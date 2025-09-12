@@ -1,0 +1,58 @@
+# Deno
+deno.lock
+
+# Node.js (if needed for compatibility)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Vim
+*.vim.backup
+*.vim.swp
+Session.vim
+.netrwhist
+tags
+
+# Build artifacts
+dist/
+build/
+*.js.map
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Debug files
+*.stackdump
+core
+
+# OS specific
+Thumbs.db
+Desktop.ini
+
+# Project specific
+.denops-test/
