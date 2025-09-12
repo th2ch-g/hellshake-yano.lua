@@ -8,12 +8,8 @@ import {
   generateWordPositions,
 } from "./helpers/mock.ts";
 
-// 単語検出機能をインポート（実装前なのでコメントアウト）
-// import { detectWords, Word } from "../denops/hellshake-yano/word.ts";
-
-// TODO: 実装後に上記のインポートを有効化
-// 現在はテストがREDになることを確認するため、関数が存在しない状態にする
-declare function detectWords(denops: any): Promise<any[]>;
+// 単語検出機能をインポート
+import { detectWords, type Word } from "../denops/hellshake-yano/word.ts";
 
 test("単一単語の検出", async (denops) => {
   await mockBuffer(denops, ["hello"]);

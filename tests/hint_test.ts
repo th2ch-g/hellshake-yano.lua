@@ -2,31 +2,9 @@ import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
 import { test, generateTestBuffer, setCursor } from "./testRunner.ts";
 import { mockBuffer, mockCursor } from "./helpers/mock.ts";
 
-// ヒント生成機能をインポート（実装前なのでコメントアウト）
-// import { generateHints, Hint, assignHintsToWords } from "../denops/hellshake-yano/hint.ts";
-
-// TODO: 実装後に上記のインポートを有効化
-// 現在はテストがREDになることを確認するため、関数が存在しない状態にする
-
-// 型定義のみ（実装はまだ存在しない）
-interface Word {
-  text: string;
-  line: number;
-  col: number;
-}
-
-interface HintMapping {
-  word: Word;
-  hint: string;
-}
-
-declare function generateHints(wordCount: number, markers?: string[]): string[];
-declare function assignHintsToWords(
-  words: Word[],
-  hints: string[],
-  cursorLine: number,
-  cursorCol: number,
-): HintMapping[];
+// ヒント生成機能をインポート
+import { generateHints, assignHintsToWords, type HintMapping } from "../denops/hellshake-yano/hint.ts";
+import type { Word } from "../denops/hellshake-yano/word.ts";
 
 test("26個以下の単語に対するA-Zヒント生成", async (denops) => {
   // 10個の単語に対するヒント生成

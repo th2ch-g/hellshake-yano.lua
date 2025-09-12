@@ -2,29 +2,8 @@ import { assertEquals, assertNotEquals } from "@std/assert";
 import { test, sleep } from "./testRunner.ts";
 import { MockTimer } from "./helpers/mock.ts";
 
-// 移動カウント管理機能をインポート（実装前なのでコメントアウト）
-// import { MotionCounter, MotionManager } from "../denops/hellshake-yano/motion.ts";
-
-// TODO: 実装後に上記のインポートを有効化
-// 現在はテストがREDになることを確認するため、クラスが存在しない状態にする
-
-// 型定義のみ（実装はまだ存在しない）
-declare class MotionCounter {
-  constructor(
-    threshold?: number,
-    timeoutMs?: number,
-    onThresholdReached?: () => void,
-  );
-  increment(): boolean;
-  reset(): void;
-  getCount(): number;
-}
-
-declare class MotionManager {
-  getCounter(bufnr: number, threshold?: number, timeout?: number): MotionCounter;
-  resetCounter(bufnr: number): void;
-  clearAll(): void;
-}
+// 移動カウント管理機能をインポート
+import { MotionCounter, MotionManager } from "../denops/hellshake-yano/motion.ts";
 
 test("hjkl各キーのカウント増加", async (denops) => {
   const counter = new MotionCounter(3, 2000);
