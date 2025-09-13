@@ -322,7 +322,7 @@ function splitJapaneseTextImproved(
  * @deprecated 新しいextractWordsFromLineを使用してください
  * @since 1.0.0
  */
-function extractWordsFromLineOriginal(lineText: string, lineNumber: number): Word[] {
+export function extractWordsFromLineOriginal(lineText: string, lineNumber: number): Word[] {
   const words: Word[] = [];
 
   // 空行や短すぎる行はスキップ

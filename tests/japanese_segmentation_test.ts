@@ -217,6 +217,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
       assertEquals(result.success, true);
       assertEquals(result.words.length > 0, true);
 
+      console.log({
         text: testCase.text,
         words: result.words.map(w => w.text),
         detector: result.detector,
@@ -241,6 +242,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
 
     // Should succeed (might use fallback or different detector)
     assertEquals(result.success || result.words.length > 0, true);
+    console.log({
       success: result.success,
       detector: result.detector,
       wordCount: result.words.length,

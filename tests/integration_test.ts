@@ -40,6 +40,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     assertEquals(typeof result.detector, "string");
     assertEquals(typeof result.performance.duration, "number");
 
+    console.log({
       success: result.success,
       wordCount: result.words.length,
       detector: result.detector,
@@ -94,6 +95,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
+    console.log({
       success: result.success,
       detector: result.detector,
       wordCount: result.words.length
