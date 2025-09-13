@@ -108,10 +108,20 @@ endfunction
 
 " プラグインの初期化を遅延実行
 " denopsが起動してから初期化する
-if exists('g:loaded_denops') && denops#server#status() !=# 'stopped'
-  call s:initialize()
+if exists('g:loaded_denops')
+  " denops#server#status()が存在する場合のみチェック
+  if exists('*denops#server#status') && denops#server#status() !=# 'stopped'
+    call s:initialize()
+  else
+    " denopsの起動を待ってから初期化
+    augroup HellshakeYanoInit
+      autocmd!
+      autocmd User DenopsPluginPost:* ++once call s:initialize()
+      autocmd User DenopsReady ++once call s:initialize()
+    augroup END
+  endif
 else
-  " denopsの起動を待ってから初期化
+  " denops自体がまだロードされていない
   augroup HellshakeYanoInit
     autocmd!
     autocmd User DenopsPluginPost:* ++once call s:initialize()
