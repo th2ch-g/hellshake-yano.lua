@@ -79,10 +79,10 @@
 
 #### sub2 回帰テストスイートの作成
 @target: - [legacy_behavior_test.ts](~/.config/nvim/plugged/hellshake-yano.vim/tests/legacy_behavior_test.ts)
-- [ ] extractWordsFromLineOriginal の現在の動作を完全にカバーするテストケースを作成
-- [ ] 最小2文字の単語のみ検出することを検証
-- [ ] 数字のみの単語をスキップすることを検証
-- [ ] kebab-case/snake_caseを分割しないことを検証
+- [x] extractWordsFromLineOriginal の現在の動作を完全にカバーするテストケースを作成
+- [x] 最小2文字の単語のみ検出することを検証
+- [x] 数字のみの単語をスキップすることを検証
+- [x] kebab-case/snake_caseを分割しないことを検証
 
 ### process2 移行用アダプター関数の作成
 #### sub1 extractWordsFromLineLegacy 関数の実装
