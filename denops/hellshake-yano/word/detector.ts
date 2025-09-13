@@ -9,6 +9,7 @@
 import type { Denops } from "@denops/std";
 import type { Word } from "../word.ts";
 import { TinySegmenter, type SegmentationResult } from "../segmenter.ts";
+import { charIndexToByteIndex } from "../utils/encoding.ts";
 
 // Configuration interfaces
 export interface WordDetectionConfig {
@@ -221,10 +222,14 @@ export class RegexWordDetector implements WordDetector {
     const finalMatches = uniqueMatches.slice(0, 200);
 
     for (const match of finalMatches) {
+      // Calculate byte position for UTF-8 compatibility
+      const byteIndex = charIndexToByteIndex(lineText, match.index);
+
       words.push({
         text: match.text,
         line: lineNumber,
         col: match.index + 1, // Vim column numbers start at 1
+        byteCol: byteIndex + 1, // Vim byte column numbers start at 1
       });
     }
 
@@ -257,10 +262,14 @@ export class RegexWordDetector implements WordDetector {
     }
 
     for (const match of matches) {
+      // Calculate byte position for UTF-8 compatibility
+      const byteIndex = charIndexToByteIndex(lineText, match.index);
+
       words.push({
         text: match.text,
         line: lineNumber,
         col: match.index + 1,
+        byteCol: byteIndex + 1, // Vim byte column numbers start at 1
       });
     }
 
@@ -389,11 +398,30 @@ export class TinySegmenterWordDetector implements WordDetector {
       const segmentIndex = originalText.indexOf(segment, currentIndex);
 
       if (segmentIndex !== -1 && segment.trim().length > 0) {
-        words.push({
-          text: segment,
-          line: lineNumber,
-          col: segmentIndex + 1, // Vim column numbers start at 1
-        });
+        // 単語の長さフィルタリング
+        if (segment.length >= (this.config.min_word_length || 1) &&
+            segment.length <= (this.config.max_word_length || 50)) {
+
+          // 数字除外オプション
+          if (this.config.exclude_numbers && /^\d+$/.test(segment)) {
+            continue;
+          }
+
+          // 単一文字除外オプション
+          if (this.config.exclude_single_chars && segment.length === 1) {
+            continue;
+          }
+
+          // Calculate byte position for UTF-8 compatibility
+          const byteIndex = charIndexToByteIndex(originalText, segmentIndex);
+
+          words.push({
+            text: segment,
+            line: lineNumber,
+            col: segmentIndex + 1, // Vim column numbers start at 1
+            byteCol: byteIndex + 1, // Vim byte column numbers start at 1
+          });
+        }
         currentIndex = segmentIndex + segment.length;
       }
     }
@@ -458,24 +486,52 @@ export class HybridWordDetector implements WordDetector {
     const lines = text.split('\n');
     const allWords: Word[] = [];
 
+    // デバッグログ：設定の確認
+    console.log(`[HybridWordDetector] Config: use_japanese=${this.config.use_japanese}, enable_tinysegmenter=${this.config.enable_tinysegmenter}`);
+
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
       const lineNumber = startLine + i;
 
+      if (!lineText || lineText.trim().length === 0) {
+        continue;
+      }
+
       // use_japanese 設定に基づいて処理を決定
       if (this.config.use_japanese === true) {
-        // 日本語モード：extractWordsFromLineWithConfigを使用（1文字ずつ分割）
-        const { extractWordsFromLineWithConfig } = await import("../word.ts");
-        const words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
-        allWords.push(...words);
+        console.log(`[HybridWordDetector] Japanese mode enabled for line ${lineNumber}`);
+
+        // 日本語モード：TinySegmenterが利用可能で日本語を含む場合は使用
+        const isSegmenterAvailable = await this.segmenterDetector.isAvailable();
+        const hasJapanese = this.segmenterDetector.canHandle(lineText);
+
+        console.log(`[HybridWordDetector] Line ${lineNumber}: segmenterAvailable=${isSegmenterAvailable}, hasJapanese=${hasJapanese}`);
+
+        if (this.config.enable_tinysegmenter && isSegmenterAvailable && hasJapanese) {
+          console.log(`[HybridWordDetector] Using TinySegmenter for line ${lineNumber}`);
+          const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber);
+          // 英数字も検出するためRegexDetectorも併用
+          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
+          const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
+          allWords.push(...mergedWords);
+        } else {
+          console.log(`[HybridWordDetector] Using fallback for line ${lineNumber}`);
+          // TinySegmenter無効または日本語なし：extractWordsFromLineWithConfigを使用
+          const { extractWordsFromLineWithConfig } = await import("../word.ts");
+          const words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
+          allWords.push(...words);
+        }
       } else {
+        console.log(`[HybridWordDetector] Non-Japanese mode for line ${lineNumber}`);
         // 日本語除外モード：RegexDetectorを使用（日本語は除外される）
         const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
         allWords.push(...regexWords);
       }
     }
 
-    return this.deduplicateWords(allWords);
+    const finalWords = this.deduplicateWords(allWords);
+    console.log(`[HybridWordDetector] Final result: ${finalWords.length} words detected`);
+    return finalWords;
   }
 
   canHandle(text: string): boolean {
@@ -525,11 +581,20 @@ export class HybridWordDetector implements WordDetector {
   }
 
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
-    return {
-      // use_japanese はVimの設定から渡された値を使用（ハードコードしない）
+    // デフォルト値を設定し、渡されたconfigで上書きする
+    const defaults = {
       enable_tinysegmenter: true,
       enable_fallback: true,
       fallback_to_regex: true,
+      min_word_length: 1,
+      max_word_length: 50,
+      exclude_numbers: false,
+      exclude_single_chars: false,
+    };
+
+    // 渡されたconfigの値を優先（特にuse_japaneseは重要）
+    return {
+      ...defaults,
       ...config
     };
   }

@@ -1,6 +1,7 @@
 import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import type { WordDetectionResult } from "./word/detector.ts";
+import { charIndexToByteIndex } from "./utils/encoding.ts";
 
 // Process 50 Sub3: 日本語除外機能の設定インターフェース（後方互換性のため保持）
 export interface WordConfig {
@@ -17,6 +18,7 @@ export interface Word {
   text: string;
   line: number;
   col: number;
+  byteCol?: number; // Optional byte-based column position for UTF-8 compatibility
 }
 
 // キャッシュとパフォーマンス設定
@@ -46,10 +48,13 @@ export async function detectWords(denops: Denops): Promise<Word[]> {
     let match: RegExpExecArray | null;
 
     while ((match = wordRegex.exec(lineText)) !== null) {
+      const byteIndex = charIndexToByteIndex(lineText, match.index);
+
       words.push({
         text: match[0],
         line: line,
         col: match.index + 1, // Vimの列番号は1から始まる
+        byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
       });
     }
   }
@@ -164,6 +169,62 @@ async function detectWordsOptimizedForLargeFiles(denops: Denops, topLine: number
 }
 
 /**
+ * 改善された日本語テキスト分割関数
+ * TinySegmenterが利用できない場合の代替手段として、より自然な単語境界を検出
+ */
+function splitJapaneseTextImproved(text: string, baseIndex: number): { text: string; index: number }[] {
+  const result: { text: string; index: number }[] = [];
+
+  // より細かい正規表現パターンで分割
+  // 1. 漢字・ひらがな・カタカナ・英数字の境界で分割
+  const patterns = [
+    /[\u4E00-\u9FAF\u3400-\u4DBF]{1,4}/g,  // 漢字 (1-4文字のグループ)
+    /[\u3040-\u309F]+/g,                    // ひらがな
+    /[\u30A0-\u30FF]+/g,                    // カタカナ
+    /[a-zA-Z0-9]+/g,                       // 英数字
+    /[０-９]+/g,                           // 全角数字
+    /[Ａ-Ｚａ-ｚ]+/g                       // 全角英字
+  ];
+
+  // 各パターンでマッチを探す
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0; // Reset regex state
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(text)) !== null) {
+      const matchText = match[0];
+      const matchIndex = match.index;
+
+      // 既に登録済みの範囲と重複しないかチェック
+      const overlaps = result.some(existing => {
+        const existingStart = existing.index - baseIndex;
+        const existingEnd = existingStart + existing.text.length;
+        const currentStart = matchIndex;
+        const currentEnd = matchIndex + matchText.length;
+
+        return !(currentEnd <= existingStart || currentStart >= existingEnd);
+      });
+
+      if (!overlaps && matchText.length >= 1) {
+        result.push({
+          text: matchText,
+          index: baseIndex + matchIndex
+        });
+      }
+    }
+  }
+
+  // 結果を位置順にソートし、重複を除去
+  return result
+    .sort((a, b) => a.index - b.index)
+    .filter((item, index, array) => {
+      if (index === 0) return true;
+      const prev = array[index - 1];
+      return !(prev.index === item.index && prev.text === item.text);
+    });
+}
+
+/**
  * 1行から単語を抽出（オリジナル版 - 既存テスト用）
  */
 function extractWordsFromLineOriginal(lineText: string, lineNumber: number): Word[] {
@@ -194,10 +255,14 @@ function extractWordsFromLineOriginal(lineText: string, lineNumber: number): Wor
 
   // マッチした単語をWordオブジェクトに変換
   for (const match of matches) {
+    // Calculate byte position for UTF-8 compatibility
+    const byteIndex = charIndexToByteIndex(lineText, match.index);
+
     words.push({
       text: match.text,
       line: lineNumber,
       col: match.index + 1, // Vimの列番号は1から始まる
+      byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
     });
   }
 
@@ -264,22 +329,12 @@ export function extractWordsFromLine(lineText: string, lineNumber: number, useIm
         currentIndex += part.length + 1; // +1 for the underscore
       }
     }
-    // 日本語の単語境界分割（文字の種別による分割）
+    // 日本語の単語境界分割（改善された文字の種別による分割）
     // excludeJapanese が true の場合はこの処理をスキップ
-    else if (!excludeJapanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 4) {
-      // 日本語長文を単語境界で分割（閾値を6から4に変更）
-      const japaneseWordRegex = /[\u4E00-\u9FAF\u3400-\u4DBF]+|[\u3040-\u309F]+|[\u30A0-\u30FF]+|[a-zA-Z0-9]+/g;
-      let jpMatch;
-      japaneseWordRegex.lastIndex = 0;
-
-      while ((jpMatch = japaneseWordRegex.exec(text)) !== null) {
-        if (jpMatch[0].length >= 1) {
-          splitMatches.push({
-            text: jpMatch[0],
-            index: baseIndex + jpMatch.index
-          });
-        }
-      }
+    else if (!excludeJapanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 2) {
+      // 改善された日本語単語分割（より自然な境界を検出）
+      const improvedSplitWords = splitJapaneseTextImproved(text, baseIndex);
+      splitMatches.push(...improvedSplitWords);
     }
     // 通常の単語はそのまま追加
     else {
@@ -347,10 +402,14 @@ export function extractWordsFromLine(lineText: string, lineNumber: number, useIm
 
   // 8. Wordオブジェクトに変換
   for (const match of finalMatches) {
+    // Calculate byte position for UTF-8 compatibility
+    const byteIndex = charIndexToByteIndex(lineText, match.index);
+
     words.push({
       text: match.text,
       line: lineNumber,
       col: match.index + 1, // Vimの列番号は1から始まる
+      byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
     });
   }
 

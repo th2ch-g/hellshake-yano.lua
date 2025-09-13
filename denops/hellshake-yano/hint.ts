@@ -311,41 +311,53 @@ export function calculateHintPositionWithCoordinateSystem(
   enableDebug: boolean = false
 ): HintPositionWithCoordinateSystem {
   let col: number;
+  let byteCol: number;
   let display_mode: "before" | "after" | "overlay";
 
   // デバッグログ追加
   if (enableDebug) {
-    console.log(`[calculateHintPositionWithCoordinateSystem] word: "${word.text}", col: ${word.col}, line: ${word.line}, hintPosition: ${hintPosition}`);
+    console.log(`[calculateHintPositionWithCoordinateSystem] word: "${word.text}", col: ${word.col}, byteCol: ${word.byteCol}, line: ${word.line}, hintPosition: ${hintPosition}`);
   }
 
   switch (hintPosition) {
     case "start":
       col = word.col; // 1ベース
+      byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
       display_mode = "before";
       break;
     case "end":
       col = word.col + word.text.length - 1; // 1ベース
+      // If we have byteCol, calculate end position using byte length
+      if (word.byteCol) {
+        const encoder = new TextEncoder();
+        const textByteLength = encoder.encode(word.text).length;
+        byteCol = word.byteCol + textByteLength - 1;
+      } else {
+        byteCol = col;
+      }
       display_mode = "after";
       break;
     case "overlay":
       col = word.col; // 1ベース
+      byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
       display_mode = "overlay";
       break;
     default:
       // 無効な設定の場合はデフォルトで "start" 動作
       col = word.col; // 1ベース
+      byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
       display_mode = "before";
       break;
   }
 
-  // 座標系変換
+  // 座標系変換 - バイト位置を優先的に使用
   const vim_line = word.line;        // Vim: 1ベース行番号
   const nvim_line = word.line - 1;   // Neovim: 0ベース行番号
-  const vim_col = col;               // Vim: 1ベース列番号
-  const nvim_col = Math.max(0, col - 1); // Neovim: 0ベース列番号（負の値を防ぐ）
+  const vim_col = byteCol;           // Vim: 1ベースバイト列番号（UTF-8対応）
+  const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号（負の値を防ぐ）
 
   if (enableDebug) {
-    console.log(`[calculateHintPositionWithCoordinateSystem] calculated - vim(${vim_line},${vim_col}) nvim(${nvim_line},${nvim_col})`);
+    console.log(`[calculateHintPositionWithCoordinateSystem] calculated - vim(${vim_line},${vim_col}) nvim(${nvim_line},${nvim_col}) [using byte positions]`);
   }
 
   return {

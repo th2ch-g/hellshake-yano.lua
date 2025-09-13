@@ -2,11 +2,10 @@
  * TinySegmenter Integration Module for Hellshake-Yano
  *
  * This module provides Japanese text segmentation capabilities using TinySegmenter.
- * It includes error handling, caching, and fallback mechanisms.
+ * Uses the npm @birchill/tiny-segmenter package for accurate segmentation.
  */
 
-// TinySegmenter implementation (embedded for reliability)
-// Original by Taku Kudo, modified for ES modules and error handling
+import { TinySegmenter as NpmTinySegmenter } from "npm:@birchill/tiny-segmenter@1.0.0";
 
 interface SegmentationResult {
   segments: string[];
@@ -15,101 +14,16 @@ interface SegmentationResult {
   source: 'tinysegmenter' | 'fallback';
 }
 
-class TinySegmenterCore {
-  private patterns = {
-    // Character type patterns
-    ctype_: [
-      /[一二三四五六七八九十百千万億兆]/,
-      /[一-龠々〆ヵヶ]/,
-      /[ぁ-ん]/,
-      /[ァ-ヴーｱ-ﾝﾞｰ]/,
-      /[a-zA-Zａ-ｚＡ-Ｚ]/,
-      /[0-9０-９]/
-    ],
-
-    // Boundary patterns for word detection
-    bias: -332,
-    BC1: {"HH":6,"II":2461,"KH":406,"OH":-1378},
-    BC2: {"AA":-3267,"AI":2744,"AN":-878,"HH":-4070,"HM":-1711,"HN":4012,"HO":3761,"HS":1327,"HT":-1185,"HU":861,"IH":831,"IK":-1444,"IN":-3631,"IO":-2083,"IS":3729,"KA":1273,"KB":476,"KC":3545,"KD":915,"KI":1250,"KK":-1550,"KN":2097,"KO":-4258,"KS":5865,"KT":2448,"KU":-1296,"MH":-973,"MK":-736,"NM":-4092,"NN":6506,"NO":1850,"NS":-1897,"OI":-333,"ON":-1638,"OU":-256,"SS":-157,"SU":-2222,"TA":972,"TH":576,"TK":-663,"TN":-2897,"TO":-2516,"TS":1626,"TT":556,"TU":1356,"UH":226,"UN":-2491,"UO":3462},
-    // ... (more patterns would be included in a full implementation)
-  };
-
-  // Simplified scoring - in reality this would include the full TinySegmenter model
-  private score(w1: string, w2: string, w3: string, w4: string, w5: string, w6: string, p1: string, p2: string, p3: string): number {
-    let score = this.patterns.bias;
-
-    // This is a simplified version - the full implementation would include
-    // all the statistical patterns from the original TinySegmenter
-
-    // Basic character type analysis
-    const types = [w1, w2, w3, w4, w5, w6].map(c => this.ctype(c));
-
-    // Simple scoring based on character transitions
-    for (let i = 0; i < types.length - 1; i++) {
-      if (types[i] !== types[i + 1]) {
-        score += 100; // Bonus for type changes
-      }
-    }
-
-    return score;
-  }
-
-  private ctype(str: string): string {
-    if (!str) return "O";
-
-    for (let i = 0; i < this.patterns.ctype_.length; i++) {
-      if (str.match(this.patterns.ctype_[i])) {
-        return ["M", "H", "I", "K", "A", "N"][i];
-      }
-    }
-    return "O";
-  }
-
-  segment(input: string): string[] {
-    if (!input) return [];
-
-    const result: string[] = [];
-    let seg = ["B3", "B2", "B1"];
-    const ctype = ["O", "O", "O"];
-
-    for (let i = 0; i < input.length; ++i) {
-      seg.push(input.substr(i, 1));
-      ctype.push(this.ctype(input.substr(i, 1)));
-    }
-    seg.push("E1", "E2", "E3");
-    ctype.push("O", "O", "O");
-
-    let word = seg[3];
-    let p = "U";
-
-    for (let i = 4; i < seg.length - 3; ++i) {
-      const score = this.score(
-        seg[i-3], seg[i-2], seg[i-1], seg[i], seg[i+1], seg[i+2],
-        ctype[i-3], ctype[i-2], ctype[i-1]
-      );
-
-      if (score > 0) {
-        result.push(word);
-        word = "";
-      }
-      word += seg[i];
-    }
-    result.push(word);
-
-    return result.filter(s => s.length > 0);
-  }
-}
-
 // TinySegmenter wrapper with error handling and caching
 export class TinySegmenter {
   private static instance: TinySegmenter;
-  private segmenter: TinySegmenterCore;
+  private segmenter: NpmTinySegmenter;
   private cache: Map<string, string[]>;
   private maxCacheSize: number;
   private enabled: boolean;
 
   constructor(maxCacheSize: number = 1000) {
-    this.segmenter = new TinySegmenterCore();
+    this.segmenter = new NpmTinySegmenter();
     this.cache = new Map();
     this.maxCacheSize = maxCacheSize;
     this.enabled = true;
@@ -120,6 +34,67 @@ export class TinySegmenter {
       TinySegmenter.instance = new TinySegmenter();
     }
     return TinySegmenter.instance;
+  }
+
+  /**
+   * Post-process segments to combine consecutive numbers and units
+   */
+  private postProcessSegments(segments: string[]): string[] {
+    const processed: string[] = [];
+    let i = 0;
+
+    while (i < segments.length) {
+      const current = segments[i];
+
+      // 連続する数字をまとめる
+      if (current && /^\d+$/.test(current)) {
+        let number = current;
+        let j = i + 1;
+
+        // 後続の数字を結合
+        while (j < segments.length && /^\d+$/.test(segments[j])) {
+          number += segments[j];
+          j++;
+        }
+
+        // 単位があれば結合
+        if (j < segments.length) {
+          const unit = segments[j];
+          if (unit === '%' || unit === '％' || /^(年|月|日|時|分|秒)$/.test(unit)) {
+            number += unit;
+            j++;
+          }
+        }
+
+        processed.push(number);
+        i = j;
+        continue;
+      }
+
+      // 括弧内の内容を一つのセグメントにする
+      if (current === '（' || current === '(') {
+        let j = i + 1;
+        let content = current;
+        while (j < segments.length && segments[j] !== '）' && segments[j] !== ')') {
+          content += segments[j];
+          j++;
+        }
+        if (j < segments.length) {
+          content += segments[j];
+          processed.push(content);
+          i = j + 1;
+          continue;
+        }
+      }
+
+      // 通常のセグメント
+      if (current && current.trim().length > 0) {
+        processed.push(current);
+      }
+      i++;
+    }
+
+    return processed;
   }
 
   /**
@@ -153,7 +128,11 @@ export class TinySegmenter {
     }
 
     try {
-      const segments = this.segmenter.segment(text);
+      // npm版TinySegmenterを使用
+      const rawSegments = this.segmenter.segment(text);
+
+      // 後処理を適用
+      const segments = this.postProcessSegments(rawSegments);
 
       // Cache the result (with size limit)
       if (this.cache.size >= this.maxCacheSize) {
