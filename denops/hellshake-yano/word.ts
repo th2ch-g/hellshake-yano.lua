@@ -1,9 +1,17 @@
 import type { Denops } from "@denops/std";
+import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
+import type { WordDetectionResult } from "./word/detector.ts";
 
-// Process 50 Sub3: 日本語除外機能の設定インターフェース
+// Process 50 Sub3: 日本語除外機能の設定インターフェース（後方互換性のため保持）
 export interface WordConfig {
   use_japanese?: boolean;
   use_improved_detection?: boolean; // Process 50 Sub6: 改善版単語検出を使用するか
+}
+
+// Process 50 Sub7: 新しい単語検出設定インターフェース（WordDetectionManagerConfig のエイリアス）
+export interface EnhancedWordConfig extends WordDetectionManagerConfig {
+  // 後方互換性のための追加フィールド
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
 }
 
 export interface Word {
@@ -19,9 +27,11 @@ const MAX_WORDS_PER_FILE = 1000;
 const wordDetectionCache = new Map<string, Word[]>();
 
 /**
- * 画面内の単語を検出する
+ * 画面内の単語を検出する（レガシー版、後方互換性のため保持）
  */
 export async function detectWords(denops: Denops): Promise<Word[]> {
+  console.warn("[DEPRECATED] detectWords: Use detectWordsWithManager for enhanced capabilities");
+
   const words: Word[] = [];
 
   // 画面の表示範囲を取得
@@ -49,7 +59,36 @@ export async function detectWords(denops: Denops): Promise<Word[]> {
 }
 
 /**
- * Process 50 Sub3: 設定に基づいて画面内の単語を検出する
+ * Process 50 Sub7: 新しい単語検出マネージャーを使用した高機能版検出
+ */
+export async function detectWordsWithManager(
+  denops: Denops,
+  config: EnhancedWordConfig = {}
+): Promise<WordDetectionResult> {
+  try {
+    const manager = getWordDetectionManager(config);
+    return await manager.detectWordsFromBuffer(denops);
+  } catch (error) {
+    console.error("[detectWordsWithManager] Error:", error);
+
+    // フォールバックとして従来のメソッドを使用
+    const fallbackWords = await detectWordsWithConfig(denops, config);
+    return {
+      words: fallbackWords,
+      detector: "fallback",
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      performance: {
+        duration: 0,
+        wordCount: fallbackWords.length,
+        linesProcessed: 0,
+      }
+    };
+  }
+}
+
+/**
+ * Process 50 Sub3: 設定に基づいて画面内の単語を検出する（レガシー版）
  */
 export async function detectWordsWithConfig(denops: Denops, config: WordConfig = {}): Promise<Word[]> {
   const words: Word[] = [];
@@ -234,7 +273,8 @@ export function extractWordsFromLine(lineText: string, lineNumber: number, useIm
       }
     }
     // 日本語の単語境界分割（文字の種別による分割）
-    else if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 4) {
+    // excludeJapanese が true の場合はこの処理をスキップ
+    else if (!excludeJapanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 4) {
       // 日本語長文を単語境界で分割（閾値を6から4に変更）
       const japaneseWordRegex = /[\u4E00-\u9FAF\u3400-\u4DBF]+|[\u3040-\u309F]+|[\u30A0-\u30FF]+|[a-zA-Z0-9]+/g;
       let jpMatch;

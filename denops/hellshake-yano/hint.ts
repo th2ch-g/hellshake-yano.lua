@@ -7,6 +7,18 @@ export interface HintPosition {
   display_mode: "before" | "after" | "overlay";
 }
 
+// 座標系対応版のヒント表示位置型定義
+export interface HintPositionWithCoordinateSystem {
+  line: number;
+  col: number;
+  display_mode: "before" | "after" | "overlay";
+  // Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方を提供
+  vim_col: number;      // 1ベース（Vim matchadd用）
+  nvim_col: number;     // 0ベース（Neovim extmark用）
+  vim_line: number;     // 1ベース（Vim matchadd用）
+  nvim_line: number;    // 0ベース（Neovim extmark用）
+}
+
 // パフォーマンス最適化用のキャッシュ
 let hintCache = new Map<string, string[]>();
 let assignmentCache = new Map<string, HintMapping[]>();
@@ -256,6 +268,9 @@ export function calculateHintPosition(
   let col: number;
   let display_mode: "before" | "after" | "overlay";
 
+  // デバッグログ追加
+  console.log(`[calculateHintPosition] word: "${word.text}", col: ${word.col}, hintPosition: ${hintPosition}`);
+
   switch (hintPosition) {
     case "start":
       col = word.col;
@@ -280,6 +295,67 @@ export function calculateHintPosition(
     line: word.line,
     col: col,
     display_mode: display_mode,
+  };
+}
+
+/**
+ * 座標系対応版：ヒント表示位置を計算する（Vim/Neovim両方対応）
+ *
+ * @param word 単語情報（1ベース座標で提供されることを前提）
+ * @param hintPosition ヒント位置設定
+ * @returns Vim/Neovim両方の座標系に対応した位置情報
+ */
+export function calculateHintPositionWithCoordinateSystem(
+  word: Word,
+  hintPosition: string,
+  enableDebug: boolean = false
+): HintPositionWithCoordinateSystem {
+  let col: number;
+  let display_mode: "before" | "after" | "overlay";
+
+  // デバッグログ追加
+  if (enableDebug) {
+    console.log(`[calculateHintPositionWithCoordinateSystem] word: "${word.text}", col: ${word.col}, line: ${word.line}, hintPosition: ${hintPosition}`);
+  }
+
+  switch (hintPosition) {
+    case "start":
+      col = word.col; // 1ベース
+      display_mode = "before";
+      break;
+    case "end":
+      col = word.col + word.text.length - 1; // 1ベース
+      display_mode = "after";
+      break;
+    case "overlay":
+      col = word.col; // 1ベース
+      display_mode = "overlay";
+      break;
+    default:
+      // 無効な設定の場合はデフォルトで "start" 動作
+      col = word.col; // 1ベース
+      display_mode = "before";
+      break;
+  }
+
+  // 座標系変換
+  const vim_line = word.line;        // Vim: 1ベース行番号
+  const nvim_line = word.line - 1;   // Neovim: 0ベース行番号
+  const vim_col = col;               // Vim: 1ベース列番号
+  const nvim_col = Math.max(0, col - 1); // Neovim: 0ベース列番号（負の値を防ぐ）
+
+  if (enableDebug) {
+    console.log(`[calculateHintPositionWithCoordinateSystem] calculated - vim(${vim_line},${vim_col}) nvim(${nvim_line},${nvim_col})`);
+  }
+
+  return {
+    line: word.line,     // 後方互換性のため
+    col: col,            // 後方互換性のため
+    display_mode: display_mode,
+    vim_col,
+    nvim_col,
+    vim_line,
+    nvim_line,
   };
 }
 
