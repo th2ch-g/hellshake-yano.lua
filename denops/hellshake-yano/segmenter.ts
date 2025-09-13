@@ -281,4 +281,3 @@ export class TinySegmenter {
 export const tinysegmenter = TinySegmenter.getInstance();
 export type { SegmentationResult };
 
-// console.log("✓ TinySegmenter module loaded successfully");

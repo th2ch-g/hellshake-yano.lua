@@ -14,10 +14,6 @@ describe("Character Encoding and Column Position", () => {
     const beforeProcess = "- **最終更新**: 2025-09-13 (";
     const processIndex = text.indexOf("Process8");
 
-    console.log("Text:", text);
-    console.log("Before Process8:", beforeProcess);
-    console.log("Character length before Process8:", beforeProcess.length);
-    console.log("indexOf Process8:", processIndex);
 
     // JavaScriptのindexOfは文字単位
     assertEquals(processIndex, 25);
@@ -30,9 +26,6 @@ describe("Character Encoding and Column Position", () => {
     const charLength = text.length;
     const byteLength = new TextEncoder().encode(text).length;
 
-    console.log("Text:", text);
-    console.log("Character length:", charLength);
-    console.log("Byte length:", byteLength);
 
     // マルチバイト文字が含まれるため、バイト数の方が多い
     assertEquals(charLength < byteLength, true);
@@ -45,7 +38,6 @@ describe("Character Encoding and Column Position", () => {
     const chars = Array.from(text);
     chars.forEach((char, index) => {
       if (char === 'P') {
-        console.log(`Found 'P' at index ${index}: "${text.substring(index, index + 8)}"`);
       }
     });
 
@@ -73,8 +65,6 @@ describe("Character Encoding and Column Position", () => {
       const processIndex = text.indexOf("Process8");
       const vimCol = processIndex + 1; // 1-based
 
-      console.log(`Text: "${text}"`);
-      console.log(`  Process8 at index: ${processIndex}, vim col: ${vimCol}`);
 
       assertEquals(vimCol, expectedCol);
     });

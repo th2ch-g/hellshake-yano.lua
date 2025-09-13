@@ -89,11 +89,9 @@ export class WordDetectionManager {
     // Test detector availability
     for (const [name, detector] of this.detectors) {
       const available = await detector.isAvailable();
-// console.log(`[WordDetectionManager] ${name}: ${available ? 'available' : 'unavailable'}`);
     }
 
     this.initialized = true;
-// console.log("[WordDetectionManager] Initialized successfully");
   }
 
   /**
@@ -101,7 +99,6 @@ export class WordDetectionManager {
    */
   registerDetector(detector: WordDetector): void {
     this.detectors.set(detector.name, detector);
-// console.log(`[WordDetectionManager] Registered detector: ${detector.name} (priority: ${detector.priority})`);
   }
 
   /**
@@ -440,12 +437,10 @@ export class WordDetectionManager {
 
   clearCache(): void {
     this.cache.clear();
-// console.log("[WordDetectionManager] Cache cleared");
   }
 
   resetStats(): void {
     this.stats = this.initializeStats();
-// console.log("[WordDetectionManager] Statistics reset");
   }
 
   updateConfig(newConfig: Partial<WordDetectionManagerConfig>): void {
@@ -456,7 +451,6 @@ export class WordDetectionManager {
       this.clearCache();
     }
 
-// console.log("[WordDetectionManager] Configuration updated");
   }
 
   getAvailableDetectors(): Array<{ name: string; priority: number; languages: string[] }> {
@@ -556,4 +550,3 @@ export function resetWordDetectionManager(): void {
   globalManager = null;
 }
 
-// console.log("✓ Word detection manager loaded successfully");

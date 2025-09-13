@@ -47,11 +47,9 @@ Deno.test("日本語検出デバッグ", async (t) => {
       use_improved_detection: true,
     };
 
-    console.log("Config passed:", config);
 
     const result = await detectWordsWithManager(mockDenops, config);
 
-    console.log("Result:", {
       detector: result.detector,
       success: result.success,
       wordCount: result.words.length,
@@ -59,14 +57,11 @@ Deno.test("日本語検出デバッグ", async (t) => {
     });
 
     if (result.words.length > 0) {
-      console.log("Sample words:", result.words.slice(0, 10).map(w => w.text));
     } else {
-      console.log("No words detected!");
     }
 
     // Manager configuration check
     const manager = getWordDetectionManager();
-    console.log("Manager config:", (manager as any).config.use_japanese);
   });
 
   await t.step("detectWordsWithConfig with use_japanese: true", async () => {
@@ -75,15 +70,11 @@ Deno.test("日本語検出デバッグ", async (t) => {
       use_improved_detection: false, // Force using extractWordsFromLineWithConfig
     };
 
-    console.log("Config passed:", config);
 
     const words = await detectWordsWithConfig(mockDenops, config);
 
-    console.log("Word count:", words.length);
     if (words.length > 0) {
-      console.log("Sample words:", words.slice(0, 10).map(w => w.text));
     } else {
-      console.log("No words detected!");
     }
   });
 
@@ -96,6 +87,5 @@ Deno.test("日本語検出デバッグ", async (t) => {
 
     const words = extractWordsFromLineWithConfig("私は本を読む", 1, config);
 
-    console.log("Direct extraction result:", words.map(w => w.text));
   });
 });

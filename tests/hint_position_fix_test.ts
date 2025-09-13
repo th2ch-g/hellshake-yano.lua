@@ -19,14 +19,11 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
       // Process8を探す
       const process8 = words.find(w => w.text === "Process8");
-      console.log("検出された単語:", words.map(w => ({ text: w.text, col: w.col })));
 
       if (process8) {
-        console.log(`Process8の位置: line=${process8.line}, col=${process8.col}, text="${process8.text}"`);
 
         // ヒント位置を計算
         const position = calculateHintPosition(process8, "start");
-        console.log(`計算されたヒント位置: line=${position.line}, col=${position.col}, mode=${position.display_mode}`);
 
         // Process8の開始位置（Pの位置）にヒントが表示されることを確認
         assertEquals(position.col, process8.col);
@@ -42,7 +39,6 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
       // すべてのProcess単語を確認
       const processWords = words.filter(w => w.text.startsWith("Process"));
-      console.log("Process単語:", processWords);
 
       processWords.forEach(word => {
         const position = calculateHintPosition(word, "start");
@@ -51,7 +47,6 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
         assertEquals(position.col, word.col);
         assertEquals(position.display_mode, "before");
 
-        console.log(`${word.text}: col=${word.col} -> hint at col=${position.col}`);
       });
     });
 
@@ -66,7 +61,6 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
         // インデントを考慮してもPの位置にヒントが表示される
         assertEquals(position.col, process8.col);
         assertEquals(position.col, 5); // 4スペース + 1（1ベース）
-        console.log(`インデントされたProcess8: col=${process8.col} -> hint at col=${position.col}`);
       }
     });
   });
@@ -87,7 +81,6 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
       // kebab-case分割により複数の単語として検出される
       const wordTexts = words.map(w => w.text);
-      console.log("分割された単語:", wordTexts);
 
       // Process50とsub1が別々に検出される
       const hasProcess50 = wordTexts.includes("Process50");

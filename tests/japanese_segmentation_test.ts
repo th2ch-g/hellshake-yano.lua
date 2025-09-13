@@ -18,7 +18,6 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
     assertEquals(result.source, "tinysegmenter");
     assertEquals(result.segments.length > 0, true);
 
-    console.log("Segmentation result:", result.segments);
   });
 
   await t.step("Handle empty text", async () => {
@@ -34,7 +33,6 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
     assertEquals(result.success, true);
     assertEquals(result.segments.length > 0, true);
 
-    console.log("Mixed content segments:", result.segments);
   });
 
   await t.step("Check Japanese detection", () => {
@@ -85,10 +83,8 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
   await t.step("Run segmenter self-test", async () => {
     const testResult = await segmenter.test();
 
-    console.log("Segmenter test results:");
     for (let i = 0; i < testResult.results.length; i++) {
       const result = testResult.results[i];
-      console.log(`  Test ${i + 1}: ${result.success ? 'PASS' : 'FAIL'} - ${result.segments.length} segments`);
     }
 
     // At least some tests should pass
@@ -111,7 +107,6 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(detector.canHandle("any text"), true);
     assertEquals(await detector.isAvailable(), true);
 
-    console.log("Regex detector words:", words.map(w => w.text));
   });
 
   await t.step("TinySegmenterWordDetector basic functionality", async () => {
@@ -131,8 +126,6 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(detector.canHandle("English text"), false);
     assertEquals(await detector.isAvailable(), true);
 
-    console.log("TinySegmenter Japanese words:", japaneseWords.map(w => w.text));
-    console.log("TinySegmenter English fallback:", englishWords.map(w => w.text));
   });
 
   await t.step("HybridWordDetector auto-detection", async () => {
@@ -159,9 +152,6 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(detector.canHandle("anything"), true);
     assertEquals(await detector.isAvailable(), true);
 
-    console.log("Hybrid Japanese words:", japaneseWords.map(w => w.text));
-    console.log("Hybrid English words:", englishWords.map(w => w.text));
-    console.log("Hybrid mixed words:", mixedWords.map(w => w.text));
   });
 
   await t.step("Compare detection strategies", async () => {
@@ -175,10 +165,6 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     const segmenterWords = await segmenterDetector.detectWords(testText, 1);
     const hybridWords = await hybridDetector.detectWords(testText, 1);
 
-    console.log("Comparison for:", testText);
-    console.log("  Regex words:", regexWords.map(w => w.text));
-    console.log("  Segmenter words:", segmenterWords.map(w => w.text));
-    console.log("  Hybrid words:", hybridWords.map(w => w.text));
 
     // All should detect some words
     assertEquals(regexWords.length > 0, true);
@@ -205,7 +191,6 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     assertEquals(detectors.length >= 3, true); // At least regex, segmenter, hybrid
 
     const availability = await manager.testDetectors();
-    console.log("Detector availability:", availability);
 
     // At least regex should be available
     assertEquals(Object.values(availability).some(v => v), true);
@@ -232,7 +217,6 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
       assertEquals(result.success, true);
       assertEquals(result.words.length > 0, true);
 
-      console.log(`Strategy ${testCase.strategy}:`, {
         text: testCase.text,
         words: result.words.map(w => w.text),
         detector: result.detector,
@@ -257,14 +241,12 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
 
     // Should succeed (might use fallback or different detector)
     assertEquals(result.success || result.words.length > 0, true);
-    console.log("Fallback test result:", {
       success: result.success,
       detector: result.detector,
       wordCount: result.words.length,
       error: result.error
     });
 
-    console.log("Fallback result:", result);
   });
 
   await t.step("Performance monitoring and caching", async () => {
@@ -297,8 +279,6 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     assertEquals(cache2.size >= 1, true);
     assertEquals(cache2.hitRate > 0, true);
 
-    console.log("Performance stats:", stats2);
-    console.log("Cache stats:", cache2);
   });
 
   await t.step("Configuration updates", async () => {
@@ -325,8 +305,6 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     assertEquals(result2.success, true);
 
     // Results might differ due to different strategy and Japanese handling
-    console.log("Before config update:", result1.words.map(w => w.text));
-    console.log("After config update:", result2.words.map(w => w.text));
   });
 
   await t.step("Large text performance", async () => {
@@ -350,8 +328,6 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
-    console.log(`Large text performance: ${result.words.length} words in ${duration}ms`);
-    console.log(`Performance: ${(result.words.length / duration * 1000).toFixed(2)} words/second`);
 
     // Should complete within reasonable time
     assertEquals(duration < 5000, true); // Less than 5 seconds
@@ -384,7 +360,6 @@ function calculateTotal(items) {
     assertEquals(result.words.length > 0, true);
 
     const words = result.words.map(w => w.text);
-    console.log("Code with Japanese comments words:", words);
 
     // Should detect both English and Japanese words
     const hasEnglish = words.some(w => /[a-zA-Z]/.test(w));
@@ -422,7 +397,6 @@ For more information, see the 詳細ドキュメント.
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
-    console.log("Documentation words:", result.words.map(w => w.text));
   });
 
   await t.step("Configuration file with Japanese keys", async () => {
@@ -450,8 +424,6 @@ For more information, see the 詳細ドキュメント.
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
-    console.log("Configuration file words:", result.words.map(w => w.text));
   });
 });
 
-console.log("✓ Japanese segmentation tests ready to run");

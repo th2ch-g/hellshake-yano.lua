@@ -246,4 +246,3 @@ Deno.test("小文字と大文字の境界値テスト", async () => {
   assertEquals(denops.getFeedKeysBuffer().length, 0);
 });
 
-console.log("小文字入力時のヒントキャンセル機能のテストが完了しました。");

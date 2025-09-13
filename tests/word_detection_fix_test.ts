@@ -29,7 +29,6 @@ test("Process50-Sub6: 1文字単語の検出（'a', 'I'等）", async () => {
   const words = extractWordsFromLine(testLine, 1, true); // 改善版フラグを有効
 
   const wordTexts = words.map((w: Word) => w.text);
-  console.log("1文字単語テスト - 検出された単語:", wordTexts);
 
   // 現在の実装では'I'と'a'が検出されない（2文字未満のため）
   // 改善後は検出されるべき
@@ -44,7 +43,6 @@ test("Process50-Sub6: 数字のみの単語検出（'2025', '09', '13'等）", a
   const words = extractWordsFromLine(testLine, 1, true);
 
   const wordTexts = words.map((w: Word) => w.text);
-  console.log("数字のみ単語テスト - 検出された単語:", wordTexts);
 
   // 現在の実装では数字のみの単語が除外される
   // 改善後は検出されるべき
@@ -59,7 +57,6 @@ test("Process50-Sub6: kebab-case分割検出（'hit-a-hint', 'Process50-sub1'等
   const words = extractWordsFromLine(testLine, 1, true);
 
   const wordTexts = words.map((w: Word) => w.text);
-  console.log("kebab-case分割テスト - 検出された単語:", wordTexts);
 
   // kebab-caseが適切に分割されるべき
   assertExists(wordTexts.find((w: string) => w === "Process50"), "'Process50'が検出されませんでした");
@@ -75,7 +72,6 @@ test("Process50-Sub6: hit-a-hintの分割検出", async () => {
   const words = extractWordsFromLine(testLine, 1, true);
 
   const wordTexts = words.map((w: Word) => w.text);
-  console.log("hit-a-hint分割テスト - 検出された単語:", wordTexts);
 
   // hit-a-hintが適切に分割されるべき
   assertExists(wordTexts.find((w: string) => w === "hit"), "'hit'が検出されませんでした");
@@ -90,7 +86,6 @@ test("Process50-Sub6: 数字を含む単語検出（'Process8', 'Process9', 'Pro
   const words = extractWordsFromLine(testLine, 1, true);
 
   const wordTexts = words.map((w: Word) => w.text);
-  console.log("数字含む単語テスト - 検出された単語:", wordTexts);
 
   // 数字を含む単語が検出されるべき
   assertExists(wordTexts.find((w: string) => w === "Process8"), "'Process8'が検出されませんでした");
@@ -113,8 +108,6 @@ test("Process50-Sub6: 実際のサンプルテキスト全体での検出", asyn
 
   const wordTexts = allWords.map(w => w.text);
   const uniqueWords = [...new Set(wordTexts)];
-  console.log("サンプルテキスト全体 - ユニークな単語数:", uniqueWords.length);
-  console.log("サンプルテキスト全体 - 検出された単語:", uniqueWords.sort());
 
   // 期待される重要な単語が検出されることを確認
   const expectedWords = [
@@ -133,13 +126,10 @@ test("Process50-Sub6: 実際のサンプルテキスト全体での検出", asyn
   let missingWords = 0;
   expectedWords.forEach(expectedWord => {
     if (!wordTexts.includes(expectedWord)) {
-      console.log(`期待される単語が検出されませんでした: '${expectedWord}'`);
       missingWords++;
     }
   });
 
-  console.log(`取りこぼし単語数: ${missingWords}/${expectedWords.length}`);
-  console.log(`改善率: ${Math.round((1 - missingWords / expectedWords.length) * 100)}%`);
 
   // Process50 Sub6の目標:
   // - 1文字単語の検出（I, a）✓
@@ -159,7 +149,6 @@ test("Process50-Sub6: snake_case分割の改善確認", async () => {
   const words = extractWordsFromLine(testLine, 1, true);
 
   const wordTexts = words.map((w: Word) => w.text);
-  console.log("snake_case分割テスト - 検出された単語:", wordTexts);
 
   // snake_caseが適切に分割されるべき（現在はアンダースコアで分割される）
   assertExists(wordTexts.find((w: string) => w === "snake"), "'snake'が検出されませんでした");

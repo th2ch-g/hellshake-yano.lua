@@ -18,12 +18,8 @@ describe("Japanese Exclusion Final Fix", () => {
       // Call detectWords with excludeJapanese: true
       const words = await detectWords(testText, 1, true); // excludeJapanese = true
 
-      console.log("\n=== Test: Japanese Exclusion ===");
-      console.log("Text:", testText);
-      console.log("\nDetected words (excludeJapanese: true):");
       words.forEach(w => {
         const isJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text);
-        console.log(`  "${w.text}" at col ${w.col} [Japanese: ${isJapanese}]`);
       });
 
       // Verify no Japanese characters are detected
@@ -47,11 +43,7 @@ describe("Japanese Exclusion Final Fix", () => {
 
       const words = await detectWords(mixedText, 1, true); // excludeJapanese = true
 
-      console.log("\n=== Test: Mixed Text ===");
-      console.log("Text:", mixedText);
-      console.log("\nDetected words:");
       words.forEach(w => {
-        console.log(`  "${w.text}" at col ${w.col}`);
       });
 
       // Should detect English words
@@ -75,10 +67,6 @@ describe("Japanese Exclusion Final Fix", () => {
       const wordsExcluded = await detectWords(longJapaneseText, 1, true);
       const wordsIncluded = await detectWords(longJapaneseText, 1, false);
 
-      console.log("\n=== Test: Japanese Word Boundary ===");
-      console.log("Text:", longJapaneseText);
-      console.log("\nWith excludeJapanese=true:", wordsExcluded.map(w => w.text));
-      console.log("With excludeJapanese=false:", wordsIncluded.map(w => w.text));
 
       // When excluded, no words should be detected (all Japanese)
       assertEquals(wordsExcluded.length, 0, "Should detect no words when Japanese is excluded");
@@ -92,12 +80,8 @@ describe("Japanese Exclusion Final Fix", () => {
 
       const words = await detectWords(vimConfigText, 1, true);
 
-      console.log("\n=== Test: Vim Config Text ===");
-      console.log("Text:", vimConfigText);
-      console.log("\nDetected words:");
       words.forEach(w => {
         const snippet = vimConfigText.substring(w.col - 1, w.col - 1 + w.text.length);
-        console.log(`  "${w.text}" at col ${w.col} (actual: "${snippet}")`);
       });
 
       // Should detect English identifiers

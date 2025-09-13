@@ -24,7 +24,6 @@ describe("Japanese Exclusion Configuration", () => {
 
       // 日本語を除外するので、Englishのみが検出される
       const wordTexts = words.map(w => w.text);
-      console.log("RegexWordDetector (use_japanese: false):", wordTexts);
 
       assertEquals(wordTexts.includes("English"), true);
       assertEquals(wordTexts.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w)), false);
@@ -36,7 +35,6 @@ describe("Japanese Exclusion Configuration", () => {
       const words = await detector.detectWords(japaneseText, startLine);
 
       const wordTexts = words.map(w => w.text);
-      console.log("RegexWordDetector (use_japanese: true):", wordTexts);
 
       // 日本語を含む
       assertEquals(wordTexts.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w)), true);
@@ -53,7 +51,6 @@ describe("Japanese Exclusion Configuration", () => {
       const words = await detector.detectWords(japaneseText, startLine);
 
       const wordTexts = words.map(w => w.text);
-      console.log("HybridWordDetector (use_japanese: false):", wordTexts);
 
       // 日本語が除外されることを確認
       assertEquals(wordTexts.includes("English"), true);
@@ -70,7 +67,6 @@ describe("Japanese Exclusion Configuration", () => {
       const words = await detector.detectWords(japaneseText, startLine);
 
       const wordTexts = words.map(w => w.text);
-      console.log("HybridWordDetector (use_japanese: true):", wordTexts);
 
       // 日本語が含まれることを確認
       const hasJapanese = wordTexts.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w));
@@ -85,7 +81,6 @@ describe("Japanese Exclusion Configuration", () => {
       const words = await detector.detectWords(japaneseText, startLine);
 
       const wordTexts = words.map(w => w.text);
-      console.log("HybridWordDetector (use_japanese: undefined):", wordTexts);
 
       // デフォルトでは日本語が除外される（main.tsのデフォルト設定に従う）
       assertEquals(wordTexts.includes("English"), true);
@@ -110,8 +105,6 @@ describe("Japanese Exclusion Configuration", () => {
       const hybridInclude = new HybridWordDetector(configInclude);
       const wordsInclude = await hybridInclude.detectWords(testText, 1);
 
-      console.log("Exclude Japanese:", wordsExclude.map(w => w.text));
-      console.log("Include Japanese:", wordsInclude.map(w => w.text));
 
       // 除外設定では日本語が含まれない
       const hasJapaneseExclude = wordsExclude.some(w =>

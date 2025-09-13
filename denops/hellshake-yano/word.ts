@@ -137,7 +137,6 @@ async function detectWordsOptimizedForLargeFiles(denops: Denops, topLine: number
   const words: Word[] = [];
   const batchSize = 100; // バッチサイズ
   
-// console.log(`[hellshake-yano] Large file detected, using optimized batch processing (${topLine}-${bottomLine})`);
   
   // バッチ処理で行を取得して単語を検出
   for (let startLine = topLine; startLine <= bottomLine; startLine += batchSize) {
@@ -446,11 +445,9 @@ export async function detectWordsInRange(
     const actualEndLine = Math.min(endLine, await denops.call("line", "$") as number);
     const actualStartLine = Math.max(1, startLine);
     
-// console.log(`[hellshake-yano] Detecting words in range ${actualStartLine}-${actualEndLine} (max: ${effectiveMaxWords})`);
     
     for (let line = actualStartLine; line <= actualEndLine; line++) {
       if (words.length >= effectiveMaxWords) {
-// console.log(`[hellshake-yano] Reached maximum word limit (${effectiveMaxWords})`);
         break;
       }
 
@@ -474,7 +471,6 @@ export async function detectWordsInRange(
  */
 export function clearWordDetectionCache(): void {
   wordDetectionCache.clear();
-// console.log("[hellshake-yano] Word detection cache cleared");
 }
 
 /**

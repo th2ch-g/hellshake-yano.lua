@@ -312,7 +312,6 @@ Deno.test("WordDetectionManager Tests", async (t) => {
     const japaneseText = "これはテスト";
     const words = await manager.detectWords(japaneseText, 1);
 
-    console.log("Japanese detection result:", words);
     // Mock implementation might return empty results, so we just check it doesn't error
     assertEquals(Array.isArray(words), true);
   });
@@ -442,4 +441,3 @@ Deno.test("WordDetectionConfig Tests", async (t) => {
   });
 });
 
-console.log("✓ Word detector tests are ready to run");

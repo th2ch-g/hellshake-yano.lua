@@ -76,16 +76,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     const { getDefaultConfig } = await import("../denops/hellshake-yano/main.ts");
     const defaultConfig = getDefaultConfig();
 
-    console.log("=== Default Config ===");
-    console.log("markers:", defaultConfig.markers);
-    console.log("motion_count:", defaultConfig.motion_count);
-    console.log("motion_timeout:", defaultConfig.motion_timeout);
-    console.log("hint_position:", defaultConfig.hint_position);
-    console.log("trigger_on_hjkl:", defaultConfig.trigger_on_hjkl);
-    console.log("enabled:", defaultConfig.enabled);
-    console.log("use_japanese:", defaultConfig.use_japanese);
-    console.log("use_improved_detection:", defaultConfig.use_improved_detection);
-    console.log("word_detection_strategy:", defaultConfig.word_detection_strategy);
 
     // デフォルト値の確認
     assertEquals(defaultConfig.motion_count, 3, "motion_countのデフォルトは3");
@@ -95,11 +85,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
 
   await t.step("Config更新のシミュレーション", async () => {
     // updateConfigは外部から呼べないので、設定の伝播を別の方法で確認
-    console.log("=== Custom Vim Config ===");
-    console.log("motion_count:", mockVimConfig.motion_count);
-    console.log("motion_timeout:", mockVimConfig.motion_timeout);
-    console.log("use_japanese:", mockVimConfig.use_japanese);
-    console.log("word_detection_strategy:", mockVimConfig.word_detection_strategy);
 
     // これらの値がハードコードされた値で上書きされないことが重要
     assertNotEquals(mockVimConfig.motion_count, 3, "カスタム値はデフォルトと異なる");
@@ -120,12 +105,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     const manager = new WordDetectionManager(customConfig);
     const internalConfig = (manager as any).config;
 
-    console.log("=== WordDetectionManager Config ===");
-    console.log("use_japanese:", internalConfig.use_japanese);
-    console.log("min_word_length:", internalConfig.min_word_length);
-    console.log("max_word_length:", internalConfig.max_word_length);
-    console.log("enable_tinysegmenter:", internalConfig.enable_tinysegmenter);
-    console.log("segmenter_threshold:", internalConfig.segmenter_threshold);
 
     // カスタム設定が維持されることを確認
     assertEquals(internalConfig.use_japanese, true, "use_japaneseが上書きされない");
@@ -151,20 +130,17 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     // RegexWordDetector
     const regexDetector = new RegexWordDetector(customConfig);
     const regexConfig = (regexDetector as any).config;
-    console.log("RegexWordDetector config:", regexConfig);
     assertEquals(regexConfig.use_japanese, true, "RegexWordDetectorのuse_japaneseが維持される");
     assertEquals(regexConfig.min_word_length, 2, "RegexWordDetectorのmin_word_lengthが維持される");
 
     // HybridWordDetector
     const hybridDetector = new HybridWordDetector(customConfig);
     const hybridConfig = (hybridDetector as any).config;
-    console.log("HybridWordDetector config:", hybridConfig);
     assertEquals(hybridConfig.use_japanese, true, "HybridWordDetectorのuse_japaneseが維持される");
 
     // TinySegmenterWordDetector
     const segmenterDetector = new TinySegmenterWordDetector(customConfig);
     const segmenterConfig = (segmenterDetector as any).config;
-    console.log("TinySegmenterWordDetector config:", segmenterConfig);
     assertEquals(segmenterConfig.use_japanese, true, "TinySegmenterWordDetectorのuse_japaneseが維持される");
   });
 
@@ -174,7 +150,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     // generateHints（レガシー版）
     const markers = ["Z", "Y", "X"];
     const hints = generateHints(5, markers, 10);
-    console.log("Generated hints with custom markers:", hints);
 
     // カスタムマーカーが使用されることを確認
     const hasCustomMarker = hints.some(h => h.startsWith("Z") || h.startsWith("Y") || h.startsWith("X"));
@@ -188,7 +163,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     };
 
     const groupHints = generateHintsWithGroups(5, keyConfig);
-    console.log("Generated group hints:", groupHints);
 
     // 設定に基づいてヒントが生成されることを確認
     const singleCharHints = groupHints.filter(h => h.length === 1);
@@ -208,8 +182,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     };
 
     // これらの値がupdateConfig()で正しく上書きされることが重要
-    console.log("=== Hardcoded defaults in main.ts ===");
-    console.log(mainConfig);
 
     // WordDetectionManagerのデフォルト値
     const managerDefaults = {
@@ -219,8 +191,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
       strategy: "hybrid",
     };
 
-    console.log("=== Manager defaults ===");
-    console.log(managerDefaults);
   });
 });
 
@@ -244,10 +214,6 @@ Deno.test("設定の完全な伝播フロー", async (t) => {
 
     const result = await detectWordsWithManager(mockDenops, fullCustomConfig);
 
-    console.log("=== Full custom config result ===");
-    console.log("Detector used:", result.detector);
-    console.log("Success:", result.success);
-    console.log("Word count:", result.words.length);
 
     // カスタム設定が反映されていることを確認
     assertNotEquals(result.detector, "HybridWordDetector", "strategyがregexなのでHybridを使わない");

@@ -24,12 +24,8 @@ describe("Japanese Exclusion Verification", () => {
       const detector = new RegexWordDetector(config);
       const words = await detector.detectWords(problemText, 1);
 
-      console.log("\n=== RegexWordDetector Test ===");
-      console.log("Text:", problemText);
-      console.log("\nDetected words (use_japanese: false):");
       words.forEach(w => {
         const isJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text);
-        console.log(`  "${w.text}" at col ${w.col} [Japanese: ${isJapanese}]`);
       });
 
       // Check that no Japanese characters are detected
@@ -51,8 +47,6 @@ describe("Japanese Exclusion Verification", () => {
       const hasHint = words.some(w => w.text === "hint" || w.text === "HintPosition");
       const hasCalculate = words.some(w => w.text === "calculateHintPosition");
 
-      console.log(`  Found hint-related words: ${hasHint}`);
-      console.log(`  Found calculateHintPosition: ${hasCalculate}`);
     });
   });
 
@@ -65,13 +59,8 @@ describe("Japanese Exclusion Verification", () => {
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(problemText, 1);
 
-      console.log("\n=== HybridWordDetector Test ===");
-      console.log("Configuration:", config);
-      console.log("Text:", problemText);
-      console.log("\nDetected words:");
       words.forEach(w => {
         const isJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text);
-        console.log(`  "${w.text}" at col ${w.col} [Japanese: ${isJapanese}]`);
       });
 
       // Verify no Japanese characters are detected
@@ -95,11 +84,7 @@ describe("Japanese Exclusion Verification", () => {
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(text, 1);
 
-      console.log("\n=== Process8 Test ===");
-      console.log("Text:", text);
-      console.log("\nDetected words:");
       words.forEach(w => {
-        console.log(`  "${w.text}" at col ${w.col}`);
       });
 
       // Should detect Process8 as one word
@@ -127,18 +112,13 @@ describe("Japanese Exclusion Verification", () => {
       const detector = new RegexWordDetector(config);
       const words = await detector.detectWords(vimConfigLine, 1);
 
-      console.log("\n=== Vim Config Line Test ===");
-      console.log("Text:", vimConfigLine);
-      console.log("\nDetected words:");
 
       let foundJapaneseChar = false;
       words.forEach(w => {
         const isJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text);
         if (isJapanese) {
-          console.log(`  ❌ JAPANESE DETECTED: "${w.text}" at col ${w.col}`);
           foundJapaneseChar = true;
         } else {
-          console.log(`  ✓ "${w.text}" at col ${w.col}`);
         }
       });
 

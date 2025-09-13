@@ -40,7 +40,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     assertEquals(typeof result.detector, "string");
     assertEquals(typeof result.performance.duration, "number");
 
-    console.log("End-to-end result:", {
       success: result.success,
       wordCount: result.words.length,
       detector: result.detector,
@@ -76,7 +75,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
       const result = await detectWordsWithManager(mockDenops, config);
 
       assertEquals(result.success, true);
-      console.log(`Strategy ${strategy}: ${result.words.length} words via ${result.detector}`);
     }
   });
 
@@ -96,7 +94,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
-    console.log("Fallback test:", {
       success: result.success,
       detector: result.detector,
       wordCount: result.words.length
@@ -123,8 +120,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     assertEquals(typeof stats.average_duration, "number");
     assertEquals(typeof cacheStats.hitRate, "number");
 
-    console.log("Performance stats:", stats);
-    console.log("Cache stats:", cacheStats);
   });
 
   await t.step("Configuration validation", async () => {
@@ -139,7 +134,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     for (const config of validConfigs) {
       const result = await detectWordsWithManager(mockDenops, config);
       assertEquals(result.success, true);
-      console.log(`Config ${JSON.stringify(config)}: OK`);
     }
   });
 
@@ -157,7 +151,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     }
 
     const cacheStats = manager.getCacheStats();
-    console.log("Cache stats after overflow test:", cacheStats);
     assertEquals(cacheStats.size <= cacheStats.maxSize, true); // Should not exceed max size
 
     // Clear cache
@@ -165,7 +158,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     const clearedStats = manager.getCacheStats();
     assertEquals(clearedStats.size, 0);
 
-    console.log("Cache management test passed");
   });
 
   await t.step("Real-world text scenarios", async () => {
@@ -219,10 +211,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
       assertEquals(result.success, true);
       assertEquals(result.words.length > 0, true);
 
-      console.log(`${scenario.name}: ${result.words.length} words via ${result.detector}`);
-      console.log(`  Sample words: ${result.words.slice(0, 5).map(w => `"${w.text}"`).join(", ")}`);
     }
   });
 });
 
-console.log("✅ Integration tests loaded successfully");

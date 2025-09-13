@@ -65,9 +65,6 @@ describe("Max Hints and Capacity Calculation", () => {
       assertEquals(hints.length, wordCount);
 
       // すべての単語にヒントが割り当てられることを確認
-      console.log("Generated hints for vim config:");
-      console.log("  Single char (1-10):", hints.slice(0, 10).join(", "));
-      console.log("  Multi char (11-42):", hints.slice(10, 42).join(", "));
 
       // 最初の単語 "let" には最初のヒント "A" が割り当てられるべき
       assertEquals(hints[0], "A");

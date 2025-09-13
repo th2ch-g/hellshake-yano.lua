@@ -13,7 +13,6 @@ Deno.test("日本語1文字単語の検出", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("検出された単語:", wordTexts);
 
     // 最低限「私」と「本」が検出されることを期待
     assertEquals(wordTexts.includes("私"), true, "「私」が検出されるべき");
@@ -26,7 +25,6 @@ Deno.test("日本語1文字単語の検出", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("検出された単語:", wordTexts);
 
     // ひらがなが何らかの形で検出されることを確認
     assertEquals(words.length > 0, true, "ひらがなの単語が検出されるべき");
@@ -38,7 +36,6 @@ Deno.test("日本語1文字単語の検出", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("検出された単語:", wordTexts);
 
     // カタカナが検出されることを確認
     assertEquals(words.length > 0, true, "カタカナの単語が検出されるべき");
@@ -50,7 +47,6 @@ Deno.test("日本語1文字単語の検出", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("検出された単語:", wordTexts);
 
     // 「今」と「日」が個別に検出されるか、「今日」として検出される
     assertEquals(words.length > 0, true, "日本語の単語が検出されるべき");
@@ -62,7 +58,6 @@ Deno.test("日本語1文字単語の検出", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("検出された単語:", wordTexts);
 
     // 1文字の "I" と "a" は除外される
     assertEquals(wordTexts.includes("I"), false, "1文字の'I'は除外されるべき");
@@ -76,7 +71,6 @@ Deno.test("日本語1文字単語の検出", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("検出された単語:", wordTexts);
 
     // 日本語と英語の両方が検出される
     assertEquals(wordTexts.includes("私"), true, "「私」が検出されるべき");
@@ -91,7 +85,6 @@ Deno.test("日本語文字の個別分割", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("個別分割された単語:", wordTexts);
 
     // 各文字が個別に検出されることを期待
     assertEquals(wordTexts.includes("今"), true, "「今」が検出されるべき");
@@ -105,7 +98,6 @@ Deno.test("日本語文字の個別分割", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("個別分割された単語:", wordTexts);
 
     // 各ひらがなが個別に検出される
     assertEquals(wordTexts.includes("あ"), true, "「あ」が検出されるべき");
@@ -121,7 +113,6 @@ Deno.test("日本語文字の個別分割", async (t) => {
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
     const wordTexts = words.map(w => w.text);
-    console.log("個別分割された単語:", wordTexts);
 
     // 各カタカナが個別に検出される
     assertEquals(wordTexts.includes("カ"), true, "「カ」が検出されるべき");
@@ -134,7 +125,6 @@ Deno.test("日本語文字の個別分割", async (t) => {
     const text = "私は元気";
     const words = extractWordsFromLineWithConfig(text, 1, config);
 
-    console.log("単語と位置:", words.map(w => ({ text: w.text, col: w.col })));
 
     // 「私」の位置確認
     const watashi = words.find(w => w.text === "私");
