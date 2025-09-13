@@ -75,7 +75,7 @@ let fallbackMatchIds: number[] = []; // matchadd()のフォールバック用ID
 // パフォーマンス最適化用の状態管理
 let debounceTimeoutId: number | undefined;
 let lastShowHintsTime = 0;
-let wordsCache: { bufnr: number; content: string; words: any[] } | null = null;
+let wordsCache: { bufnr: number; topLine: number; bottomLine: number; content: string; words: any[] } | null = null;
 let hintsCache: { wordCount: number; hints: string[] } | null = null;
 
 /**
@@ -785,28 +785,36 @@ export async function main(denops: Denops): Promise<void> {
  */
 async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[]> {
   try {
-    // バッファの内容を取得してキャッシュと比較
-    const lines = await denops.call("getbufline", bufnr, 1, "$") as string[];
+    // 現在の表示範囲を取得
+    const topLine = await denops.call("line", "w0") as number;
+    const bottomLine = await denops.call("line", "w$") as number;
+
+    // 表示範囲の内容を取得してキャッシュと比較
+    const lines = await denops.call("getbufline", bufnr, topLine, bottomLine) as string[];
     const content = lines.join("\n");
-    
-    // キャッシュヒットチェック
-    if (wordsCache && wordsCache.bufnr === bufnr && wordsCache.content === content) {
+
+    // キャッシュヒットチェック（表示範囲も含めて比較）
+    if (wordsCache &&
+        wordsCache.bufnr === bufnr &&
+        wordsCache.topLine === topLine &&
+        wordsCache.bottomLine === bottomLine &&
+        wordsCache.content === content) {
       console.log("[hellshake-yano] Using cached word detection results");
       return wordsCache.words;
     }
-    
+
     // キャッシュミスの場合、新たに単語を検出（設定に基づいて改善版を使用）
-    console.log(`[hellshake-yano] Cache miss, detecting words (improved: ${config.use_improved_detection !== false})...`);
+    console.log(`[hellshake-yano] Cache miss, detecting words for lines ${topLine}-${bottomLine} (improved: ${config.use_improved_detection !== false})...`);
     const words = await detectWordsWithConfig(denops, {
       use_japanese: config.use_japanese,
       use_improved_detection: config.use_improved_detection !== false  // undefined の場合も true として扱う
     });
-    
+
     // キャッシュを更新（メモリ使用量を制限）
     if (content.length < 1000000) { // 1MB未満のファイルのみキャッシュ
-      wordsCache = { bufnr, content, words };
+      wordsCache = { bufnr, topLine, bottomLine, content, words };
     }
-    
+
     return words;
   } catch (error) {
     console.error("[hellshake-yano] Error in detectWordsOptimized:", error);
