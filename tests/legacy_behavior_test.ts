@@ -10,7 +10,8 @@ import { extractWordsFromLineOriginal } from "../denops/hellshake-yano/word.ts";
  * Key characteristics of extractWordsFromLineOriginal:
  * - Minimum word length: 2 characters
  * - Skips number-only words
- * - Does NOT split kebab-case or snake_case
+ * - SPLITS kebab-case (hyphens are NOT word characters)
+ * - Does NOT split snake_case (underscores ARE word characters)
  * - Simple regex matching with Unicode support
  * - Handles Japanese text (hiragana, katakana, kanji)
  */
