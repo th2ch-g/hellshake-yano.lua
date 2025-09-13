@@ -910,14 +910,6 @@ async function displayHintsOptimized(denops: Denops, hints: HintMapping[]): Prom
       // Vim: バッチ処理でmatchaddを作成
       await displayHintsWithMatchAddBatch(denops, hints);
     }
-
-    // 表示フィードバック
-    const displayedCount = hints.length;
-    if (displayedCount > 0) {
-      await denops.cmd(`echo 'Displayed ${displayedCount} hints. Press a hint key to jump.'`);
-    } else {
-      await denops.cmd("echo 'No hints to display'");
-    }
   } catch (error) {
     // console.error("[hellshake-yano] Critical error in displayHintsOptimized:", error);
 
