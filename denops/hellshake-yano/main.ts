@@ -1,9 +1,23 @@
 import type { Denops } from "@denops/std";
-import { detectWords } from "./word.ts";
-import { assignHintsToWords, generateHints, type HintMapping } from "./hint.ts";
+import { detectWords, detectWordsWithConfig, extractWordsFromLineWithConfig, type WordConfig } from "./word.ts";
+import {
+  assignHintsToWords,
+  generateHints,
+  generateHintsWithGroups,
+  validateHintKeyConfig,
+  calculateHintPosition,
+  type HintMapping,
+  type HintKeyConfig
+} from "./hint.ts";
+
+// ハイライト色の個別指定インターフェース
+export interface HighlightColor {
+  fg?: string;  // 前景色（'Red' or '#ff0000' or 'NONE'）
+  bg?: string;  // 背景色（'Blue' or '#0000ff' or 'NONE'）
+}
 
 // 設定の型定義
-interface Config {
+export interface Config {
   markers: string[];
   motion_count: number;
   motion_timeout: number;
@@ -14,6 +28,16 @@ interface Config {
   debounceDelay: number; // デバウンス遅延時間
   use_numbers: boolean; // 数字(0-9)をヒント文字として使用
   highlight_selected: boolean; // 選択中のヒントをハイライト（UX改善）
+  // Process 50 Sub2: 1文字/2文字ヒント割り当て設定
+  single_char_keys?: string[]; // 1文字ヒント専用キー
+  multi_char_keys?: string[]; // 2文字以上ヒント専用キー
+  max_single_char_hints?: number; // 1文字ヒントの最大数
+  use_hint_groups?: boolean; // ヒントグループ機能を使用するか
+  // Process 50 Sub3: 日本語除外機能
+  use_japanese?: boolean; // 日本語を含む単語検出を行うか（デフォルト: false）
+  // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
+  highlight_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
+  highlight_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
 }
 
 // グローバル状態
@@ -29,6 +53,15 @@ let config: Config = {
   debounceDelay: 50, // 50msのデバウンス
   use_numbers: false, // デフォルトでは数字は使用しない
   highlight_selected: true, // デフォルトで選択中ヒントをハイライト
+  // Process 50 Sub3: デフォルトのキー分離設定
+  single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
+  multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
+  max_single_char_hints: 11,
+  use_hint_groups: true, // デフォルトで有効
+  use_japanese: false, // Process 50 Sub3: デフォルトで日本語除外
+  // Process 50 Sub5: ハイライト色設定のデフォルト値
+  highlight_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
+  highlight_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
 };
 
 let currentHints: HintMapping[] = [];
@@ -132,6 +165,100 @@ export async function main(denops: Denops): Promise<void> {
       // highlight_selected の適用（UX改善）
       if (typeof cfg.highlight_selected === "boolean") {
         config.highlight_selected = cfg.highlight_selected;
+      }
+
+      // maxHints の検証（1以上の整数）
+      if (typeof cfg.maxHints === "number") {
+        if (cfg.maxHints >= 1 && Number.isInteger(cfg.maxHints)) {
+          config.maxHints = cfg.maxHints;
+        } else {
+          console.warn(`[hellshake-yano] Invalid maxHints: ${cfg.maxHints}, must be integer >= 1`);
+        }
+      }
+
+      // debounceDelay の検証（0以上の数値）
+      if (typeof cfg.debounceDelay === "number") {
+        if (cfg.debounceDelay >= 0) {
+          config.debounceDelay = cfg.debounceDelay;
+        } else {
+          console.warn(`[hellshake-yano] Invalid debounceDelay: ${cfg.debounceDelay}, must be >= 0`);
+        }
+      }
+
+      // Process 50 Sub2: ヒントグループ設定の適用
+      // single_char_keys の検証と適用
+      if (cfg.single_char_keys && Array.isArray(cfg.single_char_keys)) {
+        const validKeys = cfg.single_char_keys.filter((k): k is string =>
+          typeof k === "string" && k.length === 1
+        );
+        if (validKeys.length > 0) {
+          config.single_char_keys = validKeys;
+          console.log(`[hellshake-yano] Single char keys set: ${validKeys.join(", ")}`);
+        } else {
+          console.warn("[hellshake-yano] Invalid single_char_keys provided");
+        }
+      }
+
+      // multi_char_keys の検証と適用
+      if (cfg.multi_char_keys && Array.isArray(cfg.multi_char_keys)) {
+        const validKeys = cfg.multi_char_keys.filter((k): k is string =>
+          typeof k === "string" && k.length === 1
+        );
+        if (validKeys.length > 0) {
+          config.multi_char_keys = validKeys;
+          console.log(`[hellshake-yano] Multi char keys set: ${validKeys.join(", ")}`);
+        } else {
+          console.warn("[hellshake-yano] Invalid multi_char_keys provided");
+        }
+      }
+
+      // max_single_char_hints の検証
+      if (typeof cfg.max_single_char_hints === "number") {
+        if (cfg.max_single_char_hints >= 0 && Number.isInteger(cfg.max_single_char_hints)) {
+          config.max_single_char_hints = cfg.max_single_char_hints;
+        } else {
+          console.warn(`[hellshake-yano] Invalid max_single_char_hints: ${cfg.max_single_char_hints}`);
+        }
+      }
+
+      // use_hint_groups の適用
+      if (typeof cfg.use_hint_groups === "boolean") {
+        config.use_hint_groups = cfg.use_hint_groups;
+        console.log(`[hellshake-yano] Hint groups feature: ${cfg.use_hint_groups ? "enabled" : "disabled"}`);
+      }
+
+      // Process 50 Sub3: use_japanese の適用
+      if (typeof cfg.use_japanese === "boolean") {
+        config.use_japanese = cfg.use_japanese;
+        console.log(`[hellshake-yano] Japanese word detection: ${cfg.use_japanese ? "enabled" : "disabled"}`);
+      }
+
+      // Process 50 Sub5: highlight_marker の検証と適用（fg/bg対応）
+      if (cfg.highlight_marker !== undefined) {
+        const markerResult = validateHighlightColor(cfg.highlight_marker);
+        if (markerResult.valid) {
+          config.highlight_marker = cfg.highlight_marker;
+          const displayValue = typeof cfg.highlight_marker === 'string'
+            ? cfg.highlight_marker
+            : JSON.stringify(cfg.highlight_marker);
+          console.log(`[hellshake-yano] Highlight marker set: ${displayValue}`);
+        } else {
+          console.warn(`[hellshake-yano] Invalid highlight_marker: ${markerResult.errors.join(', ')}`);
+        }
+      }
+
+      // Process 50 Sub5: highlight_marker_current の検証と適用（fg/bg対応）
+      if (cfg.highlight_marker_current !== undefined) {
+        const currentResult = validateHighlightColor(cfg.highlight_marker_current);
+        if (currentResult.valid) {
+          config.highlight_marker_current = cfg.highlight_marker_current;
+          const displayValue = typeof cfg.highlight_marker_current === 'string'
+            ? cfg.highlight_marker_current
+            : JSON.stringify(cfg.highlight_marker_current);
+          console.log(`[hellshake-yano] Highlight marker current set: ${displayValue}`);
+        } else {
+          console.warn(`[hellshake-yano] Invalid highlight_marker_current: ${currentResult.errors.join(', ')}`);
+        }
       }
     },
 
@@ -643,7 +770,7 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     
     // キャッシュミスの場合、新たに単語を検出
     console.log("[hellshake-yano] Cache miss, detecting words...");
-    const words = await detectWords(denops);
+    const words = await detectWordsWithConfig(denops, { use_japanese: config.use_japanese });
     
     // キャッシュを更新（メモリ使用量を制限）
     if (content.length < 1000000) { // 1MB未満のファイルのみキャッシュ
@@ -654,7 +781,7 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
   } catch (error) {
     console.error("[hellshake-yano] Error in detectWordsOptimized:", error);
     // フォールバックとして通常の単語検出を使用
-    return await detectWords(denops);
+    return await detectWordsWithConfig(denops, { use_japanese: config.use_japanese });
   }
 }
 
@@ -662,21 +789,42 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
  * キャッシュを使用した最適化済みヒント生成
  */
 function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
+  // Process 50 Sub2: ヒントグループ機能を使用する場合
+  if (config.use_hint_groups && (config.single_char_keys || config.multi_char_keys)) {
+    const hintConfig: HintKeyConfig = {
+      single_char_keys: config.single_char_keys,
+      multi_char_keys: config.multi_char_keys,
+      max_single_char_hints: config.max_single_char_hints,
+      markers: markers
+    };
+
+    // 設定の検証
+    const validation = validateHintKeyConfig(hintConfig);
+    if (!validation.valid) {
+      console.error("[hellshake-yano] Invalid hint key configuration:", validation.errors);
+      // フォールバックとして通常のヒント生成を使用
+      return generateHints(wordCount, markers);
+    }
+
+    return generateHintsWithGroups(wordCount, hintConfig);
+  }
+
+  // 従来のヒント生成処理
   // キャッシュヒットチェック
   if (hintsCache && hintsCache.wordCount === wordCount) {
     console.log("[hellshake-yano] Using cached hint generation results");
     return hintsCache.hints.slice(0, wordCount);
   }
-  
+
   // キャッシュミスの場合、新たにヒントを生成
   console.log("[hellshake-yano] Cache miss, generating hints...");
   const hints = generateHints(wordCount, markers);
-  
+
   // キャッシュを更新（最大1000個まで）
   if (wordCount <= 1000) {
     hintsCache = { wordCount, hints };
   }
-  
+
   return hints;
 }
 
@@ -743,23 +891,13 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          // hint_positionに基づいてカラム位置を計算
-          let col: number;
+          // Process 50 Sub3: 新しい位置計算関数を使用
+          const position = calculateHintPosition(word, config.hint_position);
+          const col = position.col - 1; // Vimの0ベース配列に変換
           let virtTextPos: "overlay" | "eol" = "overlay";
-          
-          switch (config.hint_position) {
-            case "start":
-              col = word.col - 1;
-              break;
-            case "end":
-              col = word.col + word.text.length - 1;
-              break;
-            case "overlay":
-              col = word.col - 1;
-              virtTextPos = "overlay";
-              break;
-            default:
-              col = word.col - 1;
+
+          if (position.display_mode === "overlay") {
+            virtTextPos = "overlay";
           }
           
           // 行とカラムの境界チェック
@@ -826,22 +964,20 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
       // バッチ内の各matchを作成
       const matchPromises = batch.map(async ({ word, hint }) => {
         try {
-          // hint_positionに基づいてパターンを調整
+          // Process 50 Sub3: 新しい位置計算関数を使用してパターンを生成
+          const position = calculateHintPosition(word, config.hint_position);
           let pattern: string;
-          switch (config.hint_position) {
-            case "start":
-              pattern = `\\%${word.line}l\\%${word.col}c.`;
+
+          switch (position.display_mode) {
+            case "before":
+            case "after":
+              pattern = `\\%${position.line}l\\%${position.col}c.`;
               break;
-            case "end": {
-              const endCol = word.col + word.text.length - 1;
-              pattern = `\\%${word.line}l\\%${endCol}c.`;
-              break;
-            }
             case "overlay":
               pattern = `\\%${word.line}l\\%>${word.col - 1}c\\%<${word.col + word.text.length + 1}c`;
               break;
             default:
-              pattern = `\\%${word.line}l\\%${word.col}c.`;
+              pattern = `\\%${position.line}l\\%${position.col}c.`;
           }
           
           const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
@@ -898,23 +1034,13 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          // hint_positionに基づいてカラム位置を計算
-          let col: number;
+          // Process 50 Sub3: 新しい位置計算関数を使用
+          const position = calculateHintPosition(word, config.hint_position);
+          const col = position.col - 1; // Vimの0ベース配列に変換
           let virtTextPos: "overlay" | "eol" = "overlay";
-          
-          switch (config.hint_position) {
-            case "start":
-              col = word.col - 1;
-              break;
-            case "end":
-              col = word.col + word.text.length - 1;
-              break;
-            case "overlay":
-              col = word.col - 1;
-              virtTextPos = "overlay";
-              break;
-            default:
-              col = word.col - 1; // デフォルトは開始位置
+
+          if (position.display_mode === "overlay") {
+            virtTextPos = "overlay";
           }
           
           // 行とカラムの境界チェック
@@ -987,26 +1113,21 @@ async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[]): P
   try {
     for (const { word, hint } of hints) {
       try {
-        // hint_positionに基づいてパターンを調整
+        // Process 50 Sub3: 新しい位置計算関数を使用してパターンを生成
+        const position = calculateHintPosition(word, config.hint_position);
         let pattern: string;
-        switch (config.hint_position) {
-          case "start":
-            // 単語の開始位置にマッチ
-            pattern = `\\%${word.line}l\\%${word.col}c.`;
+
+        switch (position.display_mode) {
+          case "before":
+          case "after":
+            pattern = `\\%${position.line}l\\%${position.col}c.`;
             break;
-          case "end": {
-            // 単語の終了位置にマッチ
-            const endCol = word.col + word.text.length - 1;
-            pattern = `\\%${word.line}l\\%${endCol}c.`;
-            break;
-          }
           case "overlay":
             // 単語全体にマッチ（オーバーレイ風）
             pattern = `\\%${word.line}l\\%>${word.col - 1}c\\%<${word.col + word.text.length + 1}c`;
             break;
           default:
-            // デフォルトは開始位置
-            pattern = `\\%${word.line}l\\%${word.col}c.`;
+            pattern = `\\%${position.line}l\\%${position.col}c.`;
         }
         
         const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
@@ -1106,19 +1227,32 @@ async function highlightCandidateHints(
 
     if (candidates.length === 0) return;
 
+    // バッファの存在確認
+    const bufnr = await denops.call("bufnr", "%") as number;
+    if (bufnr === -1) return;
+
     // Neovimの場合はextmarkでハイライト
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
       for (const candidate of candidates) {
         try {
+          // Process 50 Sub5: 新しい位置計算関数を使用してカスタム色を適用
+          const position = calculateHintPosition(candidate.word, config.hint_position);
+          const col = position.col - 1; // Vimの0ベース配列に変換
+          let virtTextPos: "overlay" | "eol" = "overlay";
+
+          if (position.display_mode === "overlay") {
+            virtTextPos = "overlay";
+          }
+
           await denops.call(
             "nvim_buf_set_extmark",
-            0,
+            bufnr,
             extmarkNamespace,
             candidate.word.line - 1,
-            candidate.word.col - 1,
+            Math.max(0, col),
             {
               virt_text: [[candidate.hint, "HellshakeYanoMarkerCurrent"]],
-              virt_text_pos: "overlay",
+              virt_text_pos: virtTextPos,
               priority: 999,
             }
           );
@@ -1130,7 +1264,23 @@ async function highlightCandidateHints(
       // Vimの場合はmatchadd()でハイライト（フォールバック）
       for (const candidate of candidates) {
         try {
-          const pattern = `\\%${candidate.word.line}l\\%${candidate.word.col}c${candidate.hint}`;
+          // Process 50 Sub5: 新しい位置計算関数を使用してパターンを生成
+          const position = calculateHintPosition(candidate.word, config.hint_position);
+          let pattern: string;
+
+          switch (position.display_mode) {
+            case "before":
+            case "after":
+              pattern = `\\%${position.line}l\\%${position.col}c.`;
+              break;
+            case "overlay":
+              // 単語全体にマッチ（オーバーレイ風）
+              pattern = `\\%${candidate.word.line}l\\%>${candidate.word.col - 1}c\\%<${candidate.word.col + candidate.word.text.length + 1}c`;
+              break;
+            default:
+              pattern = `\\%${position.line}l\\%${position.col}c.`;
+          }
+
           const matchId = await denops.call(
             "matchadd",
             "HellshakeYanoMarkerCurrent",
@@ -1195,6 +1345,22 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       return;
     }
 
+    // 元の入力が大文字かどうかを記録（A-Z: 65-90）
+    const wasUpperCase = char >= 65 && char <= 90;
+    // 元の入力が数字かどうかを記録（0-9: 48-57）
+    const wasNumber = char >= 48 && char <= 57;
+    // 元の入力が小文字かどうかを記録（a-z: 97-122）
+    const wasLowerCase = char >= 97 && char <= 122;
+
+    // 小文字の場合は、ヒントをキャンセルして通常のVim動作を実行
+    if (wasLowerCase) {
+      await hideHints(denops);
+      // 小文字をそのままVimに渡す
+      const originalChar = String.fromCharCode(char);
+      await denops.call("feedkeys", originalChar, "n");
+      return;
+    }
+
     // 文字に変換
     let inputChar: string;
     try {
@@ -1226,26 +1392,10 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       return;
     }
 
-    // 単一文字のヒントを探す
-    const singleCharTarget = currentHints.find((h) => h.hint === inputChar);
+    // 入力文字で始まる全てのヒントを探す（単一文字と複数文字の両方）
+    const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
 
-    if (singleCharTarget) {
-      // 単一文字のヒントが見つかった場合、すぐにジャンプ
-      try {
-        await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
-        await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"'`);
-      } catch (jumpError) {
-        console.error("[hellshake-yano] Failed to jump to target:", jumpError);
-        await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
-      }
-      await hideHints(denops);
-      return;
-    }
-
-    // 複数文字のヒントの可能性をチェック
-    const multiCharHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
-
-    if (multiCharHints.length === 0) {
+    if (matchingHints.length === 0) {
       // 該当するヒントがない場合は終了（視覚・音声フィードバック付き）
       await denops.cmd("echohl WarningMsg | echo 'No matching hint found' | echohl None");
       try {
@@ -1257,32 +1407,103 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       return;
     }
 
+    // 単一文字のヒントと複数文字のヒントを分離
+    const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
+    const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
+
+    // Process 50 Sub3: 1文字/2文字キーの完全分離
+    if (config.use_hint_groups) {
+      // デフォルトのキー設定
+      const singleOnlyKeys = config.single_char_keys || ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"];
+      const multiOnlyKeys = config.multi_char_keys || ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+
+      // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
+      if (singleOnlyKeys.includes(inputChar) && singleCharTarget) {
+        try {
+          await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
+          await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
+        } catch (jumpError) {
+          console.error("[hellshake-yano] Failed to jump to target:", jumpError);
+          await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
+        }
+        await hideHints(denops);
+        return;
+      }
+
+      // 2文字専用キーの場合：必ず2文字目を待つ（タイムアウトなし）
+      if (multiOnlyKeys.includes(inputChar) && multiCharHints.length > 0) {
+        // 2文字目の入力を待つ処理は後続のコードで実行される
+        // ただし、タイムアウト処理をスキップするフラグを設定
+        // この場合は通常の処理フローを続ける
+      }
+    } else {
+      // 従来のロジック（後方互換性）
+      // 複数文字ヒントが存在する場合は待機、単一文字のみの場合は即座にジャンプ
+      if (matchingHints.length === 1 && singleCharTarget) {
+        // マッチするヒントが1つだけで、それが単一文字の場合のみ即座にジャンプ
+        try {
+          await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
+          await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
+        } catch (jumpError) {
+          console.error("[hellshake-yano] Failed to jump to target:", jumpError);
+          await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
+        }
+        await hideHints(denops);
+        return;
+      }
+    }
+
     // 候補のヒントをハイライト表示（UX改善）
-    if (config.highlight_selected && multiCharHints.length > 1) {
+    if (config.highlight_selected && matchingHints.length > 1) {
       await highlightCandidateHints(denops, inputChar);
     }
 
     // 第2文字の入力を待機
     await denops.cmd(`echo 'Select hint: ${inputChar}' | redraw`);
-    
-    // 短いタイムアウトで第2文字を取得
-    const secondInputPromise = denops.call("getchar") as Promise<number>;
-    const secondTimeoutPromise = new Promise<number>((resolve) => {
-      timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
-    });
-    
-    const secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
 
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
+    let secondChar: number;
+
+    // Process 50 Sub3: 2文字専用キーの場合はタイムアウトなし
+    if (config.use_hint_groups) {
+      const multiOnlyKeys = config.multi_char_keys || ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+
+      if (multiOnlyKeys.includes(inputChar)) {
+        // 2文字専用キーの場合：タイムアウトなしで2文字目を待つ
+        secondChar = await denops.call("getchar") as number;
+      } else {
+        // それ以外（従来の動作）：タイムアウトあり
+        const secondInputPromise = denops.call("getchar") as Promise<number>;
+        const secondTimeoutPromise = new Promise<number>((resolve) => {
+          timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
+        });
+
+        secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
+      }
+    } else {
+      // 従来の動作：タイムアウトあり
+      const secondInputPromise = denops.call("getchar") as Promise<number>;
+      const secondTimeoutPromise = new Promise<number>((resolve) => {
+        timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
+      });
+
+      secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
     }
 
     if (secondChar === -1) {
       // タイムアウトの場合
-      if (multiCharHints.length === 1) {
+      if (matchingHints.length === 1) {
         // 候補が1つの場合は自動選択
-        const target = multiCharHints[0];
+        const target = matchingHints[0];
         try {
           await denops.call("cursor", target.word.line, target.word.col);
           await denops.cmd(`echo 'Auto-selected "${target.word.text}"'`);
@@ -1290,8 +1511,17 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           console.error("[hellshake-yano] Failed to jump to auto-selected target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
         }
+      } else if (singleCharTarget) {
+        // タイムアウトで単一文字ヒントがある場合はそれを選択
+        try {
+          await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
+          await denops.cmd(`echo 'Selected "${singleCharTarget.word.text}" (timeout)' | redraw`);
+        } catch (jumpError) {
+          console.error("[hellshake-yano] Failed to jump to single char target:", jumpError);
+          await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
+        }
       } else {
-        await denops.cmd(`echo 'Timeout - ${multiCharHints.length} candidates available'`);
+        await denops.cmd(`echo 'Timeout - ${matchingHints.length} candidates available'`);
       }
       await hideHints(denops);
       return;
@@ -1375,4 +1605,362 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     await hideHints(denops);
     throw error;
   }
+}
+
+/**
+ * 設定値を検証する関数（テスト用にエクスポート）
+ * @param cfg 検証する設定オブジェクト
+ * @returns 検証結果（valid: 成功/失敗、errors: エラーメッセージ配列）
+ */
+export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // motion_count の検証
+  if (cfg.motion_count !== undefined) {
+    if (typeof cfg.motion_count !== 'number' || cfg.motion_count < 1 || !Number.isInteger(cfg.motion_count)) {
+      errors.push("motion_count must be a positive integer");
+    }
+  }
+
+  // motion_timeout の検証
+  if (cfg.motion_timeout !== undefined) {
+    if (typeof cfg.motion_timeout !== 'number' || cfg.motion_timeout < 100) {
+      errors.push("motion_timeout must be at least 100ms");
+    }
+  }
+
+  // hint_position の検証
+  if (cfg.hint_position !== undefined) {
+    const validPositions = ['start', 'end', 'overlay'];
+    if (!validPositions.includes(cfg.hint_position)) {
+      errors.push(`hint_position must be one of: ${validPositions.join(', ')}`);
+    }
+  }
+
+  // markers の検証
+  if (cfg.markers !== undefined) {
+    if (!Array.isArray(cfg.markers)) {
+      errors.push("markers must be an array");
+    } else if (cfg.markers.length === 0) {
+      errors.push("markers must not be empty");
+    } else if (!cfg.markers.every((m: any) => typeof m === 'string' && m.length > 0)) {
+      errors.push("markers must be an array of strings");
+    }
+  }
+
+  // use_numbers の検証
+  if (cfg.use_numbers !== undefined) {
+    if (typeof cfg.use_numbers !== 'boolean') {
+      errors.push("use_numbers must be a boolean");
+    }
+  }
+
+  // maxHints の検証
+  if (cfg.maxHints !== undefined) {
+    if (typeof cfg.maxHints !== 'number' || cfg.maxHints < 1 || !Number.isInteger(cfg.maxHints)) {
+      errors.push("maxHints must be a positive integer");
+    }
+  }
+
+  // debounceDelay の検証
+  if (cfg.debounceDelay !== undefined) {
+    if (typeof cfg.debounceDelay !== 'number' || cfg.debounceDelay < 0) {
+      errors.push("debounceDelay must be a non-negative number");
+    }
+  }
+
+  // highlight_selected の検証
+  if (cfg.highlight_selected !== undefined) {
+    if (typeof cfg.highlight_selected !== 'boolean') {
+      errors.push("highlight_selected must be a boolean");
+    }
+  }
+
+  // trigger_on_hjkl の検証
+  if (cfg.trigger_on_hjkl !== undefined) {
+    if (typeof cfg.trigger_on_hjkl !== 'boolean') {
+      errors.push("trigger_on_hjkl must be a boolean");
+    }
+  }
+
+  // enabled の検証
+  if (cfg.enabled !== undefined) {
+    if (typeof cfg.enabled !== 'boolean') {
+      errors.push("enabled must be a boolean");
+    }
+  }
+
+  // Process 50 Sub3: use_japanese の検証
+  if (cfg.use_japanese !== undefined) {
+    if (typeof cfg.use_japanese !== 'boolean') {
+      errors.push("use_japanese must be a boolean");
+    }
+  }
+
+  // Process 50 Sub5: highlight_marker の検証（fg/bg対応）
+  if (cfg.highlight_marker !== undefined) {
+    const markerResult = validateHighlightColor(cfg.highlight_marker);
+    if (!markerResult.valid) {
+      errors.push(...markerResult.errors.map(e => `highlight_marker: ${e}`));
+    }
+  }
+
+  // Process 50 Sub5: highlight_marker_current の検証（fg/bg対応）
+  if (cfg.highlight_marker_current !== undefined) {
+    const currentResult = validateHighlightColor(cfg.highlight_marker_current);
+    if (!currentResult.valid) {
+      errors.push(...currentResult.errors.map(e => `highlight_marker_current: ${e}`));
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * デフォルト設定を取得（テスト用にエクスポート）
+ */
+export function getDefaultConfig(): Config {
+  return {
+    markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+    motion_count: 3,
+    motion_timeout: 2000,
+    hint_position: "start",
+    trigger_on_hjkl: true,
+    enabled: true,
+    maxHints: 100,
+    debounceDelay: 50,
+    use_numbers: false,
+    highlight_selected: false,
+    // Process 50 Sub5: ハイライト色設定のデフォルト値
+    highlight_marker: "DiffAdd",
+    highlight_marker_current: "DiffText",
+  };
+}
+
+/**
+ * ハイライトグループ名を検証する関数
+ * Vimのハイライトグループ名は以下のルールに従う必要がある：
+ * - 英字またはアンダースコアで始まる
+ * - 英数字とアンダースコアのみ使用可能
+ * - 100文字以下
+ * @param groupName 検証するハイライトグループ名
+ * @returns 有効な場合はtrue、無効な場合はfalse
+ */
+export function validateHighlightGroupName(groupName: string): boolean {
+  // 空文字列チェック
+  if (!groupName || groupName.length === 0) {
+    return false;
+  }
+
+  // 長さチェック（100文字以下）
+  if (groupName.length > 100) {
+    return false;
+  }
+
+  // 最初の文字は英字またはアンダースコアでなければならない
+  const firstChar = groupName.charAt(0);
+  if (!/[a-zA-Z_]/.test(firstChar)) {
+    return false;
+  }
+
+  // 全体の文字列は英数字とアンダースコアのみ
+  if (!/^[a-zA-Z0-9_]+$/.test(groupName)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * 色名が有効なVim色名かどうか検証する
+ * @param colorName 検証する色名
+ * @returns 有効な場合はtrue、無効な場合はfalse
+ */
+export function isValidColorName(colorName: string): boolean {
+  if (!colorName || typeof colorName !== 'string') {
+    return false;
+  }
+
+  // 標準的なVim色名（大文字小文字不区別）
+  const validColorNames = [
+    'black', 'darkblue', 'darkgreen', 'darkcyan', 'darkred', 'darkmagenta',
+    'brown', 'darkgray', 'darkgrey', 'lightgray', 'lightgrey', 'lightblue',
+    'lightgreen', 'lightcyan', 'lightred', 'lightmagenta', 'yellow', 'white',
+    'red', 'green', 'blue', 'cyan', 'magenta', 'gray', 'grey', 'none'
+  ];
+
+  return validColorNames.includes(colorName.toLowerCase());
+}
+
+/**
+ * 16進数色表記が有効かどうか検証する
+ * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
+ * @returns 有効な場合はtrue、無効な場合はfalse
+ */
+export function isValidHexColor(hexColor: string): boolean {
+  if (!hexColor || typeof hexColor !== 'string') {
+    return false;
+  }
+
+  // #で始まること
+  if (!hexColor.startsWith('#')) {
+    return false;
+  }
+
+  // #を除いた部分
+  const hex = hexColor.slice(1);
+
+  // 3桁または6桁の16進数
+  if (hex.length !== 3 && hex.length !== 6) {
+    return false;
+  }
+
+  // 有効な16進数文字のみ
+  return /^[0-9a-fA-F]+$/.test(hex);
+}
+
+/**
+ * 色値を正規化する（大文字小文字を統一）
+ * @param color 正規化する色値
+ * @returns 正規化された色値
+ */
+export function normalizeColorName(color: string): string {
+  if (!color || typeof color !== 'string') {
+    return color;
+  }
+
+  // 16進数色の場合はそのまま返す
+  if (color.startsWith('#')) {
+    return color;
+  }
+
+  // 色名の場合は最初の文字を大文字、残りを小文字にする
+  return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
+}
+
+/**
+ * ハイライト色設定を検証する
+ * @param colorConfig 検証するハイライト色設定
+ * @returns 検証結果
+ */
+export function validateHighlightColor(colorConfig: string | HighlightColor): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // 文字列の場合（従来のハイライトグループ名）
+  if (typeof colorConfig === 'string') {
+    if (!validateHighlightGroupName(colorConfig)) {
+      errors.push(`Invalid highlight group name: ${colorConfig}`);
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  // オブジェクトの場合（fg/bg個別指定）
+  if (typeof colorConfig === 'object' && colorConfig !== null) {
+    const { fg, bg } = colorConfig;
+
+    // fgの検証
+    if (fg !== undefined) {
+      if (typeof fg !== 'string') {
+        errors.push('fg must be a string');
+      } else if (fg === '') {
+        errors.push('fg cannot be empty string');
+      } else if (!isValidColorName(fg) && !isValidHexColor(fg)) {
+        errors.push(`Invalid fg color: ${fg}`);
+      }
+    }
+
+    // bgの検証
+    if (bg !== undefined) {
+      if (typeof bg !== 'string') {
+        errors.push('bg must be a string');
+      } else if (bg === '') {
+        errors.push('bg cannot be empty string');
+      } else if (!isValidColorName(bg) && !isValidHexColor(bg)) {
+        errors.push(`Invalid bg color: ${bg}`);
+      }
+    }
+
+    // fgもbgも指定されていない場合
+    if (fg === undefined && bg === undefined) {
+      errors.push('At least one of fg or bg must be specified');
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  errors.push('Color configuration must be a string or object');
+  return { valid: false, errors };
+}
+
+/**
+ * ハイライトコマンドを生成する
+ * @param hlGroupName ハイライトグループ名
+ * @param colorConfig 色設定
+ * @returns 生成されたハイライトコマンド
+ */
+export function generateHighlightCommand(hlGroupName: string, colorConfig: string | HighlightColor): string {
+  // 文字列の場合（従来のハイライトグループ名）
+  if (typeof colorConfig === 'string') {
+    return `highlight default link ${hlGroupName} ${colorConfig}`;
+  }
+
+  // オブジェクトの場合（fg/bg個別指定）
+  const { fg, bg } = colorConfig;
+  const parts = [`highlight ${hlGroupName}`];
+
+  if (fg !== undefined) {
+    const normalizedFg = normalizeColorName(fg);
+    if (fg.startsWith('#')) {
+      // 16進数色の場合はguifgのみ
+      parts.push(`guifg=${fg}`);
+    } else {
+      // 色名の場合はctermfgとguifgの両方
+      parts.push(`ctermfg=${normalizedFg}`);
+      parts.push(`guifg=${normalizedFg}`);
+    }
+  }
+
+  if (bg !== undefined) {
+    const normalizedBg = normalizeColorName(bg);
+    if (bg.startsWith('#')) {
+      // 16進数色の場合はguibgのみ
+      parts.push(`guibg=${bg}`);
+    } else {
+      // 色名の場合はctermbgとguibgの両方
+      parts.push(`ctermbg=${normalizedBg}`);
+      parts.push(`guibg=${normalizedBg}`);
+    }
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * ハイライト設定を検証する（設定更新時に使用）
+ * @param config 検証する設定オブジェクト
+ * @returns 検証結果
+ */
+export function validateHighlightConfig(config: { highlight_marker?: string | HighlightColor; highlight_marker_current?: string | HighlightColor }): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // highlight_markerの検証
+  if (config.highlight_marker !== undefined) {
+    const markerResult = validateHighlightColor(config.highlight_marker);
+    if (!markerResult.valid) {
+      errors.push(...markerResult.errors.map(e => `highlight_marker: ${e}`));
+    }
+  }
+
+  // highlight_marker_currentの検証
+  if (config.highlight_marker_current !== undefined) {
+    const currentResult = validateHighlightColor(config.highlight_marker_current);
+    if (!currentResult.valid) {
+      errors.push(...currentResult.errors.map(e => `highlight_marker_current: ${e}`));
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
