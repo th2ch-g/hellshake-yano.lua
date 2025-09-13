@@ -350,7 +350,7 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
 }
 
 /**
- * 指定されたキーから複数文字ヒントを生成
+ * 指定されたキーから複数文字ヒントを生成（2桁数字フォールバック付き）
  */
 function generateMultiCharHintsFromKeys(keys: string[], count: number): string[] {
   const hints: string[] = [];
@@ -364,7 +364,18 @@ function generateMultiCharHintsFromKeys(keys: string[], count: number): string[]
     }
   }
 
-  // 3文字の組み合わせ（必要な場合）
+  // 2桁数字ヒント（00-99）- アルファベット使い切り後のフォールバック
+  if (generated < count) {
+    const remainingCount = count - generated;
+    const maxNumbers = Math.min(remainingCount, 100); // 最大100個の数字ヒント
+
+    for (let i = 0; i < maxNumbers; i++) {
+      hints.push(i.toString().padStart(2, '0')); // 00, 01, 02, ..., 99
+      generated++;
+    }
+  }
+
+  // 3文字の組み合わせ（数字でも足りない場合のみ）
   if (generated < count) {
     for (let i = 0; i < keys.length && generated < count; i++) {
       for (let j = 0; j < keys.length && generated < count; j++) {

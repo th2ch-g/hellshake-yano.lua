@@ -74,7 +74,7 @@ describe("Hint Assignment with Character Groups", () => {
       assertEquals(multiCharHints[4], "WW");
     });
 
-    it("should handle 3-char hints when needed", () => {
+    it("should handle number hints after alphabet exhaustion", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
         multi_char_keys: ["Q", "W"]  // 2文字で最大4通り
@@ -91,9 +91,9 @@ describe("Hint Assignment with Character Groups", () => {
       assertEquals(hints[3], "WQ");
       assertEquals(hints[4], "WW");
 
-      // 6-7個目は3文字
-      assertEquals(hints[5], "QQQ");
-      assertEquals(hints[6], "QQW");
+      // 6-7個目は2桁数字（新しい動作）
+      assertEquals(hints[5], "00");
+      assertEquals(hints[6], "01");
     });
   });
 

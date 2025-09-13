@@ -64,8 +64,9 @@ export async function detectWordsWithConfig(denops: Denops, config: WordConfig =
 
     // Process 50 Sub6: 改善版の使用を設定に基づいて判断（デフォルトは true）
     if (config.use_improved_detection !== false) {
-      // 改善版を使用（1文字単語も検出）- undefined の場合もここを通る
-      const lineWords = extractWordsFromLine(lineText, line, true);
+      // 改善版を使用（1文字単語も検出）- 日本語除外設定も考慮
+      const excludeJapanese = config.use_japanese !== true;  // undefined または false の場合は日本語除外
+      const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
       words.push(...lineWords);
     } else {
       // 従来版を使用（日本語設定に基づく）- 明示的に false の場合のみ
@@ -175,7 +176,7 @@ function extractWordsFromLineOriginal(lineText: string, lineNumber: number): Wor
 /**
  * 1行から単語を抽出（改善版 - Process50 Sub6対応）
  */
-export function extractWordsFromLine(lineText: string, lineNumber: number, useImprovedDetection = false): Word[] {
+export function extractWordsFromLine(lineText: string, lineNumber: number, useImprovedDetection = false, excludeJapanese = false): Word[] {
   // 既存テストとの互換性を保つためデフォルトはオリジナル版を使用
   if (!useImprovedDetection) {
     return extractWordsFromLineOriginal(lineText, lineNumber);
@@ -187,8 +188,10 @@ export function extractWordsFromLine(lineText: string, lineNumber: number, useIm
     return words;
   }
 
-  // 1. 基本的な単語検出（英数字+日本語）- 最小1文字、数字のみも許可
-  const basicWordRegex = /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g;
+  // 1. 基本的な単語検出 - excludeJapanese設定に基づいて正規表現を選択
+  const basicWordRegex = excludeJapanese
+    ? /[a-zA-Z0-9]+/g  // 日本語を除外（英数字のみ）
+    : /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g;  // 日本語を含む
   let match: RegExpExecArray | null;
   const allMatches: { text: string; index: number }[] = [];
 
