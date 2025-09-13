@@ -94,16 +94,27 @@
   - 数字のみの単語を除外
 
 **実装仕様（調査結果に基づく）:**
-- 現在の extractWordsFromLineOriginal の動作を完全に再現
-- 最小文字数制限：2文字以上
-- 数値のみの単語をスキップ
-- kebab-case や snake_case の分割なし
-- シンプルな正規表現マッチング方式を踏襲
+- **extractWordsFromLineOriginal の確認された動作:**
+  - 最小文字数制限：2文字以上
+  - 数字のみの単語をスキップ
+  - **kebab-case を分割**（ハイフンは単語文字ではないため、"hello-world" → "hello", "world"）
+  - **snake_case を保持**（アンダースコアは単語文字のため、"hello_world" → "hello_world"）
+  - 連続する日本語テキストは単一の単語として扱う
+
+- **extractWordsFromLineLegacy の実装計画:**
+  - 新実装（useImprovedDetection=true）を呼び出し
+  - 結果を旧動作に合わせてフィルタリング：
+    - 2文字未満の単語を除去
+    - 数字のみの単語を除去
+    - kebab-case の分割は新実装で既に処理済み
+    - snake_case が新実装で分割される場合は再結合が必要な可能性
 
 #### sub2 アダプター関数のテスト
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/legacy_behavior_test.ts`
 - [ ] extractWordsFromLineOriginal と extractWordsFromLineLegacy の出力を比較
 - [ ] 100%一致することを確認
+- [ ] legacy_behavior_test.ts に比較テストを追加
+- [ ] 既存のテストスイートのすべてのエッジケースで検証
 
 ### process3 段階的な置き換え
 #### sub1 detectWordsStandard の更新

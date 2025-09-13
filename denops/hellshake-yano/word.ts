@@ -641,3 +641,56 @@ export function getWordDetectionCacheStats(): {
     maxWordsPerFile: MAX_WORDS_PER_FILE,
   };
 }
+
+/**
+ * Process2: レガシー互換性アダプター関数
+ * @description extractWordsFromLineOriginalと100%互換性のある結果を返すアダプター関数。
+ * 将来的には新しい実装をベースとした最適化版に切り替え可能な設計。
+ *
+ * **レガシー互換性の特徴:**
+ * - 最小単語長: 2文字以上
+ * - 数字のみの単語を除外
+ * - kebab-caseは分割（ハイフンで区切られる）
+ * - snake_caseは保持（アンダースコアは単語文字として扱う）
+ * - 連続する日本語は1つの単語として扱う
+ * - パフォーマンス制限: 1行あたり最大100単語
+ *
+ * @param lineText - 解析する行のテキスト
+ * @param lineNumber - 行番号（1ベース）
+ * @returns Word[] - レガシー互換性を保った抽出された単語の配列
+ * @since 1.0.0
+ * @version Process2 - TDD実装によるアダプターパターン
+ *
+ * @example
+ * ```typescript
+ * // kebab-caseの分割
+ * const kebabWords = extractWordsFromLineLegacy('hello-world foo-bar', 1);
+ * console.log(kebabWords.map(w => w.text)); // ["hello", "world", "foo", "bar"]
+ *
+ * // snake_caseの保持
+ * const snakeWords = extractWordsFromLineLegacy('hello_world foo_bar', 1);
+ * console.log(snakeWords.map(w => w.text)); // ["hello_world", "foo_bar"]
+ *
+ * // 日本語の連続処理
+ * const japaneseWords = extractWordsFromLineLegacy('これは日本語のテストです', 1);
+ * console.log(japaneseWords.map(w => w.text)); // ["これは日本語のテストです"]
+ *
+ * // フィルタリング（2文字未満、数字のみを除外）
+ * const filteredWords = extractWordsFromLineLegacy('a bb 123 word1', 1);
+ * console.log(filteredWords.map(w => w.text)); // ["bb", "word1"]
+ * ```
+ */
+export function extractWordsFromLineLegacy(
+  lineText: string,
+  lineNumber: number,
+): Word[] {
+  // TDD Process2: アダプターパターンによる実装
+  // 現在の実装: 100%互換性保証のためオリジナル関数を使用
+  //
+  // 設計ノート:
+  // - Phase1: オリジナル関数の直接使用（現在のフェーズ）
+  // - Phase2: 新しい実装 + フィルタリングによる最適化（将来予定）
+  // - Phase3: 完全にカスタマイズされた実装（長期計画）
+
+  return extractWordsFromLineOriginal(lineText, lineNumber);
+}

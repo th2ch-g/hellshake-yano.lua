@@ -1,5 +1,5 @@
 import { assertEquals, assertNotEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
-import { extractWordsFromLineOriginal } from "../denops/hellshake-yano/word.ts";
+import { extractWordsFromLineOriginal, extractWordsFromLineLegacy } from "../denops/hellshake-yano/word.ts";
 
 /**
  * Legacy behavior regression test suite for extractWordsFromLineOriginal
@@ -180,5 +180,93 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
     // Should detect: background, color, ff0000, margin, top, 10px (hyphens split words)
     assertEquals(cssWords.length, 6, "Should handle CSS content");
     assertEquals(cssWords.map(w => w.text), ["background", "color", "ff0000", "margin", "top", "10px"]);
+  });
+});
+
+/**
+ * TDD Process2: extractWordsFromLineLegacy Compatibility Test Suite
+ *
+ * This test suite ensures that the new extractWordsFromLineLegacy function
+ * produces identical results to extractWordsFromLineOriginal for all test cases.
+ *
+ * RED Phase: These tests will fail initially since extractWordsFromLineLegacy doesn't exist yet.
+ * GREEN Phase: Implement minimal extractWordsFromLineLegacy to make tests pass.
+ * REFACTOR Phase: Improve code quality while maintaining 100% compatibility.
+ */
+Deno.test("TDD Process2: extractWordsFromLineLegacy 100% Compatibility", async (t) => {
+  const testCases = [
+    // Minimum word length test cases
+    { line: "a b c d e 1 2 3", lineNum: 1, description: "single characters" },
+    { line: "aa bb cc dd", lineNum: 1, description: "two-character words" },
+
+    // Number-only exclusion test cases
+    { line: "12 123 1234 word1 word2 123word word123", lineNum: 1, description: "number-only exclusion" },
+
+    // Word boundary behavior test cases
+    { line: "hello-world foo-bar-baz my-component", lineNum: 1, description: "kebab-case splitting" },
+    { line: "hello_world foo_bar_baz my_variable", lineNum: 1, description: "snake_case preservation" },
+    { line: "camelCase PascalCase hello-world foo_bar", lineNum: 1, description: "mixed naming conventions" },
+
+    // Japanese text test cases
+    { line: "これは ひらがな の テスト です", lineNum: 1, description: "hiragana text" },
+    { line: "コレハ カタカナ ノ テスト デス", lineNum: 1, description: "katakana text" },
+    { line: "日本語 文字列 処理 テスト", lineNum: 1, description: "kanji text" },
+    { line: "これは日本語のテストです", lineNum: 1, description: "continuous Japanese" },
+
+    // Mixed language test cases
+    { line: "Hello 世界 test テスト 123 word", lineNum: 1, description: "mixed language content" },
+
+    // Edge cases
+    { line: "", lineNum: 1, description: "empty line" },
+    { line: "a", lineNum: 1, description: "single character line" },
+    { line: "   ", lineNum: 1, description: "whitespace-only line" },
+    { line: "hello! @world #test $money 50% (test)", lineNum: 1, description: "special characters" },
+
+    // UTF-8 multibyte character handling
+    { line: "hello 世界 test", lineNum: 1, description: "UTF-8 multibyte characters" },
+
+    // Real-world code examples
+    { line: "function getUserName(userId) { return user.name; }", lineNum: 1, description: "programming code" },
+    { line: "background-color: #ff0000; margin-top: 10px;", lineNum: 1, description: "CSS content" },
+  ];
+
+  for (const testCase of testCases) {
+    await t.step(`Compatibility test: ${testCase.description}`, () => {
+      const originalResults = extractWordsFromLineOriginal(testCase.line, testCase.lineNum);
+      const legacyResults = extractWordsFromLineLegacy(testCase.line, testCase.lineNum);
+
+      // Test exact match of word count
+      assertEquals(
+        legacyResults.length,
+        originalResults.length,
+        `Word count mismatch for "${testCase.description}". Expected: ${originalResults.length}, Got: ${legacyResults.length}`
+      );
+
+      // Test exact match of all word properties
+      for (let i = 0; i < originalResults.length; i++) {
+        const original = originalResults[i];
+        const legacy = legacyResults[i];
+
+        assertEquals(legacy.text, original.text, `Text mismatch at index ${i} for "${testCase.description}"`);
+        assertEquals(legacy.line, original.line, `Line number mismatch at index ${i} for "${testCase.description}"`);
+        assertEquals(legacy.col, original.col, `Column mismatch at index ${i} for "${testCase.description}"`);
+        assertEquals(legacy.byteCol, original.byteCol, `Byte column mismatch at index ${i} for "${testCase.description}"`);
+      }
+    });
+  }
+
+  await t.step("Performance limits compatibility", () => {
+    // Test performance limit (max 100 words per line)
+    const manyWords = Array.from({length: 150}, (_, i) => `word${i}`).join(" ");
+    const originalResults = extractWordsFromLineOriginal(manyWords, 1);
+    const legacyResults = extractWordsFromLineLegacy(manyWords, 1);
+
+    assertEquals(legacyResults.length, originalResults.length, "Should maintain same performance limits");
+    assertEquals(legacyResults.length, 100, "Should limit to 100 words per line");
+
+    // Check that the first 100 words are identical
+    for (let i = 0; i < 100; i++) {
+      assertEquals(legacyResults[i].text, originalResults[i].text, `Performance limit word ${i} should match`);
+    }
   });
 });
