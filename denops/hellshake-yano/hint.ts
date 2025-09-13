@@ -244,7 +244,7 @@ function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: nu
 export function clearHintCache(): void {
   hintCache.clear();
   assignmentCache.clear();
-  console.log("[hellshake-yano] Hint cache cleared");
+// console.log("[hellshake-yano] Hint cache cleared");
 }
 
 /**
@@ -316,7 +316,7 @@ export function calculateHintPositionWithCoordinateSystem(
 
   // デバッグログ追加
   if (enableDebug) {
-    console.log(`[calculateHintPositionWithCoordinateSystem] word: "${word.text}", col: ${word.col}, byteCol: ${word.byteCol}, line: ${word.line}, hintPosition: ${hintPosition}`);
+// console.log(`[calculateHintPositionWithCoordinateSystem] word: "${word.text}", col: ${word.col}, byteCol: ${word.byteCol}, line: ${word.line}, hintPosition: ${hintPosition}`);
   }
 
   switch (hintPosition) {
@@ -357,7 +357,7 @@ export function calculateHintPositionWithCoordinateSystem(
   const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号（負の値を防ぐ）
 
   if (enableDebug) {
-    console.log(`[calculateHintPositionWithCoordinateSystem] calculated - vim(${vim_line},${vim_col}) nvim(${nvim_line},${nvim_col}) [using byte positions]`);
+// console.log(`[calculateHintPositionWithCoordinateSystem] calculated - vim(${vim_line},${vim_col}) nvim(${nvim_line},${nvim_col}) [using byte positions]`);
   }
 
   return {

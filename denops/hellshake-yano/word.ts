@@ -31,7 +31,7 @@ const wordDetectionCache = new Map<string, Word[]>();
  * 画面内の単語を検出する（レガシー版、後方互換性のため保持）
  */
 export async function detectWords(denops: Denops): Promise<Word[]> {
-  console.warn("[DEPRECATED] detectWords: Use detectWordsWithManager for enhanced capabilities");
+// console.warn("[DEPRECATED] detectWords: Use detectWordsWithManager for enhanced capabilities");
 
   const words: Word[] = [];
 
@@ -73,7 +73,7 @@ export async function detectWordsWithManager(
     const manager = getWordDetectionManager(config);
     return await manager.detectWordsFromBuffer(denops);
   } catch (error) {
-    console.error("[detectWordsWithManager] Error:", error);
+// console.error("[detectWordsWithManager] Error:", error);
 
     // フォールバックとして従来のメソッドを使用
     const fallbackWords = await detectWordsWithConfig(denops, config);
@@ -137,7 +137,7 @@ async function detectWordsOptimizedForLargeFiles(denops: Denops, topLine: number
   const words: Word[] = [];
   const batchSize = 100; // バッチサイズ
   
-  console.log(`[hellshake-yano] Large file detected, using optimized batch processing (${topLine}-${bottomLine})`);
+// console.log(`[hellshake-yano] Large file detected, using optimized batch processing (${topLine}-${bottomLine})`);
   
   // バッチ処理で行を取得して単語を検出
   for (let startLine = topLine; startLine <= bottomLine; startLine += batchSize) {
@@ -159,7 +159,7 @@ async function detectWordsOptimizedForLargeFiles(denops: Denops, topLine: number
         await new Promise(resolve => setTimeout(resolve, 1));
       }
     } catch (error) {
-      console.error(`[hellshake-yano] Error processing batch ${startLine}-${endLine}:`, error);
+// console.error(`[hellshake-yano] Error processing batch ${startLine}-${endLine}:`, error);
       // エラーが発生したバッチはスキップして続行
       continue;
     }
@@ -446,11 +446,11 @@ export async function detectWordsInRange(
     const actualEndLine = Math.min(endLine, await denops.call("line", "$") as number);
     const actualStartLine = Math.max(1, startLine);
     
-    console.log(`[hellshake-yano] Detecting words in range ${actualStartLine}-${actualEndLine} (max: ${effectiveMaxWords})`);
+// console.log(`[hellshake-yano] Detecting words in range ${actualStartLine}-${actualEndLine} (max: ${effectiveMaxWords})`);
     
     for (let line = actualStartLine; line <= actualEndLine; line++) {
       if (words.length >= effectiveMaxWords) {
-        console.log(`[hellshake-yano] Reached maximum word limit (${effectiveMaxWords})`);
+// console.log(`[hellshake-yano] Reached maximum word limit (${effectiveMaxWords})`);
         break;
       }
 
@@ -464,7 +464,7 @@ export async function detectWordsInRange(
     
     return words;
   } catch (error) {
-    console.error("[hellshake-yano] Error in detectWordsInRange:", error);
+// console.error("[hellshake-yano] Error in detectWordsInRange:", error);
     return [];
   }
 }
@@ -474,7 +474,7 @@ export async function detectWordsInRange(
  */
 export function clearWordDetectionCache(): void {
   wordDetectionCache.clear();
-  console.log("[hellshake-yano] Word detection cache cleared");
+// console.log("[hellshake-yano] Word detection cache cleared");
 }
 
 /**

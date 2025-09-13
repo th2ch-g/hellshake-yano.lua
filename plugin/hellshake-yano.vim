@@ -24,7 +24,12 @@ let g:hellshake_yano = extend({
       \ 'motion_timeout': 2000,
       \ 'hint_position': 'start',
       \ 'trigger_on_hjkl': v:true,
+      \ 'counted_motions': [],
       \ 'enabled': v:true,
+      \ 'single_char_keys': split('ASDFGHJKLNM0123456789', '\zs'),
+      \ 'multi_char_keys': split('BCEIOPQRTUVWXYZ', '\zs'),
+      \ 'use_hint_groups': v:true,
+      \ 'use_numbers': v:true,
       \ }, g:hellshake_yano, 'keep')
 
 " ハイライトグループの定義（デフォルト値）
@@ -104,6 +109,29 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
   throw 'Invalid color configuration type: ' . type(a:color_config)
 endfunction
 
+" モーションキーのマッピングを設定する関数
+function! s:setup_motion_mappings() abort
+  " counted_motions が設定されている場合はそれを優先
+  if has_key(g:hellshake_yano, 'counted_motions') && !empty(g:hellshake_yano.counted_motions)
+    for key in g:hellshake_yano.counted_motions
+      " キーが有効かチェック（1文字の英数字記号のみ）
+      if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
+        execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
+      else
+        echohl WarningMsg
+        echomsg '[hellshake-yano] Invalid key in counted_motions: ' . string(key)
+        echohl None
+      endif
+    endfor
+  elseif g:hellshake_yano.trigger_on_hjkl
+    " 従来のhjklマッピング（下位互換性）
+    nnoremap <silent> <expr> h hellshake_yano#motion('h')
+    nnoremap <silent> <expr> j hellshake_yano#motion('j')
+    nnoremap <silent> <expr> k hellshake_yano#motion('k')
+    nnoremap <silent> <expr> l hellshake_yano#motion('l')
+  endif
+endfunction
+
 " 色名を正規化する関数
 function! s:normalize_color_name(color) abort
   if empty(a:color) || a:color =~# '^#'
@@ -150,13 +178,9 @@ function! s:initialize() abort
   endtry
 endfunction
 
-" hjklキーマッピング（初期設定で有効な場合）
-if g:hellshake_yano.trigger_on_hjkl && g:hellshake_yano.enabled
-  " ノーマルモードでのマッピング
-  nnoremap <silent> <expr> h hellshake_yano#motion('h')
-  nnoremap <silent> <expr> j hellshake_yano#motion('j')
-  nnoremap <silent> <expr> k hellshake_yano#motion('k')
-  nnoremap <silent> <expr> l hellshake_yano#motion('l')
+" モーションキーマッピング（初期設定で有効な場合）
+if g:hellshake_yano.enabled
+  call s:setup_motion_mappings()
 endif
 
 " コマンド定義
@@ -168,6 +192,7 @@ command! -nargs=0 HellshakeYanoHide call hellshake_yano#hide()
 command! -nargs=1 HellshakeYanoSetCount call hellshake_yano#set_count(<args>)
 command! -nargs=1 HellshakeYanoSetTimeout call hellshake_yano#set_timeout(<args>)
 command! -nargs=+ HellshakeYanoSetHighlight call hellshake_yano#update_highlight(<f-args>)
+command! -nargs=+ HellshakeYanoSetCountedMotions call hellshake_yano#set_counted_motions([<f-args>])
 command! -nargs=0 HellshakeYanoDebug call hellshake_yano#debug()
 
 " 自動コマンド
@@ -192,12 +217,12 @@ function! s:on_denops_ready() abort
   " カスタムハイライト色の適用
   call s:apply_custom_highlights()
 
-  " 設定をdenops側に送信（デバッグログ付き）
-  if has_key(g:hellshake_yano, 'use_japanese')
-    echom '[hellshake-yano] Sending config with use_japanese: ' . string(g:hellshake_yano.use_japanese)
-  else
-    echom '[hellshake-yano] Sending config without use_japanese setting'
-  endif
+  " 設定をdenops側に送信
+  " if has_key(g:hellshake_yano, 'use_japanese')
+  "   echom '[hellshake-yano] Sending config with use_japanese: ' . string(g:hellshake_yano.use_japanese)
+  " else
+  "   echom '[hellshake-yano] Sending config without use_japanese setting'
+  " endif
   call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
 endfunction
 

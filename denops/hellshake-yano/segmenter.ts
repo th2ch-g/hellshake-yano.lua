@@ -150,7 +150,7 @@ export class TinySegmenter {
         source: 'tinysegmenter'
       };
     } catch (error) {
-      console.warn("[TinySegmenter] Segmentation failed:", error);
+// console.warn("[TinySegmenter] Segmentation failed:", error);
 
       return {
         segments: await this.fallbackSegmentation(text),
@@ -281,4 +281,4 @@ export class TinySegmenter {
 export const tinysegmenter = TinySegmenter.getInstance();
 export type { SegmentationResult };
 
-console.log("✓ TinySegmenter module loaded successfully");
+// console.log("✓ TinySegmenter module loaded successfully");

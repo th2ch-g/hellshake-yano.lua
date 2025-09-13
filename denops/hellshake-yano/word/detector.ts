@@ -369,7 +369,7 @@ export class TinySegmenterWordDetector implements WordDetector {
           words.push(...fallbackWords);
         }
       } catch (error) {
-        console.warn(`TinySegmenter failed for line ${lineNumber}:`, error);
+// console.warn(`TinySegmenter failed for line ${lineNumber}:`, error);
         const fallbackWords = await this.fallbackDetection(lineText, lineNumber);
         words.push(...fallbackWords);
       }
@@ -725,7 +725,7 @@ export class HybridWordDetector implements WordDetector {
     const allWords: Word[] = [];
 
     // デバッグログ：設定の確認
-    console.log(`[HybridWordDetector] Config: use_japanese=${this.config.use_japanese}, enable_tinysegmenter=${this.config.enable_tinysegmenter}`);
+// console.log(`[HybridWordDetector] Config: use_japanese=${this.config.use_japanese}, enable_tinysegmenter=${this.config.enable_tinysegmenter}`);
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -737,30 +737,30 @@ export class HybridWordDetector implements WordDetector {
 
       // use_japanese 設定に基づいて処理を決定
       if (this.config.use_japanese === true) {
-        console.log(`[HybridWordDetector] Japanese mode enabled for line ${lineNumber}`);
+// console.log(`[HybridWordDetector] Japanese mode enabled for line ${lineNumber}`);
 
         // 日本語モード：TinySegmenterが利用可能で日本語を含む場合は使用
         const isSegmenterAvailable = await this.segmenterDetector.isAvailable();
         const hasJapanese = this.segmenterDetector.canHandle(lineText);
 
-        console.log(`[HybridWordDetector] Line ${lineNumber}: segmenterAvailable=${isSegmenterAvailable}, hasJapanese=${hasJapanese}`);
+// console.log(`[HybridWordDetector] Line ${lineNumber}: segmenterAvailable=${isSegmenterAvailable}, hasJapanese=${hasJapanese}`);
 
         if (this.config.enable_tinysegmenter && isSegmenterAvailable && hasJapanese) {
-          console.log(`[HybridWordDetector] Using TinySegmenter for line ${lineNumber}`);
+// console.log(`[HybridWordDetector] Using TinySegmenter for line ${lineNumber}`);
           const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber);
           // 英数字も検出するためRegexDetectorも併用
           const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
           const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
           allWords.push(...mergedWords);
         } else {
-          console.log(`[HybridWordDetector] Using fallback for line ${lineNumber}`);
+// console.log(`[HybridWordDetector] Using fallback for line ${lineNumber}`);
           // TinySegmenter無効または日本語なし：extractWordsFromLineWithConfigを使用
           const { extractWordsFromLineWithConfig } = await import("../word.ts");
           const words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
           allWords.push(...words);
         }
       } else {
-        console.log(`[HybridWordDetector] Non-Japanese mode for line ${lineNumber}`);
+// console.log(`[HybridWordDetector] Non-Japanese mode for line ${lineNumber}`);
         // 日本語除外モード：RegexDetectorを使用（日本語は除外される）
         const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
         allWords.push(...regexWords);
@@ -768,7 +768,7 @@ export class HybridWordDetector implements WordDetector {
     }
 
     const finalWords = this.deduplicateWords(allWords);
-    console.log(`[HybridWordDetector] Final result: ${finalWords.length} words detected`);
+// console.log(`[HybridWordDetector] Final result: ${finalWords.length} words detected`);
     return finalWords;
   }
 
@@ -838,4 +838,4 @@ export class HybridWordDetector implements WordDetector {
   }
 }
 
-console.log("✓ Word detector interfaces and implementations loaded successfully");
+// console.log("✓ Word detector interfaces and implementations loaded successfully");

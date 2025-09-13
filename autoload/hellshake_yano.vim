@@ -78,6 +78,40 @@ function! hellshake_yano#reset_count() abort
   endfor
 endfunction
 
+" マッピング対象キーを取得
+function! s:get_motion_keys() abort
+  if has_key(g:hellshake_yano, 'counted_motions') && !empty(g:hellshake_yano.counted_motions)
+    return g:hellshake_yano.counted_motions
+  elseif g:hellshake_yano.trigger_on_hjkl
+    return ['h', 'j', 'k', 'l']
+  else
+    return []
+  endif
+endfunction
+
+" モーションキーマッピングを設定
+function! s:setup_motion_mappings() abort
+  let keys = s:get_motion_keys()
+  for key in keys
+    " キーが有効かチェック（1文字の英数字記号のみ）
+    if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
+      execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
+    else
+      echohl WarningMsg
+      echomsg '[hellshake-yano] Invalid key in motion keys: ' . string(key)
+      echohl None
+    endif
+  endfor
+endfunction
+
+" モーションキーマッピングを解除
+function! s:clear_motion_mappings() abort
+  let keys = s:get_motion_keys()
+  for key in keys
+    execute 'silent! nunmap ' . key
+  endfor
+endfunction
+
 " ヒントをトリガー
 function! s:trigger_hints() abort
   " denopsが準備できているか確認
@@ -120,36 +154,28 @@ endfunction
 " プラグインを有効化
 function! hellshake_yano#enable() abort
   let g:hellshake_yano.enabled = v:true
-  
+
   " マッピングを再設定
-  if g:hellshake_yano.trigger_on_hjkl
-    nnoremap <silent> <expr> h hellshake_yano#motion('h')
-    nnoremap <silent> <expr> j hellshake_yano#motion('j')
-    nnoremap <silent> <expr> k hellshake_yano#motion('k')
-    nnoremap <silent> <expr> l hellshake_yano#motion('l')
-  endif
-  
+  call s:setup_motion_mappings()
+
   echo '[hellshake-yano] Enabled'
 endfunction
 
 " プラグインを無効化
 function! hellshake_yano#disable() abort
   let g:hellshake_yano.enabled = v:false
-  
+
   " マッピングを解除
-  silent! nunmap h
-  silent! nunmap j
-  silent! nunmap k
-  silent! nunmap l
-  
+  call s:clear_motion_mappings()
+
   " ヒントを非表示
   if s:hints_visible
     call hellshake_yano#hide()
   endif
-  
+
   " カウントをリセット
   call hellshake_yano#reset_count()
-  
+
   echo '[hellshake-yano] Disabled'
 endfunction
 
@@ -261,6 +287,53 @@ function! hellshake_yano#debug() abort
   echo 'Denops ready: ' . (exists('g:hellshake_yano_ready') ? g:hellshake_yano_ready : 'false')
   echo 'Highlight marker: ' . get(g:hellshake_yano, 'highlight_marker', 'DiffAdd')
   echo 'Highlight marker current: ' . get(g:hellshake_yano, 'highlight_marker_current', 'DiffText')
+  echo 'Counted motions: ' . string(s:get_motion_keys())
+endfunction
+
+" counted_motions を設定
+function! hellshake_yano#set_counted_motions(keys) abort
+  " 引数の検証
+  if type(a:keys) != v:t_list
+    echohl ErrorMsg
+    echomsg '[hellshake-yano] counted_motions must be a list'
+    echohl None
+    return
+  endif
+
+  " 各キーの検証
+  for key in a:keys
+    if type(key) != v:t_string || len(key) != 1
+      echohl ErrorMsg
+      echomsg '[hellshake-yano] Each motion key must be a single character string: ' . string(key)
+      echohl None
+      return
+    endif
+    if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') == -1
+      echohl WarningMsg
+      echomsg '[hellshake-yano] Potentially invalid key: ' . string(key)
+      echohl None
+    endif
+  endfor
+
+  " 現在のマッピングを解除
+  if g:hellshake_yano.enabled
+    call s:clear_motion_mappings()
+  endif
+
+  " 設定を更新
+  let g:hellshake_yano.counted_motions = copy(a:keys)
+
+  " 新しいマッピングを設定
+  if g:hellshake_yano.enabled
+    call s:setup_motion_mappings()
+  endif
+
+  " denops側に設定を通知
+  if exists('g:hellshake_yano_ready') && g:hellshake_yano_ready
+    call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
+  endif
+
+  echo printf('[hellshake-yano] Counted motions set to: %s', string(a:keys))
 endfunction
 
 " 保存と復元

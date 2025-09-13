@@ -33,6 +33,7 @@ export interface Config {
   motion_timeout: number;
   hint_position: string;
   trigger_on_hjkl: boolean;
+  counted_motions: string[];
   enabled: boolean;
   maxHints: number; // パフォーマンス最適化: 最大ヒント数
   debounceDelay: number; // デバウンス遅延時間
@@ -67,16 +68,17 @@ let config: Config = {
   motion_timeout: 2000,
   hint_position: "start",
   trigger_on_hjkl: true,
+  counted_motions: [],
   enabled: true,
   maxHints: 336, // Approach A対応: 11単文字 + 225二文字 + 100数字 = 336個
   debounceDelay: 50, // 50msのデバウンス
-  use_numbers: false, // デフォルトでは数字は使用しない
+  use_numbers: true, // デフォルトで数字を使用可能
   highlight_selected: true, // デフォルトで選択中ヒントをハイライト
   debug_coordinates: false, // デフォルトでデバッグログは無効
   // Process 50 Sub3: デフォルトのキー分離設定
-  single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
+  single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
   multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-  max_single_char_hints: 11,
+  // max_single_char_hints: undefined, // デフォルトは制限なし（single_char_keysの長さ）
   use_hint_groups: true, // デフォルトで有効
   // use_japanese: デフォルト値を設定しない（ユーザー設定を優先）
   // Process 50 Sub7: 単語検出アブストラクションのデフォルト設定
@@ -131,9 +133,9 @@ export async function main(denops: Denops): Promise<void> {
         );
         if (validMarkers.length > 0) {
           config.markers = validMarkers;
-          console.log(`[hellshake-yano] Custom markers set: ${validMarkers.slice(0, 5).join(", ")}${validMarkers.length > 5 ? "..." : ""}`);
+// console.log(`[hellshake-yano] Custom markers set: ${validMarkers.slice(0, 5).join(", ")}${validMarkers.length > 5 ? "..." : ""}`);
         } else {
-          console.warn("[hellshake-yano] Invalid markers provided, keeping default");
+// console.warn("[hellshake-yano] Invalid markers provided, keeping default");
         }
       }
       
@@ -142,7 +144,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.motion_count >= 1 && Number.isInteger(cfg.motion_count)) {
           config.motion_count = cfg.motion_count;
         } else {
-          console.warn(`[hellshake-yano] Invalid motion_count: ${cfg.motion_count}, must be integer >= 1`);
+// console.warn(`[hellshake-yano] Invalid motion_count: ${cfg.motion_count}, must be integer >= 1`);
         }
       }
       
@@ -151,7 +153,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.motion_timeout >= 100) {
           config.motion_timeout = cfg.motion_timeout;
         } else {
-          console.warn(`[hellshake-yano] Invalid motion_timeout: ${cfg.motion_timeout}, must be >= 100ms`);
+// console.warn(`[hellshake-yano] Invalid motion_timeout: ${cfg.motion_timeout}, must be >= 100ms`);
         }
       }
       
@@ -161,13 +163,27 @@ export async function main(denops: Denops): Promise<void> {
         if (validPositions.includes(cfg.hint_position)) {
           config.hint_position = cfg.hint_position;
         } else {
-          console.warn(`[hellshake-yano] Invalid hint_position: ${cfg.hint_position}, must be one of: ${validPositions.join(", ")}`);
+// console.warn(`[hellshake-yano] Invalid hint_position: ${cfg.hint_position}, must be one of: ${validPositions.join(", ")}`);
         }
       }
       
       // trigger_on_hjkl の適用
       if (typeof cfg.trigger_on_hjkl === "boolean") {
         config.trigger_on_hjkl = cfg.trigger_on_hjkl;
+      }
+
+      // counted_motions の適用
+      if (Array.isArray(cfg.counted_motions)) {
+        // 各要素が1文字の文字列か検証
+        const validKeys = cfg.counted_motions.filter((key: any) =>
+          typeof key === 'string' && key.length === 1
+        );
+        if (validKeys.length === cfg.counted_motions.length) {
+          config.counted_motions = [...validKeys];
+        } else {
+          console.warn(`[hellshake-yano] Some keys in counted_motions are invalid, using valid keys only: ${validKeys}`);
+          config.counted_motions = [...validKeys];
+        }
       }
 
       // enabled の適用
@@ -183,7 +199,7 @@ export async function main(denops: Denops): Promise<void> {
           const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
           const numbers = "0123456789".split("");
           config.markers = [...letters, ...numbers];
-          console.log("[hellshake-yano] Numbers enabled in markers");
+// console.log("[hellshake-yano] Numbers enabled in markers");
         } else {
           config.markers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
         }
@@ -204,7 +220,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.maxHints >= 1 && Number.isInteger(cfg.maxHints)) {
           config.maxHints = cfg.maxHints;
         } else {
-          console.warn(`[hellshake-yano] Invalid maxHints: ${cfg.maxHints}, must be integer >= 1`);
+// console.warn(`[hellshake-yano] Invalid maxHints: ${cfg.maxHints}, must be integer >= 1`);
         }
       }
 
@@ -213,7 +229,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.debounceDelay >= 0) {
           config.debounceDelay = cfg.debounceDelay;
         } else {
-          console.warn(`[hellshake-yano] Invalid debounceDelay: ${cfg.debounceDelay}, must be >= 0`);
+// console.warn(`[hellshake-yano] Invalid debounceDelay: ${cfg.debounceDelay}, must be >= 0`);
         }
       }
 
@@ -225,9 +241,9 @@ export async function main(denops: Denops): Promise<void> {
         );
         if (validKeys.length > 0) {
           config.single_char_keys = validKeys;
-          console.log(`[hellshake-yano] Single char keys set: ${validKeys.join(", ")}`);
+// console.log(`[hellshake-yano] Single char keys set: ${validKeys.join(", ")}`);
         } else {
-          console.warn("[hellshake-yano] Invalid single_char_keys provided");
+// console.warn("[hellshake-yano] Invalid single_char_keys provided");
         }
       }
 
@@ -238,9 +254,9 @@ export async function main(denops: Denops): Promise<void> {
         );
         if (validKeys.length > 0) {
           config.multi_char_keys = validKeys;
-          console.log(`[hellshake-yano] Multi char keys set: ${validKeys.join(", ")}`);
+// console.log(`[hellshake-yano] Multi char keys set: ${validKeys.join(", ")}`);
         } else {
-          console.warn("[hellshake-yano] Invalid multi_char_keys provided");
+// console.warn("[hellshake-yano] Invalid multi_char_keys provided");
         }
       }
 
@@ -249,52 +265,52 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.max_single_char_hints >= 0 && Number.isInteger(cfg.max_single_char_hints)) {
           config.max_single_char_hints = cfg.max_single_char_hints;
         } else {
-          console.warn(`[hellshake-yano] Invalid max_single_char_hints: ${cfg.max_single_char_hints}`);
+// console.warn(`[hellshake-yano] Invalid max_single_char_hints: ${cfg.max_single_char_hints}`);
         }
       }
 
       // use_hint_groups の適用
       if (typeof cfg.use_hint_groups === "boolean") {
         config.use_hint_groups = cfg.use_hint_groups;
-        console.log(`[hellshake-yano] Hint groups feature: ${cfg.use_hint_groups ? "enabled" : "disabled"}`);
+// console.log(`[hellshake-yano] Hint groups feature: ${cfg.use_hint_groups ? "enabled" : "disabled"}`);
       }
 
       // Process 50 Sub3: use_japanese の適用
       if (typeof cfg.use_japanese === "boolean") {
         config.use_japanese = cfg.use_japanese;
-        console.log(`[hellshake-yano] Japanese word detection: ${cfg.use_japanese ? "enabled" : "disabled"}`);
+// console.log(`[hellshake-yano] Japanese word detection: ${cfg.use_japanese ? "enabled" : "disabled"}`);
       }
 
       // Process 50 Sub6: use_improved_detection は統合済み（常に有効）
-      console.log(`[hellshake-yano] Improved word detection (1-char support): enabled (integrated)`);
+// console.log(`[hellshake-yano] Improved word detection (1-char support): enabled (integrated)`);
 
       // Process 50 Sub7: 単語検出アブストラクション設定
       if (typeof cfg.word_detection_strategy === "string") {
         const validStrategies = ["regex", "tinysegmenter", "hybrid"];
         if (validStrategies.includes(cfg.word_detection_strategy)) {
           config.word_detection_strategy = cfg.word_detection_strategy;
-          console.log(`[hellshake-yano] Word detection strategy: ${cfg.word_detection_strategy}`);
+// console.log(`[hellshake-yano] Word detection strategy: ${cfg.word_detection_strategy}`);
 
           // マネージャーをリセットして新しい設定を適用
           resetWordDetectionManager();
         } else {
-          console.warn(`[hellshake-yano] Invalid word_detection_strategy: ${cfg.word_detection_strategy}, must be one of: ${validStrategies.join(", ")}`);
+// console.warn(`[hellshake-yano] Invalid word_detection_strategy: ${cfg.word_detection_strategy}, must be one of: ${validStrategies.join(", ")}`);
         }
       }
 
       if (typeof cfg.enable_tinysegmenter === "boolean") {
         config.enable_tinysegmenter = cfg.enable_tinysegmenter;
-        console.log(`[hellshake-yano] TinySegmenter: ${cfg.enable_tinysegmenter ? "enabled" : "disabled"}`);
+// console.log(`[hellshake-yano] TinySegmenter: ${cfg.enable_tinysegmenter ? "enabled" : "disabled"}`);
         resetWordDetectionManager();
       }
 
       if (typeof cfg.segmenter_threshold === "number") {
         if (cfg.segmenter_threshold >= 1 && Number.isInteger(cfg.segmenter_threshold)) {
           config.segmenter_threshold = cfg.segmenter_threshold;
-          console.log(`[hellshake-yano] Segmenter threshold: ${cfg.segmenter_threshold}`);
+// console.log(`[hellshake-yano] Segmenter threshold: ${cfg.segmenter_threshold}`);
           resetWordDetectionManager();
         } else {
-          console.warn(`[hellshake-yano] Invalid segmenter_threshold: ${cfg.segmenter_threshold}, must be integer >= 1`);
+// console.warn(`[hellshake-yano] Invalid segmenter_threshold: ${cfg.segmenter_threshold}, must be integer >= 1`);
         }
       }
 
@@ -306,9 +322,9 @@ export async function main(denops: Denops): Promise<void> {
           const displayValue = typeof cfg.highlight_marker === 'string'
             ? cfg.highlight_marker
             : JSON.stringify(cfg.highlight_marker);
-          console.log(`[hellshake-yano] Highlight marker set: ${displayValue}`);
+// console.log(`[hellshake-yano] Highlight marker set: ${displayValue}`);
         } else {
-          console.warn(`[hellshake-yano] Invalid highlight_marker: ${markerResult.errors.join(', ')}`);
+// console.warn(`[hellshake-yano] Invalid highlight_marker: ${markerResult.errors.join(', ')}`);
         }
       }
 
@@ -320,9 +336,9 @@ export async function main(denops: Denops): Promise<void> {
           const displayValue = typeof cfg.highlight_marker_current === 'string'
             ? cfg.highlight_marker_current
             : JSON.stringify(cfg.highlight_marker_current);
-          console.log(`[hellshake-yano] Highlight marker current set: ${displayValue}`);
+// console.log(`[hellshake-yano] Highlight marker current set: ${displayValue}`);
         } else {
-          console.warn(`[hellshake-yano] Invalid highlight_marker_current: ${currentResult.errors.join(', ')}`);
+// console.warn(`[hellshake-yano] Invalid highlight_marker_current: ${currentResult.errors.join(', ')}`);
         }
       }
     },
@@ -445,14 +461,14 @@ export async function main(denops: Denops): Promise<void> {
 
         } catch (error) {
           retryCount++;
-          console.error(`[hellshake-yano] Error in showHintsInternal (attempt ${retryCount}/${maxRetries + 1}):`, error);
+// console.error(`[hellshake-yano] Error in showHintsInternal (attempt ${retryCount}/${maxRetries + 1}):`, error);
           
           // ヒントをクリア
           await hideHints(denops);
 
           if (retryCount <= maxRetries) {
             // リトライする場合
-            console.log(`[hellshake-yano] Retrying showHintsInternal in 100ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
+// console.log(`[hellshake-yano] Retrying showHintsInternal in 100ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
             await new Promise(resolve => setTimeout(resolve, 100)); // 100ms待機
           } else {
             // 最大リトライ回数に達した場合
@@ -486,7 +502,7 @@ export async function main(denops: Denops): Promise<void> {
     clearCache(): void {
       wordsCache = null;
       hintsCache = null;
-      console.log("[hellshake-yano] Cache cleared");
+// console.log("[hellshake-yano] Cache cleared");
     },
 
     /**
@@ -542,45 +558,45 @@ export async function main(denops: Denops): Promise<void> {
      */
     async testErrorHandling(): Promise<void> {
       try {
-        console.log("[hellshake-yano] Starting error handling tests...");
+// console.log("[hellshake-yano] Starting error handling tests...");
         
         // テスト1: 無効なバッファでのヒント表示
-        console.log("[hellshake-yano] Test 1: Invalid buffer handling");
+// console.log("[hellshake-yano] Test 1: Invalid buffer handling");
         try {
           await denops.cmd("new"); // 新しいバッファを作成
           await denops.cmd("setlocal buftype=nofile"); // 特殊バッファタイプに設定
           await denops.dispatcher.showHints?.();
-          console.log("[hellshake-yano] Test 1: PASSED - Special buffer handled correctly");
+// console.log("[hellshake-yano] Test 1: PASSED - Special buffer handled correctly");
         } catch (error) {
-          console.log("[hellshake-yano] Test 1: FAILED -", error);
+// console.log("[hellshake-yano] Test 1: FAILED -", error);
         }
 
         // テスト2: 読み取り専用バッファでのヒント表示
-        console.log("[hellshake-yano] Test 2: Readonly buffer handling");
+// console.log("[hellshake-yano] Test 2: Readonly buffer handling");
         try {
           await denops.cmd("new"); // 新しいバッファを作成
           await denops.cmd("put ='test content for hints'");
           await denops.cmd("setlocal readonly");
           await denops.dispatcher.showHints?.();
-          console.log("[hellshake-yano] Test 2: PASSED - Readonly buffer handled correctly");
+// console.log("[hellshake-yano] Test 2: PASSED - Readonly buffer handled correctly");
         } catch (error) {
-          console.log("[hellshake-yano] Test 2: FAILED -", error);
+// console.log("[hellshake-yano] Test 2: FAILED -", error);
         }
 
         // テスト3: プラグイン無効状態でのヒント表示
-        console.log("[hellshake-yano] Test 3: Disabled plugin handling");
+// console.log("[hellshake-yano] Test 3: Disabled plugin handling");
         try {
           const originalEnabled = config.enabled;
           config.enabled = false;
           await denops.dispatcher.showHints?.();
           config.enabled = originalEnabled;
-          console.log("[hellshake-yano] Test 3: PASSED - Disabled state handled correctly");
+// console.log("[hellshake-yano] Test 3: PASSED - Disabled state handled correctly");
         } catch (error) {
-          console.log("[hellshake-yano] Test 3: FAILED -", error);
+// console.log("[hellshake-yano] Test 3: FAILED -", error);
         }
 
         // テスト4: extmarkフォールバック機能
-        console.log("[hellshake-yano] Test 4: Extmark fallback functionality");
+// console.log("[hellshake-yano] Test 4: Extmark fallback functionality");
         try {
           // 通常のバッファでテスト
           await denops.cmd("new");
@@ -591,21 +607,21 @@ export async function main(denops: Denops): Promise<void> {
             capabilities?: { hasExtmarks?: boolean };
             buffer?: { type?: string; readonly?: boolean };
           };
-          console.log("[hellshake-yano] Test 4: Debug info -", {
-            hasExtmarks: debugInfo.capabilities?.hasExtmarks,
-            bufferType: debugInfo.buffer?.type,
-            readonly: debugInfo.buffer?.readonly
-          });
+// console.log("[hellshake-yano] Test 4: Debug info -", {
+//             hasExtmarks: debugInfo.capabilities?.hasExtmarks,
+//             bufferType: debugInfo.buffer?.type,
+//             readonly: debugInfo.buffer?.readonly
+//           });
           
-          console.log("[hellshake-yano] Test 4: PASSED - Fallback test completed");
+// console.log("[hellshake-yano] Test 4: PASSED - Fallback test completed");
         } catch (error) {
-          console.log("[hellshake-yano] Test 4: FAILED -", error);
+// console.log("[hellshake-yano] Test 4: FAILED -", error);
         }
 
-        console.log("[hellshake-yano] Error handling tests completed");
+// console.log("[hellshake-yano] Error handling tests completed");
         await denops.cmd("echo 'Error handling tests completed. Check console for results.'");
       } catch (error) {
-        console.error("[hellshake-yano] Error in testErrorHandling:", error);
+// console.error("[hellshake-yano] Error in testErrorHandling:", error);
         await denops.cmd("echohl ErrorMsg | echo 'Error handling test failed' | echohl None");
       }
     },
@@ -615,47 +631,47 @@ export async function main(denops: Denops): Promise<void> {
      */
     async testConfig(): Promise<void> {
       try {
-        console.log("[hellshake-yano] Testing configuration validation");
+// console.log("[hellshake-yano] Testing configuration validation");
         
         // テスト1: カスタムマーカー設定
-        console.log("[TEST] Custom markers");
+// console.log("[TEST] Custom markers");
         await denops.dispatcher.updateConfig?.({
           markers: ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"]
         });
-        console.log("Custom markers test passed");
+// console.log("Custom markers test passed");
         
         // テスト2: 無効なマーカー設定
-        console.log("[TEST] Invalid markers");
+// console.log("[TEST] Invalid markers");
         await denops.dispatcher.updateConfig?.({
           markers: [123, null, "", "valid"]  // 混在した無効な値
         });
         
         // テスト3: hint_position設定
-        console.log("[TEST] hint_position variations");
+// console.log("[TEST] hint_position variations");
         for (const pos of ["start", "end", "overlay", "invalid"]) {
           await denops.dispatcher.updateConfig?.({ hint_position: pos });
-          console.log(`Set hint_position to: ${pos}`);
+// console.log(`Set hint_position to: ${pos}`);
         }
         
         // テスト4: motion_count検証
-        console.log("[TEST] motion_count validation");
+// console.log("[TEST] motion_count validation");
         for (const count of [0, -1, 1.5, 3, 10]) {
           await denops.dispatcher.updateConfig?.({ motion_count: count });
         }
         
         // テスト5: motion_timeout検証
-        console.log("[TEST] motion_timeout validation");
+// console.log("[TEST] motion_timeout validation");
         for (const timeout of [50, 100, 500, 2000]) {
           await denops.dispatcher.updateConfig?.({ motion_timeout: timeout });
         }
         
         // 現在の設定を表示
         const debugInfo = await denops.dispatcher.debug?.();
-        console.log("[hellshake-yano] Final configuration:", debugInfo);
+// console.log("[hellshake-yano] Final configuration:", debugInfo);
         
         await denops.cmd("echo 'Configuration test completed. Check console for results.'");
       } catch (error) {
-        console.error("[hellshake-yano] Error in testConfig:", error);
+// console.error("[hellshake-yano] Error in testConfig:", error);
       }
     },
 
@@ -664,7 +680,7 @@ export async function main(denops: Denops): Promise<void> {
      */
     async testMultiCharHints(): Promise<void> {
       try {
-        console.log("[hellshake-yano] Testing multi-character hints functionality");
+// console.log("[hellshake-yano] Testing multi-character hints functionality");
         
         // テストファイルを開く
         await denops.cmd("edit tmp/claude/multi_char_test.txt");
@@ -675,27 +691,27 @@ export async function main(denops: Denops): Promise<void> {
         const debugInfo = await denops.dispatcher.debug?.() as {
           currentHints?: Array<{ hint: string; word: string; line: number; col: number }>;
         };
-        console.log("[hellshake-yano] Debug info:", debugInfo);
+// console.log("[hellshake-yano] Debug info:", debugInfo);
         
         if (debugInfo.currentHints) {
-          console.log("[hellshake-yano] Generated hints:");
+// console.log("[hellshake-yano] Generated hints:");
           debugInfo.currentHints.forEach((h, i: number) => {
-            console.log(`  ${i + 1}: ${h.hint} -> "${h.word}" at (${h.line}, ${h.col})`);
+// console.log(`  ${i + 1}: ${h.hint} -> "${h.word}" at (${h.line}, ${h.col})`);
           });
           
           // 複数文字ヒントの存在を確認
           const multiCharHints = debugInfo.currentHints.filter((h) => h.hint.length > 1);
-          console.log(`[hellshake-yano] Multi-character hints found: ${multiCharHints.length}`);
+// console.log(`[hellshake-yano] Multi-character hints found: ${multiCharHints.length}`);
           
           if (multiCharHints.length > 0) {
-            console.log("[hellshake-yano] Sample multi-character hints:");
+// console.log("[hellshake-yano] Sample multi-character hints:");
             multiCharHints.slice(0, 5).forEach((h) => {
-              console.log(`  ${h.hint} -> "${h.word}"`);
+// console.log(`  ${h.hint} -> "${h.word}"`);
             });
           }
         }
       } catch (error) {
-        console.error("[hellshake-yano] Error in testMultiCharHints:", error);
+// console.error("[hellshake-yano] Error in testMultiCharHints:", error);
       }
     },
 
@@ -704,7 +720,7 @@ export async function main(denops: Denops): Promise<void> {
      */
     async testPerformance(): Promise<void> {
       try {
-        console.log("[hellshake-yano] Starting performance tests...");
+// console.log("[hellshake-yano] Starting performance tests...");
         
         // テストファイルを開く
         await denops.cmd("edit tmp/claude/performance_test.txt");
@@ -712,36 +728,36 @@ export async function main(denops: Denops): Promise<void> {
         const startTime = Date.now();
         
         // 1. 単語検出の性能テスト
-        console.log("[hellshake-yano] Test 1: Word detection performance");
+// console.log("[hellshake-yano] Test 1: Word detection performance");
         const wordDetectionStart = Date.now();
         const words = await detectWords(denops);
         const wordDetectionTime = Date.now() - wordDetectionStart;
-        console.log(`Word detection: ${words.length} words in ${wordDetectionTime}ms`);
+// console.log(`Word detection: ${words.length} words in ${wordDetectionTime}ms`);
         
         // 2. ヒント生成の性能テスト
-        console.log("[hellshake-yano] Test 2: Hint generation performance");
+// console.log("[hellshake-yano] Test 2: Hint generation performance");
         const hintGenerationStart = Date.now();
         const hints = generateHints(words.length, config.markers, config.maxHints);
         const hintGenerationTime = Date.now() - hintGenerationStart;
-        console.log(`Hint generation: ${hints.length} hints in ${hintGenerationTime}ms`);
+// console.log(`Hint generation: ${hints.length} hints in ${hintGenerationTime}ms`);
         
         // 3. 実際のヒント表示性能テスト
-        console.log("[hellshake-yano] Test 3: Full hint display performance");
+// console.log("[hellshake-yano] Test 3: Full hint display performance");
         const fullTestStart = Date.now();
         await denops.dispatcher.showHints?.();
         const fullTestTime = Date.now() - fullTestStart;
-        console.log(`Full hint display: completed in ${fullTestTime}ms`);
+// console.log(`Full hint display: completed in ${fullTestTime}ms`);
         
         // 4. キャッシュ効果のテスト
-        console.log("[hellshake-yano] Test 4: Cache effectiveness test");
+// console.log("[hellshake-yano] Test 4: Cache effectiveness test");
         const cachedTestStart = Date.now();
         await denops.dispatcher.hideHints?.();
         await denops.dispatcher.showHints?.();
         const cachedTestTime = Date.now() - cachedTestStart;
-        console.log(`Cached hint display: completed in ${cachedTestTime}ms`);
+// console.log(`Cached hint display: completed in ${cachedTestTime}ms`);
         
         // 5. デバウンス機能のテスト
-        console.log("[hellshake-yano] Test 5: Debounce functionality test");
+// console.log("[hellshake-yano] Test 5: Debounce functionality test");
         const debounceTestStart = Date.now();
         await denops.dispatcher.hideHints?.();
         
@@ -752,20 +768,20 @@ export async function main(denops: Denops): Promise<void> {
         }
         await Promise.all(promises);
         const debounceTestTime = Date.now() - debounceTestStart;
-        console.log(`Debounced multiple calls: completed in ${debounceTestTime}ms`);
+// console.log(`Debounced multiple calls: completed in ${debounceTestTime}ms`);
         
         const totalTime = Date.now() - startTime;
         
         // 統計情報を表示
         const debugInfo = await denops.dispatcher.debug?.() as any;
         
-        console.log("\n=== Performance Test Results ===");
-        console.log(`Total test time: ${totalTime}ms`);
-        console.log(`Words detected: ${words.length}`);
-        console.log(`Hints generated: ${hints.length}`);
-        console.log(`Current hints displayed: ${debugInfo?.currentHintsCount || 0}`);
-        console.log(`Host: ${denops.meta.host}`);
-        console.log(`Has extmarks: ${debugInfo?.capabilities?.hasExtmarks || false}`);
+// console.log("\n=== Performance Test Results ===");
+// console.log(`Total test time: ${totalTime}ms`);
+// console.log(`Words detected: ${words.length}`);
+// console.log(`Hints generated: ${hints.length}`);
+// console.log(`Current hints displayed: ${debugInfo?.currentHintsCount || 0}`);
+// console.log(`Host: ${denops.meta.host}`);
+// console.log(`Has extmarks: ${debugInfo?.capabilities?.hasExtmarks || false}`);
         
         // キャッシュ統計
         try {
@@ -775,17 +791,17 @@ export async function main(denops: Denops): Promise<void> {
           const wordCacheStats = getWordDetectionCacheStats();
           const hintCacheStats = getHintCacheStats();
           
-          console.log("\n=== Cache Statistics ===");
-          console.log(`Word cache entries: ${wordCacheStats.cacheSize}/${wordCacheStats.maxCacheSize}`);
-          console.log(`Hint cache entries: ${hintCacheStats.hintCacheSize}`);
-          console.log(`Assignment cache entries: ${hintCacheStats.assignmentCacheSize}`);
+// console.log("\n=== Cache Statistics ===");
+// console.log(`Word cache entries: ${wordCacheStats.cacheSize}/${wordCacheStats.maxCacheSize}`);
+// console.log(`Hint cache entries: ${hintCacheStats.hintCacheSize}`);
+// console.log(`Assignment cache entries: ${hintCacheStats.assignmentCacheSize}`);
         } catch (error) {
-          console.warn("Could not retrieve cache statistics:", error);
+// console.warn("Could not retrieve cache statistics:", error);
         }
         
         await denops.cmd("echo 'Performance test completed. Check console for detailed results.'");
       } catch (error) {
-        console.error("[hellshake-yano] Error in testPerformance:", error);
+// console.error("[hellshake-yano] Error in testPerformance:", error);
         await denops.cmd("echohl ErrorMsg | echo 'Performance test failed' | echohl None");
       }
     },
@@ -795,7 +811,7 @@ export async function main(denops: Denops): Promise<void> {
      */
     async testStress(): Promise<void> {
       try {
-        console.log("[hellshake-yano] Starting stress test with large file...");
+// console.log("[hellshake-yano] Starting stress test with large file...");
         
         // パフォーマンステストファイルを開く
         await denops.cmd("edit tmp/claude/performance_test.txt");
@@ -804,7 +820,7 @@ export async function main(denops: Denops): Promise<void> {
         const originalMaxHints = config.maxHints;
         config.maxHints = 500;
         
-        console.log(`[hellshake-yano] Stress test with maxHints: ${config.maxHints}`);
+// console.log(`[hellshake-yano] Stress test with maxHints: ${config.maxHints}`);
         
         const startTime = Date.now();
         
@@ -817,17 +833,17 @@ export async function main(denops: Denops): Promise<void> {
         // 結果を取得
         const debugInfo = await denops.dispatcher.debug?.() as any;
         
-        console.log("\n=== Stress Test Results ===");
-        console.log(`Execution time: ${executionTime}ms`);
-        console.log(`Hints displayed: ${debugInfo?.currentHintsCount || 0}`);
-        console.log(`Performance: ${((debugInfo?.currentHintsCount || 0) / executionTime * 1000).toFixed(2)} hints/second`);
+// console.log("\n=== Stress Test Results ===");
+// console.log(`Execution time: ${executionTime}ms`);
+// console.log(`Hints displayed: ${debugInfo?.currentHintsCount || 0}`);
+// console.log(`Performance: ${((debugInfo?.currentHintsCount || 0) / executionTime * 1000).toFixed(2)} hints/second`);
         
         // 設定を元に戻す
         config.maxHints = originalMaxHints;
         
         await denops.cmd(`echo 'Stress test completed in ${executionTime}ms with ${debugInfo?.currentHintsCount || 0} hints'`);
       } catch (error) {
-        console.error("[hellshake-yano] Error in testStress:", error);
+// console.error("[hellshake-yano] Error in testStress:", error);
         await denops.cmd("echohl ErrorMsg | echo 'Stress test failed' | echohl None");
       }
     },
@@ -853,10 +869,10 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     const result = await detectWordsWithManager(denops, enhancedConfig);
 
     if (result.success) {
-      console.log(`[hellshake-yano] Enhanced detection successful: ${result.words.length} words via ${result.detector} (${result.performance.duration}ms)`);
+// console.log(`[hellshake-yano] Enhanced detection successful: ${result.words.length} words via ${result.detector} (${result.performance.duration}ms)`);
       return result.words;
     } else {
-      console.warn(`[hellshake-yano] Enhanced detection failed, using fallback: ${result.error}`);
+// console.warn(`[hellshake-yano] Enhanced detection failed, using fallback: ${result.error}`);
 
       // フォールバックとしてレガシーメソッドを使用
       return await detectWordsWithConfig(denops, {
@@ -864,7 +880,7 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
       });
     }
   } catch (error) {
-    console.error("[hellshake-yano] Error in detectWordsOptimized:", error);
+// console.error("[hellshake-yano] Error in detectWordsOptimized:", error);
 
     // 最終フォールバックとしてレガシーメソッドを使用
     return await detectWordsWithConfig(denops, {
@@ -889,7 +905,7 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
     // 設定の検証
     const validation = validateHintKeyConfig(hintConfig);
     if (!validation.valid) {
-      console.error("[hellshake-yano] Invalid hint key configuration:", validation.errors);
+// console.error("[hellshake-yano] Invalid hint key configuration:", validation.errors);
       // フォールバックとして通常のヒント生成を使用
       return generateHints(wordCount, markers);
     }
@@ -900,12 +916,12 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
   // 従来のヒント生成処理
   // キャッシュヒットチェック
   if (hintsCache && hintsCache.wordCount === wordCount) {
-    console.log("[hellshake-yano] Using cached hint generation results");
+// console.log("[hellshake-yano] Using cached hint generation results");
     return hintsCache.hints.slice(0, wordCount);
   }
 
   // キャッシュミスの場合、新たにヒントを生成
-  console.log("[hellshake-yano] Cache miss, generating hints...");
+// console.log("[hellshake-yano] Cache miss, generating hints...");
   const hints = generateHints(wordCount, markers);
 
   // キャッシュを更新（最大1000個まで）
@@ -930,7 +946,7 @@ async function displayHintsOptimized(denops: Denops, hints: HintMapping[]): Prom
     // バッファが読み込み専用かチェック
     const readonly = await denops.call("getbufvar", bufnr, "&readonly") as number;
     if (readonly) {
-      console.warn("[hellshake-yano] Buffer is readonly, hints may not display correctly");
+// console.warn("[hellshake-yano] Buffer is readonly, hints may not display correctly");
     }
 
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
@@ -949,7 +965,7 @@ async function displayHintsOptimized(denops: Denops, hints: HintMapping[]): Prom
       await denops.cmd("echo 'No hints to display'");
     }
   } catch (error) {
-    console.error("[hellshake-yano] Critical error in displayHintsOptimized:", error);
+// console.error("[hellshake-yano] Critical error in displayHintsOptimized:", error);
     
     // フォールバックとして通常の表示処理を使用
     await displayHints(denops, hints);
@@ -964,7 +980,7 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
   let extmarkFailCount = 0;
   const maxFailures = 5;
   
-  console.log(`[hellshake-yano] Creating ${hints.length} extmarks in batches of ${batchSize}`);
+// console.log(`[hellshake-yano] Creating ${hints.length} extmarks in batches of ${batchSize}`);
   
   for (let i = 0; i < hints.length; i += batchSize) {
     const batch = hints.slice(i, i + batchSize);
@@ -983,7 +999,7 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
           const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
           // デバッグログ追加
           if (config.debug_coordinates) {
-            console.log(`[displayHintsExtmarksBatch] word: "${word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
+// console.log(`[displayHintsExtmarksBatch] word: "${word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
           }
           const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
           let virtTextPos: "overlay" | "eol" = "overlay";
@@ -995,7 +1011,7 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
           // 行とカラムの境界チェック
           const lineCount = await denops.call("line", "$") as number;
           if (word.line > lineCount || word.line < 1) {
-            console.warn(`[hellshake-yano] Invalid line number: ${word.line} (max: ${lineCount})`);
+// console.warn(`[hellshake-yano] Invalid line number: ${word.line} (max: ${lineCount})`);
             return;
           }
 
@@ -1006,21 +1022,21 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
           });
         } catch (extmarkError) {
           extmarkFailCount++;
-          console.warn(`[hellshake-yano] Extmark failed for hint '${hint}' in batch ${Math.floor(i / batchSize)}:`, extmarkError);
+// console.warn(`[hellshake-yano] Extmark failed for hint '${hint}' in batch ${Math.floor(i / batchSize)}:`, extmarkError);
           
           // フォールバックとしてmatchaddを使用
           try {
             const pattern = `\\%${word.line}l\\%${word.col}c.`;
             const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
             fallbackMatchIds.push(matchId);
-            console.log(`[hellshake-yano] Used matchadd fallback for hint '${hint}'`);
+// console.log(`[hellshake-yano] Used matchadd fallback for hint '${hint}'`);
           } catch (matchError) {
-            console.error(`[hellshake-yano] Both extmark and matchadd failed for hint '${hint}':`, matchError);
+// console.error(`[hellshake-yano] Both extmark and matchadd failed for hint '${hint}':`, matchError);
           }
 
           // 失敗が多すぎる場合はextmarkを諦めてmatchaddに切り替え
           if (extmarkFailCount >= maxFailures) {
-            console.warn("[hellshake-yano] Too many extmark failures, switching to matchadd for remaining hints");
+// console.warn("[hellshake-yano] Too many extmark failures, switching to matchadd for remaining hints");
             const remainingHints = hints.slice(i + index + 1);
             if (remainingHints.length > 0) {
               await displayHintsWithMatchAddBatch(denops, remainingHints);
@@ -1035,7 +1051,7 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
         await new Promise(resolve => setTimeout(resolve, 1));
       }
     } catch (batchError) {
-      console.error(`[hellshake-yano] Error in batch ${Math.floor(i / batchSize)}:`, batchError);
+// console.error(`[hellshake-yano] Error in batch ${Math.floor(i / batchSize)}:`, batchError);
       // バッチエラーの場合は次のバッチに続く
     }
   }
@@ -1047,7 +1063,7 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
 async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[]): Promise<void> {
   const batchSize = 100; // matchaddはより高速なので大きなバッチサイズ
   
-  console.log(`[hellshake-yano] Creating ${hints.length} matches in batches of ${batchSize}`);
+// console.log(`[hellshake-yano] Creating ${hints.length} matches in batches of ${batchSize}`);
   
   for (let i = 0; i < hints.length; i += batchSize) {
     const batch = hints.slice(i, i + batchSize);
@@ -1059,7 +1075,7 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
           // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用してパターンを生成
           const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
           if (config.debug_coordinates) {
-            console.log(`[displayHintsMatchAddBatch] word: "${word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
+// console.log(`[displayHintsMatchAddBatch] word: "${word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
           }
           let pattern: string;
 
@@ -1078,10 +1094,10 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
           const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
           fallbackMatchIds.push(matchId);
           
-          console.log(`[hellshake-yano] Added match for hint '${hint}' at (${word.line}, ${word.col})`);
+// console.log(`[hellshake-yano] Added match for hint '${hint}' at (${word.line}, ${word.col})`);
           return matchId;
         } catch (matchError) {
-          console.warn(`[hellshake-yano] Failed to add match for hint '${hint}' at (${word.line}, ${word.col}):`, matchError);
+// console.warn(`[hellshake-yano] Failed to add match for hint '${hint}' at (${word.line}, ${word.col}):`, matchError);
           return null;
         }
       });
@@ -1093,7 +1109,7 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
         await new Promise(resolve => setTimeout(resolve, 1));
       }
     } catch (batchError) {
-      console.error(`[hellshake-yano] Error in match batch ${Math.floor(i / batchSize)}:`, batchError);
+// console.error(`[hellshake-yano] Error in match batch ${Math.floor(i / batchSize)}:`, batchError);
       // バッチエラーの場合は次のバッチに続く
     }
   }
@@ -1113,7 +1129,7 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
     // バッファが読み込み専用かチェック
     const readonly = await denops.call("getbufvar", bufnr, "&readonly") as number;
     if (readonly) {
-      console.warn("[hellshake-yano] Buffer is readonly, hints may not display correctly");
+// console.warn("[hellshake-yano] Buffer is readonly, hints may not display correctly");
     }
 
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
@@ -1143,7 +1159,7 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
           // 行とカラムの境界チェック
           const lineCount = await denops.call("line", "$") as number;
           if (word.line > lineCount || word.line < 1) {
-            console.warn(`[hellshake-yano] Invalid line number: ${word.line} (max: ${lineCount})`);
+// console.warn(`[hellshake-yano] Invalid line number: ${word.line} (max: ${lineCount})`);
             continue;
           }
 
@@ -1154,21 +1170,21 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
           });
         } catch (extmarkError) {
           extmarkFailCount++;
-          console.warn(`[hellshake-yano] Extmark failed for hint '${hint}' at (${word.line}, ${word.col}):`, extmarkError);
+// console.warn(`[hellshake-yano] Extmark failed for hint '${hint}' at (${word.line}, ${word.col}):`, extmarkError);
           
           // フォールバックとしてmatchadd()を使用
           try {
             const pattern = `\\%${word.line}l\\%${word.col}c.`;
             const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
             fallbackMatchIds.push(matchId);
-            console.log(`[hellshake-yano] Used matchadd fallback for hint '${hint}'`);
+// console.log(`[hellshake-yano] Used matchadd fallback for hint '${hint}'`);
           } catch (matchError) {
-            console.error(`[hellshake-yano] Both extmark and matchadd failed for hint '${hint}':`, matchError);
+// console.error(`[hellshake-yano] Both extmark and matchadd failed for hint '${hint}':`, matchError);
           }
 
           // 失敗が多すぎる場合はextmarkを諦めてmatchaddに切り替え
           if (extmarkFailCount >= maxFailures) {
-            console.warn("[hellshake-yano] Too many extmark failures, switching to matchadd for remaining hints");
+// console.warn("[hellshake-yano] Too many extmark failures, switching to matchadd for remaining hints");
             await displayHintsWithMatchAdd(denops, hints.slice(hints.indexOf({ word, hint })));
             break;
           }
@@ -1187,7 +1203,7 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
       await denops.cmd("echo 'No hints to display'");
     }
   } catch (error) {
-    console.error("[hellshake-yano] Critical error in displayHints:", error);
+// console.error("[hellshake-yano] Critical error in displayHints:", error);
     
     // 最後の手段としてユーザーに通知
     await denops.cmd("echohl ErrorMsg | echo 'hellshake-yano: Failed to display hints' | echohl None");
@@ -1232,13 +1248,13 @@ async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[]): P
         fallbackMatchIds.push(matchId);
         
         // Vimではテキストの表示はできないので、ヒント文字の情報をコメントとして記録
-        console.log(`[hellshake-yano] Added match for hint '${hint}' at (${word.line}, ${word.col}) with position '${config.hint_position}'`);
+// console.log(`[hellshake-yano] Added match for hint '${hint}' at (${word.line}, ${word.col}) with position '${config.hint_position}'`);
       } catch (matchError) {
-        console.warn(`[hellshake-yano] Failed to add match for hint '${hint}' at (${word.line}, ${word.col}):`, matchError);
+// console.warn(`[hellshake-yano] Failed to add match for hint '${hint}' at (${word.line}, ${word.col}):`, matchError);
       }
     }
   } catch (error) {
-    console.error("[hellshake-yano] Error in displayHintsWithMatchAdd:", error);
+// console.error("[hellshake-yano] Error in displayHintsWithMatchAdd:", error);
     throw error;
   }
 }
@@ -1263,7 +1279,7 @@ async function hideHints(denops: Denops): Promise<void> {
           }
         }
       } catch (extmarkError) {
-        console.warn("[hellshake-yano] Failed to clear extmarks:", extmarkError);
+// console.warn("[hellshake-yano] Failed to clear extmarks:", extmarkError);
       }
     }
 
@@ -1275,17 +1291,17 @@ async function hideHints(denops: Denops): Promise<void> {
             await denops.call("matchdelete", matchId);
           } catch (matchError) {
             // 個別のmatch削除エラーは警告のみ
-            console.warn(`[hellshake-yano] Failed to delete match ${matchId}:`, matchError);
+// console.warn(`[hellshake-yano] Failed to delete match ${matchId}:`, matchError);
           }
         }
         fallbackMatchIds = [];
       } catch (error) {
-        console.warn("[hellshake-yano] Error clearing fallback matches:", error);
+// console.warn("[hellshake-yano] Error clearing fallback matches:", error);
         // 最後の手段として全matchをクリア
         try {
           await denops.call("clearmatches");
         } catch (clearError) {
-          console.error("[hellshake-yano] Failed to clear all matches:", clearError);
+// console.error("[hellshake-yano] Failed to clear all matches:", clearError);
         }
       }
     }
@@ -1295,11 +1311,11 @@ async function hideHints(denops: Denops): Promise<void> {
       try {
         await denops.call("clearmatches");
       } catch (clearError) {
-        console.warn("[hellshake-yano] Failed to clear matches:", clearError);
+// console.warn("[hellshake-yano] Failed to clear matches:", clearError);
       }
     }
   } catch (error) {
-    console.error("[hellshake-yano] Error in hideHints:", error);
+// console.error("[hellshake-yano] Error in hideHints:", error);
   } finally {
     // エラーが発生しても状態はリセットする
     currentHints = [];
@@ -1356,7 +1372,7 @@ async function highlightCandidateHints(
             }
           );
         } catch (error) {
-          console.warn("[hellshake-yano] Failed to highlight candidate:", error);
+// console.warn("[hellshake-yano] Failed to highlight candidate:", error);
         }
       }
     } else {
@@ -1389,12 +1405,12 @@ async function highlightCandidateHints(
           ) as number;
           fallbackMatchIds.push(matchId);
         } catch (error) {
-          console.warn("[hellshake-yano] Failed to highlight candidate with matchadd:", error);
+// console.warn("[hellshake-yano] Failed to highlight candidate with matchadd:", error);
         }
       }
     }
   } catch (error) {
-    console.error("[hellshake-yano] Error highlighting candidates:", error);
+// console.error("[hellshake-yano] Error highlighting candidates:", error);
   }
 }
 
@@ -1475,9 +1491,13 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       return;
     }
 
-    // 有効な文字範囲チェック（数字対応を追加）
-    const validPattern = config.use_numbers ? /[A-Z0-9]/ : /[A-Z]/;
-    const errorMessage = config.use_numbers
+    // 現在のキー設定に数字が含まれているかチェック
+    const allKeys = [...(config.single_char_keys || []), ...(config.multi_char_keys || [])];
+    const hasNumbers = allKeys.some(k => /^\d$/.test(k));
+
+    // 有効な文字範囲チェック（use_numbersがtrueまたはキー設定に数字が含まれていれば数字を許可）
+    const validPattern = (config.use_numbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
+    const errorMessage = (config.use_numbers || hasNumbers)
       ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
       : "Please use alphabetic characters only";
 
@@ -1514,7 +1534,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // Process 50 Sub3: 1文字/2文字キーの完全分離
     if (config.use_hint_groups) {
       // デフォルトのキー設定
-      const singleOnlyKeys = config.single_char_keys || ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"];
+      const singleOnlyKeys = config.single_char_keys || ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
       const multiOnlyKeys = config.multi_char_keys || ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
       // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
@@ -1523,7 +1543,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
           await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
         } catch (jumpError) {
-          console.error("[hellshake-yano] Failed to jump to target:", jumpError);
+// console.error("[hellshake-yano] Failed to jump to target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
         }
         await hideHints(denops);
@@ -1545,7 +1565,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
           await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
         } catch (jumpError) {
-          console.error("[hellshake-yano] Failed to jump to target:", jumpError);
+// console.error("[hellshake-yano] Failed to jump to target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
         }
         await hideHints(denops);
@@ -1608,7 +1628,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           await denops.call("cursor", target.word.line, target.word.col);
           await denops.cmd(`echo 'Auto-selected "${target.word.text}"'`);
         } catch (jumpError) {
-          console.error("[hellshake-yano] Failed to jump to auto-selected target:", jumpError);
+// console.error("[hellshake-yano] Failed to jump to auto-selected target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
         }
       } else if (singleCharTarget) {
@@ -1617,7 +1637,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
           await denops.cmd(`echo 'Selected "${singleCharTarget.word.text}" (timeout)' | redraw`);
         } catch (jumpError) {
-          console.error("[hellshake-yano] Failed to jump to single char target:", jumpError);
+// console.error("[hellshake-yano] Failed to jump to single char target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
         }
       } else {
@@ -1669,11 +1689,11 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       // カーソルを移動（byteColが利用可能な場合は使用）
       try {
         const jumpCol = target.word.byteCol || target.word.col;
-        console.log(`[hellshake-yano] Jumping to word "${target.word.text}" at line ${target.word.line}, col ${jumpCol} (byte: ${target.word.byteCol}, char: ${target.word.col})`);
+// console.log(`[hellshake-yano] Jumping to word "${target.word.text}" at line ${target.word.line}, col ${jumpCol} (byte: ${target.word.byteCol}, char: ${target.word.col})`);
         await denops.call("cursor", target.word.line, jumpCol);
         await denops.cmd(`echo 'Jumped to "${target.word.text}"'`);
       } catch (jumpError) {
-        console.error("[hellshake-yano] Failed to jump to target:", jumpError);
+// console.error("[hellshake-yano] Failed to jump to target:", jumpError);
         await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
       }
     } else {
@@ -1689,7 +1709,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // ヒントを非表示
     await hideHints(denops);
   } catch (error) {
-    console.error("[hellshake-yano] Critical error in waitForUserInput:", error);
+// console.error("[hellshake-yano] Critical error in waitForUserInput:", error);
     
     // タイムアウトをクリア
     if (timeoutId) {
@@ -1792,6 +1812,20 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     }
   }
 
+  // counted_motions の検証
+  if (cfg.counted_motions !== undefined) {
+    if (!Array.isArray(cfg.counted_motions)) {
+      errors.push("counted_motions must be an array");
+    } else {
+      for (const key of cfg.counted_motions) {
+        if (typeof key !== 'string' || key.length !== 1) {
+          errors.push(`counted_motions contains invalid key: ${key} (must be single character strings)`);
+          break;
+        }
+      }
+    }
+  }
+
   // enabled の検証
   if (cfg.enabled !== undefined) {
     if (typeof cfg.enabled !== 'boolean') {
@@ -1840,6 +1874,7 @@ export function getDefaultConfig(): Config {
     motion_timeout: 2000,
     hint_position: "start",
     trigger_on_hjkl: true,
+    counted_motions: [],
     enabled: true,
     maxHints: 336,
     debounceDelay: 50,
