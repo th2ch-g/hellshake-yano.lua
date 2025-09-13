@@ -175,7 +175,7 @@ Deno.test("Integration - Error handling flow", async () => {
     // ここに到達してはいけない
     assertEquals(true, false, "Should have thrown error");
   } catch (error) {
-    assertEquals(error.message, "No matching hint: Z");
+    assertEquals((error as Error).message, "No matching hint: Z");
     // エラー後もヒントは非表示になる
     assertEquals(simulator.isVisible(), false);
   }
@@ -331,7 +331,7 @@ Deno.test("Integration - Invalid multi-character combination", async () => {
     await simulator.selectMultiCharHint("A", "Z");
     assertEquals(true, false, "Should have thrown error");
   } catch (error) {
-    assertEquals(error.message, "Invalid hint combination: AZ");
+    assertEquals((error as Error).message, "Invalid hint combination: AZ");
     assertEquals(simulator.isVisible(), false);
   }
 });

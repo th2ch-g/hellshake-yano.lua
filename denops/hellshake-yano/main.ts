@@ -35,6 +35,8 @@ export interface Config {
   use_hint_groups?: boolean; // ヒントグループ機能を使用するか
   // Process 50 Sub3: 日本語除外機能
   use_japanese?: boolean; // 日本語を含む単語検出を行うか（デフォルト: false）
+  // Process 50 Sub6: 改善版単語検出機能
+  use_improved_detection?: boolean; // 改善版単語検出（1文字単語含む）を使用するか（デフォルト: true）
   // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
   highlight_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
   highlight_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
@@ -59,6 +61,7 @@ let config: Config = {
   max_single_char_hints: 11,
   use_hint_groups: true, // デフォルトで有効
   use_japanese: false, // Process 50 Sub3: デフォルトで日本語除外
+  use_improved_detection: true, // Process 50 Sub6: デフォルトで改善版単語検出を使用
   // Process 50 Sub5: ハイライト色設定のデフォルト値
   highlight_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
   highlight_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
@@ -231,6 +234,14 @@ export async function main(denops: Denops): Promise<void> {
       if (typeof cfg.use_japanese === "boolean") {
         config.use_japanese = cfg.use_japanese;
         console.log(`[hellshake-yano] Japanese word detection: ${cfg.use_japanese ? "enabled" : "disabled"}`);
+      }
+
+      // Process 50 Sub6: use_improved_detection の適用
+      if (typeof cfg.use_improved_detection === "boolean") {
+        config.use_improved_detection = cfg.use_improved_detection;
+        console.log(`[hellshake-yano] Improved word detection (1-char support): ${cfg.use_improved_detection ? "enabled" : "disabled"}`);
+        // キャッシュをクリアして新しい設定を適用
+        wordsCache = null;
       }
 
       // Process 50 Sub5: highlight_marker の検証と適用（fg/bg対応）
@@ -768,9 +779,12 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
       return wordsCache.words;
     }
     
-    // キャッシュミスの場合、新たに単語を検出
-    console.log("[hellshake-yano] Cache miss, detecting words...");
-    const words = await detectWordsWithConfig(denops, { use_japanese: config.use_japanese });
+    // キャッシュミスの場合、新たに単語を検出（設定に基づいて改善版を使用）
+    console.log(`[hellshake-yano] Cache miss, detecting words (improved: ${config.use_improved_detection !== false})...`);
+    const words = await detectWordsWithConfig(denops, {
+      use_japanese: config.use_japanese,
+      use_improved_detection: config.use_improved_detection !== false  // undefined の場合も true として扱う
+    });
     
     // キャッシュを更新（メモリ使用量を制限）
     if (content.length < 1000000) { // 1MB未満のファイルのみキャッシュ
@@ -780,8 +794,11 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     return words;
   } catch (error) {
     console.error("[hellshake-yano] Error in detectWordsOptimized:", error);
-    // フォールバックとして通常の単語検出を使用
-    return await detectWordsWithConfig(denops, { use_japanese: config.use_japanese });
+    // フォールバックとして設定に基づく単語検出を使用
+    return await detectWordsWithConfig(denops, {
+      use_japanese: config.use_japanese,
+      use_improved_detection: config.use_improved_detection
+    });
   }
 }
 
@@ -1697,6 +1714,13 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     }
   }
 
+  // Process 50 Sub6: use_improved_detection の検証
+  if (cfg.use_improved_detection !== undefined) {
+    if (typeof cfg.use_improved_detection !== 'boolean') {
+      errors.push("use_improved_detection must be a boolean");
+    }
+  }
+
   // Process 50 Sub5: highlight_marker の検証（fg/bg対応）
   if (cfg.highlight_marker !== undefined) {
     const markerResult = validateHighlightColor(cfg.highlight_marker);
@@ -1734,6 +1758,7 @@ export function getDefaultConfig(): Config {
     debounceDelay: 50,
     use_numbers: false,
     highlight_selected: false,
+    use_improved_detection: true, // Process 50 Sub6: デフォルトで改善版を使用
     // Process 50 Sub5: ハイライト色設定のデフォルト値
     highlight_marker: "DiffAdd",
     highlight_marker_current: "DiffText",

@@ -214,11 +214,43 @@ function! hellshake_yano#on_buf_leave() abort
   endif
 endfunction
 
+" ハイライト色を更新
+function! hellshake_yano#update_highlight(marker_group, current_group) abort
+  " 設定を更新
+  if !empty(a:marker_group)
+    let g:hellshake_yano.highlight_marker = a:marker_group
+  endif
+  if !empty(a:current_group)
+    let g:hellshake_yano.highlight_marker_current = a:current_group
+  endif
+
+  " ハイライトを再適用
+  try
+    if !empty(a:marker_group)
+      execute 'highlight default link HellshakeYanoMarker ' . a:marker_group
+    endif
+    if !empty(a:current_group)
+      execute 'highlight default link HellshakeYanoMarkerCurrent ' . a:current_group
+    endif
+
+    " denops側に設定を通知
+    if exists('g:hellshake_yano_ready') && g:hellshake_yano_ready
+      call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
+    endif
+
+    echo printf('[hellshake-yano] Highlight updated: marker=%s, current=%s', a:marker_group, a:current_group)
+  catch
+    echohl ErrorMsg
+    echomsg '[hellshake-yano] Failed to update highlight: ' . v:exception
+    echohl None
+  endtry
+endfunction
+
 " デバッグ情報を表示
 function! hellshake_yano#debug() abort
   let bufnr = s:bufnr()
   call s:init_count(bufnr)
-  
+
   echo '=== hellshake-yano Debug Info ==='
   echo 'Enabled: ' . g:hellshake_yano.enabled
   echo 'Motion count threshold: ' . g:hellshake_yano.motion_count
@@ -227,6 +259,8 @@ function! hellshake_yano#debug() abort
   echo 'Current count: ' . s:motion_count[bufnr]
   echo 'Hints visible: ' . s:hints_visible
   echo 'Denops ready: ' . (exists('g:hellshake_yano_ready') ? g:hellshake_yano_ready : 'false')
+  echo 'Highlight marker: ' . get(g:hellshake_yano, 'highlight_marker', 'DiffAdd')
+  echo 'Highlight marker current: ' . get(g:hellshake_yano, 'highlight_marker_current', 'DiffText')
 endfunction
 
 " 保存と復元

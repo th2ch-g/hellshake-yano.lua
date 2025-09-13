@@ -1,5 +1,12 @@
 import type { Word } from "./word.ts";
 
+// Process 50 Sub3: ヒント表示位置の型定義
+export interface HintPosition {
+  line: number;
+  col: number;
+  display_mode: "before" | "after" | "overlay";
+}
+
 // パフォーマンス最適化用のキャッシュ
 let hintCache = new Map<string, string[]>();
 let assignmentCache = new Map<string, HintMapping[]>();
@@ -45,7 +52,9 @@ export function generateHints(wordCount: number, markers?: string[], maxHints?: 
   if (hintCache.size >= CACHE_MAX_SIZE) {
     // 最古のエントリを削除
     const firstKey = hintCache.keys().next().value;
-    hintCache.delete(firstKey);
+    if (firstKey !== undefined) {
+      hintCache.delete(firstKey);
+    }
   }
   hintCache.set(cacheKey, hints);
   
@@ -91,7 +100,9 @@ export function assignHintsToWords(
   if (assignmentCache.size >= CACHE_MAX_SIZE) {
     // 最古のエントリを削除
     const firstKey = assignmentCache.keys().next().value;
-    assignmentCache.delete(firstKey);
+    if (firstKey !== undefined) {
+      assignmentCache.delete(firstKey);
+    }
   }
   assignmentCache.set(cacheKey, mappings);
   
@@ -231,5 +242,187 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
   return {
     hintCacheSize: hintCache.size,
     assignmentCacheSize: assignmentCache.size,
+  };
+}
+
+/**
+ * Process 50 Sub3: ヒント表示位置を計算する
+ * マークは単語の先頭に表示する
+ */
+export function calculateHintPosition(
+  word: Word,
+  hintPosition: string
+): HintPosition {
+  let col: number;
+  let display_mode: "before" | "after" | "overlay";
+
+  switch (hintPosition) {
+    case "start":
+      col = word.col;
+      display_mode = "before";
+      break;
+    case "end":
+      col = word.col + word.text.length - 1;
+      display_mode = "after";
+      break;
+    case "overlay":
+      col = word.col;
+      display_mode = "overlay";
+      break;
+    default:
+      // 無効な設定の場合はデフォルトで "start" 動作
+      col = word.col;
+      display_mode = "before";
+      break;
+  }
+
+  return {
+    line: word.line,
+    col: col,
+    display_mode: display_mode,
+  };
+}
+
+/**
+ * Process 50 Sub2: ヒントキー設定インターフェース
+ * 1文字ヒントと2文字以上ヒントで使用するキーを個別に設定
+ */
+export interface HintKeyConfig {
+  // 1文字ヒント専用キー（例: ["A","S","D","F","G","H","J","K","L",";"]）
+  single_char_keys?: string[];
+
+  // 2文字以上ヒント専用キー（例: ["Q","W","E","R","T","Y","U","I","O","P"]）
+  multi_char_keys?: string[];
+
+  // 従来のmarkers（後方互換性のため維持）
+  markers?: string[];
+
+  // 1文字ヒントの最大数（この数を超えたら2文字ヒントを使用）
+  max_single_char_hints?: number;
+
+  // カーソルからの距離で1文字/2文字を決定するか
+  use_distance_priority?: boolean;
+}
+
+/**
+ * キーグループを使用したヒント生成
+ * 1文字ヒント用と2文字以上ヒント用のキーを分けて管理
+ */
+export function generateHintsWithGroups(
+  wordCount: number,
+  config: HintKeyConfig
+): string[] {
+  // デフォルト値の設定
+  const defaultMarkers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const singleCharKeys = config.single_char_keys || config.markers || defaultMarkers;
+  const multiCharKeys = config.multi_char_keys || singleCharKeys;
+
+  if (wordCount <= 0) {
+    return [];
+  }
+
+  const hints: string[] = [];
+
+  // 1文字ヒントの数を決定
+  const maxSingleChars = config.max_single_char_hints !== undefined
+    ? Math.min(config.max_single_char_hints, singleCharKeys.length)
+    : singleCharKeys.length;
+  const singleCharCount = Math.min(wordCount, maxSingleChars);
+
+  // 1文字ヒントを生成
+  hints.push(...generateSingleCharHints(singleCharKeys, singleCharCount));
+
+  // 2文字以上のヒントが必要な場合
+  const remainingCount = wordCount - singleCharCount;
+  if (remainingCount > 0) {
+    const multiCharHints = generateMultiCharHintsFromKeys(multiCharKeys, remainingCount);
+    hints.push(...multiCharHints);
+  }
+
+  return hints;
+}
+
+/**
+ * 1文字ヒントの生成
+ */
+function generateSingleCharHints(keys: string[], count: number): string[] {
+  return keys.slice(0, count);
+}
+
+/**
+ * 指定されたキーから複数文字ヒントを生成
+ */
+function generateMultiCharHintsFromKeys(keys: string[], count: number): string[] {
+  const hints: string[] = [];
+  let generated = 0;
+
+  // 2文字の組み合わせ
+  for (let i = 0; i < keys.length && generated < count; i++) {
+    for (let j = 0; j < keys.length && generated < count; j++) {
+      hints.push(keys[i] + keys[j]);
+      generated++;
+    }
+  }
+
+  // 3文字の組み合わせ（必要な場合）
+  if (generated < count) {
+    for (let i = 0; i < keys.length && generated < count; i++) {
+      for (let j = 0; j < keys.length && generated < count; j++) {
+        for (let k = 0; k < keys.length && generated < count; k++) {
+          hints.push(keys[i] + keys[j] + keys[k]);
+          generated++;
+        }
+      }
+    }
+  }
+
+  return hints;
+}
+
+/**
+ * ヒントキー設定の検証
+ */
+export function validateHintKeyConfig(config: HintKeyConfig): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  // 1文字キーの検証
+  if (config.single_char_keys) {
+    const invalidSingle = config.single_char_keys.filter(k => k.length !== 1);
+    if (invalidSingle.length > 0) {
+      errors.push(`Invalid single char keys: ${invalidSingle.join(", ")}`);
+    }
+  }
+
+  // 2文字キーの検証（実際は1文字である必要がある）
+  if (config.multi_char_keys) {
+    const invalidMulti = config.multi_char_keys.filter(k => k.length !== 1);
+    if (invalidMulti.length > 0) {
+      errors.push(`Multi char keys must be single characters: ${invalidMulti.join(", ")}`);
+    }
+  }
+
+  // 重複チェック
+  if (config.single_char_keys && config.multi_char_keys) {
+    const overlap = config.single_char_keys.filter(k =>
+      config.multi_char_keys!.includes(k)
+    );
+    if (overlap.length > 0) {
+      errors.push(`Keys cannot be in both groups: ${overlap.join(", ")}`);
+    }
+  }
+
+  // max_single_char_hints の検証
+  if (config.max_single_char_hints !== undefined) {
+    if (config.max_single_char_hints < 0) {
+      errors.push("max_single_char_hints must be non-negative");
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
   };
 }
