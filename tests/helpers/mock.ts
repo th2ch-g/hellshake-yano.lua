@@ -147,6 +147,89 @@ export class MockTimer {
 }
 
 /**
+ * MockDenops - Denopsインターフェースのモック実装
+ */
+export class MockDenops implements Partial<Denops> {
+  private callResponses: Map<string, any> = new Map();
+  private cmdHandlers: Array<(cmd: string) => void> = [];
+  private callHandlers: Map<string, ((...args: any[]) => any)> = new Map();
+
+  meta = {
+    host: "nvim" as const,
+    mode: "test" as const,
+    platform: "linux" as const,
+    version: "0.0.0"
+  };
+
+  dispatcher: Record<string, (...args: unknown[]) => unknown> = {};
+
+  setCallResponse(method: string, response: any): void {
+    this.callResponses.set(method, response);
+  }
+
+  onCall(method: string, handler: (...args: any[]) => any): void {
+    this.callHandlers.set(method, handler);
+  }
+
+  onCmd(handler: (cmd: string) => void): void {
+    this.cmdHandlers.push(handler);
+  }
+
+  async call(fn: string, ...args: unknown[]): Promise<unknown> {
+    // カスタムハンドラーがあれば実行
+    if (this.callHandlers.has(fn)) {
+      const handler = this.callHandlers.get(fn)!;
+      return handler(...args);
+    }
+
+    // 事前設定されたレスポンスを返す
+    if (this.callResponses.has(fn)) {
+      const response = this.callResponses.get(fn);
+      return typeof response === "function" ? response() : response;
+    }
+
+    // デフォルトのレスポンス
+    switch (fn) {
+      case "bufnr":
+        return 1;
+      case "line":
+        return args[0] === "." ? 1 : 100;
+      case "col":
+        return args[0] === "." ? 1 : 80;
+      case "getbufvar":
+        return "";
+      case "cursor":
+        if (this.callHandlers.has("cursor")) {
+          const handler = this.callHandlers.get("cursor")!;
+          return handler(args[0], args[1]);
+        }
+        return undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  async batch(..._args: unknown[]): Promise<unknown[]> {
+    return [];
+  }
+
+  async cmd(command: string, _context?: unknown): Promise<void> {
+    // コマンドハンドラーを実行
+    for (const handler of this.cmdHandlers) {
+      handler(command);
+    }
+  }
+
+  async eval(expr: string, _context?: unknown): Promise<unknown> {
+    return undefined;
+  }
+
+  async dispatch(_name: string, ..._args: unknown[]): Promise<unknown> {
+    return undefined;
+  }
+}
+
+/**
  * テスト用のサンプルテキスト生成
  */
 export function generateSampleText(): string[] {
