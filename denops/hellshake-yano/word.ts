@@ -5,7 +5,6 @@ import type { WordDetectionResult } from "./word/detector.ts";
 // Process 50 Sub3: 日本語除外機能の設定インターフェース（後方互換性のため保持）
 export interface WordConfig {
   use_japanese?: boolean;
-  use_improved_detection?: boolean; // Process 50 Sub6: 改善版単語検出を使用するか
 }
 
 // Process 50 Sub7: 新しい単語検出設定インターフェース（WordDetectionManagerConfig のエイリアス）
@@ -88,7 +87,7 @@ export async function detectWordsWithManager(
 }
 
 /**
- * Process 50 Sub3: 設定に基づいて画面内の単語を検出する（レガシー版）
+ * Process 50 Sub3: 設定に基づいて画面内の単語を検出する（統合版）
  */
 export async function detectWordsWithConfig(denops: Denops, config: WordConfig = {}): Promise<Word[]> {
   const words: Word[] = [];
@@ -97,27 +96,14 @@ export async function detectWordsWithConfig(denops: Denops, config: WordConfig =
   const topLine = await denops.call("line", "w0") as number;
   const bottomLine = await denops.call("line", "w$") as number;
 
-  // 各行から設定に基づいて単語を検出
+  // 各行から設定に基づいて単語を検出（常に改善版を使用）
   for (let line = topLine; line <= bottomLine; line++) {
     const lineText = await denops.call("getline", line) as string;
 
-    // Process 50 Sub6: 改善版の使用を設定に基づいて判断（デフォルトは true）
-    if (config.use_improved_detection !== false) {
-      // 日本語モードが有効な場合は、extractWordsFromLineWithConfigを使用
-      if (config.use_japanese === true) {
-        const lineWords = extractWordsFromLineWithConfig(lineText, line, config);
-        words.push(...lineWords);
-      } else {
-        // 改善版を使用（1文字単語も検出）- 英数字のみ
-        const excludeJapanese = true;  // 日本語除外
-        const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
-        words.push(...lineWords);
-      }
-    } else {
-      // 従来版を使用（日本語設定に基づく）- 明示的に false の場合のみ
-      const lineWords = extractWordsFromLineWithConfig(lineText, line, config);
-      words.push(...lineWords);
-    }
+    // use_japanese設定に基づいてexcludeJapaneseを決定
+    const excludeJapanese = config.use_japanese !== true;
+    const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
+    words.push(...lineWords);
   }
 
   return words;
@@ -372,84 +358,16 @@ export function extractWordsFromLine(lineText: string, lineNumber: number, useIm
 }
 
 /**
- * Process 50 Sub3: 設定に基づいて1行から単語を抽出
+ * Process 50 Sub3: 設定に基づいて1行から単語を抽出（統合版）
  */
 export function extractWordsFromLineWithConfig(
   lineText: string,
   lineNumber: number,
   config: WordConfig = {}
 ): Word[] {
-  // Process 50 Sub6: 改善版が有効な場合はそちらを使用
-  if (config.use_improved_detection) {
-    return extractWordsFromLine(lineText, lineNumber, true);
-  }
-
-  const words: Word[] = [];
-
-  // 空行はスキップ（日本語モードでは1文字でも処理）
-  if (!lineText || (config.use_japanese ? lineText.trim().length < 1 : lineText.trim().length < 2)) {
-    return words;
-  }
-
-  // 日本語モードの場合、日本語文字を個別に分割
-  if (config.use_japanese) {
-    // まず日本語文字を1文字ずつ分割
-    const japaneseChars = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]/g;
-    let japMatch;
-
-    while ((japMatch = japaneseChars.exec(lineText)) !== null) {
-      words.push({
-        text: japMatch[0],
-        line: lineNumber,
-        col: japMatch.index + 1, // Vimの列番号は1から始まる
-      });
-
-      // パフォーマンス保護
-      if (words.length >= 100) {
-        break;
-      }
-    }
-
-    // 英数字単語も検出（3文字以上）
-    const englishRegex = /\b[a-zA-Z0-9]+\b/g;
-    let engMatch;
-
-    while ((engMatch = englishRegex.exec(lineText)) !== null) {
-      if (engMatch[0].length >= 3 && !/^\d+$/.test(engMatch[0])) {
-        words.push({
-          text: engMatch[0],
-          line: lineNumber,
-          col: engMatch.index + 1,
-        });
-      }
-
-      if (words.length >= 100) {
-        break;
-      }
-    }
-  } else {
-    // 英数字モードは既存の処理
-    const wordRegex = /\b[a-zA-Z0-9]+\b/g;
-    let match;
-
-    while ((match = wordRegex.exec(lineText)) !== null) {
-      // 短すぎる単語や数字のみの単語はスキップ
-      if (match[0].length >= 3 && !/^\d+$/.test(match[0])) {
-        words.push({
-          text: match[0],
-          line: lineNumber,
-          col: match.index + 1,
-        });
-      }
-
-      // パフォーマンス保護：1行あたり100個まで
-      if (words.length >= 100) {
-        break;
-      }
-    }
-  }
-
-  return words;
+  // 常に改善版を使用し、use_japanese設定に基づいてexcludeJapaneseを決定
+  const excludeJapanese = config.use_japanese !== true;
+  return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
 }
 
 /**

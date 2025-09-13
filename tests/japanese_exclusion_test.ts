@@ -47,8 +47,7 @@ describe("Japanese Exclusion Configuration", () => {
     it("should respect use_japanese configuration from Vim settings", async () => {
       // use_japanese: false を明示的に設定
       const config: WordDetectionConfig = {
-        use_japanese: false,
-        use_improved_detection: true
+        use_japanese: false
       };
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(japaneseText, startLine);
@@ -65,8 +64,7 @@ describe("Japanese Exclusion Configuration", () => {
 
     it("should include Japanese when explicitly enabled", async () => {
       const config: WordDetectionConfig = {
-        use_japanese: true,
-        use_improved_detection: true
+        use_japanese: true
       };
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(japaneseText, startLine);
@@ -82,7 +80,6 @@ describe("Japanese Exclusion Configuration", () => {
     it("should use default (false) when use_japanese is not specified", async () => {
       // use_japanese を指定しない（undefined）
       const config: WordDetectionConfig = {
-        use_improved_detection: true
       };
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(japaneseText, startLine);
@@ -101,16 +98,14 @@ describe("Japanese Exclusion Configuration", () => {
 
       // 日本語除外設定
       const configExclude: WordDetectionConfig = {
-        use_japanese: false,
-        use_improved_detection: true
+        use_japanese: false
       };
       const hybridExclude = new HybridWordDetector(configExclude);
       const wordsExclude = await hybridExclude.detectWords(testText, 1);
 
       // 日本語含む設定
       const configInclude: WordDetectionConfig = {
-        use_japanese: true,
-        use_improved_detection: true
+        use_japanese: true
       };
       const hybridInclude = new HybridWordDetector(configInclude);
       const wordsInclude = await hybridInclude.detectWords(testText, 1);

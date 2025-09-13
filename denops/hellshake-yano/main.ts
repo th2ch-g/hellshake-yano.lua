@@ -46,8 +46,6 @@ export interface Config {
   use_hint_groups?: boolean; // ヒントグループ機能を使用するか
   // Process 50 Sub3: 日本語除外機能
   use_japanese?: boolean; // 日本語を含む単語検出を行うか（デフォルト: false）
-  // Process 50 Sub6: 改善版単語検出機能
-  use_improved_detection?: boolean; // 改善版単語検出（1文字単語含む）を使用するか（デフォルト: true）
   // Process 50 Sub7: 単語検出アブストラクション設定
   word_detection_strategy?: "regex" | "tinysegmenter" | "hybrid"; // 単語検出アルゴリズム（デフォルト: "hybrid"）
   enable_tinysegmenter?: boolean; // TinySegmenterを有効にするか（デフォルト: true）
@@ -76,8 +74,7 @@ let config: Config = {
   multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
   max_single_char_hints: 11,
   use_hint_groups: true, // デフォルトで有効
-  use_japanese: false, // Process 50 Sub3: デフォルトで日本語除外
-  use_improved_detection: true, // Process 50 Sub6: デフォルトで改善版単語検出を使用
+  // use_japanese: デフォルト値を設定しない（ユーザー設定を優先）
   // Process 50 Sub7: 単語検出アブストラクションのデフォルト設定
   word_detection_strategy: "hybrid" as const, // ハイブリッド方式をデフォルトに
   enable_tinysegmenter: true, // TinySegmenterを有効に
@@ -261,13 +258,8 @@ export async function main(denops: Denops): Promise<void> {
         console.log(`[hellshake-yano] Japanese word detection: ${cfg.use_japanese ? "enabled" : "disabled"}`);
       }
 
-      // Process 50 Sub6: use_improved_detection の適用
-      if (typeof cfg.use_improved_detection === "boolean") {
-        config.use_improved_detection = cfg.use_improved_detection;
-        console.log(`[hellshake-yano] Improved word detection (1-char support): ${cfg.use_improved_detection ? "enabled" : "disabled"}`);
-        // キャッシュをクリアして新しい設定を適用
-        wordsCache = null;
-      }
+      // Process 50 Sub6: use_improved_detection は統合済み（常に有効）
+      console.log(`[hellshake-yano] Improved word detection (1-char support): enabled (integrated)`);
 
       // Process 50 Sub7: 単語検出アブストラクション設定
       if (typeof cfg.word_detection_strategy === "string") {
@@ -844,7 +836,7 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     const enhancedConfig: EnhancedWordConfig = {
       strategy: config.word_detection_strategy,
       use_japanese: config.use_japanese,
-      use_improved_detection: config.use_improved_detection !== false,
+      // use_improved_detection は常にtrueとして統合済み
       enable_tinysegmenter: config.enable_tinysegmenter,
       segmenter_threshold: config.segmenter_threshold,
       cache_enabled: true,
@@ -861,8 +853,7 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
 
       // フォールバックとしてレガシーメソッドを使用
       return await detectWordsWithConfig(denops, {
-        use_japanese: config.use_japanese,
-        use_improved_detection: config.use_improved_detection
+        use_japanese: config.use_japanese
       });
     }
   } catch (error) {
@@ -870,8 +861,7 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
 
     // 最終フォールバックとしてレガシーメソッドを使用
     return await detectWordsWithConfig(denops, {
-      use_japanese: config.use_japanese,
-      use_improved_detection: config.use_improved_detection
+      use_japanese: config.use_japanese
     });
   }
 }
@@ -1807,12 +1797,7 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     }
   }
 
-  // Process 50 Sub6: use_improved_detection の検証
-  if (cfg.use_improved_detection !== undefined) {
-    if (typeof cfg.use_improved_detection !== 'boolean') {
-      errors.push("use_improved_detection must be a boolean");
-    }
-  }
+  // Process 50 Sub6: use_improved_detection は統合済み（検証不要）
 
   // Process 50 Sub5: highlight_marker の検証（fg/bg対応）
   if (cfg.highlight_marker !== undefined) {
@@ -1852,7 +1837,6 @@ export function getDefaultConfig(): Config {
     use_numbers: false,
     highlight_selected: false,
     debug_coordinates: false, // デフォルトでデバッグログは無効
-    use_improved_detection: true, // Process 50 Sub6: デフォルトで改善版を使用
     // Process 50 Sub5: ハイライト色設定のデフォルト値
     highlight_marker: "DiffAdd",
     highlight_marker_current: "DiffText",

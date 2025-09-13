@@ -14,7 +14,6 @@ import { TinySegmenter, type SegmentationResult } from "../segmenter.ts";
 export interface WordDetectionConfig {
   strategy?: "regex" | "tinysegmenter" | "hybrid";
   use_japanese?: boolean;
-  use_improved_detection?: boolean;
 
   // TinySegmenter specific options
   enable_tinysegmenter?: boolean;
@@ -85,9 +84,8 @@ export class RegexWordDetector implements WordDetector {
       const lineText = lines[i];
       const lineNumber = startLine + i;
 
-      const lineWords = this.config.use_improved_detection
-        ? this.extractWordsImproved(lineText, lineNumber)
-        : this.extractWordsStandard(lineText, lineNumber);
+      // 常に改善版検出を使用（統合済み）
+      const lineWords = this.extractWordsImproved(lineText, lineNumber);
 
       words.push(...lineWords);
     }
@@ -158,8 +156,8 @@ export class RegexWordDetector implements WordDetector {
           currentIndex += part.length + 1;
         }
       }
-      // Japanese word boundary splitting
-      else if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 4) {
+      // Japanese word boundary splitting (only if Japanese is enabled)
+      else if (this.config.use_japanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 4) {
         const japaneseWordRegex = /[\u4E00-\u9FAF\u3400-\u4DBF]+|[\u3040-\u309F]+|[\u30A0-\u30FF]+|[a-zA-Z0-9]+/g;
         let jpMatch;
         japaneseWordRegex.lastIndex = 0;
@@ -298,7 +296,6 @@ export class RegexWordDetector implements WordDetector {
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
     // デフォルト値（configで上書き可能）
     const defaults = {
-      use_improved_detection: true,
       min_word_length: 1,
       max_word_length: 50,
       exclude_numbers: false,
@@ -465,30 +462,14 @@ export class HybridWordDetector implements WordDetector {
       const lineText = lines[i];
       const lineNumber = startLine + i;
 
-      // use_japanese が true の場合は、extractWordsFromLineWithConfigを使用（1文字ずつ分割）
+      // use_japanese 設定に基づいて処理を決定
       if (this.config.use_japanese === true) {
-        // 日本語モード：extractWordsFromLineWithConfigを使用
+        // 日本語モード：extractWordsFromLineWithConfigを使用（1文字ずつ分割）
         const { extractWordsFromLineWithConfig } = await import("../word.ts");
         const words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
         allWords.push(...words);
-      } else if (this.segmenterDetector.canHandle(lineText) && await this.segmenterDetector.isAvailable()) {
-        // TinySegmenterが利用可能な場合（現在は使用されない）
-        try {
-          const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber);
-
-          // Also get regex words for comparison/supplementation
-          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
-
-          // Merge results, preferring segmenter but adding unique regex findings
-          const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
-          allWords.push(...mergedWords);
-        } catch (error) {
-          console.warn(`Hybrid detector: TinySegmenter failed, falling back to regex:`, error);
-          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
-          allWords.push(...regexWords);
-        }
       } else {
-        // Use regex detector for non-Japanese content
+        // 日本語除外モード：RegexDetectorを使用（日本語は除外される）
         const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
         allWords.push(...regexWords);
       }
@@ -546,7 +527,6 @@ export class HybridWordDetector implements WordDetector {
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
     return {
       // use_japanese はVimの設定から渡された値を使用（ハードコードしない）
-      use_improved_detection: true,
       enable_tinysegmenter: true,
       enable_fallback: true,
       fallback_to_regex: true,

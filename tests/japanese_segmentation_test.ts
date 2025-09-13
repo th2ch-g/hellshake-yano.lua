@@ -101,7 +101,7 @@ Deno.test("Word Detector Integration Tests", async (t) => {
   await t.step("RegexWordDetector with Japanese", async () => {
     const config: WordDetectionConfig = {
       use_japanese: true,
-      use_improved_detection: true
+      // use_improved_detection: 統合済み（常に有効）
     };
 
     const detector = new RegexWordDetector(config);
@@ -373,7 +373,7 @@ function calculateTotal(items) {
     const manager = new WordDetectionManager({
       strategy: "hybrid",
       use_japanese: true,
-      use_improved_detection: true
+      // use_improved_detection: 統合済み（常に有効）
     });
 
     await manager.initialize();

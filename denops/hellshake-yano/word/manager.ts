@@ -348,7 +348,7 @@ export class WordDetectionManager {
     const relevantConfig = {
       strategy: (this.config as any).word_detection_strategy || this.config.strategy,
       use_japanese: this.config.use_japanese,
-      use_improved_detection: this.config.use_improved_detection,
+      // use_improved_detection: 統合済み（常に有効）
       min_word_length: this.config.min_word_length,
       max_word_length: this.config.max_word_length,
     };
@@ -490,7 +490,7 @@ export class WordDetectionManager {
       // Detection settings
       strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
       use_japanese: false,
-      use_improved_detection: true,
+      // use_improved_detection: 統合済み（常に有効）
       enable_tinysegmenter: true,
       segmenter_threshold: 4,
       segmenter_cache_size: 1000,

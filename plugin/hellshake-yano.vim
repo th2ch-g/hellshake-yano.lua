@@ -25,8 +25,6 @@ let g:hellshake_yano = extend({
       \ 'hint_position': 'start',
       \ 'trigger_on_hjkl': v:true,
       \ 'enabled': v:true,
-      \ 'use_improved_detection': v:true,
-      \ 'use_japanese': v:false,
       \ }, g:hellshake_yano, 'keep')
 
 " ハイライトグループの定義（デフォルト値）
@@ -194,7 +192,12 @@ function! s:on_denops_ready() abort
   " カスタムハイライト色の適用
   call s:apply_custom_highlights()
 
-  " 設定をdenops側に送信
+  " 設定をdenops側に送信（デバッグログ付き）
+  if has_key(g:hellshake_yano, 'use_japanese')
+    echom '[hellshake-yano] Sending config with use_japanese: ' . string(g:hellshake_yano.use_japanese)
+  else
+    echom '[hellshake-yano] Sending config without use_japanese setting'
+  endif
   call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
 endfunction
 
