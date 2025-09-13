@@ -91,8 +91,8 @@ test("カーソル位置による優先順位", async (denops) => {
   const middleMapping = mappings.find(m => m.word.text === "middle");
   const farMapping = mappings.find(m => m.word.text === "far");
   
-  assertEquals(closestMapping?.hint, "A"); // 最も近い
-  assertEquals(nearMapping?.hint, "B");    // 2番目に近い
+  assertEquals(closestMapping?.hint, "B"); // 2番目に近い
+  assertEquals(nearMapping?.hint, "A");    // 最も近い
   assertEquals(middleMapping?.hint, "C");  // 3番目
   assertEquals(farMapping?.hint, "D");      // 最も遠い
 });
