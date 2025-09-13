@@ -11,6 +11,14 @@ import type { Word } from "../word.ts";
 import { TinySegmenter, type SegmentationResult } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 
+// Position-aware segment interface for tracking original positions
+export interface PositionSegment {
+  text: string;
+  startIndex: number;
+  endIndex: number;
+  originalIndex: number; // Position in original text before merging
+}
+
 // Configuration interfaces
 export interface WordDetectionConfig {
   strategy?: "regex" | "tinysegmenter" | "hybrid";
@@ -391,38 +399,39 @@ export class TinySegmenterWordDetector implements WordDetector {
   }
 
   private segmentsToWords(segments: string[], originalText: string, lineNumber: number): Word[] {
+    // まず位置情報付きセグメントを作成
+    const positionSegments = this.createPositionSegments(segments, originalText);
+
+    // 日本語分割精度設定を適用（位置情報を保持）
+    const mergedSegments = this.mergeShortSegmentsWithPosition(positionSegments);
     const words: Word[] = [];
-    let currentIndex = 0;
 
-    for (const segment of segments) {
-      const segmentIndex = originalText.indexOf(segment, currentIndex);
-
-      if (segmentIndex !== -1 && segment.trim().length > 0) {
+    for (const segment of mergedSegments) {
+      if (segment.text.trim().length > 0) {
         // 単語の長さフィルタリング
-        if (segment.length >= (this.config.min_word_length || 1) &&
-            segment.length <= (this.config.max_word_length || 50)) {
+        if (segment.text.length >= (this.config.min_word_length || 1) &&
+            segment.text.length <= (this.config.max_word_length || 50)) {
 
           // 数字除外オプション
-          if (this.config.exclude_numbers && /^\d+$/.test(segment)) {
+          if (this.config.exclude_numbers && /^\d+$/.test(segment.text)) {
             continue;
           }
 
           // 単一文字除外オプション
-          if (this.config.exclude_single_chars && segment.length === 1) {
+          if (this.config.exclude_single_chars && segment.text.length === 1) {
             continue;
           }
 
           // Calculate byte position for UTF-8 compatibility
-          const byteIndex = charIndexToByteIndex(originalText, segmentIndex);
+          const byteIndex = charIndexToByteIndex(originalText, segment.startIndex);
 
           words.push({
-            text: segment,
+            text: segment.text,
             line: lineNumber,
-            col: segmentIndex + 1, // Vim column numbers start at 1
+            col: segment.startIndex + 1, // Vim column numbers start at 1
             byteCol: byteIndex + 1, // Vim byte column numbers start at 1
           });
         }
-        currentIndex = segmentIndex + segment.length;
       }
     }
 
@@ -433,6 +442,235 @@ export class TinySegmenterWordDetector implements WordDetector {
     // Use simplified regex detection as fallback
     const regexDetector = new RegexWordDetector(this.config);
     return regexDetector.detectWords(lineText, lineNumber);
+  }
+
+  /**
+   * 位置情報付きセグメントを作成
+   */
+  private createPositionSegments(segments: string[], originalText: string): PositionSegment[] {
+    const positionSegments: PositionSegment[] = [];
+    let currentIndex = 0;
+
+    for (const segment of segments) {
+      const segmentIndex = originalText.indexOf(segment, currentIndex);
+
+      if (segmentIndex !== -1) {
+        positionSegments.push({
+          text: segment,
+          startIndex: segmentIndex,
+          endIndex: segmentIndex + segment.length,
+          originalIndex: segmentIndex
+        });
+        currentIndex = segmentIndex + segment.length;
+      }
+    }
+
+    return positionSegments;
+  }
+
+  /**
+   * 短いセグメントを結合して分割精度を調整（位置情報保持版）
+   */
+  private mergeShortSegmentsWithPosition(segments: PositionSegment[]): PositionSegment[] {
+    const mergeParticles = this.config.japanese_merge_particles !== false;
+    const mergeThreshold = this.config.japanese_merge_threshold || 2;
+    const minLength = this.config.japanese_min_word_length || 2;
+
+    if (!mergeParticles && minLength <= 1) {
+      return segments; // 結合処理不要
+    }
+
+    const result: PositionSegment[] = [];
+    let buffer: PositionSegment | null = null;
+
+    // 日本語の助詞・接続詞パターン
+    const particlePattern = /^[をでにへとからよりのがはもやねよなど]+$/;
+    const conjunctionPattern = /^[そしてしかしだからけれどけどものでならないし]+$/;
+
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const nextSegment = segments[i + 1];
+
+      // 短いセグメントの処理
+      if (segment.text.length <= mergeThreshold) {
+        // 助詞・接続詞の場合は前の単語と結合
+        if (mergeParticles && (particlePattern.test(segment.text) || conjunctionPattern.test(segment.text))) {
+          if (buffer) {
+            buffer = {
+              text: buffer.text + segment.text,
+              startIndex: buffer.startIndex,
+              endIndex: segment.endIndex,
+              originalIndex: buffer.originalIndex
+            };
+          } else if (result.length > 0) {
+            // 前の結果と結合
+            const lastResult = result[result.length - 1];
+            result[result.length - 1] = {
+              text: lastResult.text + segment.text,
+              startIndex: lastResult.startIndex,
+              endIndex: segment.endIndex,
+              originalIndex: lastResult.originalIndex
+            };
+          } else {
+            buffer = segment;
+          }
+        } else if (nextSegment && nextSegment.text.length <= mergeThreshold) {
+          // 次も短い場合はバッファに追加
+          if (buffer) {
+            buffer = {
+              text: buffer.text + segment.text,
+              startIndex: buffer.startIndex,
+              endIndex: segment.endIndex,
+              originalIndex: buffer.originalIndex
+            };
+          } else {
+            buffer = segment;
+          }
+        } else {
+          // 単独で最小長を満たすか、バッファと結合
+          if (buffer) {
+            const merged = {
+              text: buffer.text + segment.text,
+              startIndex: buffer.startIndex,
+              endIndex: segment.endIndex,
+              originalIndex: buffer.originalIndex
+            };
+            if (merged.text.length >= minLength) {
+              result.push(merged);
+            }
+            buffer = null;
+          } else if (segment.text.length >= minLength) {
+            result.push(segment);
+          } else if (result.length > 0) {
+            // 最小長に満たない場合は前の結果と結合
+            const lastResult = result[result.length - 1];
+            result[result.length - 1] = {
+              text: lastResult.text + segment.text,
+              startIndex: lastResult.startIndex,
+              endIndex: segment.endIndex,
+              originalIndex: lastResult.originalIndex
+            };
+          } else {
+            buffer = segment;
+          }
+        }
+      } else {
+        // 長いセグメント
+        if (buffer) {
+          if (buffer.text.length >= minLength) {
+            result.push(buffer);
+          } else if (result.length > 0) {
+            const lastResult = result[result.length - 1];
+            result[result.length - 1] = {
+              text: lastResult.text + buffer.text,
+              startIndex: lastResult.startIndex,
+              endIndex: buffer.endIndex,
+              originalIndex: lastResult.originalIndex
+            };
+          }
+          buffer = null;
+        }
+        result.push(segment);
+      }
+    }
+
+    // 残ったバッファを処理
+    if (buffer) {
+      if (buffer.text.length >= minLength) {
+        result.push(buffer);
+      } else if (result.length > 0) {
+        const lastResult = result[result.length - 1];
+        result[result.length - 1] = {
+          text: lastResult.text + buffer.text,
+          startIndex: lastResult.startIndex,
+          endIndex: buffer.endIndex,
+          originalIndex: lastResult.originalIndex
+        };
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 短いセグメントを結合して分割精度を調整（レガシー版）
+   */
+  private mergeShortSegments(segments: string[]): string[] {
+    const mergeParticles = this.config.japanese_merge_particles !== false;
+    const mergeThreshold = this.config.japanese_merge_threshold || 2;
+    const minLength = this.config.japanese_min_word_length || 2;
+
+    if (!mergeParticles && minLength <= 1) {
+      return segments; // 結合処理不要
+    }
+
+    const result: string[] = [];
+    let buffer = "";
+
+    // 日本語の助詞・接続詞パターン
+    const particlePattern = /^[をでにへとからよりのがはもやねよなど]+$/;
+    const conjunctionPattern = /^[そしてしかしだからけれどけどものでならないし]+$/;
+
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const nextSegment = segments[i + 1];
+
+      // 短いセグメントをバッファに追加
+      if (segment.length <= mergeThreshold) {
+        // 助詞・接続詞の場合は前の単語と結合
+        if (mergeParticles && (particlePattern.test(segment) || conjunctionPattern.test(segment))) {
+          if (buffer) {
+            buffer += segment;
+          } else if (result.length > 0) {
+            // 前の結果と結合
+            result[result.length - 1] += segment;
+          } else {
+            buffer = segment;
+          }
+        } else if (nextSegment && nextSegment.length <= mergeThreshold) {
+          // 次も短い場合はバッファに追加
+          buffer += segment;
+        } else {
+          // 単独で最小長を満たすか、バッファと結合
+          if (buffer) {
+            buffer += segment;
+            if (buffer.length >= minLength) {
+              result.push(buffer);
+            }
+            buffer = "";
+          } else if (segment.length >= minLength) {
+            result.push(segment);
+          } else if (result.length > 0) {
+            // 最小長に満たない場合は前の結果と結合
+            result[result.length - 1] += segment;
+          } else {
+            buffer = segment;
+          }
+        }
+      } else {
+        // 長いセグメント
+        if (buffer) {
+          if (buffer.length >= minLength) {
+            result.push(buffer);
+          } else if (result.length > 0) {
+            result[result.length - 1] += buffer;
+          }
+          buffer = "";
+        }
+        result.push(segment);
+      }
+    }
+
+    // 残ったバッファを処理
+    if (buffer) {
+      if (buffer.length >= minLength) {
+        result.push(buffer);
+      } else if (result.length > 0) {
+        result[result.length - 1] += buffer;
+      }
+    }
+
+    return result;
   }
 
   private applyFilters(words: Word[]): Word[] {

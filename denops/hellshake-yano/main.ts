@@ -50,6 +50,10 @@ export interface Config {
   word_detection_strategy?: "regex" | "tinysegmenter" | "hybrid"; // 単語検出アルゴリズム（デフォルト: "hybrid"）
   enable_tinysegmenter?: boolean; // TinySegmenterを有効にするか（デフォルト: true）
   segmenter_threshold?: number; // TinySegmenterを使用する最小文字数（デフォルト: 4）
+  // 日本語分割精度設定
+  japanese_min_word_length?: number; // 日本語の最小単語長（デフォルト: 2）
+  japanese_merge_particles?: boolean; // 助詞や接続詞を前の単語と結合（デフォルト: true）
+  japanese_merge_threshold?: number; // 結合する最大文字数（デフォルト: 2）
   // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
   highlight_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
   highlight_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
@@ -79,6 +83,9 @@ let config: Config = {
   word_detection_strategy: "hybrid" as const, // ハイブリッド方式をデフォルトに
   enable_tinysegmenter: true, // TinySegmenterを有効に
   segmenter_threshold: 4, // 4文字以上でセグメンテーション
+  japanese_min_word_length: 2, // 2文字以上の単語のみヒント表示
+  japanese_merge_particles: true, // 助詞を前の単語と結合
+  japanese_merge_threshold: 2, // 2文字以下の単語を結合対象とする
   // Process 50 Sub5: ハイライト色設定のデフォルト値
   highlight_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
   highlight_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
@@ -1659,9 +1666,11 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     const target = currentHints.find((h) => h.hint === fullHint);
 
     if (target) {
-      // カーソルを移動
+      // カーソルを移動（byteColが利用可能な場合は使用）
       try {
-        await denops.call("cursor", target.word.line, target.word.col);
+        const jumpCol = target.word.byteCol || target.word.col;
+        console.log(`[hellshake-yano] Jumping to word "${target.word.text}" at line ${target.word.line}, col ${jumpCol} (byte: ${target.word.byteCol}, char: ${target.word.col})`);
+        await denops.call("cursor", target.word.line, jumpCol);
         await denops.cmd(`echo 'Jumped to "${target.word.text}"'`);
       } catch (jumpError) {
         console.error("[hellshake-yano] Failed to jump to target:", jumpError);
