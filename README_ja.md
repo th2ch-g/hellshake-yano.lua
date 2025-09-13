@@ -44,7 +44,12 @@ let g:hellshake_yano = {
   \ 'motion_timeout': 2000,
   \ 'hint_position': 'start',
   \ 'trigger_on_hjkl': v:true,
+  \ 'counted_motions': [],
   \ 'enabled': v:true,
+  \ 'single_char_keys': split('ASDFGHJKLNM0123456789', '\zs'),
+  \ 'multi_char_keys': split('BCEIOPQRTUVWXYZ', '\zs'),
+  \ 'use_hint_groups': v:true,
+  \ 'use_numbers': v:true,
   \ 'use_japanese': v:true,
   \ 'highlight_marker': 'DiffAdd',
   \ 'highlight_marker_current': 'DiffText'
@@ -60,10 +65,24 @@ let g:hellshake_yano = {
 | `motion_timeout` | 数値 | 2000 | モーションカウントのタイムアウト（ミリ秒） |
 | `hint_position` | 文字列 | 'start' | ヒントの表示位置（'start'または'end'） |
 | `trigger_on_hjkl` | 真偽値 | v:true | hjkl移動でのトリガーを有効化 |
+| `counted_motions` | 配列 | [] | カスタムモーションキー（trigger_on_hjklを上書き） |
 | `enabled` | 真偽値 | v:true | プラグインの有効/無効 |
+| `single_char_keys` | 配列 | ASDFGHJKLNM0-9 | 1文字ヒント用キー |
+| `multi_char_keys` | 配列 | BCEIOPQRTUVWXYZ | 2文字以上ヒント用キー |
+| `use_hint_groups` | 真偽値 | v:true | ヒントグループ機能を有効化 |
+| `use_numbers` | 真偽値 | v:true | 数字キーをヒントに使用可能にする |
+| `max_single_char_hints` | 数値 | - | オプション：1文字ヒントを制限 |
 | `use_japanese` | 真偽値 | - | 日本語単語検出を有効化 |
 | `highlight_marker` | 文字列/辞書 | 'DiffAdd' | マーカーのハイライト |
 | `highlight_marker_current` | 文字列/辞書 | 'DiffText' | 現在のマーカーのハイライト |
+
+### ヒントグループ設定
+
+プラグインは、効率的なナビゲーションのために1文字ヒントと2文字以上ヒントを分離するインテリジェントなヒントグループ機能をサポートします：
+
+- **1文字キー**: タイムアウトなしで即座にナビゲーション
+- **2文字以上キー**: より多くのターゲットが必要な場合に2文字ヒントとして使用
+- **1文字ヒント最大数**: キーの競合を防ぐために1文字ヒントの数を制限
 
 ### 高度なハイライト設定
 
@@ -89,6 +108,26 @@ let g:hellshake_yano = {
   \ 'motion_timeout': 3000,
   \ 'use_japanese': v:true,
   \ 'highlight_marker': {'bg': '#3c3c3c'}
+  \ }
+
+" ヒントグループ設定例
+" ホームロウキーを1文字ヒントに使用
+let g:hellshake_yano = {
+  \ 'single_char_keys': split('asdfghjkl', '\zs'),
+  \ 'multi_char_keys': split('qwertyuiop', '\zs'),
+  \ 'use_hint_groups': v:true
+  \ }
+
+" 数字を優先的に使用（素早いアクセス）
+let g:hellshake_yano = {
+  \ 'single_char_keys': split('1234567890ASDFGHJKL', '\zs'),
+  \ 'multi_char_keys': split('QWERTYUIOPZXCVBNM', '\zs')
+  \ }
+
+" 数字を除外したい場合
+let g:hellshake_yano = {
+  \ 'single_char_keys': split('ASDFGHJKL', '\zs'),
+  \ 'multi_char_keys': split('QWERTYUIOPZXCVBNM', '\zs')
   \ }
 ```
 

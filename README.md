@@ -44,7 +44,12 @@ let g:hellshake_yano = {
   \ 'motion_timeout': 2000,
   \ 'hint_position': 'start',
   \ 'trigger_on_hjkl': v:true,
+  \ 'counted_motions': [],
   \ 'enabled': v:true,
+  \ 'single_char_keys': split('ASDFGHJKLNM0123456789', '\zs'),
+  \ 'multi_char_keys': split('BCEIOPQRTUVWXYZ', '\zs'),
+  \ 'use_hint_groups': v:true,
+  \ 'use_numbers': v:true,
   \ 'use_japanese': v:true,
   \ 'highlight_marker': 'DiffAdd',
   \ 'highlight_marker_current': 'DiffText'
@@ -60,10 +65,24 @@ let g:hellshake_yano = {
 | `motion_timeout` | number | 2000 | Timeout for motion count in milliseconds |
 | `hint_position` | string | 'start' | Where to display hints ('start' or 'end') |
 | `trigger_on_hjkl` | boolean | v:true | Enable triggering on hjkl movements |
+| `counted_motions` | array | [] | Custom motion keys to count (overrides trigger_on_hjkl) |
 | `enabled` | boolean | v:true | Enable/disable the plugin |
+| `single_char_keys` | array | ASDFGHJKLNM0-9 | Keys used for single-character hints |
+| `multi_char_keys` | array | BCEIOPQRTUVWXYZ | Keys used for multi-character hints |
+| `use_hint_groups` | boolean | v:true | Enable hint groups feature |
+| `use_numbers` | boolean | v:true | Allow number keys for hints |
+| `max_single_char_hints` | number | - | Optional: limit single-character hints |
 | `use_japanese` | boolean | - | Enable Japanese word detection |
 | `highlight_marker` | string/dict | 'DiffAdd' | Highlight for markers |
 | `highlight_marker_current` | string/dict | 'DiffText' | Highlight for current marker |
+
+### Hint Groups Configuration
+
+The plugin supports intelligent hint grouping that separates single-character hints from multi-character hints for improved navigation efficiency:
+
+- **Single-character keys**: Used for immediate navigation with no timeout
+- **Multi-character keys**: Used for two-character hints when more targets are needed
+- **Max single-character hints**: Limits the number of single-character hints to prevent key conflicts
 
 ### Advanced Highlight Configuration
 
@@ -89,6 +108,26 @@ let g:hellshake_yano = {
   \ 'motion_timeout': 3000,
   \ 'use_japanese': v:true,
   \ 'highlight_marker': {'bg': '#3c3c3c'}
+  \ }
+
+" Hint groups configuration examples
+" Using home row keys for single-character hints
+let g:hellshake_yano = {
+  \ 'single_char_keys': split('asdfghjkl', '\zs'),
+  \ 'multi_char_keys': split('qwertyuiop', '\zs'),
+  \ 'use_hint_groups': v:true
+  \ }
+
+" Numbers first for quick access (1-9, 0)
+let g:hellshake_yano = {
+  \ 'single_char_keys': split('1234567890ASDFGHJKL', '\zs'),
+  \ 'multi_char_keys': split('QWERTYUIOPZXCVBNM', '\zs')
+  \ }
+
+" Exclude numbers if preferred
+let g:hellshake_yano = {
+  \ 'single_char_keys': split('ASDFGHJKL', '\zs'),
+  \ 'multi_char_keys': split('QWERTYUIOPZXCVBNM', '\zs')
   \ }
 ```
 
