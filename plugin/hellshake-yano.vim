@@ -48,10 +48,23 @@ function! s:initialize() abort
     return
   endif
 
-  " denopsプラグインの登録
-  call denops#plugin#register('hellshake-yano', 
-        \ expand('<sfile>:p:h:h') . '/denops/hellshake-yano/main.ts',
-        \ {'mode': 'skip'})
+  " denopsプラグインの読み込み
+  " denopsは自動的にdenops/*/main.tsを検出するため、
+  " 明示的なロードが必要な場合のみdenops#plugin#load()を使用
+  try
+    let l:script_path = expand('<sfile>:p:h:h') . '/denops/hellshake-yano/main.ts'
+    if filereadable(l:script_path)
+      call denops#plugin#load('hellshake-yano', l:script_path)
+    else
+      " ファイルが見つからない場合はdenopsの自動ディスカバリーに任せる
+      " 通常、denopsは起動時に自動的にdenops/*/main.tsを検出する
+    endif
+  catch
+    " エラーが発生しても続行（denopsの自動ディスカバリーに任せる）
+    " echohl WarningMsg
+    " echomsg '[hellshake-yano] Plugin registration failed: ' . v:exception
+    " echohl None
+  endtry
 endfunction
 
 " hjklキーマッピング（初期設定で有効な場合）
@@ -93,8 +106,18 @@ function! s:on_denops_ready() abort
   call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
 endfunction
 
-" プラグインの初期化を実行
-call s:initialize()
+" プラグインの初期化を遅延実行
+" denopsが起動してから初期化する
+if exists('g:loaded_denops') && denops#server#status() !=# 'stopped'
+  call s:initialize()
+else
+  " denopsの起動を待ってから初期化
+  augroup HellshakeYanoInit
+    autocmd!
+    autocmd User DenopsPluginPost:* ++once call s:initialize()
+    autocmd User DenopsReady ++once call s:initialize()
+  augroup END
+endif
 
 " 保存と復元
 let &cpo = s:save_cpo
