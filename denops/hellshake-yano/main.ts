@@ -51,7 +51,7 @@ let config: Config = {
   hint_position: "start",
   trigger_on_hjkl: true,
   enabled: true,
-  maxHints: 100, // デフォルト最大100個のヒント
+  maxHints: 336, // Approach A対応: 11単文字 + 225二文字 + 100数字 = 336個
   debounceDelay: 50, // 50msのデバウンス
   use_numbers: false, // デフォルトでは数字は使用しない
   highlight_selected: true, // デフォルトで選択中ヒントをハイライト
@@ -340,7 +340,23 @@ export async function main(denops: Denops): Promise<void> {
           }
 
           // maxHints設定を使用してヒント数を制限
-          const effectiveMaxHints = Math.min(config.maxHints, config.markers.length * config.markers.length);
+          let effectiveMaxHints: number;
+
+          // hint groups使用時は実際の容量を計算
+          if (config.use_hint_groups && config.single_char_keys && config.multi_char_keys) {
+            const singleCharCount = Math.min(
+              config.single_char_keys.length,
+              config.max_single_char_hints || config.single_char_keys.length
+            );
+            const multiCharCount = config.multi_char_keys.length * config.multi_char_keys.length;
+            const numberHintCount = 100; // 2桁数字ヒント
+            const totalCapacity = singleCharCount + multiCharCount + numberHintCount;
+            effectiveMaxHints = Math.min(config.maxHints, totalCapacity);
+          } else {
+            // 従来の計算方法
+            effectiveMaxHints = Math.min(config.maxHints, config.markers.length * config.markers.length);
+          }
+
           const limitedWords = words.slice(0, effectiveMaxHints);
           
           if (words.length > effectiveMaxHints) {
@@ -1754,7 +1770,7 @@ export function getDefaultConfig(): Config {
     hint_position: "start",
     trigger_on_hjkl: true,
     enabled: true,
-    maxHints: 100,
+    maxHints: 336,
     debounceDelay: 50,
     use_numbers: false,
     highlight_selected: false,

@@ -26,7 +26,7 @@ describe("Config Tests", () => {
       assertEquals(config.trigger_on_hjkl, true);
       assertEquals(config.enabled, true);
       assertEquals(config.use_numbers, false);
-      assertEquals(config.maxHints, 100);
+      assertEquals(config.maxHints, 336);
       assertEquals(config.debounceDelay, 50);
       assertEquals(config.highlight_selected, false);
     });
