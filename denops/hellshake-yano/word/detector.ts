@@ -81,6 +81,12 @@ export class RegexWordDetector implements WordDetector {
 
   private config: WordDetectionConfig;
 
+  /**
+   * RegexWordDetectorのコンストラクタ
+   * @description 正規表現ベースの単語ディテクターを初期化
+   * @param config - ディテクター設定（省略時はデフォルト設定）
+   * @since 1.0.0
+   */
   constructor(config: WordDetectionConfig = {}) {
     this.config = this.mergeWithDefaults(config);
   }
@@ -338,6 +344,12 @@ export class TinySegmenterWordDetector implements WordDetector {
   private segmenter: TinySegmenter;
   private config: WordDetectionConfig;
 
+  /**
+   * TinySegmenterWordDetectorのコンストラクタ
+   * @description TinySegmenterベースの日本語単語ディテクターを初期化
+   * @param config - ディテクター設定（省略時はデフォルト設定）
+   * @since 1.0.0
+   */
   constructor(config: WordDetectionConfig = {}) {
     this.config = this.mergeWithDefaults(config);
     this.segmenter = TinySegmenter.getInstance();

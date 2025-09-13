@@ -1,22 +1,39 @@
 import type { Word } from "./word.ts";
 
-// Process 50 Sub3: ヒント表示位置の型定義
+/**
+ * Process 50 Sub3: ヒント表示位置の型定義
+ * @description ヒントの表示位置とモードを定義するインターフェース
+ * @since 1.0.0
+ */
 export interface HintPosition {
+  /** 行番号（1ベース） */
   line: number;
+  /** 列番号（1ベース） */
   col: number;
+  /** 表示モード */
   display_mode: "before" | "after" | "overlay";
 }
 
-// 座標系対応版のヒント表示位置型定義
+/**
+ * 座標系対応版のヒント表示位置型定義
+ * @description Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方に対応した位置情報
+ * @since 1.0.0
+ */
 export interface HintPositionWithCoordinateSystem {
+  /** 行番号（後方互換性のため） */
   line: number;
+  /** 列番号（後方互換性のため） */
   col: number;
+  /** 表示モード */
   display_mode: "before" | "after" | "overlay";
-  // Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方を提供
-  vim_col: number;      // 1ベース（Vim matchadd用）
-  nvim_col: number;     // 0ベース（Neovim extmark用）
-  vim_line: number;     // 1ベース（Vim matchadd用）
-  nvim_line: number;    // 0ベース（Neovim extmark用）
+  /** Vim座標系列番号（1ベース、matchadd用） */
+  vim_col: number;
+  /** Neovim extmark座標系列番号（0ベース、extmark用） */
+  nvim_col: number;
+  /** Vim座標系行番号（1ベース、matchadd用） */
+  vim_line: number;
+  /** Neovim extmark座標系行番号（0ベース、extmark用） */
+  nvim_line: number;
 }
 
 // パフォーマンス最適化用のキャッシュ
@@ -24,13 +41,32 @@ let hintCache = new Map<string, string[]>();
 let assignmentCache = new Map<string, HintMapping[]>();
 const CACHE_MAX_SIZE = 100; // キャッシュの最大サイズ
 
+/**
+ * ヒントと単語のマッピング
+ * @description 検出された単語とそれに割り当てられたヒント文字列の組み合わせ
+ * @since 1.0.0
+ */
 export interface HintMapping {
+  /** マッピング対象の単語 */
   word: Word;
+  /** 割り当てられたヒント文字列 */
   hint: string;
 }
 
 /**
  * 指定数のヒントを生成する（最適化版）
+ * @description 指定された単語数に対してヒント文字列を生成。キャッシュ機能付きで高速動作
+ * @param wordCount - 必要なヒント数
+ * @param markers - ヒント文字として使用するマーカー配列（省略時はデフォルトのアルファベット）
+ * @param maxHints - 最大ヒント数制限（省略時は制限なし）
+ * @returns string[] - 生成されたヒント文字列の配列
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * generateHints(5, ['A', 'B', 'C']); // ['A', 'B', 'C', 'AA', 'AB']
+ * generateHints(3); // ['A', 'B', 'C'] (デフォルトマーカー使用)
+ * generateHints(100, undefined, 50); // 最大50個のヒントを生成
+ * ```
  */
 export function generateHints(wordCount: number, markers?: string[], maxHints?: number): string[] {
   const defaultMarkers = markers || "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -75,6 +111,21 @@ export function generateHints(wordCount: number, markers?: string[], maxHints?: 
 
 /**
  * 単語にヒントを割り当てる（最適化版）
+ * @description 検出された単語にヒント文字列を割り当て。カーソル位置からの距離でソートしてより近い単語に短いヒントを割り当て
+ * @param words - ヒントを割り当てる単語の配列
+ * @param hints - 使用可能なヒント文字列の配列
+ * @param cursorLine - カーソルの現在行番号
+ * @param cursorCol - カーソルの現在列番号
+ * @returns HintMapping[] - 単語とヒントのマッピング配列
+ * @throws {Error} 単語またはヒントが空の場合（空の配列を返す）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const words = [{text: 'hello', line: 1, col: 5}, {text: 'world', line: 1, col: 15}];
+ * const hints = ['A', 'B'];
+ * const mappings = assignHintsToWords(words, hints, 1, 1);
+ * // カーソルに近い単語に短いヒントが割り当てられる
+ * ```
  */
 export function assignHintsToWords(
   words: Word[],
@@ -123,6 +174,11 @@ export function assignHintsToWords(
 
 /**
  * 複数文字ヒントを最適化して生成
+ * @description 単一文字ヒントを使い切った後の複数文字ヒントを効率的に生成
+ * @param wordCount - 必要な総ヒント数
+ * @param markers - ヒント文字として使用するマーカー配列
+ * @returns string[] - 生成されたヒント文字列の配列
+ * @since 1.0.0
  */
 function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): string[] {
   const hints: string[] = [];
@@ -149,6 +205,12 @@ function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): 
 
 /**
  * カーソル位置からの距離で単語を最適化してソート
+ * @description カーソル位置から近い順に単語をソート。大量の単語がある場合はバッチ処理で効率化
+ * @param words - ソートする単語の配列
+ * @param cursorLine - カーソルの現在行番号
+ * @param cursorCol - カーソルの現在列番号
+ * @returns Word[] - 距離順にソートされた単語配列
+ * @since 1.0.0
  */
 function sortWordsByDistanceOptimized(words: Word[], cursorLine: number, cursorCol: number): Word[] {
   // 大量の単語がある場合はバッチ処理でソート
@@ -183,6 +245,12 @@ function sortWordsByDistanceOptimized(words: Word[], cursorLine: number, cursorC
 
 /**
  * 大量の単語をバッチ処理でソート
+ * @description 1000個以上の単語を効率的にソートするためのバッチ処理アルゴリズム
+ * @param words - ソートする単語の配列
+ * @param cursorLine - カーソルの現在行番号
+ * @param cursorCol - カーソルの現在列番号
+ * @returns Word[] - ソートされた単語配列
+ * @since 1.0.0
  */
 function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number): Word[] {
   const batchSize = 500;
@@ -201,6 +269,12 @@ function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number
 
 /**
  * ソート済みバッチをマージ
+ * @description 複数のソート済みバッチを効率的にマージしてひとつのソート済み配列にする
+ * @param batches - ソート済み単語バッチの配列
+ * @param cursorLine - カーソルの現在行番号（距離計算用）
+ * @param cursorCol - カーソルの現在列番号（距離計算用）
+ * @returns Word[] - マージされたソート済み単語配列
+ * @since 1.0.0
  */
 function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: number): Word[] {
   if (batches.length === 0) return [];
@@ -240,6 +314,13 @@ function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: nu
 
 /**
  * キャッシュをクリア
+ * @description ヒント生成とヒント割り当てのキャッシュをクリアする
+ * @returns void
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * clearHintCache(); // キャッシュをリセット
+ * ```
  */
 export function clearHintCache(): void {
   hintCache.clear();
@@ -248,6 +329,14 @@ export function clearHintCache(): void {
 
 /**
  * キャッシュの統計情報を取得
+ * @description ヒント関連キャッシュの使用状況を取得
+ * @returns {{ hintCacheSize: number, assignmentCacheSize: number }} キャッシュサイズ情報
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const stats = getHintCacheStats();
+ * console.log(`Hint cache: ${stats.hintCacheSize}, Assignment cache: ${stats.assignmentCacheSize}`);
+ * ```
  */
 export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSize: number } {
   return {
@@ -258,7 +347,17 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
 
 /**
  * Process 50 Sub3: ヒント表示位置を計算する
- * マークは単語の先頭に表示する
+ * @description 単語とヒント位置設定に基づいてヒントの表示位置を計算
+ * @param word - 対象の単語
+ * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
+ * @returns HintPosition - 計算されたヒント表示位置
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: 'hello', line: 1, col: 5 };
+ * const position = calculateHintPosition(word, 'start');
+ * // { line: 1, col: 5, display_mode: 'before' }
+ * ```
  */
 export function calculateHintPosition(
   word: Word,
@@ -298,10 +397,18 @@ export function calculateHintPosition(
 
 /**
  * 座標系対応版：ヒント表示位置を計算する（Vim/Neovim両方対応）
- *
- * @param word 単語情報（1ベース座標で提供されることを前提）
- * @param hintPosition ヒント位置設定
- * @returns Vim/Neovim両方の座標系に対応した位置情報
+ * @description Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方に対応したヒント位置計算
+ * @param word - 単語情報（1ベース座標で提供されることを前提）
+ * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
+ * @param enableDebug - デバッグログの有効/無効（デフォルト: false）
+ * @returns HintPositionWithCoordinateSystem - Vim/Neovim両方の座標系に対応した位置情報
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: 'hello', line: 1, col: 5, byteCol: 5 };
+ * const position = calculateHintPositionWithCoordinateSystem(word, 'start', true);
+ * // { line: 1, col: 5, display_mode: 'before', vim_col: 5, nvim_col: 4, vim_line: 1, nvim_line: 0 }
+ * ```
  */
 export function calculateHintPositionWithCoordinateSystem(
   word: Word,
@@ -369,28 +476,43 @@ export function calculateHintPositionWithCoordinateSystem(
 
 /**
  * Process 50 Sub2: ヒントキー設定インターフェース
- * 1文字ヒントと2文字以上ヒントで使用するキーを個別に設定
+ * @description 1文字ヒントと2文字以上ヒントで使用するキーを個別に設定するためのインターフェース
+ * @since 1.0.0
  */
 export interface HintKeyConfig {
-  // 1文字ヒント専用キー（例: ["A","S","D","F","G","H","J","K","L",";"]）
+  /** 1文字ヒント専用キー（例: ["A","S","D","F","G","H","J","K","L",";"]） */
   single_char_keys?: string[];
 
-  // 2文字以上ヒント専用キー（例: ["Q","W","E","R","T","Y","U","I","O","P"]）
+  /** 2文字以上ヒント専用キー（例: ["Q","W","E","R","T","Y","U","I","O","P"]） */
   multi_char_keys?: string[];
 
-  // 従来のmarkers（後方互換性のため維持）
+  /** 従来のmarkers（後方互換性のため維持） */
   markers?: string[];
 
-  // 1文字ヒントの最大数（この数を超えたら2文字ヒントを使用）
+  /** 1文字ヒントの最大数（この数を超えたら2文字ヒントを使用） */
   max_single_char_hints?: number;
 
-  // カーソルからの距離で1文字/2文字を決定するか
+  /** カーソルからの距離で1文字/2文字を決定するか */
   use_distance_priority?: boolean;
 }
 
 /**
  * キーグループを使用したヒント生成
- * 1文字ヒント用と2文字以上ヒント用のキーを分けて管理
+ * @description 1文字ヒント用と2文字以上ヒント用のキーを分けて管理し、効率的なヒント生成を行う
+ * @param wordCount - 必要なヒント数
+ * @param config - ヒントキー設定
+ * @returns string[] - 生成されたヒント文字列の配列
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const config = {
+ *   single_char_keys: ['A', 'S', 'D'],
+ *   multi_char_keys: ['Q', 'W', 'E'],
+ *   max_single_char_hints: 2
+ * };
+ * const hints = generateHintsWithGroups(5, config);
+ * // ['A', 'S', 'QQ', 'QW', 'QE']
+ * ```
  */
 export function generateHintsWithGroups(
   wordCount: number,
@@ -428,6 +550,11 @@ export function generateHintsWithGroups(
 
 /**
  * 1文字ヒントの生成
+ * @description 指定されたキーから1文字ヒントを生成
+ * @param keys - 使用可能なキーの配列
+ * @param count - 生成するヒント数
+ * @returns string[] - 生成された1文字ヒントの配列
+ * @since 1.0.0
  */
 function generateSingleCharHints(keys: string[], count: number): string[] {
   return keys.slice(0, count);
@@ -435,6 +562,16 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
 
 /**
  * 指定されたキーから複数文字ヒントを生成（2桁数字フォールバック付き）
+ * @description 2文字、3文字の組み合わせを生成し、不足する場合は2桁数字（00-99）を使用
+ * @param keys - 使用可能なキーの配列
+ * @param count - 生成するヒント数
+ * @returns string[] - 生成された複数文字ヒントの配列
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * generateMultiCharHintsFromKeys(['A', 'B'], 5);
+ * // ['AA', 'AB', 'BA', 'BB', '00']
+ * ```
  */
 function generateMultiCharHintsFromKeys(keys: string[], count: number): string[] {
   const hints: string[] = [];
@@ -476,6 +613,20 @@ function generateMultiCharHintsFromKeys(keys: string[], count: number): string[]
 
 /**
  * ヒントキー設定の検証
+ * @description ヒントキー設定の妥当性を検証し、エラーメッセージを返す
+ * @param config - 検証するヒントキー設定
+ * @returns {{ valid: boolean, errors: string[] }} 検証結果オブジェクト
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const result = validateHintKeyConfig({
+ *   single_char_keys: ['A', 'BB'], // 無効（2文字）
+ *   multi_char_keys: ['Q']
+ * });
+ * if (!result.valid) {
+ *   console.log('Errors:', result.errors);
+ * }
+ * ```
  */
 export function validateHintKeyConfig(config: HintKeyConfig): {
   valid: boolean;

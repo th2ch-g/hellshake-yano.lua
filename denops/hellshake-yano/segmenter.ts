@@ -7,14 +7,35 @@
 
 import { TinySegmenter as NpmTinySegmenter } from "npm:@birchill/tiny-segmenter@1.0.0";
 
+/**
+ * セグメンテーション結果インターフェース
+ * @description TinySegmenterによる日本語テキスト分割の結果を格納するインターフェース
+ * @since 1.0.0
+ */
 interface SegmentationResult {
+  /** 分割されたセグメント（単語）の配列 */
   segments: string[];
+  /** セグメンテーションが成功したかどうか */
   success: boolean;
+  /** エラーメッセージ（失敗時のみ） */
   error?: string;
+  /** セグメンテーションのソース */
   source: 'tinysegmenter' | 'fallback';
 }
 
-// TinySegmenter wrapper with error handling and caching
+/**
+ * TinySegmenter wrapper with error handling and caching
+ * @description 日本語テキストセグメンテーションのためのTinySegmenterラッパークラス。エラーハンドリング、キャッシュ機能、フォールバック機能を提供
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const segmenter = TinySegmenter.getInstance();
+ * const result = await segmenter.segment('これはテストです');
+ * if (result.success) {
+ *   console.log('Segments:', result.segments);
+ * }
+ * ```
+ */
 export class TinySegmenter {
   private static instance: TinySegmenter;
   private segmenter: NpmTinySegmenter;
@@ -22,6 +43,12 @@ export class TinySegmenter {
   private maxCacheSize: number;
   private enabled: boolean;
 
+  /**
+   * TinySegmenterのコンストラクタ
+   * @description TinySegmenterインスタンスを初期化し、キャッシュとnpmパッケージの設定を行う
+   * @param maxCacheSize - キャッシュの最大サイズ（デフォルト: 1000）
+   * @since 1.0.0
+   */
   constructor(maxCacheSize: number = 1000) {
     this.segmenter = new NpmTinySegmenter();
     this.cache = new Map();
@@ -29,6 +56,16 @@ export class TinySegmenter {
     this.enabled = true;
   }
 
+  /**
+   * TinySegmenterのシングルトンインスタンスを取得
+   * @description アプリケーション全体で単一のTinySegmenterインスタンスを共有するためのファクトリーメソッド
+   * @returns TinySegmenter - シングルトンインスタンス
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const segmenter = TinySegmenter.getInstance();
+   * ```
+   */
   static getInstance(): TinySegmenter {
     if (!TinySegmenter.instance) {
       TinySegmenter.instance = new TinySegmenter();
@@ -37,7 +74,16 @@ export class TinySegmenter {
   }
 
   /**
-   * Post-process segments to combine consecutive numbers and units
+   * セグメント後処理：連続する数字と単位を結合
+   * @description TinySegmenterの生の出力を後処理し、連続する数字の結合、括弧内容の統合などを行う
+   * @param segments - 後処理前のセグメント配列
+   * @returns string[] - 後処理されたセグメント配列
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const processed = this.postProcessSegments(['123', '年', '4', '月']);
+   * // ['123年', '4月']
+   * ```
    */
   private postProcessSegments(segments: string[]): string[] {
     const processed: string[] = [];
@@ -98,7 +144,19 @@ export class TinySegmenter {
   }
 
   /**
-   * Segment Japanese text into words/tokens
+   * 日本語テキストを単語/トークンに分割
+   * @description 入力テキストをTinySegmenterを使用して分割し、後処理を適用してから結果を返す
+   * @param text - 分割する日本語テキスト
+   * @returns Promise<SegmentationResult> - セグメンテーション結果
+   * @throws {Error} セグメンテーション処理中にエラーが発生した場合（フォールバックが実行される）
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const result = await segmenter.segment('私の名前は田中です');
+   * if (result.success) {
+   *   console.log(result.segments); // ['私', 'の', '名前', 'は', '田中', 'です']
+   * }
+   * ```
    */
   async segment(text: string): Promise<SegmentationResult> {
     if (!this.enabled) {
@@ -162,7 +220,11 @@ export class TinySegmenter {
   }
 
   /**
-   * Fallback segmentation using simple regex patterns
+   * 単純な正規表現パターンを使用したフォールバックセグメンテーション
+   * @description TinySegmenterが利用できない場合の代替手段として、文字種別に基づくシンプルなセグメンテーションを実行
+   * @param text - 分割するテキスト
+   * @returns Promise<string[]> - 分割されたセグメント配列
+   * @since 1.0.0
    */
   private async fallbackSegmentation(text: string): Promise<string[]> {
     const segments: string[] = [];
@@ -192,6 +254,13 @@ export class TinySegmenter {
     return segments.filter(s => s.trim().length > 0);
   }
 
+  /**
+   * 文字の種別を判定
+   * @description 単一文字の種別（漢字、ひらがな、カタカナ、ラテン文字、数字等）を判定
+   * @param char - 判定する文字
+   * @returns string - 文字種別（'kanji', 'hiragana', 'katakana', 'latin', 'digit', 'space', 'other'）
+   * @since 1.0.0
+   */
   private getCharacterType(char: string): string {
     if (/[\u4E00-\u9FAF]/.test(char)) return 'kanji';
     if (/[\u3040-\u309F]/.test(char)) return 'hiragana';
@@ -203,28 +272,62 @@ export class TinySegmenter {
   }
 
   /**
-   * Check if text contains Japanese characters
+   * テキストに日本語文字が含まれているかチェック
+   * @description ひらがな、カタカナ、漢字のいずれかが含まれているかを判定
+   * @param text - チェックするテキスト
+   * @returns boolean - 日本語文字が含まれている場合true
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * segmenter.hasJapanese('Hello World'); // false
+   * segmenter.hasJapanese('こんにちは'); // true
+   * ```
    */
   hasJapanese(text: string): boolean {
     return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
   }
 
   /**
-   * Check if segmentation would be beneficial for the text
+   * テキストのセグメンテーションが有益かどうかをチェック
+   * @description 日本語を含み、かつ指定した長さ以上のテキストに対してセグメンテーションを推奨するかを判定
+   * @param text - 判定するテキスト
+   * @param threshold - セグメンテーションを推奨する最小文字数（デフォルト: 4）
+   * @returns boolean - セグメンテーションが推奨される場合true
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * segmenter.shouldSegment('あ'); // false（短すぎる）
+   * segmenter.shouldSegment('こんにちは世界'); // true
+   * ```
    */
   shouldSegment(text: string, threshold: number = 4): boolean {
     return this.hasJapanese(text) && text.length >= threshold;
   }
 
   /**
-   * Clear the segmentation cache
+   * セグメンテーションキャッシュをクリア
+   * @description 格納されているすべてのセグメンテーション結果をキャッシュから削除
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * segmenter.clearCache(); // キャッシュをリセット
+   * ```
    */
   clearCache(): void {
     this.cache.clear();
   }
 
   /**
-   * Get cache statistics
+   * キャッシュ統計情報を取得
+   * @description 現在のキャッシュ使用状況と設定値を取得
+   * @returns {{ size: number, maxSize: number, hitRate: number }} キャッシュ統計情報
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const stats = segmenter.getCacheStats();
+   * console.log(`Cache: ${stats.size}/${stats.maxSize}`);
+   * ```
    */
   getCacheStats(): { size: number; maxSize: number; hitRate: number } {
     return {
@@ -235,21 +338,50 @@ export class TinySegmenter {
   }
 
   /**
-   * Enable or disable the segmenter
+   * セグメンターの有効/無効を設定
+   * @description TinySegmenterの動作を有効または無効に切り替える。無効時はフォールバック処理が使用される
+   * @param enabled - true: 有効、false: 無効
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * segmenter.setEnabled(false); // セグメンターを無効化
+   * ```
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
 
   /**
-   * Check if segmenter is enabled
+   * セグメンターが有効かどうかをチェック
+   * @description 現在のセグメンター有効状態を取得
+   * @returns boolean - セグメンターが有効な場合true
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * if (segmenter.isEnabled()) {
+   *   console.log('Segmenter is active');
+   * }
+   * ```
    */
   isEnabled(): boolean {
     return this.enabled;
   }
 
   /**
-   * Test the segmenter with sample text
+   * サンプルテキストでセグメンターをテスト
+   * @description 予定義されたテストケースを使用してセグメンターの動作を検証し、結果を返す
+   * @returns Promise<{{ success: boolean, results: SegmentationResult[] }}> テスト結果
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const testResult = await segmenter.test();
+   * if (testResult.success) {
+   *   console.log('All tests passed');
+   * } else {
+   *   console.log('Some tests failed');
+   * }
+   * ```
    */
   async test(): Promise<{ success: boolean; results: SegmentationResult[] }> {
     const testCases = [
@@ -277,7 +409,16 @@ export class TinySegmenter {
   }
 }
 
-// Export singleton instance and types
+/**
+ * エクスポートされたシングルトンインスタンスと型定義
+ * @description アプリケーション全体で使用するTinySegmenterのシングルトンインスタンス
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * import { tinysegmenter } from './segmenter.ts';
+ * const result = await tinysegmenter.segment('テストテキスト');
+ * ```
+ */
 export const tinysegmenter = TinySegmenter.getInstance();
 export type { SegmentationResult };
 

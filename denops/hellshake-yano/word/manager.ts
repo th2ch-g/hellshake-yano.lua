@@ -16,48 +16,89 @@ import {
   HybridWordDetector,
 } from "./detector.ts";
 
-// Manager configuration
+/**
+ * 単語検出マネージャー設定インターフェース
+ * @description 単語検出マネージャーの包括的な設定オプションを定義するインターフェース
+ * @since 1.0.0
+ */
 export interface WordDetectionManagerConfig extends WordDetectionConfig {
-  // Manager-specific settings
+  /** デフォルトの単語検出ストラテジー */
   default_strategy?: "regex" | "tinysegmenter" | "hybrid";
+  /** 言語の自動検出を有効にするか */
   auto_detect_language?: boolean;
+  /** パフォーマンスモニタリングを有効にするか */
   performance_monitoring?: boolean;
 
-  // Cache configuration
+  /** キャッシュ機能を有効にするか */
   cache_enabled?: boolean;
+  /** キャッシュの最大サイズ */
   cache_max_size?: number;
-  cache_ttl_ms?: number; // Time to live for cache entries
+  /** キャッシュエントリの有効期限（ミリ秒） */
+  cache_ttl_ms?: number;
 
-  // Error handling
+  /** 最大リトライ回数 */
   max_retries?: number;
+  /** リトライ間の遅延時間（ミリ秒） */
   retry_delay_ms?: number;
 
-  // Performance settings
+  /** 処理タイムアウト時間（ミリ秒） */
   timeout_ms?: number;
+  /** バッチ処理を有効にするか */
   batch_processing?: boolean;
+  /** 同時実行可能な検出数の上限 */
   max_concurrent_detections?: number;
 }
 
-// Cache entry interface
+/**
+ * キャッシュエントリインターフェース
+ * @description キャッシュに格納される単語検出結果の構造
+ * @since 1.0.0
+ */
 interface CacheEntry {
+  /** 検出された単語の配列 */
   words: Word[];
+  /** キャッシュ作成時刻 */
   timestamp: number;
+  /** 使用されたディテクター名 */
   detector: string;
+  /** 設定のハッシュ値 */
   config_hash: string;
 }
 
-// Detection statistics
+/**
+ * 検出統計情報インターフェース
+ * @description 単語検出マネージャーのパフォーマンス統計情報
+ * @since 1.0.0
+ */
 interface DetectionStats {
+  /** 総呼び出し回数 */
   total_calls: number;
+  /** キャッシュヒット回数 */
   cache_hits: number;
+  /** キャッシュミス回数 */
   cache_misses: number;
+  /** エラー発生回数 */
   errors: number;
+  /** 平均処理時間（ミリ秒） */
   average_duration: number;
+  /** ディテクター別使用回数 */
   detector_usage: Record<string, number>;
 }
 
 /**
- * Main Word Detection Manager
+ * メイン単語検出マネージャー
+ * @description 複数の単語検出戦略を管理し、キャッシュ、エラーハンドリング、フォールバック機能を提供する統合インターフェース
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const manager = new WordDetectionManager({
+ *   default_strategy: 'hybrid',
+ *   cache_enabled: true,
+ *   use_japanese: true
+ * });
+ * await manager.initialize();
+ * const result = await manager.detectWords('テストテキスト');
+ * ```
  */
 export class WordDetectionManager {
   private detectors: Map<string, WordDetector> = new Map();
@@ -66,13 +107,29 @@ export class WordDetectionManager {
   private stats: DetectionStats;
   private initialized = false;
 
+  /**
+   * WordDetectionManagerのコンストラクタ
+   * @description マネージャーを初期化し、設定と統計情報をセットアップ
+   * @param config - マネージャー設定（省略時はデフォルト設定）
+   * @since 1.0.0
+   */
   constructor(config: WordDetectionManagerConfig = {}) {
     this.config = this.mergeWithDefaults(config);
     this.stats = this.initializeStats();
   }
 
   /**
-   * Initialize the manager with default detectors
+   * デフォルトディテクターでマネージャーを初期化
+   * @description 標準の単語検出ディテクター（Regex、TinySegmenter、Hybrid）を登録し、利用可能性をテスト
+   * @returns Promise<void> - 初期化完了を示すPromise
+   * @throws {Error} ディテクターの初期化に失敗した場合
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const manager = new WordDetectionManager();
+   * await manager.initialize();
+   * // マネージャーが使用可能になる
+   * ```
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -95,14 +152,37 @@ export class WordDetectionManager {
   }
 
   /**
-   * Register a word detector
+   * 単語ディテクターを登録
+   * @description カスタム単語ディテクターをマネージャーに登録し、利用可能にする
+   * @param detector - 登録する単語ディテクター
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const customDetector = new CustomWordDetector();
+   * manager.registerDetector(customDetector);
+   * ```
    */
   registerDetector(detector: WordDetector): void {
     this.detectors.set(detector.name, detector);
   }
 
   /**
-   * Main word detection method
+   * メイン単語検出メソッド
+   * @description テキストから単語を検出し、キャッシュ、エラーハンドリング、フォールバック機能を活用して結果を返す
+   * @param text - 解析するテキスト
+   * @param startLine - 開始行番号（デフォルト: 1）
+   * @param denops - Denopsインスタンス（オプション）
+   * @returns Promise<WordDetectionResult> - 単語検出結果
+   * @throws {Error} 全てのディテクターが失敗した場合（空の結果を返す）
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const result = await manager.detectWords('こんにちは世界', 1);
+   * if (result.success) {
+   *   console.log('Words found:', result.words.length);
+   * }
+   * ```
    */
   async detectWords(
     text: string,
@@ -208,7 +288,17 @@ export class WordDetectionManager {
   }
 
   /**
-   * Detect words from Denops buffer (convenience method)
+   * Denopsバッファから単語を検出（便利メソッド）
+   * @description 現在表示中のバッファから直接単語を検出する便利メソッド
+   * @param denops - Denopsインスタンス
+   * @returns Promise<WordDetectionResult> - 単語検出結果
+   * @throws {Error} バッファアクセスに失敗した場合（エラー情報を含む結果を返す）
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const result = await manager.detectWordsFromBuffer(denops);
+   * console.log(`Found ${result.words.length} words in current buffer`);
+   * ```
    */
   async detectWordsFromBuffer(denops: Denops): Promise<WordDetectionResult> {
     try {
@@ -238,7 +328,11 @@ export class WordDetectionManager {
   }
 
   /**
-   * Select the best detector for given text
+   * 指定されたテキストに最適なディテクターを選択
+   * @description テキストの内容、設定、優先度に基づいて最適な単語ディテクターを選択
+   * @param text - 解析対象のテキスト
+   * @returns Promise<WordDetector | null> - 選択されたディテクター（利用可能なものがない場合はnull）
+   * @since 1.0.0
    */
   private async selectDetector(text: string): Promise<WordDetector | null> {
     const availableDetectors = Array.from(this.detectors.values())
@@ -289,7 +383,10 @@ export class WordDetectionManager {
   }
 
   /**
-   * Get fallback detector
+   * フォールバックディテクターを取得
+   * @description メインのディテクターが失敗した場合に使用するフォールバックディテクターを取得
+   * @returns WordDetector | null - フォールバックディテクター（利用可能なものがない場合はnull）
+   * @since 1.0.0
    */
   private getFallbackDetector(): WordDetector | null {
     if (this.config.fallback_to_regex) {
@@ -304,7 +401,14 @@ export class WordDetectionManager {
   }
 
   /**
-   * Detect words with timeout protection
+   * タイムアウト保護付き単語検出
+   * @description 指定されたタイムアウト時間内で単語検出を実行し、超過した場合はエラーをスロー
+   * @param detector - 使用するディテクター
+   * @param text - 解析するテキスト
+   * @param startLine - 開始行番号
+   * @returns Promise<Word[]> - 検出された単語の配列
+   * @throws {Error} タイムアウトまたは検出処理に失敗した場合
+   * @since 1.0.0
    */
   private async detectWithTimeout(
     detector: WordDetector,
@@ -333,7 +437,12 @@ export class WordDetectionManager {
   }
 
   /**
-   * Cache management
+   * キャッシュキーを生成
+   * @description テキスト、行番号、設定のハッシュ値から一意なキャッシュキーを生成
+   * @param text - キャッシュ対象のテキスト
+   * @param startLine - 開始行番号
+   * @returns string - 生成されたキャッシュキー
+   * @since 1.0.0
    */
   private generateCacheKey(text: string, startLine: number): string {
     const configHash = this.generateConfigHash();
@@ -401,7 +510,10 @@ export class WordDetectionManager {
   }
 
   /**
-   * Statistics and monitoring
+   * 統計情報を初期化
+   * @description パフォーマンス統計情報を初期値で初期化
+   * @returns DetectionStats - 初期化された統計情報オブジェクト
+   * @since 1.0.0
    */
   private initializeStats(): DetectionStats {
     return {
@@ -420,12 +532,31 @@ export class WordDetectionManager {
   }
 
   /**
-   * Public methods for management and debugging
+   * 統計情報を取得
+   * @description 現在のパフォーマンス統計情報のコピーを返す
+   * @returns DetectionStats - 統計情報のコピー
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const stats = manager.getStats();
+   * console.log(`Total calls: ${stats.total_calls}, Cache hit rate: ${stats.cache_hits / (stats.cache_hits + stats.cache_misses)}`);
+   * ```
    */
   getStats(): DetectionStats {
     return { ...this.stats };
   }
 
+  /**
+   * キャッシュ統計情報を取得
+   * @description キャッシュの使用状況とヒット率を返す
+   * @returns {{ size: number, maxSize: number, hitRate: number }} キャッシュ統計情報
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const cacheStats = manager.getCacheStats();
+   * console.log(`Cache usage: ${cacheStats.size}/${cacheStats.maxSize} (${(cacheStats.hitRate * 100).toFixed(2)}% hit rate)`);
+   * ```
+   */
   getCacheStats(): { size: number; maxSize: number; hitRate: number } {
     const total = this.stats.cache_hits + this.stats.cache_misses;
     return {
@@ -435,14 +566,45 @@ export class WordDetectionManager {
     };
   }
 
+  /**
+   * キャッシュをクリア
+   * @description 格納されているすべてのキャッシュエントリを削除
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * manager.clearCache(); // キャッシュをリセット
+   * ```
+   */
   clearCache(): void {
     this.cache.clear();
   }
 
+  /**
+   * 統計情報をリセット
+   * @description すべてのパフォーマンス統計情報を初期値にリセット
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * manager.resetStats(); // 統計情報をリセット
+   * ```
+   */
   resetStats(): void {
     this.stats = this.initializeStats();
   }
 
+  /**
+   * 設定を更新
+   * @description 部分的な設定更新を行い、必要に応じてキャッシュをクリア
+   * @param newConfig - 更新する設定の部分オブジェクト
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * manager.updateConfig({ cache_enabled: false, timeout_ms: 3000 });
+   * ```
+   */
   updateConfig(newConfig: Partial<WordDetectionManagerConfig>): void {
     this.config = { ...this.config, ...newConfig };
 
@@ -453,6 +615,17 @@ export class WordDetectionManager {
 
   }
 
+  /**
+   * 利用可能なディテクター一覧を取得
+   * @description 登録されているすべてのディテクターの情報を返す
+   * @returns Array<{{ name: string, priority: number, languages: string[] }}> ディテクター情報の配列
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const detectors = manager.getAvailableDetectors();
+   * detectors.forEach(d => console.log(`${d.name} (priority: ${d.priority}, languages: ${d.languages.join(', ')})`));
+   * ```
+   */
   getAvailableDetectors(): Array<{ name: string; priority: number; languages: string[] }> {
     return Array.from(this.detectors.values()).map(d => ({
       name: d.name,
@@ -461,6 +634,19 @@ export class WordDetectionManager {
     }));
   }
 
+  /**
+   * すべてのディテクターをテスト
+   * @description 登録されているすべてのディテクターの利用可能性をテスト
+   * @returns Promise<Record<string, boolean>> ディテクター名と利用可能性のマッピング
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const testResults = await manager.testDetectors();
+   * for (const [name, available] of Object.entries(testResults)) {
+   *   console.log(`${name}: ${available ? 'Available' : 'Not available'}`);
+   * }
+   * ```
+   */
   async testDetectors(): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
 
@@ -476,7 +662,11 @@ export class WordDetectionManager {
   }
 
   /**
-   * Default configuration
+   * デフォルト設定とマージ
+   * @description 渡された設定とデフォルト設定をマージし、必要なすべてのフィールドを持つ設定オブジェクトを作成
+   * @param config - ユーザー設定
+   * @returns Required<WordDetectionManagerConfig> - デフォルト値で補完された設定
+   * @since 1.0.0
    */
   private mergeWithDefaults(config: WordDetectionManagerConfig): Required<WordDetectionManagerConfig> {
     // デフォルト値
@@ -533,9 +723,25 @@ export class WordDetectionManager {
   }
 }
 
-// Export singleton instance
+/**
+ * グローバルマネージャーインスタンス管理
+ * @description アプリケーション全体で共有するシングルトンマネージャーインスタンス
+ * @since 1.0.0
+ */
 let globalManager: WordDetectionManager | null = null;
 
+/**
+ * 単語検出マネージャーのシングルトンインスタンスを取得
+ * @description グローバルマネージャーインスタンスを取得または作成。新しい設定が渡された場合は新しいインスタンスで置き換え
+ * @param config - マネージャー設定（省略時はデフォルト設定）
+ * @returns WordDetectionManager - マネージャーインスタンス
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const manager = getWordDetectionManager({ use_japanese: true });
+ * await manager.initialize();
+ * ```
+ */
 export function getWordDetectionManager(config?: WordDetectionManagerConfig): WordDetectionManager {
   if (!globalManager) {
     globalManager = new WordDetectionManager(config);
@@ -546,6 +752,16 @@ export function getWordDetectionManager(config?: WordDetectionManagerConfig): Wo
   return globalManager;
 }
 
+/**
+ * 単語検出マネージャーをリセット
+ * @description グローバルマネージャーインスタンスをクリアし、次回呼び出し時に新しいインスタンスを作成させる
+ * @returns void
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * resetWordDetectionManager(); // マネージャーをリセット
+ * ```
+ */
 export function resetWordDetectionManager(): void {
   globalManager = null;
 }

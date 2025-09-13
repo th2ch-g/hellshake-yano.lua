@@ -6,11 +6,18 @@
  */
 
 /**
- * Convert character index to byte index in UTF-8 encoded text
- *
- * @param text - The UTF-8 encoded text
- * @param charIndex - Character position (0-based)
- * @returns Byte position (0-based)
+ * 文字インデックスをUTF-8バイトインデックスに変換
+ * @description UTF-8エンコードテキスト内での文字位置をバイト位置に変換。日本語文字のマルチバイト文字を適切に処理
+ * @param text - UTF-8エンコードされたテキスト
+ * @param charIndex - 文字位置（0ベース）
+ * @returns number - バイト位置（0ベース）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'こんにちはworld';
+ * const byteIndex = charIndexToByteIndex(text, 5); // 'w'の位置をバイト単位で取得
+ * console.log(byteIndex); // 15 (日本語文字が各々3バイトのため)
+ * ```
  */
 export function charIndexToByteIndex(text: string, charIndex: number): number {
   if (charIndex <= 0) return 0;
@@ -24,11 +31,19 @@ export function charIndexToByteIndex(text: string, charIndex: number): number {
 }
 
 /**
- * Convert byte index to character index in UTF-8 encoded text
- *
- * @param text - The UTF-8 encoded text
- * @param byteIndex - Byte position (0-based)
- * @returns Character position (0-based)
+ * UTF-8バイトインデックスを文字インデックスに変換
+ * @description UTF-8エンコードテキスト内でのバイト位置を文字位置に変換。マルチバイト文字の途中を指している場合は前の有効な文字境界に調整
+ * @param text - UTF-8エンコードされたテキスト
+ * @param byteIndex - バイト位置（0ベース）
+ * @returns number - 文字位置（0ベース）
+ * @throws なし（デコードエラー時は前の有効な文字境界を返す）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'こんにちはworld';
+ * const charIndex = byteIndexToCharIndex(text, 15); // バイト位置15から文字位置を取得
+ * console.log(charIndex); // 5 ('w'の位置)
+ * ```
  */
 export function byteIndexToCharIndex(text: string, byteIndex: number): number {
   if (byteIndex <= 0) return 0;
@@ -61,11 +76,19 @@ export function byteIndexToCharIndex(text: string, byteIndex: number): number {
 }
 
 /**
- * Get byte length of a character at given position
- *
- * @param text - The UTF-8 encoded text
- * @param charIndex - Character position (0-based)
- * @returns Number of bytes for the character at position
+ * 指定位置の文字のバイト長を取得
+ * @description 特定の文字位置にある文字がUTF-8で何バイトを占めるかを取得
+ * @param text - UTF-8エンコードされたテキスト
+ * @param charIndex - 文字位置（0ベース）
+ * @returns number - 指定位置の文字のバイト数（無効な位置の場合0）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'あAい';
+ * console.log(getCharByteLength(text, 0)); // 3 (あ)
+ * console.log(getCharByteLength(text, 1)); // 1 (A)
+ * console.log(getCharByteLength(text, 2)); // 3 (い)
+ * ```
  */
 export function getCharByteLength(text: string, charIndex: number): number {
   if (charIndex < 0 || charIndex >= text.length) return 0;
@@ -75,20 +98,36 @@ export function getCharByteLength(text: string, charIndex: number): number {
 }
 
 /**
- * Check if text contains multibyte characters (like Japanese)
- *
- * @param text - The text to check
- * @returns True if text contains multibyte characters
+ * テキストにマルチバイト文字（日本語など）が含まれているかチェック
+ * @description テキストのバイト長と文字長を比較し、マルチバイト文字の存在を判定
+ * @param text - チェックするテキスト
+ * @returns boolean - マルチバイト文字が含まれている場合true
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * console.log(hasMultibyteCharacters('hello')); // false
+ * console.log(hasMultibyteCharacters('こんにちは')); // true
+ * console.log(hasMultibyteCharacters('hello世界')); // true
+ * ```
  */
 export function hasMultibyteCharacters(text: string): boolean {
   return new TextEncoder().encode(text).length > text.length;
 }
 
 /**
- * Get detailed encoding information for debugging
- *
- * @param text - The text to analyze
- * @returns Object with encoding details
+ * デバッグ用の詳細エンコーディング情報を取得
+ * @description テキストの各文字に対する詳細なエンコーディング情報を取得し、デバッグや分析に使用
+ * @param text - 分析するテキスト
+ * @returns {{ charLength: number, byteLength: number, hasMultibyte: boolean, charToByteMap: Array<object> }} エンコーディング詳細情報
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const info = getEncodingInfo('あAい');
+ * console.log(info.charLength); // 3
+ * console.log(info.byteLength); // 7
+ * console.log(info.hasMultibyte); // true
+ * console.log(info.charToByteMap[0]); // { char: 'あ', charIndex: 0, byteStart: 0, byteLength: 3 }
+ * ```
  */
 export function getEncodingInfo(text: string): {
   charLength: number;
@@ -123,11 +162,19 @@ export function getEncodingInfo(text: string): {
 }
 
 /**
- * Convert multiple character indices to byte indices efficiently
- *
- * @param text - The UTF-8 encoded text
- * @param charIndices - Array of character positions
- * @returns Array of corresponding byte positions
+ * 複数の文字インデックスをバイトインデックスに効率的に変換
+ * @description 複数の文字位置を一度にバイト位置に変換。ソートして効率的に処理することでパフォーマンスを向上
+ * @param text - UTF-8エンコードされたテキスト
+ * @param charIndices - 文字位置の配列
+ * @returns number[] - 対応するバイト位置の配列（元の順序を保持）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'あいうABC';
+ * const charIndices = [0, 2, 4]; // 'あ', 'う', 'B'
+ * const byteIndices = charIndicesToByteIndices(text, charIndices);
+ * console.log(byteIndices); // [0, 6, 10]
+ * ```
  */
 export function charIndicesToByteIndices(text: string, charIndices: number[]): number[] {
   if (charIndices.length === 0) return [];
