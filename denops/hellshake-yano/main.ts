@@ -179,7 +179,7 @@ async function hideHints(denops: Denops): Promise<void> {
 async function waitForUserInput(denops: Denops): Promise<void> {
   try {
     // プロンプトを表示
-    await denops.call("echo", "Select hint: ");
+    await denops.cmd("echo 'Select hint: '");
 
     // ユーザー入力を取得
     const char = await denops.call("getchar") as number;
