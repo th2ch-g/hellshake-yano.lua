@@ -268,8 +268,8 @@ export function calculateHintPosition(
   let col: number;
   let display_mode: "before" | "after" | "overlay";
 
-  // デバッグログ追加
-  console.log(`[calculateHintPosition] word: "${word.text}", col: ${word.col}, hintPosition: ${hintPosition}`);
+  // デバッグログ追加（パフォーマンスのためコメントアウト）
+  // console.log(`[calculateHintPosition] word: "${word.text}", col: ${word.col}, hintPosition: ${hintPosition}`);
 
   switch (hintPosition) {
     case "start":

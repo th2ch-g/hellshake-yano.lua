@@ -1134,8 +1134,8 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
 
           // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用
           const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
-          // デバッグログ追加
-          console.log(`[displayHints] word: "${word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
+          // デバッグログ追加（パフォーマンスのためコメントアウト）
+          // console.log(`[displayHints] word: "${word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
           const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
           let virtTextPos: "overlay" | "eol" = "overlay";
 
@@ -1215,7 +1215,7 @@ async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[]): P
       try {
         // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用してパターンを生成
         const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
-        console.log(`[displayHintsWithMatchAdd] word: "${word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
+        // console.log(`[displayHintsWithMatchAdd] word: "${word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
         let pattern: string;
 
         switch (position.display_mode) {
@@ -1338,7 +1338,7 @@ async function highlightCandidateHints(
         try {
           // Process 50 Sub5: 座標系対応の新しい位置計算関数を使用してカスタム色を適用
           const position = calculateHintPositionWithCoordinateSystem(candidate.word, config.hint_position, config.debug_coordinates);
-          console.log(`[displayHintsNeovim] word: "${candidate.word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
+          // console.log(`[displayHintsNeovim] word: "${candidate.word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
           const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
           let virtTextPos: "overlay" | "eol" = "overlay";
 
@@ -1368,7 +1368,7 @@ async function highlightCandidateHints(
         try {
           // Process 50 Sub5: 座標系対応の新しい位置計算関数を使用してパターンを生成
           const position = calculateHintPositionWithCoordinateSystem(candidate.word, config.hint_position, config.debug_coordinates);
-          console.log(`[displayHintsVim] word: "${candidate.word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
+          // console.log(`[displayHintsVim] word: "${candidate.word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
           let pattern: string;
 
           switch (position.display_mode) {
