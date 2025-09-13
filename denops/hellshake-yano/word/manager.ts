@@ -253,7 +253,10 @@ export class WordDetectionManager {
     }
 
     // Strategy-based selection
-    switch (this.config.strategy || this.config.default_strategy) {
+    // word_detection_strategyとstrategyの両方をサポート（後方互換性）
+    const strategy = (this.config as any).word_detection_strategy || this.config.strategy || this.config.default_strategy;
+
+    switch (strategy) {
       case "regex":
         return availableDetectors.find(d => d.name.includes("Regex")) || availableDetectors[0];
 
@@ -343,7 +346,7 @@ export class WordDetectionManager {
 
   private generateConfigHash(): string {
     const relevantConfig = {
-      strategy: this.config.strategy,
+      strategy: (this.config as any).word_detection_strategy || this.config.strategy,
       use_japanese: this.config.use_japanese,
       use_improved_detection: this.config.use_improved_detection,
       min_word_length: this.config.min_word_length,
@@ -482,9 +485,10 @@ export class WordDetectionManager {
    * Default configuration
    */
   private mergeWithDefaults(config: WordDetectionManagerConfig): Required<WordDetectionManagerConfig> {
-    return {
+    // デフォルト値
+    const defaults = {
       // Detection settings
-      strategy: "hybrid",
+      strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
       use_japanese: false,
       use_improved_detection: true,
       enable_tinysegmenter: true,
@@ -492,7 +496,7 @@ export class WordDetectionManager {
       segmenter_cache_size: 1000,
 
       // Manager settings
-      default_strategy: "hybrid",
+      default_strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
       auto_detect_language: true,
       performance_monitoring: true,
 
@@ -518,9 +522,20 @@ export class WordDetectionManager {
       exclude_numbers: false,
       exclude_single_chars: false,
       batch_size: 100,
+    };
 
+    // 渡されたconfigの値を優先
+    const merged = {
+      ...defaults,
       ...config
     };
+
+    // word_detection_strategyがある場合はstrategyに反映
+    if ((config as any).word_detection_strategy) {
+      merged.strategy = (config as any).word_detection_strategy;
+    }
+
+    return merged as Required<WordDetectionManagerConfig>;
   }
 }
 
@@ -529,6 +544,9 @@ let globalManager: WordDetectionManager | null = null;
 
 export function getWordDetectionManager(config?: WordDetectionManagerConfig): WordDetectionManager {
   if (!globalManager) {
+    globalManager = new WordDetectionManager(config);
+  } else if (config) {
+    // 既存のマネージャーがある場合でも、新しい設定で更新
     globalManager = new WordDetectionManager(config);
   }
   return globalManager;

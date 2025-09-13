@@ -3,7 +3,7 @@
  * 日本語除外機能とヒント表示位置改善の統合テスト
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
+import { assert, assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import { extractWordsFromLineWithConfig, type WordConfig, type Word } from "../denops/hellshake-yano/word.ts";
 import { calculateHintPosition, assignHintsToWords, generateHints } from "../denops/hellshake-yano/hint.ts";
@@ -67,8 +67,16 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const config: WordConfig = { use_japanese: true };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
-      assertEquals(words.length, 1); // 全てが連結された単語として抽出
-      assertEquals(words[0].text, "コードcode実装implement");
+      // 日本語文字が個別に分割され、英単語も抽出される
+      assert(words.length > 1); // 複数の単語として抽出
+
+      // 日本語文字が含まれることを確認
+      const japaneseChars = words.filter(w => /[\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
+      assert(japaneseChars.length > 0);
+
+      // 英単語も含まれることを確認
+      const englishWords = words.filter(w => w.text === "code" || w.text === "implement");
+      assertEquals(englishWords.length, 2);
 
       // ヒント位置計算
       words.forEach((word, index) => {
@@ -174,11 +182,17 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       assertEquals(words1.length, 3);
       assertEquals(words1.map(w => w.text), ["config", "change", "apply"]);
 
-      // 設定2: 日本語包含
+      // 設定2: 日本語包含（個別分割）
       const config2: WordConfig = { use_japanese: true };
       const words2 = extractWordsFromLineWithConfig(lineText, 1, config2);
-      assertEquals(words2.length, 1);
-      assertEquals(words2.map(w => w.text), ["設定config変更change適用apply"]);
+      // 日本語文字が個別に分割され、英単語も抽出される
+      assert(words2.length > 3);
+
+      // 日本語文字と英単語の両方が含まれることを確認
+      const hasJapanese = words2.some(w => /[\u4E00-\u9FAF]/.test(w.text));
+      const hasEnglish = words2.some(w => /^[a-zA-Z]+$/.test(w.text));
+      assert(hasJapanese);
+      assert(hasEnglish);
 
       // 両方の設定でヒント位置計算が正常に動作すること
       [words1, words2].forEach(words => {

@@ -103,10 +103,16 @@ export async function detectWordsWithConfig(denops: Denops, config: WordConfig =
 
     // Process 50 Sub6: 改善版の使用を設定に基づいて判断（デフォルトは true）
     if (config.use_improved_detection !== false) {
-      // 改善版を使用（1文字単語も検出）- 日本語除外設定も考慮
-      const excludeJapanese = config.use_japanese !== true;  // undefined または false の場合は日本語除外
-      const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
-      words.push(...lineWords);
+      // 日本語モードが有効な場合は、extractWordsFromLineWithConfigを使用
+      if (config.use_japanese === true) {
+        const lineWords = extractWordsFromLineWithConfig(lineText, line, config);
+        words.push(...lineWords);
+      } else {
+        // 改善版を使用（1文字単語も検出）- 英数字のみ
+        const excludeJapanese = true;  // 日本語除外
+        const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
+        words.push(...lineWords);
+      }
     } else {
       // 従来版を使用（日本語設定に基づく）- 明示的に false の場合のみ
       const lineWords = extractWordsFromLineWithConfig(lineText, line, config);
@@ -380,38 +386,67 @@ export function extractWordsFromLineWithConfig(
 
   const words: Word[] = [];
 
-  // 空行や短すぎる行はスキップ
-  if (!lineText || lineText.trim().length < 2) {
+  // 空行はスキップ（日本語モードでは1文字でも処理）
+  if (!lineText || (config.use_japanese ? lineText.trim().length < 1 : lineText.trim().length < 2)) {
     return words;
   }
 
-  // 設定に基づいて正規表現を選択
-  const wordRegex = config.use_japanese
-    ? /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g  // 日本語含む
-    : /\b[a-zA-Z0-9]+\b/g;  // 英数字のみ
+  // 日本語モードの場合、日本語文字を個別に分割
+  if (config.use_japanese) {
+    // まず日本語文字を1文字ずつ分割
+    const japaneseChars = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]/g;
+    let japMatch;
 
-  let match;
-  const matches: { text: string; index: number }[] = [];
+    while ((japMatch = japaneseChars.exec(lineText)) !== null) {
+      words.push({
+        text: japMatch[0],
+        line: lineNumber,
+        col: japMatch.index + 1, // Vimの列番号は1から始まる
+      });
 
-  while ((match = wordRegex.exec(lineText)) !== null) {
-    // 短すぎる単語や数字のみの単語はスキップ
-    if (match[0].length >= 3 && !/^\d+$/.test(match[0])) {
-      matches.push({ text: match[0], index: match.index });
+      // パフォーマンス保護
+      if (words.length >= 100) {
+        break;
+      }
     }
 
-    // パフォーマンス保護：1行あたり100個まで
-    if (matches.length >= 100) {
-      break;
-    }
-  }
+    // 英数字単語も検出（3文字以上）
+    const englishRegex = /\b[a-zA-Z0-9]+\b/g;
+    let engMatch;
 
-  // マッチした単語をWordオブジェクトに変換
-  for (const match of matches) {
-    words.push({
-      text: match.text,
-      line: lineNumber,
-      col: match.index + 1, // Vimの列番号は1から始まる
-    });
+    while ((engMatch = englishRegex.exec(lineText)) !== null) {
+      if (engMatch[0].length >= 3 && !/^\d+$/.test(engMatch[0])) {
+        words.push({
+          text: engMatch[0],
+          line: lineNumber,
+          col: engMatch.index + 1,
+        });
+      }
+
+      if (words.length >= 100) {
+        break;
+      }
+    }
+  } else {
+    // 英数字モードは既存の処理
+    const wordRegex = /\b[a-zA-Z0-9]+\b/g;
+    let match;
+
+    while ((match = wordRegex.exec(lineText)) !== null) {
+      // 短すぎる単語や数字のみの単語はスキップ
+      if (match[0].length >= 3 && !/^\d+$/.test(match[0])) {
+        words.push({
+          text: match[0],
+          line: lineNumber,
+          col: match.index + 1,
+        });
+      }
+
+      // パフォーマンス保護：1行あたり100個まで
+      if (words.length >= 100) {
+        break;
+      }
+    }
   }
 
   return words;

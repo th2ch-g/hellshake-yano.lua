@@ -296,13 +296,18 @@ export class RegexWordDetector implements WordDetector {
   }
 
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
-    return {
-      use_japanese: false,
+    // デフォルト値（configで上書き可能）
+    const defaults = {
       use_improved_detection: true,
       min_word_length: 1,
       max_word_length: 50,
       exclude_numbers: false,
       exclude_single_chars: false,
+    };
+
+    // 渡されたconfigの値を優先（use_japaneseは渡された値をそのまま使用）
+    return {
+      ...defaults,
       ...config
     };
   }
@@ -460,13 +465,14 @@ export class HybridWordDetector implements WordDetector {
       const lineText = lines[i];
       const lineNumber = startLine + i;
 
-      // use_japanese が false または undefined の場合は、日本語があってもRegexDetectorのみを使用
-      // （main.tsのデフォルトは false なので、undefined も false として扱う）
-      if (this.config.use_japanese !== true) {
-        const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
-        allWords.push(...regexWords);
+      // use_japanese が true の場合は、extractWordsFromLineWithConfigを使用（1文字ずつ分割）
+      if (this.config.use_japanese === true) {
+        // 日本語モード：extractWordsFromLineWithConfigを使用
+        const { extractWordsFromLineWithConfig } = await import("../word.ts");
+        const words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
+        allWords.push(...words);
       } else if (this.segmenterDetector.canHandle(lineText) && await this.segmenterDetector.isAvailable()) {
-        // Use TinySegmenter for Japanese content (only when use_japanese is true or undefined)
+        // TinySegmenterが利用可能な場合（現在は使用されない）
         try {
           const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber);
 
