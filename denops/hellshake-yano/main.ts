@@ -12,6 +12,8 @@ interface Config {
   enabled: boolean;
   maxHints: number; // パフォーマンス最適化: 最大ヒント数
   debounceDelay: number; // デバウンス遅延時間
+  use_numbers: boolean; // 数字(0-9)をヒント文字として使用
+  highlight_selected: boolean; // 選択中のヒントをハイライト（UX改善）
 }
 
 // グローバル状態
@@ -25,6 +27,8 @@ let config: Config = {
   enabled: true,
   maxHints: 100, // デフォルト最大100個のヒント
   debounceDelay: 50, // 50msのデバウンス
+  use_numbers: false, // デフォルトでは数字は使用しない
+  highlight_selected: true, // デフォルトで選択中ヒントをハイライト
 };
 
 let currentHints: HintMapping[] = [];
@@ -105,10 +109,29 @@ export async function main(denops: Denops): Promise<void> {
       if (typeof cfg.trigger_on_hjkl === "boolean") {
         config.trigger_on_hjkl = cfg.trigger_on_hjkl;
       }
-      
+
       // enabled の適用
       if (typeof cfg.enabled === "boolean") {
         config.enabled = cfg.enabled;
+      }
+
+      // use_numbers の適用（数字対応）
+      if (typeof cfg.use_numbers === "boolean") {
+        config.use_numbers = cfg.use_numbers;
+        // 数字を使用する場合、マーカーを再生成
+        if (cfg.use_numbers) {
+          const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+          const numbers = "0123456789".split("");
+          config.markers = [...letters, ...numbers];
+          console.log("[hellshake-yano] Numbers enabled in markers");
+        } else {
+          config.markers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        }
+      }
+
+      // highlight_selected の適用（UX改善）
+      if (typeof cfg.highlight_selected === "boolean") {
+        config.highlight_selected = cfg.highlight_selected;
       }
     },
 
@@ -1067,6 +1090,65 @@ async function hideHints(denops: Denops): Promise<void> {
 }
 
 /**
+ * 候補のヒントをハイライト表示（UX改善）
+ */
+async function highlightCandidateHints(
+  denops: Denops,
+  inputPrefix: string,
+): Promise<void> {
+  if (!config.highlight_selected) return;
+
+  try {
+    // 候補となるヒントを見つける
+    const candidates = currentHints.filter(h =>
+      h.hint.startsWith(inputPrefix)
+    );
+
+    if (candidates.length === 0) return;
+
+    // Neovimの場合はextmarkでハイライト
+    if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
+      for (const candidate of candidates) {
+        try {
+          await denops.call(
+            "nvim_buf_set_extmark",
+            0,
+            extmarkNamespace,
+            candidate.word.line - 1,
+            candidate.word.col - 1,
+            {
+              virt_text: [[candidate.hint, "HellshakeYanoMarkerCurrent"]],
+              virt_text_pos: "overlay",
+              priority: 999,
+            }
+          );
+        } catch (error) {
+          console.warn("[hellshake-yano] Failed to highlight candidate:", error);
+        }
+      }
+    } else {
+      // Vimの場合はmatchadd()でハイライト（フォールバック）
+      for (const candidate of candidates) {
+        try {
+          const pattern = `\\%${candidate.word.line}l\\%${candidate.word.col}c${candidate.hint}`;
+          const matchId = await denops.call(
+            "matchadd",
+            "HellshakeYanoMarkerCurrent",
+            pattern,
+            999
+          ) as number;
+          fallbackMatchIds.push(matchId);
+        } catch (error) {
+          console.warn("[hellshake-yano] Failed to highlight candidate with matchadd:", error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[hellshake-yano] Error highlighting candidates:", error);
+  }
+}
+
+/**
  * ユーザー入力を待機してジャンプ（エラーハンドリング強化版）
  */
 async function waitForUserInput(denops: Denops): Promise<void> {
@@ -1116,16 +1198,25 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // 文字に変換
     let inputChar: string;
     try {
-      inputChar = String.fromCharCode(char).toUpperCase();
+      inputChar = String.fromCharCode(char);
+      // アルファベットの場合は大文字に変換（数字はそのまま）
+      if (/[a-zA-Z]/.test(inputChar)) {
+        inputChar = inputChar.toUpperCase();
+      }
     } catch (_charError) {
       await denops.cmd("echohl ErrorMsg | echo 'Invalid character input' | echohl None");
       await hideHints(denops);
       return;
     }
 
-    // 有効な文字範囲チェック
-    if (!/[A-Z]/.test(inputChar)) {
-      await denops.cmd("echohl WarningMsg | echo 'Please use alphabetic characters only' | echohl None");
+    // 有効な文字範囲チェック（数字対応を追加）
+    const validPattern = config.use_numbers ? /[A-Z0-9]/ : /[A-Z]/;
+    const errorMessage = config.use_numbers
+      ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
+      : "Please use alphabetic characters only";
+
+    if (!validPattern.test(inputChar)) {
+      await denops.cmd(`echohl WarningMsg | echo '${errorMessage}' | echohl None`);
       try {
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
       } catch {
@@ -1164,6 +1255,11 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       }
       await hideHints(denops);
       return;
+    }
+
+    // 候補のヒントをハイライト表示（UX改善）
+    if (config.highlight_selected && multiCharHints.length > 1) {
+      await highlightCandidateHints(denops, inputChar);
     }
 
     // 第2文字の入力を待機
@@ -1211,16 +1307,25 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // 第2文字を結合
     let secondInputChar: string;
     try {
-      secondInputChar = String.fromCharCode(secondChar).toUpperCase();
+      secondInputChar = String.fromCharCode(secondChar);
+      // アルファベットの場合は大文字に変換（数字はそのまま）
+      if (/[a-zA-Z]/.test(secondInputChar)) {
+        secondInputChar = secondInputChar.toUpperCase();
+      }
     } catch (_charError) {
       await denops.cmd("echohl ErrorMsg | echo 'Invalid second character' | echohl None");
       await hideHints(denops);
       return;
     }
 
-    // 有効な文字範囲チェック
-    if (!/[A-Z]/.test(secondInputChar)) {
-      await denops.cmd("echohl WarningMsg | echo 'Second character must be alphabetic' | echohl None");
+    // 有効な文字範囲チェック（数字対応）
+    const secondValidPattern = config.use_numbers ? /[A-Z0-9]/ : /[A-Z]/;
+    const secondErrorMessage = config.use_numbers
+      ? "Second character must be alphabetic or numeric"
+      : "Second character must be alphabetic";
+
+    if (!secondValidPattern.test(secondInputChar)) {
+      await denops.cmd(`echohl WarningMsg | echo '${secondErrorMessage}' | echohl None`);
       await hideHints(denops);
       return;
     }
