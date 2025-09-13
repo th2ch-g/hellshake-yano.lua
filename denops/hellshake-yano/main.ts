@@ -1,13 +1,23 @@
 import type { Denops } from "@denops/std";
-import { detectWords, detectWordsWithConfig, extractWordsFromLineWithConfig, type WordConfig } from "./word.ts";
+import {
+  detectWords,
+  detectWordsWithConfig,
+  detectWordsWithManager,
+  extractWordsFromLineWithConfig,
+  type WordConfig,
+  type EnhancedWordConfig
+} from "./word.ts";
+import { getWordDetectionManager, resetWordDetectionManager } from "./word/manager.ts";
 import {
   assignHintsToWords,
   generateHints,
   generateHintsWithGroups,
   validateHintKeyConfig,
   calculateHintPosition,
+  calculateHintPositionWithCoordinateSystem,
   type HintMapping,
-  type HintKeyConfig
+  type HintKeyConfig,
+  type HintPositionWithCoordinateSystem
 } from "./hint.ts";
 
 // ハイライト色の個別指定インターフェース
@@ -28,6 +38,7 @@ export interface Config {
   debounceDelay: number; // デバウンス遅延時間
   use_numbers: boolean; // 数字(0-9)をヒント文字として使用
   highlight_selected: boolean; // 選択中のヒントをハイライト（UX改善）
+  debug_coordinates: boolean; // 座標系デバッグログの有効/無効
   // Process 50 Sub2: 1文字/2文字ヒント割り当て設定
   single_char_keys?: string[]; // 1文字ヒント専用キー
   multi_char_keys?: string[]; // 2文字以上ヒント専用キー
@@ -37,6 +48,10 @@ export interface Config {
   use_japanese?: boolean; // 日本語を含む単語検出を行うか（デフォルト: false）
   // Process 50 Sub6: 改善版単語検出機能
   use_improved_detection?: boolean; // 改善版単語検出（1文字単語含む）を使用するか（デフォルト: true）
+  // Process 50 Sub7: 単語検出アブストラクション設定
+  word_detection_strategy?: "regex" | "tinysegmenter" | "hybrid"; // 単語検出アルゴリズム（デフォルト: "hybrid"）
+  enable_tinysegmenter?: boolean; // TinySegmenterを有効にするか（デフォルト: true）
+  segmenter_threshold?: number; // TinySegmenterを使用する最小文字数（デフォルト: 4）
   // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
   highlight_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
   highlight_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
@@ -55,6 +70,7 @@ let config: Config = {
   debounceDelay: 50, // 50msのデバウンス
   use_numbers: false, // デフォルトでは数字は使用しない
   highlight_selected: true, // デフォルトで選択中ヒントをハイライト
+  debug_coordinates: false, // デフォルトでデバッグログは無効
   // Process 50 Sub3: デフォルトのキー分離設定
   single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
   multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
@@ -62,6 +78,10 @@ let config: Config = {
   use_hint_groups: true, // デフォルトで有効
   use_japanese: false, // Process 50 Sub3: デフォルトで日本語除外
   use_improved_detection: true, // Process 50 Sub6: デフォルトで改善版単語検出を使用
+  // Process 50 Sub7: 単語検出アブストラクションのデフォルト設定
+  word_detection_strategy: "hybrid" as const, // ハイブリッド方式をデフォルトに
+  enable_tinysegmenter: true, // TinySegmenterを有効に
+  segmenter_threshold: 4, // 4文字以上でセグメンテーション
   // Process 50 Sub5: ハイライト色設定のデフォルト値
   highlight_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
   highlight_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
@@ -170,6 +190,11 @@ export async function main(denops: Denops): Promise<void> {
         config.highlight_selected = cfg.highlight_selected;
       }
 
+      // debug_coordinates の適用（デバッグ用）
+      if (typeof cfg.debug_coordinates === "boolean") {
+        config.debug_coordinates = cfg.debug_coordinates;
+      }
+
       // maxHints の検証（1以上の整数）
       if (typeof cfg.maxHints === "number") {
         if (cfg.maxHints >= 1 && Number.isInteger(cfg.maxHints)) {
@@ -242,6 +267,36 @@ export async function main(denops: Denops): Promise<void> {
         console.log(`[hellshake-yano] Improved word detection (1-char support): ${cfg.use_improved_detection ? "enabled" : "disabled"}`);
         // キャッシュをクリアして新しい設定を適用
         wordsCache = null;
+      }
+
+      // Process 50 Sub7: 単語検出アブストラクション設定
+      if (typeof cfg.word_detection_strategy === "string") {
+        const validStrategies = ["regex", "tinysegmenter", "hybrid"];
+        if (validStrategies.includes(cfg.word_detection_strategy)) {
+          config.word_detection_strategy = cfg.word_detection_strategy;
+          console.log(`[hellshake-yano] Word detection strategy: ${cfg.word_detection_strategy}`);
+
+          // マネージャーをリセットして新しい設定を適用
+          resetWordDetectionManager();
+        } else {
+          console.warn(`[hellshake-yano] Invalid word_detection_strategy: ${cfg.word_detection_strategy}, must be one of: ${validStrategies.join(", ")}`);
+        }
+      }
+
+      if (typeof cfg.enable_tinysegmenter === "boolean") {
+        config.enable_tinysegmenter = cfg.enable_tinysegmenter;
+        console.log(`[hellshake-yano] TinySegmenter: ${cfg.enable_tinysegmenter ? "enabled" : "disabled"}`);
+        resetWordDetectionManager();
+      }
+
+      if (typeof cfg.segmenter_threshold === "number") {
+        if (cfg.segmenter_threshold >= 1 && Number.isInteger(cfg.segmenter_threshold)) {
+          config.segmenter_threshold = cfg.segmenter_threshold;
+          console.log(`[hellshake-yano] Segmenter threshold: ${cfg.segmenter_threshold}`);
+          resetWordDetectionManager();
+        } else {
+          console.warn(`[hellshake-yano] Invalid segmenter_threshold: ${cfg.segmenter_threshold}, must be integer >= 1`);
+        }
       }
 
       // Process 50 Sub5: highlight_marker の検証と適用（fg/bg対応）
@@ -785,40 +840,35 @@ export async function main(denops: Denops): Promise<void> {
  */
 async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[]> {
   try {
-    // 現在の表示範囲を取得
-    const topLine = await denops.call("line", "w0") as number;
-    const bottomLine = await denops.call("line", "w$") as number;
-
-    // 表示範囲の内容を取得してキャッシュと比較
-    const lines = await denops.call("getbufline", bufnr, topLine, bottomLine) as string[];
-    const content = lines.join("\n");
-
-    // キャッシュヒットチェック（表示範囲も含めて比較）
-    if (wordsCache &&
-        wordsCache.bufnr === bufnr &&
-        wordsCache.topLine === topLine &&
-        wordsCache.bottomLine === bottomLine &&
-        wordsCache.content === content) {
-      console.log("[hellshake-yano] Using cached word detection results");
-      return wordsCache.words;
-    }
-
-    // キャッシュミスの場合、新たに単語を検出（設定に基づいて改善版を使用）
-    console.log(`[hellshake-yano] Cache miss, detecting words for lines ${topLine}-${bottomLine} (improved: ${config.use_improved_detection !== false})...`);
-    const words = await detectWordsWithConfig(denops, {
+    // Process 50 Sub7: 新しい単語検出マネージャーを使用
+    const enhancedConfig: EnhancedWordConfig = {
+      strategy: config.word_detection_strategy,
       use_japanese: config.use_japanese,
-      use_improved_detection: config.use_improved_detection !== false  // undefined の場合も true として扱う
-    });
+      use_improved_detection: config.use_improved_detection !== false,
+      enable_tinysegmenter: config.enable_tinysegmenter,
+      segmenter_threshold: config.segmenter_threshold,
+      cache_enabled: true,
+      auto_detect_language: true,
+    };
 
-    // キャッシュを更新（メモリ使用量を制限）
-    if (content.length < 1000000) { // 1MB未満のファイルのみキャッシュ
-      wordsCache = { bufnr, topLine, bottomLine, content, words };
+    const result = await detectWordsWithManager(denops, enhancedConfig);
+
+    if (result.success) {
+      console.log(`[hellshake-yano] Enhanced detection successful: ${result.words.length} words via ${result.detector} (${result.performance.duration}ms)`);
+      return result.words;
+    } else {
+      console.warn(`[hellshake-yano] Enhanced detection failed, using fallback: ${result.error}`);
+
+      // フォールバックとしてレガシーメソッドを使用
+      return await detectWordsWithConfig(denops, {
+        use_japanese: config.use_japanese,
+        use_improved_detection: config.use_improved_detection
+      });
     }
-
-    return words;
   } catch (error) {
     console.error("[hellshake-yano] Error in detectWordsOptimized:", error);
-    // フォールバックとして設定に基づく単語検出を使用
+
+    // 最終フォールバックとしてレガシーメソッドを使用
     return await detectWordsWithConfig(denops, {
       use_japanese: config.use_japanese,
       use_improved_detection: config.use_improved_detection
@@ -932,9 +982,13 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          // Process 50 Sub3: 新しい位置計算関数を使用
-          const position = calculateHintPosition(word, config.hint_position);
-          const col = position.col - 1; // Vimの0ベース配列に変換
+          // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用
+          const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
+          // デバッグログ追加
+          if (config.debug_coordinates) {
+            console.log(`[displayHintsExtmarksBatch] word: "${word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
+          }
+          const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
           let virtTextPos: "overlay" | "eol" = "overlay";
 
           if (position.display_mode === "overlay") {
@@ -948,7 +1002,7 @@ async function displayHintsWithExtmarksBatch(denops: Denops, bufnr: number, hint
             return;
           }
 
-          await denops.call("nvim_buf_set_extmark", bufnr, extmarkNamespace, word.line - 1, Math.max(0, col), {
+          await denops.call("nvim_buf_set_extmark", bufnr, extmarkNamespace, position.nvim_line, Math.max(0, col), {
             virt_text: [[hint, "HellshakeYanoMarker"]],
             virt_text_pos: virtTextPos,
             priority: 100,
@@ -1005,20 +1059,23 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
       // バッチ内の各matchを作成
       const matchPromises = batch.map(async ({ word, hint }) => {
         try {
-          // Process 50 Sub3: 新しい位置計算関数を使用してパターンを生成
-          const position = calculateHintPosition(word, config.hint_position);
+          // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用してパターンを生成
+          const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
+          if (config.debug_coordinates) {
+            console.log(`[displayHintsMatchAddBatch] word: "${word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
+          }
           let pattern: string;
 
           switch (position.display_mode) {
             case "before":
             case "after":
-              pattern = `\\%${position.line}l\\%${position.col}c.`;
+              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
               break;
             case "overlay":
-              pattern = `\\%${word.line}l\\%>${word.col - 1}c\\%<${word.col + word.text.length + 1}c`;
+              pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${position.vim_col + word.text.length + 1}c`;
               break;
             default:
-              pattern = `\\%${position.line}l\\%${position.col}c.`;
+              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
           }
           
           const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
@@ -1075,9 +1132,11 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          // Process 50 Sub3: 新しい位置計算関数を使用
-          const position = calculateHintPosition(word, config.hint_position);
-          const col = position.col - 1; // Vimの0ベース配列に変換
+          // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用
+          const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
+          // デバッグログ追加（パフォーマンスのためコメントアウト）
+          // console.log(`[displayHints] word: "${word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
+          const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
           let virtTextPos: "overlay" | "eol" = "overlay";
 
           if (position.display_mode === "overlay") {
@@ -1091,7 +1150,7 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
             continue;
           }
 
-          await denops.call("nvim_buf_set_extmark", bufnr, extmarkNamespace, word.line - 1, Math.max(0, col), {
+          await denops.call("nvim_buf_set_extmark", bufnr, extmarkNamespace, position.nvim_line, Math.max(0, col), {
             virt_text: [[hint, "HellshakeYanoMarker"]],
             virt_text_pos: virtTextPos,
             priority: 100,
@@ -1154,21 +1213,22 @@ async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[]): P
   try {
     for (const { word, hint } of hints) {
       try {
-        // Process 50 Sub3: 新しい位置計算関数を使用してパターンを生成
-        const position = calculateHintPosition(word, config.hint_position);
+        // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用してパターンを生成
+        const position = calculateHintPositionWithCoordinateSystem(word, config.hint_position, config.debug_coordinates);
+        // console.log(`[displayHintsWithMatchAdd] word: "${word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
         let pattern: string;
 
         switch (position.display_mode) {
           case "before":
           case "after":
-            pattern = `\\%${position.line}l\\%${position.col}c.`;
+            pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
             break;
           case "overlay":
             // 単語全体にマッチ（オーバーレイ風）
-            pattern = `\\%${word.line}l\\%>${word.col - 1}c\\%<${word.col + word.text.length + 1}c`;
+            pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${position.vim_col + word.text.length + 1}c`;
             break;
           default:
-            pattern = `\\%${position.line}l\\%${position.col}c.`;
+            pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
         }
         
         const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 100) as number;
@@ -1276,9 +1336,10 @@ async function highlightCandidateHints(
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
       for (const candidate of candidates) {
         try {
-          // Process 50 Sub5: 新しい位置計算関数を使用してカスタム色を適用
-          const position = calculateHintPosition(candidate.word, config.hint_position);
-          const col = position.col - 1; // Vimの0ベース配列に変換
+          // Process 50 Sub5: 座標系対応の新しい位置計算関数を使用してカスタム色を適用
+          const position = calculateHintPositionWithCoordinateSystem(candidate.word, config.hint_position, config.debug_coordinates);
+          // console.log(`[displayHintsNeovim] word: "${candidate.word.text}", nvim_col: ${position.nvim_col}, vim_col: ${position.vim_col}`);
+          const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
           let virtTextPos: "overlay" | "eol" = "overlay";
 
           if (position.display_mode === "overlay") {
@@ -1289,7 +1350,7 @@ async function highlightCandidateHints(
             "nvim_buf_set_extmark",
             bufnr,
             extmarkNamespace,
-            candidate.word.line - 1,
+            position.nvim_line,
             Math.max(0, col),
             {
               virt_text: [[candidate.hint, "HellshakeYanoMarkerCurrent"]],
@@ -1305,21 +1366,22 @@ async function highlightCandidateHints(
       // Vimの場合はmatchadd()でハイライト（フォールバック）
       for (const candidate of candidates) {
         try {
-          // Process 50 Sub5: 新しい位置計算関数を使用してパターンを生成
-          const position = calculateHintPosition(candidate.word, config.hint_position);
+          // Process 50 Sub5: 座標系対応の新しい位置計算関数を使用してパターンを生成
+          const position = calculateHintPositionWithCoordinateSystem(candidate.word, config.hint_position, config.debug_coordinates);
+          // console.log(`[displayHintsVim] word: "${candidate.word.text}", vim_col: ${position.vim_col}, nvim_col: ${position.nvim_col}`);
           let pattern: string;
 
           switch (position.display_mode) {
             case "before":
             case "after":
-              pattern = `\\%${position.line}l\\%${position.col}c.`;
+              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
               break;
             case "overlay":
               // 単語全体にマッチ（オーバーレイ風）
-              pattern = `\\%${candidate.word.line}l\\%>${candidate.word.col - 1}c\\%<${candidate.word.col + candidate.word.text.length + 1}c`;
+              pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${position.vim_col + candidate.word.text.length + 1}c`;
               break;
             default:
-              pattern = `\\%${position.line}l\\%${position.col}c.`;
+              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
           }
 
           const matchId = await denops.call(
@@ -1717,6 +1779,13 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     }
   }
 
+  // debug_coordinates の検証
+  if (cfg.debug_coordinates !== undefined) {
+    if (typeof cfg.debug_coordinates !== 'boolean') {
+      errors.push("debug_coordinates must be a boolean");
+    }
+  }
+
   // trigger_on_hjkl の検証
   if (cfg.trigger_on_hjkl !== undefined) {
     if (typeof cfg.trigger_on_hjkl !== 'boolean') {
@@ -1782,6 +1851,7 @@ export function getDefaultConfig(): Config {
     debounceDelay: 50,
     use_numbers: false,
     highlight_selected: false,
+    debug_coordinates: false, // デフォルトでデバッグログは無効
     use_improved_detection: true, // Process 50 Sub6: デフォルトで改善版を使用
     // Process 50 Sub5: ハイライト色設定のデフォルト値
     highlight_marker: "DiffAdd",

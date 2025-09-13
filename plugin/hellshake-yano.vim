@@ -26,6 +26,7 @@ let g:hellshake_yano = extend({
       \ 'trigger_on_hjkl': v:true,
       \ 'enabled': v:true,
       \ 'use_improved_detection': v:true,
+      \ 'use_japanese': v:false,
       \ }, g:hellshake_yano, 'keep')
 
 " ハイライトグループの定義（デフォルト値）
