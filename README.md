@@ -4,7 +4,10 @@ A Neovim plugin for seamless word-based cursor movement in Japanese text
 
 ## Overview
 
-hellshake-yano.vim is a Neovim plugin that accurately detects word boundaries in Japanese text and enables seamless cursor movement between words. It fully supports UTF-8 encoding and properly handles Japanese characters (3-byte characters), making word-based navigation in Japanese text as smooth as in English.
+hellshake-yano.vim is a Neovim plugin that accurately detects word boundaries in Japanese text and
+enables seamless cursor movement between words. It fully supports UTF-8 encoding and properly
+handles Japanese characters (3-byte characters), making word-based navigation in Japanese text as
+smooth as in English.
 
 ## Features
 
@@ -13,6 +16,7 @@ hellshake-yano.vim is a Neovim plugin that accurately detects word boundaries in
 - **Mixed Text Support**: Works perfectly with mixed Japanese/English text
 - **Full UTF-8 Support**: Correctly calculates byte positions for multi-byte Japanese characters
 - **Customizable Precision**: Adjustable word detection algorithms for different use cases
+- **Key Repeat Suppression**: Suppresses hint display during rapid hjkl repeats for smooth scrolling
 
 ## Installation
 
@@ -35,7 +39,8 @@ Plug 'username/hellshake-yano.vim'
 
 ## Configuration
 
-The plugin can be configured using the `g:hellshake_yano` dictionary variable. Here are all available options:
+The plugin can be configured using the `g:hellshake_yano` dictionary variable. Here are all
+available options:
 
 ```vim
 let g:hellshake_yano = {
@@ -58,31 +63,43 @@ let g:hellshake_yano = {
 
 ### Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `markers` | array | A-Z split | Characters used as hint markers |
-| `motion_count` | number | 3 | Number of motions before hints appear |
-| `motion_timeout` | number | 2000 | Timeout for motion count in milliseconds |
-| `hint_position` | string | 'start' | Where to display hints ('start' or 'end') |
-| `trigger_on_hjkl` | boolean | v:true | Enable triggering on hjkl movements |
-| `counted_motions` | array | [] | Custom motion keys to count (overrides trigger_on_hjkl) |
-| `enabled` | boolean | v:true | Enable/disable the plugin |
-| `single_char_keys` | array | ASDFGHJKLNM0-9 | Keys used for single-character hints |
-| `multi_char_keys` | array | BCEIOPQRTUVWXYZ | Keys used for multi-character hints |
-| `use_hint_groups` | boolean | v:true | Enable hint groups feature |
-| `use_numbers` | boolean | v:true | Allow number keys for hints |
-| `max_single_char_hints` | number | - | Optional: limit single-character hints |
-| `use_japanese` | boolean | - | Enable Japanese word detection |
-| `highlight_hint_marker` | string/dict | 'DiffAdd' | Highlight for hint markers |
-| `highlight_hint_marker_current` | string/dict | 'DiffText' | Highlight for current hint marker |
+| Option                          | Type        | Default         | Description                                             |
+| ------------------------------- | ----------- | --------------- | ------------------------------------------------------- |
+| `markers`                       | array       | A-Z split       | Characters used as hint markers                         |
+| `motion_count`                  | number      | 3               | Number of motions before hints appear                   |
+| `motion_timeout`                | number      | 2000            | Timeout for motion count in milliseconds                |
+| `hint_position`                 | string      | 'start'         | Where to display hints ('start' or 'end')               |
+| `trigger_on_hjkl`               | boolean     | v:true          | Enable triggering on hjkl movements                     |
+| `counted_motions`               | array       | []              | Custom motion keys to count (overrides trigger_on_hjkl) |
+| `enabled`                       | boolean     | v:true          | Enable/disable the plugin                               |
+| `single_char_keys`              | array       | ASDFGHJKLNM0-9  | Keys used for single-character hints                    |
+| `multi_char_keys`               | array       | BCEIOPQRTUVWXYZ | Keys used for multi-character hints                     |
+| `use_hint_groups`               | boolean     | v:true          | Enable hint groups feature                              |
+| `use_numbers`                   | boolean     | v:true          | Allow number keys for hints                             |
+| `max_single_char_hints`         | number      | -               | Optional: limit single-character hints                  |
+| `use_japanese`                  | boolean     | -               | Enable Japanese word detection                          |
+| `highlight_hint_marker`         | string/dict | 'DiffAdd'       | Highlight for hint markers                              |
+| `highlight_hint_marker_current` | string/dict | 'DiffText'      | Highlight for current hint marker                       |
+
+### Key Repeat Suppression
+
+During rapid hjkl key repetition, hint display is temporarily suppressed to keep scrolling smooth. Timing is configurable and the feature can be disabled.
+
+- Enable/disable: `g:hellshake_yano.suppress_on_key_repeat` (default: `v:true`)
+- Repeat threshold: `g:hellshake_yano.key_repeat_threshold` in ms (default: `50`)
+- Reset delay: `g:hellshake_yano.key_repeat_reset_delay` in ms (default: `300`)
+
+See the example configuration below for quick copies.
 
 ### Hint Groups Configuration
 
-The plugin supports intelligent hint grouping that separates single-character hints from multi-character hints for improved navigation efficiency:
+The plugin supports intelligent hint grouping that separates single-character hints from
+multi-character hints for improved navigation efficiency:
 
 - **Single-character keys**: Used for immediate navigation with no timeout
 - **Multi-character keys**: Used for two-character hints when more targets are needed
-- **Max single-character hints**: Limits the number of single-character hints to prevent key conflicts
+- **Max single-character hints**: Limits the number of single-character hints to prevent key
+  conflicts
 
 ### Advanced Highlight Configuration
 
@@ -129,11 +146,31 @@ let g:hellshake_yano = {
   \ 'single_char_keys': split('ASDFGHJKL', '\zs'),
   \ 'multi_char_keys': split('QWERTYUIOPZXCVBNM', '\zs')
   \ }
+
+" Key repeat detection configuration
+" Disable hint display during rapid key repetition (for smooth scrolling)
+let g:hellshake_yano = {
+  \ 'suppress_on_key_repeat': v:true,    " Enable/disable key repeat suppression (default: true)
+  \ 'key_repeat_threshold': 50,          " Repeat detection threshold in milliseconds (default: 50)
+  \ 'key_repeat_reset_delay': 300        " Delay before resetting repeat state in milliseconds (default: 300)
+  \ }
+
+" Disable key repeat suppression (always show hints)
+let g:hellshake_yano = {
+  \ 'suppress_on_key_repeat': v:false
+  \ }
+
+" Custom key repeat timing
+let g:hellshake_yano = {
+  \ 'key_repeat_threshold': 100,         " More lenient threshold for slower typing
+  \ 'key_repeat_reset_delay': 500        " Longer delay before returning to normal behavior
+  \ }
 ```
 
 ## Usage
 
-Once installed, the plugin enhances Vim's built-in word motion commands to work correctly with Japanese text. Use standard Vim motions to navigate:
+Once installed, the plugin enhances Vim's built-in word motion commands to work correctly with
+Japanese text. Use standard Vim motions to navigate:
 
 ### Word Navigation
 
@@ -142,7 +179,8 @@ Once installed, the plugin enhances Vim's built-in word motion commands to work 
 - `e` - Move forward to the end of the current/next word
 - `ge` - Move backward to the end of the previous word
 
-These motions now correctly recognize Japanese word boundaries, allowing you to jump between words in Japanese text just as you would in English.
+These motions now correctly recognize Japanese word boundaries, allowing you to jump between words
+in Japanese text just as you would in English.
 
 ### Commands
 
@@ -154,13 +192,17 @@ These motions now correctly recognize Japanese word boundaries, allowing you to 
 
 ### UTF-8 Encoding Support
 
-This plugin correctly handles the complexity of UTF-8 encoded Japanese text, where characters occupy different numbers of bytes (Japanese: 3 bytes, ASCII: 1 byte). It accurately converts between character positions and byte positions, ensuring cursor movement commands work correctly with Neovim's internal buffer representation.
+This plugin correctly handles the complexity of UTF-8 encoded Japanese text, where characters occupy
+different numbers of bytes (Japanese: 3 bytes, ASCII: 1 byte). It accurately converts between
+character positions and byte positions, ensuring cursor movement commands work correctly with
+Neovim's internal buffer representation.
 
 ### Word Boundary Detection Algorithm
 
 The plugin intelligently detects word boundaries in Japanese text using:
 
-1. **Character Type Analysis**: Distinguishes between hiragana, katakana, kanji, and alphanumeric characters
+1. **Character Type Analysis**: Distinguishes between hiragana, katakana, kanji, and alphanumeric
+   characters
 2. **Boundary Rules**: Identifies natural word breaks based on character type transitions
 3. **Contextual Detection**: Applies different rules based on the surrounding context
 4. **Precision Modes**: Three levels of detection precision for different use cases:

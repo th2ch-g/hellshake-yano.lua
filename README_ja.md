@@ -58,23 +58,23 @@ let g:hellshake_yano = {
 
 ### 設定オプション
 
-| オプション | 型 | デフォルト | 説明 |
-|-----------|-----|----------|------|
-| `markers` | 配列 | A-Z分割 | ヒントマーカーとして使用する文字 |
-| `motion_count` | 数値 | 3 | ヒント表示までのモーション回数 |
-| `motion_timeout` | 数値 | 2000 | モーションカウントのタイムアウト（ミリ秒） |
-| `hint_position` | 文字列 | 'start' | ヒントの表示位置（'start'または'end'） |
-| `trigger_on_hjkl` | 真偽値 | v:true | hjkl移動でのトリガーを有効化 |
-| `counted_motions` | 配列 | [] | カスタムモーションキー（trigger_on_hjklを上書き） |
-| `enabled` | 真偽値 | v:true | プラグインの有効/無効 |
-| `single_char_keys` | 配列 | ASDFGHJKLNM0-9 | 1文字ヒント用キー |
-| `multi_char_keys` | 配列 | BCEIOPQRTUVWXYZ | 2文字以上ヒント用キー |
-| `use_hint_groups` | 真偽値 | v:true | ヒントグループ機能を有効化 |
-| `use_numbers` | 真偽値 | v:true | 数字キーをヒントに使用可能にする |
-| `max_single_char_hints` | 数値 | - | オプション：1文字ヒントを制限 |
-| `use_japanese` | 真偽値 | - | 日本語単語検出を有効化 |
-| `highlight_hint_marker` | 文字列/辞書 | 'DiffAdd' | マーカーのハイライト |
-| `highlight_hint_marker_current` | 文字列/辞書 | 'DiffText' | 現在のマーカーのハイライト |
+| オプション                      | 型          | デフォルト      | 説明                                              |
+| ------------------------------- | ----------- | --------------- | ------------------------------------------------- |
+| `markers`                       | 配列        | A-Z分割         | ヒントマーカーとして使用する文字                  |
+| `motion_count`                  | 数値        | 3               | ヒント表示までのモーション回数                    |
+| `motion_timeout`                | 数値        | 2000            | モーションカウントのタイムアウト（ミリ秒）        |
+| `hint_position`                 | 文字列      | 'start'         | ヒントの表示位置（'start'または'end'）            |
+| `trigger_on_hjkl`               | 真偽値      | v:true          | hjkl移動でのトリガーを有効化                      |
+| `counted_motions`               | 配列        | []              | カスタムモーションキー（trigger_on_hjklを上書き） |
+| `enabled`                       | 真偽値      | v:true          | プラグインの有効/無効                             |
+| `single_char_keys`              | 配列        | ASDFGHJKLNM0-9  | 1文字ヒント用キー                                 |
+| `multi_char_keys`               | 配列        | BCEIOPQRTUVWXYZ | 2文字以上ヒント用キー                             |
+| `use_hint_groups`               | 真偽値      | v:true          | ヒントグループ機能を有効化                        |
+| `use_numbers`                   | 真偽値      | v:true          | 数字キーをヒントに使用可能にする                  |
+| `max_single_char_hints`         | 数値        | -               | オプション：1文字ヒントを制限                     |
+| `use_japanese`                  | 真偽値      | -               | 日本語単語検出を有効化                            |
+| `highlight_hint_marker`         | 文字列/辞書 | 'DiffAdd'       | マーカーのハイライト                              |
+| `highlight_hint_marker_current` | 文字列/辞書 | 'DiffText'      | 現在のマーカーのハイライト                        |
 
 ### ヒントグループ設定
 
