@@ -9,14 +9,14 @@ async function setup(denops: Denops) {
   // プラグインのパスを設定
   const runtimepath = fromFileUrl(import.meta.resolve("../"));
   await denops.cmd(`set runtimepath^=${runtimepath}`);
-  
+
   // hellshake-yano.vimの初期設定
   await denops.cmd(`let g:hellshake_yano = {}`);
   await denops.cmd(`let g:hellshake_yano.motion_count = 3`);
   await denops.cmd(`let g:hellshake_yano.motion_timeout = 2000`);
   await denops.cmd(`let g:hellshake_yano.hint_position = 'start'`);
   await denops.cmd(`let g:hellshake_yano.markers = split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '\\.\\zs')`);
-  
+
   // テスト用バッファを作成
   await denops.cmd("enew!");
   await sleep(10);
@@ -36,7 +36,7 @@ export function test(
     await setup(denops);
     await fn(denops);
   });
-  
+
   // Vimでもテストを実行（オプション）
   denopsTest("vim", name, async (denops) => {
     await setup(denops);

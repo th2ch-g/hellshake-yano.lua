@@ -1,5 +1,8 @@
 import { assertEquals, assertNotEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
-import { getWordDetectionManager, resetWordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
+import {
+  getWordDetectionManager,
+  resetWordDetectionManager,
+} from "../denops/hellshake-yano/word/manager.ts";
 import { detectWordsWithManager, type EnhancedWordConfig } from "../denops/hellshake-yano/word.ts";
 
 // Mock Denops for testing
@@ -21,7 +24,7 @@ const mockDenops = {
         return null;
     }
   },
-  meta: { host: "nvim" }
+  meta: { host: "nvim" },
 } as any;
 
 Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
@@ -44,7 +47,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
       success: result.success,
       wordCount: result.words.length,
       detector: result.detector,
-      duration: result.performance.duration
+      duration: result.performance.duration,
     });
   });
 
@@ -98,7 +101,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     console.log({
       success: result.success,
       detector: result.detector,
-      wordCount: result.words.length
+      wordCount: result.words.length,
     });
   });
 
@@ -121,7 +124,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     assertEquals(stats.total_calls >= 5, true);
     assertEquals(typeof stats.average_duration, "number");
     assertEquals(typeof cacheStats.hitRate, "number");
-
   });
 
   await t.step("Configuration validation", async () => {
@@ -159,7 +161,6 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     manager.clearCache();
     const clearedStats = manager.getCacheStats();
     assertEquals(clearedStats.size, 0);
-
   });
 
   await t.step("Real-world text scenarios", async () => {
@@ -205,15 +206,13 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
             return [scenario.text];
           }
           return mockDenops.call(func, ...args);
-        }
+        },
       };
 
       const result = await detectWordsWithManager(scenarioDenops, config);
 
       assertEquals(result.success, true);
       assertEquals(result.words.length > 0, true);
-
     }
   });
 });
-

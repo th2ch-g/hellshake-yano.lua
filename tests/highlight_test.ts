@@ -1,7 +1,11 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { MockDenops } from "./helpers/mock.ts";
 import type { Word } from "../denops/hellshake-yano/word.ts";
-import { generateHints, assignHintsToWords, type HintMapping } from "../denops/hellshake-yano/hint.ts";
+import {
+  assignHintsToWords,
+  generateHints,
+  type HintMapping,
+} from "../denops/hellshake-yano/hint.ts";
 
 /**
  * ハイライト機能のテスト（Process8 sub4）
@@ -36,11 +40,9 @@ class HighlightSimulator {
     }
 
     // 候補となるヒントを見つける
-    const candidates = this.hints.filter(h =>
-      h.hint.startsWith(inputPrefix)
-    );
+    const candidates = this.hints.filter((h) => h.hint.startsWith(inputPrefix));
 
-    this.highlightedHints = candidates.map(c => c.hint);
+    this.highlightedHints = candidates.map((c) => c.hint);
     return this.highlightedHints;
   }
 
@@ -88,7 +90,7 @@ Deno.test("Highlight - Multiple candidates highlighting", () => {
 
   // A（単一文字）とAA, AB, AC, AD（複数文字）の5つ
   assertEquals(highlighted.includes("A"), true);
-  assertEquals(highlighted.filter(h => h.startsWith("A")).length >= 1, true);
+  assertEquals(highlighted.filter((h) => h.startsWith("A")).length >= 1, true);
 });
 
 Deno.test("Highlight - No matching candidates", () => {
@@ -230,6 +232,6 @@ Deno.test("Highlight - Multiple prefix matching", () => {
 
   // Bと、BA, BB, BC...などが含まれる
   assertEquals(highlightedB.includes("B"), true);
-  const multiCharB = highlightedB.filter(h => h.length > 1 && h.startsWith("B"));
+  const multiCharB = highlightedB.filter((h) => h.length > 1 && h.startsWith("B"));
   assertExists(multiCharB);
 });

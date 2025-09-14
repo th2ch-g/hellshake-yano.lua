@@ -51,15 +51,15 @@ export class MotionCounter {
    */
   increment(): boolean {
     const now = Date.now();
-    
+
     // タイムアウトチェック
     if (this.lastMotionTime && (now - this.lastMotionTime) > this.timeoutMs) {
       this.reset();
     }
-    
+
     this.count++;
     this.lastMotionTime = now;
-    
+
     // 閾値に達したか
     if (this.count >= this.threshold) {
       if (this.onThresholdReached) {
@@ -68,7 +68,7 @@ export class MotionCounter {
       this.reset();
       return true;
     }
-    
+
     return false;
   }
 
@@ -120,7 +120,7 @@ export class MotionCounter {
  */
 export class MotionManager {
   private counters: Map<number, MotionCounter> = new Map();
-  
+
   /**
    * 指定されたバッファのMotionCounterを取得
    * @description バッファ番号に対応するMotionCounterを取得。存在しない場合は新しく作成
@@ -142,7 +142,7 @@ export class MotionManager {
     }
     return this.counters.get(bufnr)!;
   }
-  
+
   /**
    * 指定されたバッファのカウンターをリセット
    * @description 特定のバッファのMotionCounterをリセットし、カウントを初期化
@@ -161,7 +161,7 @@ export class MotionManager {
       counter.reset();
     }
   }
-  
+
   /**
    * すべてのバッファのカウンターをクリア
    * @description 管理されているすべてのMotionCounterを削除し、メモリを解放

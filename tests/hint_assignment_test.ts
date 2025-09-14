@@ -7,8 +7,8 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import {
   generateHintsWithGroups,
+  type HintKeyConfig,
   validateHintKeyConfig,
-  type HintKeyConfig
 } from "../denops/hellshake-yano/hint.ts";
 
 describe("Hint Assignment with Character Groups", () => {
@@ -17,7 +17,7 @@ describe("Hint Assignment with Character Groups", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
         multi_char_keys: ["Q", "W", "E", "R"],
-        max_single_char_hints: 9
+        max_single_char_hints: 9,
       };
 
       const hints = generateHintsWithGroups(12, config);
@@ -35,7 +35,7 @@ describe("Hint Assignment with Character Groups", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
         multi_char_keys: ["Q", "W"],
-        max_single_char_hints: 5  // 9個使えるが5個に制限
+        max_single_char_hints: 5, // 9個使えるが5個に制限
       };
 
       const hints = generateHintsWithGroups(8, config);
@@ -54,7 +54,7 @@ describe("Hint Assignment with Character Groups", () => {
     it("should generate multi-char hints from specified keys", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S"],
-        multi_char_keys: ["Q", "W", "E"]
+        multi_char_keys: ["Q", "W", "E"],
       };
 
       const hints = generateHintsWithGroups(7, config);
@@ -77,7 +77,7 @@ describe("Hint Assignment with Character Groups", () => {
     it("should handle number hints after alphabet exhaustion", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
-        multi_char_keys: ["Q", "W"]  // 2文字で最大4通り
+        multi_char_keys: ["Q", "W"], // 2文字で最大4通り
       };
 
       const hints = generateHintsWithGroups(7, config);
@@ -100,8 +100,8 @@ describe("Hint Assignment with Character Groups", () => {
   describe("Configuration Validation", () => {
     it("should validate single_char_keys are single characters", () => {
       const config: HintKeyConfig = {
-        single_char_keys: ["A", "AB", "C"],  // ABは無効
-        multi_char_keys: ["Q"]
+        single_char_keys: ["A", "AB", "C"], // ABは無効
+        multi_char_keys: ["Q"],
       };
 
       const result = validateHintKeyConfig(config);
@@ -114,7 +114,7 @@ describe("Hint Assignment with Character Groups", () => {
     it("should detect overlapping keys between groups", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D"],
-        multi_char_keys: ["A", "Q", "W"]  // Aが重複
+        multi_char_keys: ["A", "Q", "W"], // Aが重複
       };
 
       const result = validateHintKeyConfig(config);
@@ -128,7 +128,7 @@ describe("Hint Assignment with Character Groups", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F"],
         multi_char_keys: ["Q", "W", "E", "R"],
-        max_single_char_hints: 4
+        max_single_char_hints: 4,
       };
 
       const result = validateHintKeyConfig(config);
@@ -150,7 +150,7 @@ describe("Hint Assignment with Character Groups", () => {
 
     it("should use single_char_keys for multi-char if multi_char_keys not specified", () => {
       const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D"]
+        single_char_keys: ["A", "S", "D"],
       };
 
       const hints = generateHintsWithGroups(6, config);

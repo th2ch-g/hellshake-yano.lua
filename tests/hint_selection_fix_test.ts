@@ -171,7 +171,7 @@ describe("Hint Selection Fix Tests", () => {
       assertEquals(candidates.length, 3);
 
       // 単一文字ヒントが存在することを確認
-      const singleChar = candidates.find(h => h.hint === "A");
+      const singleChar = candidates.find((h) => h.hint === "A");
       assertExists(singleChar);
       assertEquals(singleChar.word.text, "apple");
     });

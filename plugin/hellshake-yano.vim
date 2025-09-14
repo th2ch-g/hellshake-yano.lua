@@ -17,8 +17,8 @@ if !exists('g:hellshake_yano')
   let g:hellshake_yano = {}
 endif
 
-" デフォルト設定
-let g:hellshake_yano = extend({
+" デフォルト設定を定義
+let s:default_config = {
       \ 'markers': split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '\zs'),
       \ 'motion_count': 3,
       \ 'motion_timeout': 2000,
@@ -30,7 +30,34 @@ let g:hellshake_yano = extend({
       \ 'multi_char_keys': split('BCEIOPQRTUVWXYZ', '\zs'),
       \ 'use_hint_groups': v:true,
       \ 'use_numbers': v:true,
-      \ }, g:hellshake_yano, 'keep')
+      \ 'suppress_on_key_repeat': v:true,
+      \ 'key_repeat_threshold': 50,
+      \ 'key_repeat_reset_delay': 300,
+      \ }
+
+" ユーザー設定でデフォルト設定を上書き（ユーザー設定が優先）
+let g:hellshake_yano = extend(copy(s:default_config), g:hellshake_yano, 'force')
+
+" 設定値の検証とサニタイズ
+function! s:validate_config() abort
+  " キーリピート閾値は正の値でなければならない
+  if g:hellshake_yano.key_repeat_threshold <= 0
+    echohl WarningMsg
+    echom '[hellshake-yano] Warning: key_repeat_threshold must be positive, using default 50ms'
+    echohl None
+    let g:hellshake_yano.key_repeat_threshold = 50
+  endif
+
+  " リピート終了遅延は正の値でなければならない
+  if g:hellshake_yano.key_repeat_reset_delay <= 0
+    echohl WarningMsg
+    echom '[hellshake-yano] Warning: key_repeat_reset_delay must be positive, using default 300ms'
+    echohl None
+    let g:hellshake_yano.key_repeat_reset_delay = 300
+  endif
+endfunction
+
+call s:validate_config()
 
 " ハイライトグループの定義（デフォルト値）
 highlight default link HellshakeYanoMarker DiffAdd

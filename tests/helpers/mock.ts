@@ -158,7 +158,7 @@ export class MockDenops implements Partial<Denops> {
     host: "nvim" as const,
     mode: "test" as const,
     platform: "linux" as const,
-    version: "0.0.0"
+    version: "0.0.0",
   };
 
   dispatcher: Record<string, (...args: unknown[]) => unknown> = {};

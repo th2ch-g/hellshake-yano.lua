@@ -6,9 +6,9 @@
 import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import {
-  RegexWordDetector,
   HybridWordDetector,
-  type WordDetectionConfig
+  RegexWordDetector,
+  type WordDetectionConfig,
 } from "../denops/hellshake-yano/word/detector.ts";
 
 describe("Japanese Word Position Issue", () => {
@@ -18,25 +18,29 @@ describe("Japanese Word Position Issue", () => {
     it("should not detect Japanese characters as words", async () => {
       const config: WordDetectionConfig = {
         use_japanese: false,
-        use_improved_detection: true
+        use_improved_detection: true,
       };
       const detector = new RegexWordDetector(config);
       const words = await detector.detectWords(vimConfigText, 1);
 
-      words.forEach(w => {
+      words.forEach((w) => {
         const before = vimConfigText.substring(Math.max(0, w.col - 5), w.col - 1);
-        const after = vimConfigText.substring(w.col - 1 + w.text.length, Math.min(vimConfigText.length, w.col + 10));
+        const after = vimConfigText.substring(
+          w.col - 1 + w.text.length,
+          Math.min(vimConfigText.length, w.col + 10),
+        );
       });
 
       // 日本語が含まれないことを確認
-      const hasJapanese = words.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
+      const hasJapanese = words.some((w) =>
+        /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
+      );
       assertEquals(hasJapanese, false, "Should not detect Japanese characters");
 
       // 英単語は検出される
-      const hasUseJapanese = words.some(w => w.text === "use_japanese");
-      const hasV = words.some(w => w.text === "v");
-      const hasFalse = words.some(w => w.text === "false");
-
+      const hasUseJapanese = words.some((w) => w.text === "use_japanese");
+      const hasV = words.some((w) => w.text === "v");
+      const hasFalse = words.some((w) => w.text === "false");
     });
 
     it("should show what's being detected at each position", async () => {
@@ -44,12 +48,12 @@ describe("Japanese Word Position Issue", () => {
         "日本語",
         "use_japanese",
         "'use_japanese': v:false",
-        "    \\ 'use_japanese': v:false,  \" 日本語を除外"
+        "    \\ 'use_japanese': v:false,  \" 日本語を除外",
       ];
 
       const config: WordDetectionConfig = {
         use_japanese: false,
-        use_improved_detection: true
+        use_improved_detection: true,
       };
       const detector = new RegexWordDetector(config);
 
@@ -58,7 +62,7 @@ describe("Japanese Word Position Issue", () => {
 
         if (words.length === 0) {
         } else {
-          words.forEach(w => {
+          words.forEach((w) => {
             // 実際の文字位置を確認
             const actualChar = text[w.col - 1];
           });
@@ -71,17 +75,23 @@ describe("Japanese Word Position Issue", () => {
     it("should properly handle mixed Japanese-English text", async () => {
       const config: WordDetectionConfig = {
         use_japanese: false,
-        use_improved_detection: true
+        use_improved_detection: true,
       };
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(vimConfigText, 1);
 
-      words.forEach(w => {
+      words.forEach((w) => {
       });
 
       // 日本語が含まれないことを確認
-      const hasJapanese = words.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
-      assertEquals(hasJapanese, false, "HybridWordDetector should not detect Japanese when use_japanese is false");
+      const hasJapanese = words.some((w) =>
+        /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
+      );
+      assertEquals(
+        hasJapanese,
+        false,
+        "HybridWordDetector should not detect Japanese when use_japanese is false",
+      );
     });
   });
 

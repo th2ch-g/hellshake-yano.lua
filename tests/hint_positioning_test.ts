@@ -92,10 +92,10 @@ describe("Hint Positioning - Word Start Display", () => {
       const words: Word[] = [
         { text: "first", line: 1, col: 1 },
         { text: "second", line: 2, col: 5 },
-        { text: "third", line: 3, col: 10 }
+        { text: "third", line: 3, col: 10 },
       ];
 
-      const positions = words.map(word => calculateHintPosition(word, "start"));
+      const positions = words.map((word) => calculateHintPosition(word, "start"));
 
       assertEquals(positions[0].line, 1);
       assertEquals(positions[0].col, 1);
@@ -132,7 +132,7 @@ describe("Hint Positioning - Word Start Display", () => {
       const longWord: Word = {
         text: "verylongwordthatspansmultiplescreencolumns",
         line: 1,
-        col: 1
+        col: 1,
       };
       const position = calculateHintPosition(longWord, "start");
 

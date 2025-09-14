@@ -28,7 +28,10 @@ Deno.test("Number support - Generate hints with numbers", () => {
 });
 
 Deno.test("Number support - Generate multi-character hints with numbers", () => {
-  const markersWithNumbers = [...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")), ...("0123456789".split(""))];
+  const markersWithNumbers = [
+    ...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")),
+    ...("0123456789".split("")),
+  ];
 
   // 40個の単語（36個の単一文字 + 4個の複数文字）
   const hints = generateHints(40, markersWithNumbers);
@@ -43,7 +46,10 @@ Deno.test("Number support - Generate multi-character hints with numbers", () => 
 });
 
 Deno.test("Number support - Mixed alphanumeric hints", () => {
-  const markersWithNumbers = [...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")), ...("0123456789".split(""))];
+  const markersWithNumbers = [
+    ...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")),
+    ...("0123456789".split("")),
+  ];
 
   // 100個の単語でテスト
   const hints = generateHints(100, markersWithNumbers);
@@ -57,7 +63,7 @@ Deno.test("Number support - Mixed alphanumeric hints", () => {
   assertEquals(hints[36], "AA");
 
   // 数字を含む複数文字ヒント
-  const numericMultiHints = hints.filter(h => h.length > 1 && /[0-9]/.test(h));
+  const numericMultiHints = hints.filter((h) => h.length > 1 && /[0-9]/.test(h));
   // A0-A9, B0-B9などが含まれるはず
   assertExists(numericMultiHints);
 });
@@ -83,18 +89,21 @@ Deno.test("Number support - Input validation patterns", () => {
     assertEquals(
       alphaOnlyPattern.test(testCase.input),
       testCase.alphaOnly,
-      `Alpha-only pattern failed for "${testCase.input}"`
+      `Alpha-only pattern failed for "${testCase.input}"`,
     );
     assertEquals(
       alphaNumericPattern.test(testCase.input),
       testCase.alphaNumeric,
-      `Alpha-numeric pattern failed for "${testCase.input}"`
+      `Alpha-numeric pattern failed for "${testCase.input}"`,
     );
   }
 });
 
 Deno.test("Number support - Priority ordering with numbers", () => {
-  const markersWithNumbers = [...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")), ...("0123456789".split(""))];
+  const markersWithNumbers = [
+    ...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")),
+    ...("0123456789".split("")),
+  ];
 
   // 50個の単語
   const hints = generateHints(50, markersWithNumbers);
@@ -120,9 +129,7 @@ Deno.test("Number support - Case conversion behavior", () => {
   ];
 
   for (const testCase of testCases) {
-    const result = /[a-zA-Z]/.test(testCase.input)
-      ? testCase.input.toUpperCase()
-      : testCase.input;
+    const result = /[a-zA-Z]/.test(testCase.input) ? testCase.input.toUpperCase() : testCase.input;
 
     assertEquals(result, testCase.expected);
   }
@@ -145,7 +152,10 @@ Deno.test("Number support - Edge cases", () => {
 });
 
 Deno.test("Number support - Performance with large numeric hints", () => {
-  const markersWithNumbers = [...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")), ...("0123456789".split(""))];
+  const markersWithNumbers = [
+    ...("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")),
+    ...("0123456789".split("")),
+  ];
 
   // パフォーマンステスト: 500個のヒント生成
   const startTime = performance.now();

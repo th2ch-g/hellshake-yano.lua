@@ -5,7 +5,7 @@
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
-import { validateConfig, getDefaultConfig } from "../denops/hellshake-yano/main.ts";
+import { getDefaultConfig, validateConfig } from "../denops/hellshake-yano/main.ts";
 
 // 設定のマージ
 function mergeConfig(defaults: any, userConfig: any) {
@@ -18,11 +18,11 @@ describe("Config Tests", () => {
       const config = getDefaultConfig();
 
       assertEquals(config.markers.length, 26);
-      assertEquals(config.markers[0], 'A');
-      assertEquals(config.markers[25], 'Z');
+      assertEquals(config.markers[0], "A");
+      assertEquals(config.markers[25], "Z");
       assertEquals(config.motion_count, 3);
       assertEquals(config.motion_timeout, 2000);
-      assertEquals(config.hint_position, 'start');
+      assertEquals(config.hint_position, "start");
       assertEquals(config.trigger_on_hjkl, true);
       assertEquals(config.enabled, true);
       assertEquals(config.use_numbers, false);
@@ -86,22 +86,22 @@ describe("Config Tests", () => {
     });
 
     it("should accept valid hint_position values", () => {
-      const result1 = validateConfig({ hint_position: 'start' });
+      const result1 = validateConfig({ hint_position: "start" });
       assertEquals(result1.valid, true);
 
-      const result2 = validateConfig({ hint_position: 'end' });
+      const result2 = validateConfig({ hint_position: "end" });
       assertEquals(result2.valid, true);
 
-      const result3 = validateConfig({ hint_position: 'overlay' });
+      const result3 = validateConfig({ hint_position: "overlay" });
       assertEquals(result3.valid, true);
     });
 
     it("should reject invalid hint_position values", () => {
-      const result1 = validateConfig({ hint_position: 'middle' });
+      const result1 = validateConfig({ hint_position: "middle" });
       assertEquals(result1.valid, false);
       assertEquals(result1.errors[0], "hint_position must be one of: start, end, overlay");
 
-      const result2 = validateConfig({ hint_position: 'top' });
+      const result2 = validateConfig({ hint_position: "top" });
       assertEquals(result2.valid, false);
 
       const result3 = validateConfig({ hint_position: 123 as any });
@@ -109,13 +109,13 @@ describe("Config Tests", () => {
     });
 
     it("should accept valid markers arrays", () => {
-      const result1 = validateConfig({ markers: ['A', 'B', 'C'] });
+      const result1 = validateConfig({ markers: ["A", "B", "C"] });
       assertEquals(result1.valid, true);
 
-      const result2 = validateConfig({ markers: ['1', '2', '3'] });
+      const result2 = validateConfig({ markers: ["1", "2", "3"] });
       assertEquals(result2.valid, true);
 
-      const result3 = validateConfig({ markers: ['!', '@', '#'] });
+      const result3 = validateConfig({ markers: ["!", "@", "#"] });
       assertEquals(result3.valid, true);
     });
 
@@ -129,7 +129,7 @@ describe("Config Tests", () => {
       assertEquals(result2.errors[0], "markers must be an array");
 
       // 実装では文字列の長さが0以上であることをチェック（1文字制限はない）
-      const result3 = validateConfig({ markers: ['AB', 'C'] });
+      const result3 = validateConfig({ markers: ["AB", "C"] });
       assertEquals(result3.valid, true); // 実装に合わせて期待値を変更
 
       const result4 = validateConfig({ markers: [1, 2, 3] as any });
@@ -201,15 +201,18 @@ describe("Config Tests", () => {
       const result = validateConfig({
         motion_count: 0,
         motion_timeout: 50,
-        hint_position: 'invalid',
-        markers: []
+        hint_position: "invalid",
+        markers: [],
       });
 
       assertEquals(result.valid, false);
       assertEquals(result.errors.length, 4);
       assertEquals(result.errors.includes("motion_count must be a positive integer"), true);
       assertEquals(result.errors.includes("motion_timeout must be at least 100ms"), true);
-      assertEquals(result.errors.includes("hint_position must be one of: start, end, overlay"), true);
+      assertEquals(
+        result.errors.includes("hint_position must be one of: start, end, overlay"),
+        true,
+      );
       assertEquals(result.errors.includes("markers must not be empty"), true);
     });
   });
@@ -219,14 +222,14 @@ describe("Config Tests", () => {
       const defaults = getDefaultConfig();
       const userConfig = {
         motion_count: 5,
-        hint_position: 'end',
-        use_numbers: true
+        hint_position: "end",
+        use_numbers: true,
       };
 
       const merged = mergeConfig(defaults, userConfig);
 
       assertEquals(merged.motion_count, 5);
-      assertEquals(merged.hint_position, 'end');
+      assertEquals(merged.hint_position, "end");
       assertEquals(merged.use_numbers, true);
       assertEquals(merged.motion_timeout, 2000); // デフォルト値が保持される
       assertEquals(merged.markers.length, 26); // デフォルト値が保持される
@@ -235,24 +238,24 @@ describe("Config Tests", () => {
     it("should override all specified values", () => {
       const defaults = getDefaultConfig();
       const userConfig = {
-        markers: ['1', '2', '3'],
+        markers: ["1", "2", "3"],
         motion_count: 1,
         motion_timeout: 500,
-        hint_position: 'overlay',
+        hint_position: "overlay",
         trigger_on_hjkl: false,
         enabled: false,
         use_numbers: true,
         maxHints: 50,
         debounceDelay: 100,
-        highlight_selected: true
+        highlight_selected: true,
       };
 
       const merged = mergeConfig(defaults, userConfig);
 
-      assertEquals(merged.markers, ['1', '2', '3']);
+      assertEquals(merged.markers, ["1", "2", "3"]);
       assertEquals(merged.motion_count, 1);
       assertEquals(merged.motion_timeout, 500);
-      assertEquals(merged.hint_position, 'overlay');
+      assertEquals(merged.hint_position, "overlay");
       assertEquals(merged.trigger_on_hjkl, false);
       assertEquals(merged.enabled, false);
       assertEquals(merged.use_numbers, true);
@@ -266,25 +269,25 @@ describe("Config Tests", () => {
     it("should generate markers with numbers when use_numbers is true", () => {
       const config = { use_numbers: true };
       const markers = config.use_numbers
-        ? [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), ...'0123456789'.split('')]
-        : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        ? [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""), ..."0123456789".split("")]
+        : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
       assertEquals(markers.length, 36);
-      assertEquals(markers[0], 'A');
-      assertEquals(markers[25], 'Z');
-      assertEquals(markers[26], '0');
-      assertEquals(markers[35], '9');
+      assertEquals(markers[0], "A");
+      assertEquals(markers[25], "Z");
+      assertEquals(markers[26], "0");
+      assertEquals(markers[35], "9");
     });
 
     it("should generate only letters when use_numbers is false", () => {
       const config = { use_numbers: false };
       const markers = config.use_numbers
-        ? [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), ...'0123456789'.split('')]
-        : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        ? [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""), ..."0123456789".split("")]
+        : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
       assertEquals(markers.length, 26);
-      assertEquals(markers[0], 'A');
-      assertEquals(markers[25], 'Z');
+      assertEquals(markers[0], "A");
+      assertEquals(markers[25], "Z");
     });
   });
 
@@ -298,7 +301,7 @@ describe("Config Tests", () => {
     it("should handle null values gracefully", () => {
       const result = validateConfig({
         motion_count: null as any,
-        hint_position: null as any
+        hint_position: null as any,
       });
       assertEquals(result.valid, false);
       assertEquals(result.errors.length, 2);
@@ -316,15 +319,15 @@ describe("Config Tests", () => {
     });
 
     it("should handle special characters in markers", () => {
-      const result1 = validateConfig({ markers: ['♠', '♣', '♥', '♦'] });
+      const result1 = validateConfig({ markers: ["♠", "♣", "♥", "♦"] });
       assertEquals(result1.valid, true);
 
-      const result2 = validateConfig({ markers: ['あ', 'い', 'う'] });
+      const result2 = validateConfig({ markers: ["あ", "い", "う"] });
       assertEquals(result2.valid, true);
 
       // 絵文字は複数のコードポイントで構成されることがあるため、検証をスキップ
       // または文字長を適切に処理する実装が必要
-      const result3 = validateConfig({ markers: ['📌', '📍', '📎'] });
+      const result3 = validateConfig({ markers: ["📌", "📍", "📎"] });
       // 絵文字の文字長判定は複雑なため、実装ではコメントアウト
       // assertEquals(result3.valid, true);
     });

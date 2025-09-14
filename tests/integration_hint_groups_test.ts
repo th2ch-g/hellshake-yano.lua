@@ -11,8 +11,8 @@ import { MockDenops } from "./helpers/mock.ts";
 // ここではヒント生成機能をシミュレート
 import {
   generateHintsWithGroups,
+  type HintKeyConfig,
   validateHintKeyConfig,
-  type HintKeyConfig
 } from "../denops/hellshake-yano/hint.ts";
 
 describe("Integration: Hint Groups Feature", () => {
@@ -22,7 +22,7 @@ describe("Integration: Hint Groups Feature", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
         multi_char_keys: ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-        max_single_char_hints: 10
+        max_single_char_hints: 10,
       };
 
       // 15個の単語に対してヒントを生成
@@ -44,7 +44,7 @@ describe("Integration: Hint Groups Feature", () => {
       const invalidConfig: HintKeyConfig = {
         single_char_keys: ["A", "S", "D"],
         multi_char_keys: ["A", "Q"], // Aが重複
-        max_single_char_hints: 3
+        max_single_char_hints: 3,
       };
 
       const validation = validateHintKeyConfig(invalidConfig);
@@ -69,7 +69,7 @@ describe("Integration: Hint Groups Feature", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "J", "K", "L", ";"],
         multi_char_keys: ["G", "H", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-        max_single_char_hints: 8
+        max_single_char_hints: 8,
       };
 
       const hints = generateHintsWithGroups(20, config);
@@ -85,9 +85,9 @@ describe("Integration: Hint Groups Feature", () => {
     it("should handle limited single-char scenario", () => {
       // 少数の1文字ヒント、多数の2文字ヒント
       const config: HintKeyConfig = {
-        single_char_keys: ["F", "J"],  // 最も押しやすい2キーのみ
+        single_char_keys: ["F", "J"], // 最も押しやすい2キーのみ
         multi_char_keys: ["A", "S", "D", "G", "H", "K", "L"],
-        max_single_char_hints: 2
+        max_single_char_hints: 2,
       };
 
       const hints = generateHintsWithGroups(10, config);
@@ -108,7 +108,7 @@ describe("Integration: Hint Groups Feature", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
         multi_char_keys: ["Q", "W", "E", "R", "T"],
-        max_single_char_hints: 9
+        max_single_char_hints: 9,
       };
 
       const startTime = Date.now();
@@ -133,7 +133,7 @@ describe("Integration: Hint Groups Feature", () => {
     it("should handle edge case with very few keys", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
-        multi_char_keys: ["B", "C"]
+        multi_char_keys: ["B", "C"],
       };
 
       const hints = generateHintsWithGroups(10, config);
@@ -155,7 +155,7 @@ describe("Integration: Hint Groups Feature", () => {
   describe("Backward Compatibility", () => {
     it("should work with legacy markers configuration", () => {
       const config: HintKeyConfig = {
-        markers: ["X", "Y", "Z"]  // 従来のmarkers設定
+        markers: ["X", "Y", "Z"], // 従来のmarkers設定
       };
 
       const hints = generateHintsWithGroups(5, config);
@@ -171,7 +171,7 @@ describe("Integration: Hint Groups Feature", () => {
     it("should prioritize new config over legacy markers", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "B"],
-        markers: ["X", "Y", "Z"]  // これは無視される
+        markers: ["X", "Y", "Z"], // これは無視される
       };
 
       const hints = generateHintsWithGroups(4, config);

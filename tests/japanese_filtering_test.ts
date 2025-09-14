@@ -7,7 +7,7 @@
 
 import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
-import { extractWordsFromLine, detectWordsWithConfig } from "../denops/hellshake-yano/word.ts";
+import { detectWordsWithConfig, extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
 
 describe("Japanese Filtering Tests", () => {
   describe("extractWordsFromLine with Japanese exclusion", () => {
@@ -16,14 +16,14 @@ describe("Japanese Filtering Tests", () => {
 
       // 日本語を除外
       const wordsExcluded = extractWordsFromLine(line, 1, true, true);
-      const textsExcluded = wordsExcluded.map(w => w.text);
+      const textsExcluded = wordsExcluded.map((w) => w.text);
 
       // 英数字のみが抽出されるべき
       assertEquals(textsExcluded, ["hello", "world", "test", "123"]);
 
       // 日本語を含む
       const wordsIncluded = extractWordsFromLine(line, 1, true, false);
-      const textsIncluded = wordsIncluded.map(w => w.text);
+      const textsIncluded = wordsIncluded.map((w) => w.text);
 
       // 日本語も含まれるべき
       assertEquals(textsIncluded.includes("こんにちは"), true);
@@ -36,14 +36,14 @@ describe("Japanese Filtering Tests", () => {
 
       // 日本語を除外
       const wordsExcluded = extractWordsFromLine(line, 1, true, true);
-      const textsExcluded = wordsExcluded.map(w => w.text);
+      const textsExcluded = wordsExcluded.map((w) => w.text);
 
       // 英字のみが抽出されるべき
       assertEquals(textsExcluded, ["A", "B", "C", "D", "E"]);
 
       // 日本語を含む
       const wordsIncluded = extractWordsFromLine(line, 1, true, false);
-      const textsIncluded = wordsIncluded.map(w => w.text);
+      const textsIncluded = wordsIncluded.map((w) => w.text);
 
       // ひらがなも含まれるべき
       assertEquals(textsIncluded.includes("あ"), true);
@@ -55,7 +55,7 @@ describe("Japanese Filtering Tests", () => {
 
       // 日本語を除外
       const wordsExcluded = extractWordsFromLine(line, 1, true, true);
-      const textsExcluded = wordsExcluded.map(w => w.text);
+      const textsExcluded = wordsExcluded.map((w) => w.text);
 
       // 英字部分のみが抽出されるべき
       assertEquals(textsExcluded.includes("function"), true);
@@ -81,21 +81,21 @@ describe("Japanese Filtering Tests", () => {
             "",
             "hello こんにちは world",
             "テスト test 試験",
-            "A B C あ い う"
+            "A B C あ い う",
           ];
           return lines[lineNumber] || "";
         }
         return null;
-      }
+      },
     };
 
     it("should respect use_japanese=false setting", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
         use_improved_detection: true,
-        use_japanese: false
+        use_japanese: false,
       });
 
-      const texts = words.map(w => w.text);
+      const texts = words.map((w) => w.text);
 
       // 英数字のみが含まれるべき
       assertEquals(texts.includes("hello"), true);
@@ -115,10 +115,10 @@ describe("Japanese Filtering Tests", () => {
     it("should include Japanese when use_japanese=true", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
         use_improved_detection: true,
-        use_japanese: true
+        use_japanese: true,
       });
 
-      const texts = words.map(w => w.text);
+      const texts = words.map((w) => w.text);
 
       // 英数字と日本語の両方が含まれるべき
       assertEquals(texts.includes("hello"), true);
@@ -130,11 +130,11 @@ describe("Japanese Filtering Tests", () => {
 
     it("should default to excluding Japanese when use_japanese is undefined", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        use_improved_detection: true
+        use_improved_detection: true,
         // use_japanese is undefined
       });
 
-      const texts = words.map(w => w.text);
+      const texts = words.map((w) => w.text);
 
       // デフォルトでは日本語を除外すべき
       assertEquals(texts.includes("hello"), true);
@@ -153,7 +153,7 @@ describe("Japanese Filtering Tests", () => {
       const wordsOld = extractWordsFromLine(line, 1, false);
 
       // 2文字以上の単語のみが抽出されるべき（従来の動作）
-      const textsOld = wordsOld.map(w => w.text);
+      const textsOld = wordsOld.map((w) => w.text);
       assertEquals(textsOld, ["hello", "world", "test"]);
     });
 

@@ -18,10 +18,9 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
       const words = extractWordsFromLine(text, 1, true, true);
 
       // Process8を探す
-      const process8 = words.find(w => w.text === "Process8");
+      const process8 = words.find((w) => w.text === "Process8");
 
       if (process8) {
-
         // ヒント位置を計算
         const position = calculateHintPosition(process8, "start");
 
@@ -38,15 +37,14 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
       const words = extractWordsFromLine(text, 1, true, true);
 
       // すべてのProcess単語を確認
-      const processWords = words.filter(w => w.text.startsWith("Process"));
+      const processWords = words.filter((w) => w.text.startsWith("Process"));
 
-      processWords.forEach(word => {
+      processWords.forEach((word) => {
         const position = calculateHintPosition(word, "start");
 
         // 各Process単語の先頭（P）にヒントが表示されることを確認
         assertEquals(position.col, word.col);
         assertEquals(position.display_mode, "before");
-
       });
     });
 
@@ -54,7 +52,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
       const text = "    Process8: 実装完了";
       const words = extractWordsFromLine(text, 1, true, true);
 
-      const process8 = words.find(w => w.text === "Process8");
+      const process8 = words.find((w) => w.text === "Process8");
       if (process8) {
         const position = calculateHintPosition(process8, "start");
 
@@ -80,7 +78,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
       const words = extractWordsFromLine(text, 1, true, true);
 
       // kebab-case分割により複数の単語として検出される
-      const wordTexts = words.map(w => w.text);
+      const wordTexts = words.map((w) => w.text);
 
       // Process50とsub1が別々に検出される
       const hasProcess50 = wordTexts.includes("Process50");

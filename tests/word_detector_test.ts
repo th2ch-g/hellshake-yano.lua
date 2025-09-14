@@ -27,7 +27,7 @@ class MockRegexWordDetector implements WordDetector {
 
   async detectWords(text: string, startLine: number): Promise<Word[]> {
     const words: Word[] = [];
-    const lines = text.split('\n');
+    const lines = text.split("\n");
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -58,7 +58,7 @@ class MockTinySegmenterWordDetector implements WordDetector {
 
   async detectWords(text: string, startLine: number): Promise<Word[]> {
     const words: Word[] = [];
-    const lines = text.split('\n');
+    const lines = text.split("\n");
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -102,12 +102,12 @@ class MockTinySegmenterWordDetector implements WordDetector {
   private mockSegmentation(text: string): string[] {
     // Very simple mock segmentation for testing
     // In real implementation, this would use TinySegmenter
-    return text.split('').map(char => {
+    return text.split("").map((char) => {
       if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(char)) {
         return char; // Each Japanese character as a segment
       }
       return char;
-    }).filter(s => s.trim().length > 0);
+    }).filter((s) => s.trim().length > 0);
   }
 }
 
@@ -168,15 +168,15 @@ class MockWordDetectionManager {
 
     switch (this.config.strategy) {
       case "regex":
-        return this.detectors.find(d => d.name.includes("Regex")) || this.detectors[0];
+        return this.detectors.find((d) => d.name.includes("Regex")) || this.detectors[0];
       case "tinysegmenter":
-        return this.detectors.find(d => d.name.includes("TinySegmenter")) || this.detectors[0];
+        return this.detectors.find((d) => d.name.includes("TinySegmenter")) || this.detectors[0];
       case "hybrid":
         // Choose based on text content
         if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text)) {
-          return this.detectors.find(d => d.name.includes("TinySegmenter")) || this.detectors[0];
+          return this.detectors.find((d) => d.name.includes("TinySegmenter")) || this.detectors[0];
         } else {
-          return this.detectors.find(d => d.name.includes("Regex")) || this.detectors[0];
+          return this.detectors.find((d) => d.name.includes("Regex")) || this.detectors[0];
         }
       default:
         return this.detectors[0];
@@ -185,7 +185,7 @@ class MockWordDetectionManager {
 
   private getFallbackDetector(): WordDetector | null {
     if (this.config.fallback_to_regex) {
-      return this.detectors.find(d => d.name.includes("Regex")) || null;
+      return this.detectors.find((d) => d.name.includes("Regex")) || null;
     }
     return this.detectors.length > 1 ? this.detectors[1] : null;
   }
@@ -195,14 +195,14 @@ class MockWordDetectionManager {
 
     // Apply Japanese filtering if configured
     if (!this.config.use_japanese) {
-      filtered = filtered.filter(word =>
+      filtered = filtered.filter((word) =>
         !/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(word.text)
       );
     }
 
     // Remove duplicates
     const seen = new Set<string>();
-    filtered = filtered.filter(word => {
+    filtered = filtered.filter((word) => {
       const key = `${word.text}:${word.line}:${word.col}`;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -330,7 +330,7 @@ Deno.test("WordDetectionManager Tests", async (t) => {
   await t.step("Japanese filtering configuration", async () => {
     const manager = new MockWordDetectionManager({
       use_japanese: false,
-      strategy: "hybrid"
+      strategy: "hybrid",
     });
     manager.addDetector(new MockRegexWordDetector());
     manager.addDetector(new MockTinySegmenterWordDetector());
@@ -339,7 +339,7 @@ Deno.test("WordDetectionManager Tests", async (t) => {
     const words = await manager.detectWords(mixedText, 1);
 
     // Should filter out Japanese words
-    const hasJapanese = words.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
+    const hasJapanese = words.some((w) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
     assertEquals(hasJapanese, false);
   });
 
@@ -377,7 +377,7 @@ Deno.test("WordDetectionManager Tests", async (t) => {
 
     const manager = new MockWordDetectionManager({
       enable_fallback: true,
-      fallback_to_regex: true
+      fallback_to_regex: true,
     });
     manager.addDetector(new FailingDetector());
     manager.addDetector(new MockRegexWordDetector());
@@ -440,4 +440,3 @@ Deno.test("WordDetectionConfig Tests", async (t) => {
     assertEquals(manager !== null, true);
   });
 });
-

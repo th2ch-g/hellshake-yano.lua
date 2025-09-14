@@ -2,12 +2,12 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert
 import type { Denops } from "@denops/std";
 
 // モックDenopsクラス
-class MockDenops implements Denops {
-  meta = { host: "nvim", mode: "debug" as const, version: "0.7.0", platform: "linux" };
+class MockDenops implements Partial<Denops> {
+  meta = { host: "nvim" as const, mode: "debug" as const, version: "0.7.0", platform: "linux" as const };
   name = "test";
 
   private commands: string[] = [];
-  private calls: Array<{name: string, args: any[]}> = [];
+  private calls: Array<{ name: string; args: any[] }> = [];
   private feedKeysBuffer: string[] = [];
 
   async cmd(command: string): Promise<void> {
@@ -65,7 +65,7 @@ class MockDenops implements Denops {
     return this.commands;
   }
 
-  getCalls(): Array<{name: string, args: any[]}> {
+  getCalls(): Array<{ name: string; args: any[] }> {
     return this.calls;
   }
 
@@ -122,7 +122,7 @@ Deno.test("小文字j入力でヒントがキャンセルされカーソルが�
   assertEquals(commands[0], "echo 'Hints cleared'");
 
   // feedkeysで'j'が送信されることを確認
-  const feedKeysCall = calls.find(call => call.name === "feedkeys");
+  const feedKeysCall = calls.find((call) => call.name === "feedkeys");
   assertExists(feedKeysCall);
   assertEquals(feedKeysCall.args[0], "j");
   assertEquals(feedKeysCall.args[1], "n");
@@ -143,7 +143,7 @@ Deno.test("小文字k入力でヒントがキャンセルされカーソルが�
 
   assertEquals(commands[0], "echo 'Hints cleared'");
 
-  const feedKeysCall = calls.find(call => call.name === "feedkeys");
+  const feedKeysCall = calls.find((call) => call.name === "feedkeys");
   assertExists(feedKeysCall);
   assertEquals(feedKeysCall.args[0], "k");
 
@@ -245,4 +245,3 @@ Deno.test("小文字と大文字の境界値テスト", async () => {
   assertEquals(denops.getCommands()[0], "echo 'Processing hint input'");
   assertEquals(denops.getFeedKeysBuffer().length, 0);
 });
-

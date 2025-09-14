@@ -12,6 +12,8 @@ import { charIndexToByteIndex } from "./utils/encoding.ts";
 export interface WordConfig {
   /** 日本語を含む単語検出を行うか（デフォルト: false） */
   use_japanese?: boolean;
+  /** 互換性のためのフラグ（未使用） */
+  use_improved_detection?: boolean;
 }
 
 /**
@@ -59,7 +61,27 @@ const wordDetectionCache = new Map<string, Word[]>();
  * console.log(`Found ${words.length} words`);
  * ```
  */
-export async function detectWords(denops: Denops): Promise<Word[]> {
+export function detectWords(text: string, startLine: number, excludeJapanese: boolean): Promise<Word[]>;
+export function detectWords(denops: Denops): Promise<Word[]>;
+export async function detectWords(arg1: Denops | string, arg2?: number, arg3?: boolean): Promise<Word[]> {
+  // Overload: string-based API for tests
+  if (typeof arg1 === 'string') {
+    const text = arg1 as string;
+    const startLine = (arg2 ?? 1) as number;
+    const excludeJapanese = (arg3 ?? false) as boolean;
+
+    const words: Word[] = [];
+    const lines = text.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const lineText = lines[i];
+      const lineNumber = startLine + i;
+      const lineWords = extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
+      words.push(...lineWords);
+    }
+    return words;
+  }
+
+  const denops = arg1 as Denops;
   // console.warn("[DEPRECATED] detectWords: Use detectWordsWithManager for enhanced capabilities");
 
   const words: Word[] = [];
@@ -316,7 +338,6 @@ function splitJapaneseTextImproved(
       return !(prev.index === item.index && prev.text === item.text);
     });
 }
-
 
 /**
  * 1行から単語を抽出（改善版 - Process50 Sub6対応）
