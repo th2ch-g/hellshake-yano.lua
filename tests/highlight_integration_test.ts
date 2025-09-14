@@ -18,18 +18,18 @@ Deno.test("Integration - 実際の設定使用例のテスト", () => {
   const configs = [
     {
       // 新形式：オブジェクトで fg/bg を指定
-      highlight_marker: { fg: '#00ff00', bg: '#000000' },
-      highlight_marker_current: { fg: 'Yellow', bg: 'Blue' },
+      highlight_hint_marker: { fg: '#00ff00', bg: '#000000' },
+      highlight_hint_marker_current: { fg: 'Yellow', bg: 'Blue' },
     },
     {
       // 既存形式：ハイライトグループ名（後方互換性）
-      highlight_marker: 'Search',
-      highlight_marker_current: 'IncSearch'
+      highlight_hint_marker: 'Search',
+      highlight_hint_marker_current: 'IncSearch'
     },
     {
       // 混在も可能
-      highlight_marker: { fg: 'Green', bg: 'NONE' },
-      highlight_marker_current: 'IncSearch',
+      highlight_hint_marker: { fg: 'Green', bg: 'NONE' },
+      highlight_hint_marker_current: 'IncSearch',
     }
   ];
 
@@ -51,8 +51,8 @@ Deno.test("Integration - 完全な設定オブジェクトのテスト", () => {
     debounceDelay: 50,
     use_numbers: false,
     highlight_selected: true,
-    highlight_marker: { fg: 'Red', bg: 'White' },
-    highlight_marker_current: { fg: '#ffff00', bg: '#000080' },
+    highlight_hint_marker: { fg: 'Red', bg: 'White' },
+    highlight_hint_marker_current: { fg: '#ffff00', bg: '#000080' },
   };
 
   const result = validateConfig(fullConfig);
@@ -68,8 +68,8 @@ Deno.test("Integration - デフォルト設定との互換性", () => {
   assertEquals(result.valid, true);
 
   // デフォルトのハイライト設定は文字列型
-  assertEquals(typeof defaultConfig.highlight_marker, "string");
-  assertEquals(typeof defaultConfig.highlight_marker_current, "string");
+  assertEquals(typeof defaultConfig.highlight_hint_marker, "string");
+  assertEquals(typeof defaultConfig.highlight_hint_marker_current, "string");
 });
 
 Deno.test("Integration - 複雑なハイライトコマンド生成", () => {
@@ -114,24 +114,24 @@ Deno.test("Integration - 複雑なハイライトコマンド生成", () => {
 Deno.test("Integration - エラーハンドリングの網羅テスト", () => {
   const invalidConfigs = [
     // 空のオブジェクト
-    { highlight_marker: {} },
+    { highlight_hint_marker: {} },
 
     // nullとundefinedの混在
-    { highlight_marker: { fg: null as any, bg: undefined } },
+    { highlight_hint_marker: { fg: null as any, bg: undefined } },
 
     // 無効な型の混在
-    { highlight_marker: { fg: 123 as any, bg: 'Blue' } },
+    { highlight_hint_marker: { fg: 123 as any, bg: 'Blue' } },
 
     // 無効な16進数の形式
-    { highlight_marker: { fg: '#', bg: 'Red' } },
-    { highlight_marker: { fg: '#12345', bg: 'Blue' } },
+    { highlight_hint_marker: { fg: '#', bg: 'Red' } },
+    { highlight_hint_marker: { fg: '#12345', bg: 'Blue' } },
 
     // 空文字列と無効な色名の混在
-    { highlight_marker: { fg: '', bg: 'InvalidColor' } },
+    { highlight_hint_marker: { fg: '', bg: 'InvalidColor' } },
 
     // 無効なハイライトグループ名
-    { highlight_marker: '123InvalidName' },
-    { highlight_marker: 'Invalid-Name-With-Hyphens' },
+    { highlight_hint_marker: '123InvalidName' },
+    { highlight_hint_marker: 'Invalid-Name-With-Hyphens' },
   ];
 
   for (const config of invalidConfigs) {
@@ -179,12 +179,12 @@ Deno.test("Integration - ハイライトグループ名の特殊文字テスト"
   ];
 
   for (const name of validGroupNames) {
-    const result = validateHighlightConfig({ highlight_marker: name });
+    const result = validateHighlightConfig({ highlight_hint_marker: name });
     assertEquals(result.valid, true, `'${name}' should be valid`);
   }
 
   for (const name of invalidGroupNames) {
-    const result = validateHighlightConfig({ highlight_marker: name });
+    const result = validateHighlightConfig({ highlight_hint_marker: name });
     assertEquals(result.valid, false, `'${name}' should be invalid`);
   }
 });
@@ -194,13 +194,13 @@ Deno.test("Integration - パフォーマンスと限界値テスト", () => {
   const longGroupName = 'A'.repeat(101); // 100文字を超える
   const validGroupName = 'A'.repeat(100); // 100文字ちょうど
 
-  assertEquals(validateHighlightConfig({ highlight_marker: longGroupName }).valid, false);
-  assertEquals(validateHighlightConfig({ highlight_marker: validGroupName }).valid, true);
+  assertEquals(validateHighlightConfig({ highlight_hint_marker: longGroupName }).valid, false);
+  assertEquals(validateHighlightConfig({ highlight_hint_marker: validGroupName }).valid, true);
 
   // 多数の設定項目を持つ設定オブジェクト
   const largeConfig = {
-    highlight_marker: { fg: 'Red', bg: 'Blue' },
-    highlight_marker_current: { fg: 'Green', bg: 'Yellow' },
+    highlight_hint_marker: { fg: 'Red', bg: 'Blue' },
+    highlight_hint_marker_current: { fg: 'Green', bg: 'Yellow' },
     markers: Array.from({ length: 100 }, (_, i) => String.fromCharCode(65 + (i % 26))),
     maxHints: 10000,
     debounceDelay: 0,
@@ -213,20 +213,20 @@ Deno.test("Integration - パフォーマンスと限界値テスト", () => {
 Deno.test("Integration - 実際の使用シナリオ", () => {
   // シナリオ1: 暗いテーマでの設定
   const darkThemeConfig = {
-    highlight_marker: { fg: '#ffffff', bg: '#333333' },
-    highlight_marker_current: { fg: '#000000', bg: '#ffff00' }
+    highlight_hint_marker: { fg: '#ffffff', bg: '#333333' },
+    highlight_hint_marker_current: { fg: '#000000', bg: '#ffff00' }
   };
 
   // シナリオ2: 明るいテーマでの設定
   const lightThemeConfig = {
-    highlight_marker: { fg: '#000000', bg: '#ffffff' },
-    highlight_marker_current: { fg: '#ffffff', bg: '#0000ff' }
+    highlight_hint_marker: { fg: '#000000', bg: '#ffffff' },
+    highlight_hint_marker_current: { fg: '#ffffff', bg: '#0000ff' }
   };
 
   // シナリオ3: アクセシビリティを考慮した高コントラスト設定
   const highContrastConfig = {
-    highlight_marker: { fg: 'White', bg: 'Black' },
-    highlight_marker_current: { fg: 'Black', bg: 'White' }
+    highlight_hint_marker: { fg: 'White', bg: 'Black' },
+    highlight_hint_marker_current: { fg: 'Black', bg: 'White' }
   };
 
   const scenarios = [darkThemeConfig, lightThemeConfig, highContrastConfig];
@@ -236,8 +236,8 @@ Deno.test("Integration - 実際の使用シナリオ", () => {
     assertEquals(result.valid, true);
 
     // 各設定でハイライトコマンドが生成できることを確認
-    const markerCmd = generateHighlightCommand('TestMarker', scenario.highlight_marker);
-    const currentCmd = generateHighlightCommand('TestCurrent', scenario.highlight_marker_current);
+    const markerCmd = generateHighlightCommand('TestMarker', scenario.highlight_hint_marker);
+    const currentCmd = generateHighlightCommand('TestCurrent', scenario.highlight_hint_marker_current);
 
     assertEquals(markerCmd.length > 0, true);
     assertEquals(currentCmd.length > 0, true);

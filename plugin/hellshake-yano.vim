@@ -38,24 +38,24 @@ highlight default link HellshakeYanoMarkerCurrent DiffText
 
 " カスタムハイライト色を適用する関数（fg/bg対応）
 function! s:apply_custom_highlights() abort
-  " highlight_marker の設定適用
-  if has_key(g:hellshake_yano, 'highlight_marker') && !empty(g:hellshake_yano.highlight_marker)
+  " highlight_hint_marker の設定適用
+  if has_key(g:hellshake_yano, 'highlight_hint_marker') && !empty(g:hellshake_yano.highlight_hint_marker)
     try
-      call s:apply_highlight('HellshakeYanoMarker', g:hellshake_yano.highlight_marker)
+      call s:apply_highlight('HellshakeYanoMarker', g:hellshake_yano.highlight_hint_marker)
     catch
       echohl WarningMsg
-      echomsg '[hellshake-yano] Invalid highlight_marker: ' . string(g:hellshake_yano.highlight_marker)
+      echomsg '[hellshake-yano] Invalid highlight_hint_marker: ' . string(g:hellshake_yano.highlight_hint_marker)
       echohl None
     endtry
   endif
 
-  " highlight_marker_current の設定適用
-  if has_key(g:hellshake_yano, 'highlight_marker_current') && !empty(g:hellshake_yano.highlight_marker_current)
+  " highlight_hint_marker_current の設定適用
+  if has_key(g:hellshake_yano, 'highlight_hint_marker_current') && !empty(g:hellshake_yano.highlight_hint_marker_current)
     try
-      call s:apply_highlight('HellshakeYanoMarkerCurrent', g:hellshake_yano.highlight_marker_current)
+      call s:apply_highlight('HellshakeYanoMarkerCurrent', g:hellshake_yano.highlight_hint_marker_current)
     catch
       echohl WarningMsg
-      echomsg '[hellshake-yano] Invalid highlight_marker_current: ' . string(g:hellshake_yano.highlight_marker_current)
+      echomsg '[hellshake-yano] Invalid highlight_hint_marker_current: ' . string(g:hellshake_yano.highlight_hint_marker_current)
       echohl None
     endtry
   endif

@@ -51,8 +51,8 @@ let g:hellshake_yano = {
   \ 'use_hint_groups': v:true,
   \ 'use_numbers': v:true,
   \ 'use_japanese': v:true,
-  \ 'highlight_marker': 'DiffAdd',
-  \ 'highlight_marker_current': 'DiffText'
+  \ 'highlight_hint_marker': 'DiffAdd',
+  \ 'highlight_hint_marker_current': 'DiffText'
   \ }
 ```
 
@@ -73,8 +73,8 @@ let g:hellshake_yano = {
 | `use_numbers` | 真偽値 | v:true | 数字キーをヒントに使用可能にする |
 | `max_single_char_hints` | 数値 | - | オプション：1文字ヒントを制限 |
 | `use_japanese` | 真偽値 | - | 日本語単語検出を有効化 |
-| `highlight_marker` | 文字列/辞書 | 'DiffAdd' | マーカーのハイライト |
-| `highlight_marker_current` | 文字列/辞書 | 'DiffText' | 現在のマーカーのハイライト |
+| `highlight_hint_marker` | 文字列/辞書 | 'DiffAdd' | マーカーのハイライト |
+| `highlight_hint_marker_current` | 文字列/辞書 | 'DiffText' | 現在のマーカーのハイライト |
 
 ### ヒントグループ設定
 
@@ -91,14 +91,14 @@ let g:hellshake_yano = {
 ```vim
 " 既存のハイライトグループを使用
 let g:hellshake_yano = {
-  \ 'highlight_marker': 'Search',
-  \ 'highlight_marker_current': 'IncSearch'
+  \ 'highlight_hint_marker': 'Search',
+  \ 'highlight_hint_marker_current': 'IncSearch'
   \ }
 
 " fg/bgでカスタム色を使用
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'fg': '#00ff00', 'bg': '#1a1a1a'},
-  \ 'highlight_marker_current': {'fg': '#ffffff', 'bg': '#ff0000'}
+  \ 'highlight_hint_marker': {'fg': '#00ff00', 'bg': '#1a1a1a'},
+  \ 'highlight_hint_marker_current': {'fg': '#ffffff', 'bg': '#ff0000'}
   \ }
 
 " 混合設定例
@@ -107,7 +107,7 @@ let g:hellshake_yano = {
   \ 'motion_count': 5,
   \ 'motion_timeout': 3000,
   \ 'use_japanese': v:true,
-  \ 'highlight_marker': {'bg': '#3c3c3c'}
+  \ 'highlight_hint_marker': {'bg': '#3c3c3c'}
   \ }
 
 " ヒントグループ設定例

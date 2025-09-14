@@ -55,8 +55,8 @@ export interface Config {
   japanese_merge_particles?: boolean; // 助詞や接続詞を前の単語と結合（デフォルト: true）
   japanese_merge_threshold?: number; // 結合する最大文字数（デフォルト: 2）
   // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
-  highlight_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
-  highlight_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
+  highlight_hint_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
+  highlight_hint_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
 }
 
 // グローバル状態
@@ -110,8 +110,8 @@ let config: Config = {
   japanese_merge_particles: true, // 助詞を前の単語と結合
   japanese_merge_threshold: 2, // 2文字以下の単語を結合対象とする
   // Process 50 Sub5: ハイライト色設定のデフォルト値
-  highlight_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
-  highlight_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
+  highlight_hint_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
+  highlight_hint_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
 };
 
 let currentHints: HintMapping[] = [];
@@ -333,29 +333,29 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // Process 50 Sub5: highlight_marker の検証と適用（fg/bg対応）
-      if (cfg.highlight_marker !== undefined) {
-        const markerResult = validateHighlightColor(cfg.highlight_marker);
+      // Process 50 Sub5: highlight_hint_marker の検証と適用（fg/bg対応）
+      if (cfg.highlight_hint_marker !== undefined) {
+        const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
         if (markerResult.valid) {
-          config.highlight_marker = cfg.highlight_marker;
-          const displayValue = typeof cfg.highlight_marker === "string"
-            ? cfg.highlight_marker
-            : JSON.stringify(cfg.highlight_marker);
+          config.highlight_hint_marker = cfg.highlight_hint_marker;
+          const displayValue = typeof cfg.highlight_hint_marker === "string"
+            ? cfg.highlight_hint_marker
+            : JSON.stringify(cfg.highlight_hint_marker);
         } else {
-          // console.warn(`[hellshake-yano] Invalid highlight_marker: ${markerResult.errors.join(', ')}`);
+          // console.warn(`[hellshake-yano] Invalid highlight_hint_marker: ${markerResult.errors.join(', ')}`);
         }
       }
 
-      // Process 50 Sub5: highlight_marker_current の検証と適用（fg/bg対応）
-      if (cfg.highlight_marker_current !== undefined) {
-        const currentResult = validateHighlightColor(cfg.highlight_marker_current);
+      // Process 50 Sub5: highlight_hint_marker_current の検証と適用（fg/bg対応）
+      if (cfg.highlight_hint_marker_current !== undefined) {
+        const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
         if (currentResult.valid) {
-          config.highlight_marker_current = cfg.highlight_marker_current;
-          const displayValue = typeof cfg.highlight_marker_current === "string"
-            ? cfg.highlight_marker_current
-            : JSON.stringify(cfg.highlight_marker_current);
+          config.highlight_hint_marker_current = cfg.highlight_hint_marker_current;
+          const displayValue = typeof cfg.highlight_hint_marker_current === "string"
+            ? cfg.highlight_hint_marker_current
+            : JSON.stringify(cfg.highlight_hint_marker_current);
         } else {
-          // console.warn(`[hellshake-yano] Invalid highlight_marker_current: ${currentResult.errors.join(', ')}`);
+          // console.warn(`[hellshake-yano] Invalid highlight_hint_marker_current: ${currentResult.errors.join(', ')}`);
         }
       }
     },
@@ -1863,19 +1863,19 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
 
   // Process 50 Sub6: use_improved_detection は統合済み（検証不要）
 
-  // Process 50 Sub5: highlight_marker の検証（fg/bg対応）
-  if (cfg.highlight_marker !== undefined) {
-    const markerResult = validateHighlightColor(cfg.highlight_marker);
+  // Process 50 Sub5: highlight_hint_marker の検証（fg/bg対応）
+  if (cfg.highlight_hint_marker !== undefined) {
+    const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
     if (!markerResult.valid) {
-      errors.push(...markerResult.errors.map((e) => `highlight_marker: ${e}`));
+      errors.push(...markerResult.errors.map((e) => `highlight_hint_marker: ${e}`));
     }
   }
 
-  // Process 50 Sub5: highlight_marker_current の検証（fg/bg対応）
-  if (cfg.highlight_marker_current !== undefined) {
-    const currentResult = validateHighlightColor(cfg.highlight_marker_current);
+  // Process 50 Sub5: highlight_hint_marker_current の検証（fg/bg対応）
+  if (cfg.highlight_hint_marker_current !== undefined) {
+    const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
     if (!currentResult.valid) {
-      errors.push(...currentResult.errors.map((e) => `highlight_marker_current: ${e}`));
+      errors.push(...currentResult.errors.map((e) => `highlight_hint_marker_current: ${e}`));
     }
   }
 
@@ -1903,8 +1903,8 @@ export function getDefaultConfig(): Config {
     highlight_selected: false,
     debug_coordinates: false, // デフォルトでデバッグログは無効
     // Process 50 Sub5: ハイライト色設定のデフォルト値
-    highlight_marker: "DiffAdd",
-    highlight_marker_current: "DiffText",
+    highlight_hint_marker: "DiffAdd",
+    highlight_hint_marker_current: "DiffText",
   };
 }
 
@@ -2140,25 +2140,25 @@ export function generateHighlightCommand(
  */
 export function validateHighlightConfig(
   config: {
-    highlight_marker?: string | HighlightColor;
-    highlight_marker_current?: string | HighlightColor;
+    highlight_hint_marker?: string | HighlightColor;
+    highlight_hint_marker_current?: string | HighlightColor;
   },
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // highlight_markerの検証
-  if (config.highlight_marker !== undefined) {
-    const markerResult = validateHighlightColor(config.highlight_marker);
+  // highlight_hint_markerの検証
+  if (config.highlight_hint_marker !== undefined) {
+    const markerResult = validateHighlightColor(config.highlight_hint_marker);
     if (!markerResult.valid) {
-      errors.push(...markerResult.errors.map((e) => `highlight_marker: ${e}`));
+      errors.push(...markerResult.errors.map((e) => `highlight_hint_marker: ${e}`));
     }
   }
 
-  // highlight_marker_currentの検証
-  if (config.highlight_marker_current !== undefined) {
-    const currentResult = validateHighlightColor(config.highlight_marker_current);
+  // highlight_hint_marker_currentの検証
+  if (config.highlight_hint_marker_current !== undefined) {
+    const currentResult = validateHighlightColor(config.highlight_hint_marker_current);
     if (!currentResult.valid) {
-      errors.push(...currentResult.errors.map((e) => `highlight_marker_current: ${e}`));
+      errors.push(...currentResult.errors.map((e) => `highlight_hint_marker_current: ${e}`));
     }
   }
 

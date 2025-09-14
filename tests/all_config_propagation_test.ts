@@ -66,8 +66,8 @@ const mockVimConfig = {
   segmenter_threshold: 10,  // デフォルト: 4
 
   // Process 50 Sub5: ハイライト色設定
-  highlight_marker: "Search",  // デフォルト: "DiffAdd"
-  highlight_marker_current: "Error",  // デフォルト: "DiffText"
+  highlight_hint_marker: "Search",  // デフォルト: "DiffAdd"
+  highlight_hint_marker_current: "Error",  // デフォルト: "DiffText"
 };
 
 Deno.test("全設定項目の優先順位検証", async (t) => {

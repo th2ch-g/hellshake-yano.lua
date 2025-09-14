@@ -51,8 +51,8 @@ let g:hellshake_yano = {
   \ 'use_hint_groups': v:true,
   \ 'use_numbers': v:true,
   \ 'use_japanese': v:true,
-  \ 'highlight_marker': 'DiffAdd',
-  \ 'highlight_marker_current': 'DiffText'
+  \ 'highlight_hint_marker': 'DiffAdd',
+  \ 'highlight_hint_marker_current': 'DiffText'
   \ }
 ```
 
@@ -73,8 +73,8 @@ let g:hellshake_yano = {
 | `use_numbers` | boolean | v:true | Allow number keys for hints |
 | `max_single_char_hints` | number | - | Optional: limit single-character hints |
 | `use_japanese` | boolean | - | Enable Japanese word detection |
-| `highlight_marker` | string/dict | 'DiffAdd' | Highlight for markers |
-| `highlight_marker_current` | string/dict | 'DiffText' | Highlight for current marker |
+| `highlight_hint_marker` | string/dict | 'DiffAdd' | Highlight for hint markers |
+| `highlight_hint_marker_current` | string/dict | 'DiffText' | Highlight for current hint marker |
 
 ### Hint Groups Configuration
 
@@ -91,14 +91,14 @@ You can customize highlights using either highlight group names or color diction
 ```vim
 " Using existing highlight groups
 let g:hellshake_yano = {
-  \ 'highlight_marker': 'Search',
-  \ 'highlight_marker_current': 'IncSearch'
+  \ 'highlight_hint_marker': 'Search',
+  \ 'highlight_hint_marker_current': 'IncSearch'
   \ }
 
 " Using custom colors with fg/bg
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'fg': '#00ff00', 'bg': '#1a1a1a'},
-  \ 'highlight_marker_current': {'fg': '#ffffff', 'bg': '#ff0000'}
+  \ 'highlight_hint_marker': {'fg': '#00ff00', 'bg': '#1a1a1a'},
+  \ 'highlight_hint_marker_current': {'fg': '#ffffff', 'bg': '#ff0000'}
   \ }
 
 " Mixed configuration example
@@ -107,7 +107,7 @@ let g:hellshake_yano = {
   \ 'motion_count': 5,
   \ 'motion_timeout': 3000,
   \ 'use_japanese': v:true,
-  \ 'highlight_marker': {'bg': '#3c3c3c'}
+  \ 'highlight_hint_marker': {'bg': '#3c3c3c'}
   \ }
 
 " Hint groups configuration examples

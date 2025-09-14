@@ -7,20 +7,20 @@
 
 " 例1: 新形式 - オブジェクトで fg/bg を個別指定
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'fg': '#00ff00', 'bg': '#000000'},
-  \ 'highlight_marker_current': {'fg': 'Yellow', 'bg': 'Blue'},
+  \ 'highlight_hint_marker': {'fg': '#00ff00', 'bg': '#000000'},
+  \ 'highlight_hint_marker_current': {'fg': 'Yellow', 'bg': 'Blue'},
   \ }
 
 " 例2: 既存形式 - ハイライトグループ名（後方互換性）
 let g:hellshake_yano = {
-  \ 'highlight_marker': 'Search',
-  \ 'highlight_marker_current': 'IncSearch'
+  \ 'highlight_hint_marker': 'Search',
+  \ 'highlight_hint_marker_current': 'IncSearch'
   \ }
 
 " 例3: 混在形式 - 一方はオブジェクト、もう一方は文字列
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'fg': 'Green', 'bg': 'NONE'},
-  \ 'highlight_marker_current': 'IncSearch',
+  \ 'highlight_hint_marker': {'fg': 'Green', 'bg': 'NONE'},
+  \ 'highlight_hint_marker_current': 'IncSearch',
   \ }
 
 " テーマ別設定例
@@ -28,20 +28,20 @@ let g:hellshake_yano = {
 
 " 暗いテーマ用設定
 let g:hellshake_yano_dark = {
-  \ 'highlight_marker': {'fg': '#ffffff', 'bg': '#333333'},
-  \ 'highlight_marker_current': {'fg': '#000000', 'bg': '#ffff00'}
+  \ 'highlight_hint_marker': {'fg': '#ffffff', 'bg': '#333333'},
+  \ 'highlight_hint_marker_current': {'fg': '#000000', 'bg': '#ffff00'}
   \ }
 
 " 明るいテーマ用設定
 let g:hellshake_yano_light = {
-  \ 'highlight_marker': {'fg': '#000000', 'bg': '#ffffff'},
-  \ 'highlight_marker_current': {'fg': '#ffffff', 'bg': '#0000ff'}
+  \ 'highlight_hint_marker': {'fg': '#000000', 'bg': '#ffffff'},
+  \ 'highlight_hint_marker_current': {'fg': '#ffffff', 'bg': '#0000ff'}
   \ }
 
 " 高コントラスト設定（アクセシビリティ対応）
 let g:hellshake_yano_high_contrast = {
-  \ 'highlight_marker': {'fg': 'White', 'bg': 'Black'},
-  \ 'highlight_marker_current': {'fg': 'Black', 'bg': 'White'}
+  \ 'highlight_hint_marker': {'fg': 'White', 'bg': 'Black'},
+  \ 'highlight_hint_marker_current': {'fg': 'Black', 'bg': 'White'}
   \ }
 
 " 部分指定例
@@ -49,17 +49,17 @@ let g:hellshake_yano_high_contrast = {
 
 " 前景色のみ指定
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'fg': 'Red'},
+  \ 'highlight_hint_marker': {'fg': 'Red'},
   \ }
 
 " 背景色のみ指定
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'bg': 'Blue'},
+  \ 'highlight_hint_marker': {'bg': 'Blue'},
   \ }
 
 " 透明背景の設定
 let g:hellshake_yano = {
-  \ 'highlight_marker': {'fg': 'Green', 'bg': 'NONE'},
+  \ 'highlight_hint_marker': {'fg': 'Green', 'bg': 'NONE'},
   \ }
 
 " 色指定の形式
@@ -103,15 +103,15 @@ augroup END
 
 " 無効な設定の例（これらは警告メッセージが表示される）
 " let g:hellshake_yano = {
-"   \ 'highlight_marker': {'fg': 'InvalidColor', 'bg': 'Blue'},
+"   \ 'highlight_hint_marker': {'fg': 'InvalidColor', 'bg': 'Blue'},
 "   \ }
 "
 " let g:hellshake_yano = {
-"   \ 'highlight_marker': {'fg': '#gggggg'},
+"   \ 'highlight_hint_marker': {'fg': '#gggggg'},
 "   \ }
 "
 " let g:hellshake_yano = {
-"   \ 'highlight_marker': {'fg': ''},
+"   \ 'highlight_hint_marker': {'fg': ''},
 "   \ }
 
 " 設定の確認方法

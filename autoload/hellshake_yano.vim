@@ -244,10 +244,10 @@ endfunction
 function! hellshake_yano#update_highlight(marker_group, current_group) abort
   " 設定を更新
   if !empty(a:marker_group)
-    let g:hellshake_yano.highlight_marker = a:marker_group
+    let g:hellshake_yano.highlight_hint_marker = a:marker_group
   endif
   if !empty(a:current_group)
-    let g:hellshake_yano.highlight_marker_current = a:current_group
+    let g:hellshake_yano.highlight_hint_marker_current = a:current_group
   endif
 
   " ハイライトを再適用
@@ -285,8 +285,8 @@ function! hellshake_yano#debug() abort
   echo 'Current count: ' . s:motion_count[bufnr]
   echo 'Hints visible: ' . s:hints_visible
   echo 'Denops ready: ' . (exists('g:hellshake_yano_ready') ? g:hellshake_yano_ready : 'false')
-  echo 'Highlight marker: ' . get(g:hellshake_yano, 'highlight_marker', 'DiffAdd')
-  echo 'Highlight marker current: ' . get(g:hellshake_yano, 'highlight_marker_current', 'DiffText')
+  echo 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd')
+  echo 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText')
   echo 'Counted motions: ' . string(s:get_motion_keys())
 endfunction
 
