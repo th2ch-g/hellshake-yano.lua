@@ -163,13 +163,13 @@
 
 ##### sub3 実装TODO
 
-- [ ] Word抽出: 失敗テスト群のRED確認（指定テストのみ実行）
-- [ ] extractWordsFromLine 改善: snake_case/kebab-case/camelCase 分割規則の整合
-- [ ] Word抽出: 数値接頭辞（0x/0b）処理の追加（例: `0xFF` → `xFF`）
+- [x] Word抽出: 失敗テスト群のRED確認（指定テストのみ実行）
+- [x] extractWordsFromLine 改善: snake_case/kebab-case/camelCase 分割規則の整合
+- [x] Word抽出: 数値接頭辞（0x/0b）処理の追加（例: `0xFF` → `xFF`）
 - [ ] Word抽出: 数字のみ/短すぎるトークンの除外ポリシー明確化（テスト基準に合わせる）
 - [ ] Word抽出: 日本語除外フラグの一貫適用（excludeJapanese / use_japanese）
 - [ ] Word抽出: 1行あたり上限の統一（100 or 200）とテスト期待の整合
-- [ ] Word抽出: GREEN確認（word関連テスト再実行）
+- [x] Word抽出: GREEN確認（word関連テスト再実行）
 - [ ] エンコーディング: charIndexToByteIndex の境界ケース修正（マルチバイト）
 - [ ] エンコーディング: GREEN確認（encoding_test 再実行）
 - [ ] ハイライト: グループ名の検証強化（長さ上限、先頭文字、禁止文字）
