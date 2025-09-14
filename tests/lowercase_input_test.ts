@@ -2,8 +2,8 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert
 import type { Denops } from "@denops/std";
 
 // モックDenopsクラス
-class MockDenops implements Denops {
-  meta = { host: "nvim", mode: "debug" as const, version: "0.7.0", platform: "linux" };
+class MockDenops implements Partial<Denops> {
+  meta = { host: "nvim" as const, mode: "debug" as const, version: "0.7.0", platform: "linux" as const };
   name = "test";
 
   private commands: string[] = [];

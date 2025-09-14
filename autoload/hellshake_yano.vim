@@ -355,21 +355,37 @@ function! hellshake_yano#update_highlight(marker_group, current_group) abort
 endfunction
 
 " デバッグ情報を表示
-function! hellshake_yano#debug() abort
-  let bufnr = s:bufnr()
-  call s:init_count(bufnr)
+function! s:build_debug_info(bufnr) abort
+  call s:init_count(a:bufnr)
+  let l:lines = []
+  call add(l:lines, '=== hellshake-yano Debug Info ===')
+  call add(l:lines, 'Enabled: ' . (has_key(g:hellshake_yano, 'enabled') ? g:hellshake_yano.enabled : 'v:false'))
+  call add(l:lines, 'Motion count threshold: ' . get(g:hellshake_yano, 'motion_count', 0))
+  call add(l:lines, 'Timeout: ' . get(g:hellshake_yano, 'motion_timeout', 0) . 'ms')
+  call add(l:lines, 'Current buffer: ' . a:bufnr)
+  call add(l:lines, 'Current count: ' . get(s:motion_count, a:bufnr, 0))
+  call add(l:lines, 'Hints visible: ' . (s:hints_visible ? 'v:true' : 'v:false'))
+  call add(l:lines, 'Denops ready: ' . (exists('g:hellshake_yano_ready') ? g:hellshake_yano_ready : 'false'))
+  call add(l:lines, 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'))
+  call add(l:lines, 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText'))
+  call add(l:lines, 'Counted motions: ' . string(s:get_motion_keys()))
+  " Key repeat detection debug
+  call add(l:lines, 'Key repeat suppression: ' . (get(g:hellshake_yano, 'suppress_on_key_repeat', v:true) ? 1 : 0))
+  call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'key_repeat_threshold', 50) . 'ms')
+  call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'key_repeat_reset_delay', 300) . 'ms')
+  call add(l:lines, 'Key repeating (current buffer): ' . (get(s:is_key_repeating, a:bufnr, v:false) ? 1 : 0))
+  return l:lines
+endfunction
 
-  echo '=== hellshake-yano Debug Info ==='
-  echo 'Enabled: ' . g:hellshake_yano.enabled
-  echo 'Motion count threshold: ' . g:hellshake_yano.motion_count
-  echo 'Timeout: ' . g:hellshake_yano.motion_timeout . 'ms'
-  echo 'Current buffer: ' . bufnr
-  echo 'Current count: ' . s:motion_count[bufnr]
-  echo 'Hints visible: ' . s:hints_visible
-  echo 'Denops ready: ' . (exists('g:hellshake_yano_ready') ? g:hellshake_yano_ready : 'false')
-  echo 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd')
-  echo 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText')
-  echo 'Counted motions: ' . string(s:get_motion_keys())
+function! hellshake_yano#get_debug_info() abort
+  return s:build_debug_info(s:bufnr())
+endfunction
+
+function! hellshake_yano#debug() abort
+  let l:info = s:build_debug_info(s:bufnr())
+  for l:line in l:info
+    echo l:line
+  endfor
 endfunction
 
 " counted_motions を設定

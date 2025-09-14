@@ -23,6 +23,8 @@ export interface PositionSegment {
 export interface WordDetectionConfig {
   strategy?: "regex" | "tinysegmenter" | "hybrid";
   use_japanese?: boolean;
+  // Backward compatibility toggle (ignored in implementation)
+  use_improved_detection?: boolean;
 
   // TinySegmenter specific options
   enable_tinysegmenter?: boolean;
