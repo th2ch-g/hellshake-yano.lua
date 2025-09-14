@@ -145,13 +145,13 @@
 #### sub1 旧動作に依存するテストの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/single_char_detection_test.ts`
 @ref: line 21
-- [ ] テストが本当に旧動作を検証する必要があるか確認
-- [ ] 必要なら `extractWordsFromLineLegacy()` を使用
-- [ ] 不要なら新実装に移行
+- [x] テストが本当に旧動作を検証する必要があるか確認
+- [x] 必要なら `extractWordsFromLineLegacy()` を使用
+- [x] 不要なら新実装に移行
 
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/japanese_filtering_test.ts`
 @ref: lines 152, 163
-- [ ] 同様の評価と更新を実施
+- [x] 同様の評価と更新を実施
 
 ### process5 extractWordsFromLineOriginal の削除
 #### sub1 最終確認と削除
