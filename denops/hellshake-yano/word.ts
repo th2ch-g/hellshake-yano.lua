@@ -593,6 +593,70 @@ export function getWordDetectionCacheStats(): {
 }
 
 /**
+ * Phase 1 TDD Green Phase: WordConfig to EnhancedWordConfig Adapter Functions
+ * WordConfigからEnhancedWordConfigへの変換アダプター関数群
+ */
+
+/**
+ * WordConfigをEnhancedWordConfigに変換する
+ * @description レガシーWordConfigを新しいEnhancedWordConfig形式に変換する
+ * @param wordConfig - 変換元のWordConfig
+ * @returns EnhancedWordConfig - 変換されたEnhancedWordConfig
+ * @since 1.0.0
+ */
+export function convertWordConfigToEnhanced(wordConfig: WordConfig): EnhancedWordConfig {
+  return {
+    use_japanese: wordConfig.use_japanese ?? false,
+    strategy: "regex", // デフォルト戦略
+    enable_tinysegmenter: wordConfig.use_japanese === true,
+  };
+}
+
+/**
+ * EnhancedWordConfigを使用してDenopsから単語を検出する（アダプター版）
+ * @description WordConfigベースの関数からEnhancedWordConfig版への移行アダプター
+ * @param denops - Denopsインスタンス
+ * @param config - EnhancedWordConfig設定
+ * @returns Promise<Word[]> - 検出された単語の配列
+ * @since 1.0.0
+ */
+export async function detectWordsWithEnhancedConfig(
+  denops: Denops,
+  config: EnhancedWordConfig = {},
+): Promise<Word[]> {
+  // 新しいマネージャーベースの検出を試行し、失敗した場合はフォールバック
+  try {
+    const result = await detectWordsWithManager(denops, config);
+    return result.words;
+  } catch (error) {
+    // フォールバックとしてレガシー版を使用
+    const legacyConfig: WordConfig = {
+      use_japanese: config.use_japanese,
+    };
+    return await detectWordsWithConfig(denops, legacyConfig);
+  }
+}
+
+/**
+ * EnhancedWordConfigを使用して1行から単語を抽出する（アダプター版）
+ * @description 設定に基づいて1行から単語を抽出するアダプター関数
+ * @param lineText - 解析する行のテキスト
+ * @param lineNumber - 行番号
+ * @param config - EnhancedWordConfig設定
+ * @returns Word[] - 抽出された単語の配列
+ * @since 1.0.0
+ */
+export function extractWordsFromLineWithEnhancedConfig(
+  lineText: string,
+  lineNumber: number,
+  config: EnhancedWordConfig = {},
+): Word[] {
+  // 改善版の単語検出を使用し、use_japanese設定に基づいてexcludeJapaneseを決定
+  const excludeJapanese = config.use_japanese !== true;
+  return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
+}
+
+/**
  * Process2: レガシー互換性アダプター関数
  * @description extractWordsFromLineOriginalと100%互換性のある結果を返すアダプター関数。
  * 将来的には新しい実装をベースとした最適化版に切り替え可能な設計。
