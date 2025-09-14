@@ -88,7 +88,7 @@
 ### process2 移行用アダプター関数の作成
 #### sub1 extractWordsFromLineLegacy 関数の実装
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] extractWordsFromLineLegacy 関数を新規作成
+- [x] extractWordsFromLineLegacy 関数を新規作成
   - 新実装を呼び出し、旧動作に合わせてフィルタリング
   - 2文字未満の単語を除外
   - 数字のみの単語を除外
@@ -111,10 +111,10 @@
 
 #### sub2 アダプター関数のテスト
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/legacy_behavior_test.ts`
-- [ ] extractWordsFromLineOriginal と extractWordsFromLineLegacy の出力を比較
-- [ ] 100%一致することを確認
-- [ ] legacy_behavior_test.ts に比較テストを追加
-- [ ] 既存のテストスイートのすべてのエッジケースで検証
+- [x] extractWordsFromLineOriginal と extractWordsFromLineLegacy の出力を比較
+- [x] 100%一致することを確認
+- [x] legacy_behavior_test.ts に比較テストを追加
+- [x] 既存のテストスイートのすべてのエッジケースで検証
 
 ### process3 段階的な置き換え
 #### sub1 detectWordsStandard の更新
