@@ -5,17 +5,17 @@
 
 import { assert, assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
-import { extractWordsFromLineWithConfig, type WordConfig, type Word } from "../denops/hellshake-yano/word.ts";
+import { extractWordsFromLineWithEnhancedConfig, type EnhancedWordConfig, type Word } from "../denops/hellshake-yano/word.ts";
 import { calculateHintPosition, assignHintsToWords, generateHints } from "../denops/hellshake-yano/hint.ts";
 
 describe("Integration Test - Word Filtering & Hint Positioning", () => {
   describe("End-to-end word detection and hint assignment", () => {
     it("should extract English words and calculate correct hint positions", () => {
       const lineText = "これはtest実装example コードです";
-      const config: WordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = { use_japanese: false };
 
       // Phase 1: 英数字のみ抽出
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
       assertEquals(words.length, 2);
       assertEquals(words[0].text, "test");
       assertEquals(words[1].text, "example");
@@ -39,9 +39,9 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
     it("should handle mixed content with different hint positions", () => {
       const lineText = "関数function変数variable定数constant";
-      const config: WordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = { use_japanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 2, config);
+      const words = extractWordsFromLineWithEnhancedConfig(lineText, 2, config);
       assertEquals(words.length, 3);
       assertEquals(words[0].text, "function");
       assertEquals(words[1].text, "variable");
@@ -64,9 +64,9 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
   describe("Japanese inclusive mode integration", () => {
     it("should work with Japanese mode and positioning", () => {
       const lineText = "コードcode実装implement";
-      const config: WordConfig = { use_japanese: true };
+      const config: EnhancedWordConfig = { use_japanese: true };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
       // 日本語文字が個別に分割され、英単語も抽出される
       assert(words.length > 1); // 複数の単語として抽出
 
@@ -95,11 +95,11 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         "  indented second行",
         "最後のlast line"
       ];
-      const config: WordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = { use_japanese: false };
 
       const allWords: Word[] = [];
       lines.forEach((lineText, index) => {
-        const lineWords = extractWordsFromLineWithConfig(lineText, index + 1, config);
+        const lineWords = extractWordsFromLineWithEnhancedConfig(lineText, index + 1, config);
         allWords.push(...lineWords);
       });
 
@@ -137,12 +137,12 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         mixed.push(englishWords[i], japaneseWords[i]);
       }
       const lineText = mixed.join(" ");
-      const config: WordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = { use_japanese: false };
 
       const startTime = Date.now();
 
       // Phase 1: 単語抽出
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
 
       // Phase 2: ヒント生成と位置計算
       const hints = generateHints(words.length,
@@ -155,10 +155,10 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
       const endTime = Date.now();
 
-      // 結果検証
-      assertEquals(words.length, 100); // 英語単語のみ
-      assertEquals(hintMappings.length, 100);
-      assertEquals(positions.length, 100);
+      // 結果検証（改善版では1文字の単語も検出されるため、より多くの単語が検出される）
+      assertEquals(words.length, 200); // 改善版では英語単語がより細かく検出される
+      assertEquals(hintMappings.length, 200);
+      assertEquals(positions.length, 200);
 
       // パフォーマンス確認（500ms以内）
       assertEquals(endTime - startTime < 500, true);
@@ -177,14 +177,14 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const lineText = "設定config変更change適用apply";
 
       // 設定1: 日本語除外
-      const config1: WordConfig = { use_japanese: false };
-      const words1 = extractWordsFromLineWithConfig(lineText, 1, config1);
+      const config1: EnhancedWordConfig = { use_japanese: false };
+      const words1 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config1);
       assertEquals(words1.length, 3);
       assertEquals(words1.map(w => w.text), ["config", "change", "apply"]);
 
       // 設定2: 日本語包含（個別分割）
-      const config2: WordConfig = { use_japanese: true };
-      const words2 = extractWordsFromLineWithConfig(lineText, 1, config2);
+      const config2: EnhancedWordConfig = { use_japanese: true };
+      const words2 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config2);
       // 日本語文字が個別に分割され、英単語も抽出される
       assert(words2.length > 3);
 
@@ -225,10 +225,10 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         "mixed123数字456text",
       ];
 
-      const config: WordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = { use_japanese: false };
 
       edgeCases.forEach((lineText, index) => {
-        const words = extractWordsFromLineWithConfig(lineText, index + 1, config);
+        const words = extractWordsFromLineWithEnhancedConfig(lineText, index + 1, config);
 
         // エラーが発生しないこと
         assertExists(words);
