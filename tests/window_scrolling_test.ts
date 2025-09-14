@@ -28,6 +28,15 @@ describe("Window Scrolling Detection", () => {
             }
             return lines[lineNumber] || "";
           }
+          if (fn === "getbufline") {
+            // getbufline("%", startLine, endLine) をmock
+            const [buffer, startLine, endLine] = args;
+            const result: string[] = [];
+            for (let i = startLine; i <= endLine; i++) {
+              result.push(`Line ${i}: word${i} test${i} sample${i}`);
+            }
+            return result;
+          }
           return null;
         }
       });
@@ -84,6 +93,14 @@ describe("Window Scrolling Detection", () => {
             const lineNumber = args[0];
             return `Line ${lineNumber}: small window test`;
           }
+          if (fn === "getbufline") {
+            const [buffer, startLine, endLine] = args;
+            const result: string[] = [];
+            for (let i = startLine; i <= endLine; i++) {
+              result.push(`Line ${i}: small window test`);
+            }
+            return result;
+          }
           return null;
         }
       };
@@ -116,6 +133,13 @@ describe("Window Scrolling Detection", () => {
               return "Single line with multiple words here";
             }
             return "";
+          }
+          if (fn === "getbufline") {
+            const [buffer, startLine, endLine] = args;
+            if (startLine === 42 && endLine === 42) {
+              return ["Single line with multiple words here"];
+            }
+            return [];
           }
           return null;
         }
@@ -152,6 +176,14 @@ describe("Window Scrolling Detection", () => {
           if (fn === "getline") {
             const lineNumber = args[0];
             return `Line ${lineNumber}: content`;
+          }
+          if (fn === "getbufline") {
+            const [buffer, startLine, endLine] = args;
+            const result: string[] = [];
+            for (let i = startLine; i <= endLine; i++) {
+              result.push(`Line ${i}: content`);
+            }
+            return result;
           }
           return null;
         }

@@ -44,6 +44,11 @@ export interface WordDetectionConfig {
   max_word_length?: number;
   exclude_numbers?: boolean;
   exclude_single_chars?: boolean;
+
+  // Japanese-specific options
+  japanese_merge_particles?: boolean;
+  japanese_merge_threshold?: number;
+  japanese_min_word_length?: number;
 }
 
 // Base interface for all word detectors

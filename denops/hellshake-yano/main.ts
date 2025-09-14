@@ -5,7 +5,6 @@ import {
   detectWordsWithManager,
   type EnhancedWordConfig,
   extractWordsFromLineWithConfig,
-  type WordConfig,
 } from "./word.ts";
 import { getWordDetectionManager, resetWordDetectionManager } from "./word/manager.ts";
 import {

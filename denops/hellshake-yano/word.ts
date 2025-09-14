@@ -122,7 +122,10 @@ export async function detectWordsWithManager(
     // console.error("[detectWordsWithManager] Error:", error);
 
     // フォールバックとして従来のメソッドを使用
-    const fallbackWords = await detectWordsWithConfig(denops, config);
+    const fallbackConfig: WordConfig = {
+      use_japanese: config.use_japanese,
+    };
+    const fallbackWords = await detectWordsWithConfig(denops, fallbackConfig);
     return {
       words: fallbackWords,
       detector: "fallback",
@@ -139,6 +142,7 @@ export async function detectWordsWithManager(
 
 /**
  * Process 50 Sub3: 設定に基づいて画面内の単語を検出する（統合版）
+ * @deprecated Use detectWordsWithEnhancedConfig instead for better performance and features
  * @description 設定に基づいて単語検出を行う中級レベルの関数。日本語サポートと改善版検出を含む
  * @param denops - Denopsインスタンス
  * @param config - 単語検出設定（省略時はデフォルト設定）
@@ -479,6 +483,7 @@ export function extractWordsFromLine(
 
 /**
  * Process 50 Sub3: 設定に基づいて1行から単語を抽出（統合版）
+ * @deprecated Use WordDetectionManager.detectWords instead for better performance and features
  * @description 設定オブジェクトに基づいて単語抽出を行うラッパー関数
  * @param lineText - 解析する行のテキスト
  * @param lineNumber - 行番号

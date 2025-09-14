@@ -312,7 +312,7 @@ export class WordDetectionManager {
 
       return this.detectWords(text, topLine, denops);
     } catch (error) {
-// console.error("[WordDetectionManager] Failed to detect words from buffer:", error);
+      // console.error("[WordDetectionManager] Failed to detect words from buffer:", error);
       return {
         words: [],
         detector: "none",
