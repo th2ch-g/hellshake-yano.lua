@@ -192,7 +192,7 @@ async function detectWordsStandard(
   // 各行から単語を検出
   for (let line = topLine; line <= bottomLine; line++) {
     const lineText = await denops.call("getline", line) as string;
-    const lineWords = extractWordsFromLine(lineText, line, false); // オリジナル版を使用
+    const lineWords = extractWordsFromLineLegacy(lineText, line);
     words.push(...lineWords);
   }
 
@@ -227,7 +227,7 @@ async function detectWordsOptimizedForLargeFiles(
       // 各行から単語を抽出
       lines.forEach((lineText, index) => {
         const actualLine = startLine + index;
-        const lineWords = extractWordsFromLine(lineText, actualLine, false); // オリジナル版を使用
+        const lineWords = extractWordsFromLineLegacy(lineText, actualLine);
         words.push(...lineWords);
       });
 
@@ -385,9 +385,9 @@ export function extractWordsFromLine(
   useImprovedDetection = false,
   excludeJapanese = false,
 ): Word[] {
-  // 既存テストとの互換性を保つためデフォルトはオリジナル版を使用
+  // 既存テストとの互換性を保つためデフォルトはレガシー版を使用
   if (!useImprovedDetection) {
-    return extractWordsFromLineOriginal(lineText, lineNumber);
+    return extractWordsFromLineLegacy(lineText, lineNumber);
   }
   const words: Word[] = [];
 
@@ -586,7 +586,7 @@ export async function detectWordsInRange(
       }
 
       const lineText = await denops.call("getline", line) as string;
-      const lineWords = extractWordsFromLine(lineText, line, false); // オリジナル版を使用
+      const lineWords = extractWordsFromLineLegacy(lineText, line);
 
       // 単語数制限を適用
       const remainingSlots = effectiveMaxWords - words.length;

@@ -120,26 +120,26 @@
 #### sub1 detectWordsStandard の更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
 @ref: line 195
-- [ ] `extractWordsFromLine(lineText, line, false)` → `extractWordsFromLineLegacy(lineText, line)`
-- [ ] テスト実行して回帰がないことを確認
+- [x] `extractWordsFromLine(lineText, line, false)` → `extractWordsFromLineLegacy(lineText, line)`
+- [x] テスト実行して回帰がないことを確認
 
 #### sub2 detectWordsOptimizedForLargeFiles の更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
 @ref: line 230
-- [ ] `extractWordsFromLine(lineText, actualLine, false)` → `extractWordsFromLineLegacy(lineText, actualLine)`
-- [ ] テスト実行して回帰がないことを確認
+- [x] `extractWordsFromLine(lineText, actualLine, false)` → `extractWordsFromLineLegacy(lineText, actualLine)`
+- [x] テスト実行して回帰がないことを確認
 
 #### sub3 detectWordsInRange の更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
 @ref: line 589
-- [ ] `extractWordsFromLine(lineText, line, false)` → `extractWordsFromLineLegacy(lineText, line)`
-- [ ] テスト実行して回帰がないことを確認
+- [x] `extractWordsFromLine(lineText, line, false)` → `extractWordsFromLineLegacy(lineText, line)`
+- [x] テスト実行して回帰がないことを確認
 
 #### sub4 extractWordsFromLine の簡略化
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
 @ref: lines 388-391
-- [ ] useImprovedDetection パラメータのチェックを削除
-- [ ] `false` の場合は `extractWordsFromLineLegacy()` を呼び出すよう変更
+- [x] useImprovedDetection パラメータのチェックを削除
+- [x] `false` の場合は `extractWordsFromLineLegacy()` を呼び出すよう変更
 
 ### process4 テストファイルの移行
 #### sub1 旧動作に依存するテストの更新
