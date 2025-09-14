@@ -113,7 +113,7 @@ Deno.test("TDD Process3: RED Phase - extractWordsFromLine delegation test", asyn
   // when useImprovedDetection = false
 
   // TODO: This test will initially pass but verifies the delegation logic
-  // Current logic in lines 388-391 should delegate to extractWordsFromLineOriginal
+  // Current logic should delegate to extractWordsFromLineLegacy
   // We need to update it to delegate to extractWordsFromLineLegacy
 
   const testLine = "delegation test";

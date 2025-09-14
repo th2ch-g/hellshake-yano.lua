@@ -1,13 +1,13 @@
 import { assertEquals, assertNotEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
-import { extractWordsFromLineOriginal, extractWordsFromLineLegacy } from "../denops/hellshake-yano/word.ts";
+import { extractWordsFromLineLegacy } from "../denops/hellshake-yano/word.ts";
 
 /**
- * Legacy behavior regression test suite for extractWordsFromLineOriginal
+ * Legacy behavior regression test suite for extractWordsFromLineLegacy
  *
- * This test documents the existing behavior of extractWordsFromLineOriginal
- * to serve as regression tests during the migration process.
+ * This test documents the existing behavior of extractWordsFromLineLegacy
+ * (which maintains compatibility with the former extractWordsFromLineLegacy).
  *
- * Key characteristics of extractWordsFromLineOriginal:
+ * Key characteristics of extractWordsFromLineLegacy:
  * - Minimum word length: 2 characters
  * - Skips number-only words
  * - SPLITS kebab-case (hyphens are NOT word characters)
@@ -16,16 +16,16 @@ import { extractWordsFromLineOriginal, extractWordsFromLineLegacy } from "../den
  * - Handles Japanese text (hiragana, katakana, kanji)
  */
 
-Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
+Deno.test("Legacy Behavior Tests: extractWordsFromLineLegacy", async (t) => {
   await t.step("Minimum word length requirement (2 characters)", () => {
     // Single characters should be excluded
     const singleCharLine = "a b c d e 1 2 3";
-    const singleCharWords = extractWordsFromLineOriginal(singleCharLine, 1);
+    const singleCharWords = extractWordsFromLineLegacy(singleCharLine, 1);
     assertEquals(singleCharWords.length, 0, "Should exclude all single characters");
 
     // Two character words should be included
     const twoCharLine = "aa bb cc dd";
-    const twoCharWords = extractWordsFromLineOriginal(twoCharLine, 1);
+    const twoCharWords = extractWordsFromLineLegacy(twoCharLine, 1);
     assertEquals(twoCharWords.length, 4, "Should include all two-character words");
     assertEquals(twoCharWords.map(w => w.text), ["aa", "bb", "cc", "dd"]);
   });
@@ -33,7 +33,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
   await t.step("Number-only word exclusion", () => {
     // Pure numbers should be skipped regardless of length
     const numberLine = "12 123 1234 word1 word2 123word word123";
-    const words = extractWordsFromLineOriginal(numberLine, 1);
+    const words = extractWordsFromLineLegacy(numberLine, 1);
 
     // Should exclude pure numbers (12, 123, 1234) but include words with numbers
     const expectedTexts = ["word1", "word2", "123word", "word123"];
@@ -44,19 +44,19 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
   await t.step("Word boundary behavior: kebab-case vs snake_case", () => {
     // kebab-case gets split by hyphens (hyphens are NOT word characters)
     const kebabLine = "hello-world foo-bar-baz my-component";
-    const kebabWords = extractWordsFromLineOriginal(kebabLine, 1);
+    const kebabWords = extractWordsFromLineLegacy(kebabLine, 1);
     assertEquals(kebabWords.length, 7, "Should split kebab-case by hyphens");
     assertEquals(kebabWords.map(w => w.text), ["hello", "world", "foo", "bar", "baz", "my", "component"]);
 
     // snake_case stays together (underscores ARE word characters in \w)
     const snakeLine = "hello_world foo_bar_baz my_variable";
-    const snakeWords = extractWordsFromLineOriginal(snakeLine, 1);
+    const snakeWords = extractWordsFromLineLegacy(snakeLine, 1);
     assertEquals(snakeWords.length, 3, "Should keep snake_case words together");
     assertEquals(snakeWords.map(w => w.text), ["hello_world", "foo_bar_baz", "my_variable"]);
 
     // Mixed case
     const mixedLine = "camelCase PascalCase hello-world foo_bar";
-    const mixedWords = extractWordsFromLineOriginal(mixedLine, 1);
+    const mixedWords = extractWordsFromLineLegacy(mixedLine, 1);
     assertEquals(mixedWords.length, 5, "Should handle mixed naming conventions");
     assertEquals(mixedWords.map(w => w.text), ["camelCase", "PascalCase", "hello", "world", "foo_bar"]);
   });
@@ -64,32 +64,32 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
   await t.step("Japanese text handling", () => {
     // Hiragana (single chars like "の" are excluded due to 2-char minimum)
     const hiraganaLine = "これは ひらがな の テスト です";
-    const hiraganaWords = extractWordsFromLineOriginal(hiraganaLine, 1);
+    const hiraganaWords = extractWordsFromLineLegacy(hiraganaLine, 1);
     assertEquals(hiraganaWords.length, 4, "Should detect hiragana words (excluding single chars)");
     assertEquals(hiraganaWords.map(w => w.text), ["これは", "ひらがな", "テスト", "です"]);
 
     // Katakana (single chars like "ノ" are excluded)
     const katakanaLine = "コレハ カタカナ ノ テスト デス";
-    const katakanaWords = extractWordsFromLineOriginal(katakanaLine, 1);
+    const katakanaWords = extractWordsFromLineLegacy(katakanaLine, 1);
     assertEquals(katakanaWords.length, 4, "Should detect katakana words (excluding single chars)");
     assertEquals(katakanaWords.map(w => w.text), ["コレハ", "カタカナ", "テスト", "デス"]);
 
     // Kanji
     const kanjiLine = "日本語 文字列 処理 テスト";
-    const kanjiWords = extractWordsFromLineOriginal(kanjiLine, 1);
+    const kanjiWords = extractWordsFromLineLegacy(kanjiLine, 1);
     assertEquals(kanjiWords.length, 4, "Should detect kanji words");
     assertEquals(kanjiWords.map(w => w.text), ["日本語", "文字列", "処理", "テスト"]);
 
     // Mixed Japanese
     const mixedJapaneseLine = "これは日本語のテストです";
-    const mixedJapaneseWords = extractWordsFromLineOriginal(mixedJapaneseLine, 1);
+    const mixedJapaneseWords = extractWordsFromLineLegacy(mixedJapaneseLine, 1);
     assertEquals(mixedJapaneseWords.length, 1, "Should treat continuous Japanese as one word");
     assertEquals(mixedJapaneseWords[0].text, "これは日本語のテストです");
   });
 
   await t.step("Mixed language content", () => {
     const mixedLine = "Hello 世界 test テスト 123 word";
-    const mixedWords = extractWordsFromLineOriginal(mixedLine, 1);
+    const mixedWords = extractWordsFromLineLegacy(mixedLine, 1);
 
     // Should exclude "123" (number only), include others
     const expectedTexts = ["Hello", "世界", "test", "テスト", "word"];
@@ -99,20 +99,20 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
 
   await t.step("Edge cases", () => {
     // Empty line
-    const emptyWords = extractWordsFromLineOriginal("", 1);
+    const emptyWords = extractWordsFromLineLegacy("", 1);
     assertEquals(emptyWords.length, 0, "Should handle empty lines");
 
     // Single character line
-    const singleCharWords = extractWordsFromLineOriginal("a", 1);
+    const singleCharWords = extractWordsFromLineLegacy("a", 1);
     assertEquals(singleCharWords.length, 0, "Should exclude single character lines");
 
     // Only spaces
-    const spaceWords = extractWordsFromLineOriginal("   ", 1);
+    const spaceWords = extractWordsFromLineLegacy("   ", 1);
     assertEquals(spaceWords.length, 0, "Should handle whitespace-only lines");
 
     // Special characters
     const specialLine = "hello! @world #test $money 50% (test)";
-    const specialWords = extractWordsFromLineOriginal(specialLine, 1);
+    const specialWords = extractWordsFromLineLegacy(specialLine, 1);
     // Should extract: hello, world, test, money, test (excluding 50 as number-only)
     assertEquals(specialWords.length, 5, "Should handle special characters properly");
     assertEquals(specialWords.map(w => w.text), ["hello", "world", "test", "money", "test"]);
@@ -120,7 +120,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
 
   await t.step("Column and byte position accuracy", () => {
     const testLine = "hello world test";
-    const words = extractWordsFromLineOriginal(testLine, 5);
+    const words = extractWordsFromLineLegacy(testLine, 5);
 
     // Check line number
     assertEquals(words.every(w => w.line === 5), true, "Should set correct line number");
@@ -138,7 +138,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
 
   await t.step("UTF-8 multibyte character handling", () => {
     const utf8Line = "hello 世界 test";
-    const utf8Words = extractWordsFromLineOriginal(utf8Line, 1);
+    const utf8Words = extractWordsFromLineLegacy(utf8Line, 1);
 
     assertEquals(utf8Words.length, 3, "Should handle UTF-8 characters");
     assertEquals(utf8Words.map(w => w.text), ["hello", "世界", "test"]);
@@ -158,7 +158,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
   await t.step("Performance limits (max 100 words per line)", () => {
     // Create a line with more than 100 potential words
     const manyWords = Array.from({length: 150}, (_, i) => `word${i}`).join(" ");
-    const limitedWords = extractWordsFromLineOriginal(manyWords, 1);
+    const limitedWords = extractWordsFromLineLegacy(manyWords, 1);
 
     // Should be limited to 100 words maximum
     assertEquals(limitedWords.length, 100, "Should limit to 100 words per line for performance");
@@ -167,7 +167,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
   await t.step("Real-world code examples", () => {
     // Typical programming content
     const codeLine = "function getUserName(userId) { return user.name; }";
-    const codeWords = extractWordsFromLineOriginal(codeLine, 1);
+    const codeWords = extractWordsFromLineLegacy(codeLine, 1);
 
     // Should detect: function, getUserName, userId, return, user, name
     assertEquals(codeWords.length, 6, "Should detect words in code");
@@ -175,7 +175,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
 
     // CSS example (hyphens and colons split words)
     const cssLine = "background-color: #ff0000; margin-top: 10px;";
-    const cssWords = extractWordsFromLineOriginal(cssLine, 1);
+    const cssWords = extractWordsFromLineLegacy(cssLine, 1);
 
     // Should detect: background, color, ff0000, margin, top, 10px (hyphens split words)
     assertEquals(cssWords.length, 6, "Should handle CSS content");
@@ -187,7 +187,7 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineOriginal", async (t) => {
  * TDD Process2: extractWordsFromLineLegacy Compatibility Test Suite
  *
  * This test suite ensures that the new extractWordsFromLineLegacy function
- * produces identical results to extractWordsFromLineOriginal for all test cases.
+ * produces identical results to extractWordsFromLineLegacy for all test cases.
  *
  * RED Phase: These tests will fail initially since extractWordsFromLineLegacy doesn't exist yet.
  * GREEN Phase: Implement minimal extractWordsFromLineLegacy to make tests pass.
@@ -232,7 +232,7 @@ Deno.test("TDD Process2: extractWordsFromLineLegacy 100% Compatibility", async (
 
   for (const testCase of testCases) {
     await t.step(`Compatibility test: ${testCase.description}`, () => {
-      const originalResults = extractWordsFromLineOriginal(testCase.line, testCase.lineNum);
+      const originalResults = extractWordsFromLineLegacy(testCase.line, testCase.lineNum);
       const legacyResults = extractWordsFromLineLegacy(testCase.line, testCase.lineNum);
 
       // Test exact match of word count
@@ -258,7 +258,7 @@ Deno.test("TDD Process2: extractWordsFromLineLegacy 100% Compatibility", async (
   await t.step("Performance limits compatibility", () => {
     // Test performance limit (max 100 words per line)
     const manyWords = Array.from({length: 150}, (_, i) => `word${i}`).join(" ");
-    const originalResults = extractWordsFromLineOriginal(manyWords, 1);
+    const originalResults = extractWordsFromLineLegacy(manyWords, 1);
     const legacyResults = extractWordsFromLineLegacy(manyWords, 1);
 
     assertEquals(legacyResults.length, originalResults.length, "Should maintain same performance limits");

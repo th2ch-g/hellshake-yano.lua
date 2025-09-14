@@ -313,56 +313,6 @@ function splitJapaneseTextImproved(
     });
 }
 
-/**
- * 1行から単語を抽出（オリジナル版 - 既存テスト用）
- * @description オリジナルの単語抽出ロジック。既存テストとの互換性を保つために保持
- * @param lineText - 解析する行のテキスト
- * @param lineNumber - 行番号
- * @returns Word[] - 抽出された単語の配列
- * @deprecated 新しいextractWordsFromLineを使用してください
- * @since 1.0.0
- */
-export function extractWordsFromLineOriginal(lineText: string, lineNumber: number): Word[] {
-  const words: Word[] = [];
-
-  // 空行や短すぎる行はスキップ
-  if (!lineText || lineText.trim().length < 2) {
-    return words;
-  }
-
-  // 最適化された正規表現（ユニコード対応）
-  const wordRegex = /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g;
-  let match: RegExpExecArray | null;
-
-  // パフォーマンスを向上させるためにマッチをバッチ処理
-  const matches: { text: string; index: number }[] = [];
-  while ((match = wordRegex.exec(lineText)) !== null) {
-    // 短すぎる単語や数字のみの単語はスキップ
-    if (match[0].length >= 2 && !/^\d+$/.test(match[0])) {
-      matches.push({ text: match[0], index: match.index });
-    }
-
-    // パフォーマンス保護：1行あたり100個まで
-    if (matches.length >= 100) {
-      break;
-    }
-  }
-
-  // マッチした単語をWordオブジェクトに変換
-  for (const match of matches) {
-    // Calculate byte position for UTF-8 compatibility
-    const byteIndex = charIndexToByteIndex(lineText, match.index);
-
-    words.push({
-      text: match.text,
-      line: lineNumber,
-      col: match.index + 1, // Vimの列番号は1から始まる
-      byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
-    });
-  }
-
-  return words;
-}
 
 /**
  * 1行から単語を抽出（改善版 - Process50 Sub6対応）
@@ -684,13 +634,45 @@ export function extractWordsFromLineLegacy(
   lineText: string,
   lineNumber: number,
 ): Word[] {
-  // TDD Process2: アダプターパターンによる実装
-  // 現在の実装: 100%互換性保証のためオリジナル関数を使用
-  //
-  // 設計ノート:
-  // - Phase1: オリジナル関数の直接使用（現在のフェーズ）
-  // - Phase2: 新しい実装 + フィルタリングによる最適化（将来予定）
-  // - Phase3: 完全にカスタマイズされた実装（長期計画）
+  // TDD Process5: extractWordsFromLineOriginal統合実装
+  // 元のextractWordsFromLineOriginalのロジックを直接統合
+  const words: Word[] = [];
 
-  return extractWordsFromLineOriginal(lineText, lineNumber);
+  // 空行や短すぎる行はスキップ
+  if (!lineText || lineText.trim().length < 2) {
+    return words;
+  }
+
+  // 最適化された正規表現（ユニコード対応）
+  const wordRegex = /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g;
+  let match: RegExpExecArray | null;
+
+  // パフォーマンスを向上させるためにマッチをバッチ処理
+  const matches: { text: string; index: number }[] = [];
+  while ((match = wordRegex.exec(lineText)) !== null) {
+    // 短すぎる単語や数字のみの単語はスキップ
+    if (match[0].length >= 2 && !/^\d+$/.test(match[0])) {
+      matches.push({ text: match[0], index: match.index });
+    }
+
+    // パフォーマンス保護：1行あたり100個まで
+    if (matches.length >= 100) {
+      break;
+    }
+  }
+
+  // マッチした単語をWordオブジェクトに変換
+  for (const match of matches) {
+    // Calculate byte position for UTF-8 compatibility
+    const byteIndex = charIndexToByteIndex(lineText, match.index);
+
+    words.push({
+      text: match.text,
+      line: lineNumber,
+      col: match.index + 1, // Vimの列番号は1から始まる
+      byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
+    });
+  }
+
+  return words;
 }
