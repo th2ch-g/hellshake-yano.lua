@@ -6,7 +6,7 @@ import {
   type EnhancedWordConfig,
   extractWordsFromLineWithConfig,
 } from "./word.ts";
-import { getWordDetectionManager, resetWordDetectionManager } from "./word/manager.ts";
+import { getWordDetectionManager, resetWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import {
   assignHintsToWords,
   calculateHintPosition,
@@ -136,6 +136,74 @@ let wordsCache: {
 let hintsCache: { wordCount: number; hints: string[] } | null = null;
 
 /**
+ * 後方互換性のあるフラグを正規化する
+ * @param cfg - 設定オブジェクト
+ * @returns 正規化された設定
+ */
+function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
+  const normalized = { ...cfg };
+
+  // use_improved_detection は統合済み（常に有効）として削除
+  if ('use_improved_detection' in normalized) {
+    delete normalized.use_improved_detection;
+  }
+
+  return normalized;
+}
+
+/**
+ * メイン設定をマネージャー用設定に変換する
+ * @param config - メイン設定
+ * @returns マネージャー用設定
+ */
+function convertConfigForManager(config: Config): WordDetectionManagerConfig {
+  return {
+    // 基本設定
+    strategy: config.word_detection_strategy || "hybrid",
+    use_japanese: config.use_japanese,
+    enable_tinysegmenter: config.enable_tinysegmenter,
+    segmenter_threshold: config.segmenter_threshold,
+
+    // 日本語分割精度設定
+    min_word_length: config.japanese_min_word_length,
+    // japanese_merge_particles、japanese_merge_thresholdは
+    // マネージャーレベルでは直接サポートされていないため除外
+
+    // パフォーマンス設定
+    cache_enabled: true,
+    auto_detect_language: true,
+    performance_monitoring: false, // デバッグ情報が必要な場合のみ有効
+
+    // タイムアウト設定（motion_timeoutから算出）
+    timeout_ms: Math.max(config.motion_timeout || 2000, 1000),
+
+    // デフォルトストラテジー
+    default_strategy: config.word_detection_strategy || "hybrid",
+  };
+}
+
+/**
+ * メインとマネージャーの設定を同期する
+ * @param config - メイン設定
+ */
+function syncManagerConfig(config: Config): void {
+  try {
+    // マネージャー用設定に変換
+    const managerConfig = convertConfigForManager(config);
+
+    // マネージャーを取得または作成し、設定を更新
+    const manager = getWordDetectionManager(managerConfig);
+
+    // 既存のマネージャーがある場合は設定を更新
+    if (manager) {
+      manager.updateConfig(managerConfig);
+    }
+  } catch (error) {
+    // console.warn("[hellshake-yano] Failed to sync manager config:", error);
+  }
+}
+
+/**
  * プラグインのメインエントリポイント
  */
 export async function main(denops: Denops): Promise<void> {
@@ -147,6 +215,9 @@ export async function main(denops: Denops): Promise<void> {
     ) as number;
   }
 
+  // プラグイン初期化時にマネージャーに初期設定を同期
+  syncManagerConfig(config);
+
   // dispatcherの設定
   denops.dispatcher = {
     /**
@@ -154,7 +225,10 @@ export async function main(denops: Denops): Promise<void> {
      */
     updateConfig(newConfig: unknown): void {
       // 型安全のため、Partial<Config>として処理
-      const cfg = newConfig as Partial<Config>;
+      let cfg = newConfig as Partial<Config>;
+
+      // 後方互換性のあるフラグを正規化
+      cfg = normalizeBackwardCompatibleFlags(cfg);
 
       // カスタムマーカー設定の検証と適用
       if (cfg.markers && Array.isArray(cfg.markers)) {
@@ -362,6 +436,9 @@ export async function main(denops: Denops): Promise<void> {
           // console.warn(`[hellshake-yano] Invalid highlight_hint_marker_current: ${currentResult.errors.join(', ')}`);
         }
       }
+
+      // 設定更新後、マネージャーに設定を伝播
+      syncManagerConfig(config);
     },
 
     /**
@@ -1869,17 +1946,27 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
 
   // Process 50 Sub5: highlight_hint_marker の検証（fg/bg対応）
   if (cfg.highlight_hint_marker !== undefined) {
-    const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
-    if (!markerResult.valid) {
-      errors.push(...markerResult.errors.map((e) => `highlight_hint_marker: ${e}`));
+    // null チェック
+    if (cfg.highlight_hint_marker === null) {
+      errors.push("highlight_hint_marker must be a string");
+    } else {
+      const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
+      if (!markerResult.valid) {
+        errors.push(...markerResult.errors);
+      }
     }
   }
 
   // Process 50 Sub5: highlight_hint_marker_current の検証（fg/bg対応）
   if (cfg.highlight_hint_marker_current !== undefined) {
-    const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
-    if (!currentResult.valid) {
-      errors.push(...currentResult.errors.map((e) => `highlight_hint_marker_current: ${e}`));
+    // null チェック
+    if (cfg.highlight_hint_marker_current === null) {
+      errors.push("highlight_hint_marker_current must be a string");
+    } else {
+      const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
+      if (!currentResult.valid) {
+        errors.push(...currentResult.errors.map((e) => e.replace("highlight_hint_marker", "highlight_hint_marker_current")));
+      }
     }
   }
 
@@ -2045,10 +2132,43 @@ export function validateHighlightColor(
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
+  // null と undefined のチェック
+  if (colorConfig === null) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  // 数値や配列などの無効な型チェック
+  if (typeof colorConfig === "number") {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  if (Array.isArray(colorConfig)) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
   // 文字列の場合（従来のハイライトグループ名）
   if (typeof colorConfig === "string") {
+    // 空文字列チェック
+    if (colorConfig === "") {
+      errors.push("highlight_hint_marker must be a non-empty string");
+      return { valid: false, errors };
+    }
+
+    // ハイライトグループ名のバリデーション
     if (!validateHighlightGroupName(colorConfig)) {
-      errors.push(`Invalid highlight group name: ${colorConfig}`);
+      // より詳細なエラーメッセージを提供
+      if (!/^[a-zA-Z_]/.test(colorConfig)) {
+        errors.push("highlight_hint_marker must start with a letter or underscore");
+      } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
+        errors.push("highlight_hint_marker must contain only alphanumeric characters and underscores");
+      } else if (colorConfig.length > 100) {
+        errors.push("highlight_hint_marker must be 100 characters or less");
+      } else {
+        errors.push(`Invalid highlight group name: ${colorConfig}`);
+      }
     }
     return { valid: errors.length === 0, errors };
   }
