@@ -12,6 +12,11 @@ let s:last_motion_time = {}  " バッファごとの最後の移動時刻
 let s:timer_id = {}  " バッファごとのタイマーID
 let s:hints_visible = v:false  " ヒント表示状態
 
+" キーリピート検出用変数
+let s:last_key_time = {}  " バッファごとの最後のキー入力時刻
+let s:is_key_repeating = {}  " バッファごとのキーリピート状態フラグ
+let s:repeat_end_timer = {}  " バッファごとのリピート終了検出タイマー
+
 " バッファ番号を取得
 function! s:bufnr() abort
   return bufnr('%')
@@ -22,6 +27,11 @@ function! s:init_count(bufnr) abort
   if !has_key(s:motion_count, a:bufnr)
     let s:motion_count[a:bufnr] = 0
     let s:last_motion_time[a:bufnr] = 0
+  endif
+  " キーリピート検出の初期化
+  if !has_key(s:last_key_time, a:bufnr)
+    let s:last_key_time[a:bufnr] = 0
+    let s:is_key_repeating[a:bufnr] = v:false
   endif
 endfunction
 
@@ -35,6 +45,14 @@ function! hellshake_yano#motion(key) abort
   let bufnr = s:bufnr()
   call s:init_count(bufnr)
 
+  " キーリピート検出処理
+  let current_time = s:get_elapsed_time()
+  let config = s:get_key_repeat_config()
+
+  if s:handle_key_repeat_detection(bufnr, current_time, config)
+    return a:key
+  endif
+
   " 既存のタイマーをクリア
   if has_key(s:timer_id, bufnr)
     call timer_stop(s:timer_id[bufnr])
@@ -45,8 +63,8 @@ function! hellshake_yano#motion(key) abort
   let s:motion_count[bufnr] += 1
   let s:last_motion_time[bufnr] = reltime()
 
-  " 指定回数に達したらヒント表示
-  if s:motion_count[bufnr] >= g:hellshake_yano.motion_count
+  " リピート中でなく、指定回数に達したらヒント表示
+  if !get(s:is_key_repeating, bufnr, v:false) && s:motion_count[bufnr] >= g:hellshake_yano.motion_count
     call s:reset_count(bufnr)
     call s:trigger_hints()
   else
@@ -69,6 +87,70 @@ function! s:reset_count(bufnr) abort
     call timer_stop(s:timer_id[a:bufnr])
     unlet s:timer_id[a:bufnr]
   endif
+endfunction
+
+" 経過時間をミリ秒で取得（高精度）
+function! s:get_elapsed_time() abort
+  let time_str = reltimestr(reltime())
+  return float2nr(str2float(time_str) * 1000.0)
+endfunction
+
+" リピート状態をリセット
+function! s:reset_repeat_state(bufnr) abort
+  if has_key(s:is_key_repeating, a:bufnr)
+    let s:is_key_repeating[a:bufnr] = v:false
+  endif
+  if has_key(s:repeat_end_timer, a:bufnr)
+    call timer_stop(s:repeat_end_timer[a:bufnr])
+    unlet s:repeat_end_timer[a:bufnr]
+  endif
+endfunction
+
+" キーリピート設定を取得
+function! s:get_key_repeat_config() abort
+  return {
+        \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
+        \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
+        \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300)
+        \ }
+endfunction
+
+" キーリピート検出処理
+" @param bufnr バッファ番号
+" @param current_time 現在時刻（ミリ秒）
+" @param config キーリピート設定辞書
+" @return v:true = リピート中でヒント表示をスキップ, v:false = 通常処理を継続
+function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
+  " 機能が無効の場合は通常処理
+  if !a:config.enabled
+    let s:last_key_time[a:bufnr] = a:current_time
+    return v:false
+  endif
+
+  " 前回のキー入力時刻との差を計算
+  let time_diff = a:current_time - s:last_key_time[a:bufnr]
+
+  " キーリピート判定
+  if time_diff < a:config.threshold && s:last_key_time[a:bufnr] > 0
+    " リピート状態に設定
+    let s:is_key_repeating[a:bufnr] = v:true
+
+    " 既存のリピート終了タイマーをクリアして新しく設定
+    if has_key(s:repeat_end_timer, a:bufnr)
+      call timer_stop(s:repeat_end_timer[a:bufnr])
+    endif
+    let s:repeat_end_timer[a:bufnr] = timer_start(
+          \ a:config.reset_delay,
+          \ {-> s:reset_repeat_state(a:bufnr)})
+
+    " キー時刻更新してヒント表示をスキップ
+    let s:last_key_time[a:bufnr] = a:current_time
+    return v:true
+  endif
+
+  " 通常処理: キー時刻を更新
+  let s:last_key_time[a:bufnr] = a:current_time
+  return v:false
 endfunction
 
 " 全バッファのカウントをリセット

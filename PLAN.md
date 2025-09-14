@@ -1,182 +1,149 @@
-# title: extractWordsFromLineOriginal() の安全な段階的除去
+# title: hjklキーリピート時のヒント表示抑制機能
 
 ## 概要
-- 非推奨となっている `extractWordsFromLineOriginal()` 関数を、TDD（テスト駆動開発）アプローチで安全に除去し、コードベースを簡潔化する
+
+- hjklキーをリピート（押しっぱなし）している時は、ヒントの表示を抑制し、スムーズなスクロールを実現する
 
 ### goal
-- レガシーコードの除去により、保守性の向上とコードの簡潔化を実現
-- 既存の動作を保持しながら、段階的に新実装へ移行
+
+- hjklキーを押しっぱなしでスクロールする際に、不要なヒント表示を防ぎ、快適な操作体験を提供する
 
 ## 必須のルール
+
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 - 各段階でテストを実行し、回帰がないことを確認すること
-- ロールバック可能な小さなステップで進めること
-- 人間がコードレビューを行ってからコミットするため、git add,  git commitするようように人間に通知する
+- 既存の動作に影響を与えないよう、機能は設定で有効/無効を切り替え可能にすること
 
 ## 開発のゴール
-- `extractWordsFromLineOriginal()` 関数を完全に除去
-- 後方互換性を維持しながら、新実装への移行を完了
-- テストカバレッジを維持または向上
+
+- キーリピート（連続入力）を検出する仕組みの実装
+- リピート中はヒント表示を抑制する機能の追加
+- 通常のhjkl操作には影響を与えない
+- パフォーマンスへの影響を最小限に抑える
 
 ## 実装仕様
 
-### 現状の分析結果
-- **extractWordsFromLineOriginal（旧実装）の特徴:**
-  - 最小文字数が2文字
-  - 数字のみの単語をスキップ
-  - kebab-case や snake_case の分割なし
-  - シンプルな正規表現マッチング
+### キーリピート検出の仕組み
 
-- **新実装（useImprovedDetection=true）の特徴:**
-  - 最小文字数が1文字
-  - 数字のみの単語も許可
-  - kebab-case と snake_case の分割
-  - 日本語の文字種別による分割
-  - 1文字の英単語・数字の検出
+- **検出方法:** 連続するキー入力の時間間隔を測定
+- **リピート判定基準:** 50ms以下の間隔で連続入力があればリピートと判定
+- **状態管理:**
+  - `is_key_repeating` フラグでリピート状態を管理
+  - リピート終了後、300ms経過でフラグをリセット
 
-### 依存関係
-- **直接呼び出し:** `extractWordsFromLine()` 内で `useImprovedDetection=false` の場合
-- **間接的な使用:**
-  - `detectWordsStandard()` - line 195
-  - `detectWordsOptimizedForLargeFiles()` - line 230
-  - `detectWordsInRange()` - line 589
-- **テストファイル:**
-  - `tests/single_char_detection_test.ts` - line 21
-  - `tests/japanese_filtering_test.ts` - lines 152, 163
+### 現在の実装の分析
+
+- **Vimスクリプト側 (autoload/hellshake_yano.vim):**
+  - `hellshake_yano#motion()` 関数がhjklキーの押下を検知
+  - `motion_count` が指定回数（デフォルト3回）に達したらヒント表示
+  - タイマーによるカウントリセット機能あり（デフォルト2000ms）
+
+- **TypeScript側 (denops/hellshake-yano/main.ts):**
+  - `showHints()` メソッドでデバウンス処理を実装済み
+  - `debounceDelay` による連続呼び出しの制御
 
 ## 生成AIの学習用コンテキスト
-### 実装ファイル
-- [word.ts](~/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts)
-  - extractWordsFromLineOriginal 関数の定義
-  - extractWordsFromLine 関数の定義
-  - 各種 detectWords 関数
 
-### テストファイル
-- [single_char_detection_test.ts](~/.config/nvim/plugged/hellshake-yano.vim/tests/single_char_detection_test.ts)
-  - 旧実装の動作を検証しているテストケース
-- [japanese_filtering_test.ts](~/.config/nvim/plugged/hellshake-yano.vim/tests/japanese_filtering_test.ts)
-  - 日本語フィルタリングのテストケース
+### Vimスクリプト実装ファイル
+
+- [autoload/hellshake_yano.vim](~/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano.vim)
+  - hellshake_yano#motion() 関数の定義（29-61行）
+  - s:trigger_hints() 関数の定義（106-131行）
+
+### TypeScript実装ファイル
+
+- [denops/hellshake-yano/main.ts](~/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts)
+  - Config インターフェース定義（28-59行）
+  - showHints() メソッド（365-379行）
+  - displayHints() 関数（1088-1195行）
+
+### 設定ファイル
+
+- [plugin/hellshake-yano.vim](~/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano.vim)
+  - デフォルト設定の定義（21-33行）
+  - モーションキーマッピングの設定（112-133行）
 
 ## Process
-### process1 現状の把握とテストの整備
-#### sub1 既存テストの実行と記録
-@target: テスト実行結果の記録
-- [x] 全テストを実行し、現在の状態を記録
-- [x] 失敗しているテストを特定（現在1つ失敗中）
 
-**調査結果:**
-- **テスト状態:** integration_test.ts にシンタックスエラーが存在（43-47行目）
-  - `console.log` 文またはステートメントが不完全でテストが実行できない状態
-- **extractWordsFromLineOriginal 使用箇所の詳細:**
-  - word.ts内：
-    - detectWordsStandard() - line 195
-    - detectWordsOptimizedForLargeFiles() - line 230
-    - detectWordsInRange() - line 589
-  - テストファイル内：
-    - single_char_detection_test.ts - line 21
-    - japanese_filtering_test.ts - lines 152, 163
-- **関数詳細:** extractWordsFromLineOriginal は word.ts の 325-365行に定義
-- **現在の制御:** useImprovedDetection=false 時に使用（389-391行）
+### process1 キーリピート検出機能の実装
 
-#### sub2 回帰テストスイートの作成
-@target: - [legacy_behavior_test.ts](~/.config/nvim/plugged/hellshake-yano.vim/tests/legacy_behavior_test.ts)
-- [x] extractWordsFromLineOriginal の現在の動作を完全にカバーするテストケースを作成
-- [x] 最小2文字の単語のみ検出することを検証
-- [x] 数字のみの単語をスキップすることを検証
-- [x] kebab-case/snake_caseを分割しないことを検証
+#### sub1 Vimスクリプト側の変数追加
 
-### process2 移行用アダプター関数の作成
-#### sub1 extractWordsFromLineLegacy 関数の実装
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [x] extractWordsFromLineLegacy 関数を新規作成
-  - 新実装を呼び出し、旧動作に合わせてフィルタリング
-  - 2文字未満の単語を除外
-  - 数字のみの単語を除外
+@target: ~/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano.vim
 
-**実装仕様（調査結果に基づく）:**
-- **extractWordsFromLineOriginal の確認された動作:**
-  - 最小文字数制限：2文字以上
-  - 数字のみの単語をスキップ
-  - **kebab-case を分割**（ハイフンは単語文字ではないため、"hello-world" → "hello", "world"）
-  - **snake_case を保持**（アンダースコアは単語文字のため、"hello_world" → "hello_world"）
-  - 連続する日本語テキストは単一の単語として扱う
+- [x] `s:last_key_time` - 最後のキー入力時刻を記録する辞書を追加
+- [x] `s:is_key_repeating` - キーリピート中かどうかのフラグ辞書を追加
+- [x] `s:repeat_end_timer` - リピート終了検出用タイマー辞書を追加
 
-- **extractWordsFromLineLegacy の実装計画:**
-  - 新実装（useImprovedDetection=true）を呼び出し
-  - 結果を旧動作に合わせてフィルタリング：
-    - 2文字未満の単語を除去
-    - 数字のみの単語を除去
-    - kebab-case の分割は新実装で既に処理済み
-    - snake_case が新実装で分割される場合は再結合が必要な可能性
+#### sub2 hellshake_yano#motion() 関数の改修
 
-#### sub2 アダプター関数のテスト
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/legacy_behavior_test.ts`
-- [x] extractWordsFromLineOriginal と extractWordsFromLineLegacy の出力を比較
-- [x] 100%一致することを確認
-- [x] legacy_behavior_test.ts に比較テストを追加
-- [x] 既存のテストスイートのすべてのエッジケースで検証
+@target: ~/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano.vim @ref: lines 29-61
 
-### process3 段階的な置き換え
-#### sub1 detectWordsStandard の更新
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-@ref: line 195
-- [x] `extractWordsFromLine(lineText, line, false)` → `extractWordsFromLineLegacy(lineText, line)`
-- [x] テスト実行して回帰がないことを確認
+- [x] 現在時刻と前回のキー入力時刻の差を計算するロジックを追加
+- [x] 時間差が閾値（50ms）以下ならキーリピートと判定
+- [x] リピート中はヒント表示（s:trigger_hints()）をスキップ
+- [x] リピート終了検出タイマーの設定（300ms後にフラグリセット）
 
-#### sub2 detectWordsOptimizedForLargeFiles の更新
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-@ref: line 230
-- [x] `extractWordsFromLine(lineText, actualLine, false)` → `extractWordsFromLineLegacy(lineText, actualLine)`
-- [x] テスト実行して回帰がないことを確認
+### process2 設定オプションの追加
 
-#### sub3 detectWordsInRange の更新
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-@ref: line 589
-- [x] `extractWordsFromLine(lineText, line, false)` → `extractWordsFromLineLegacy(lineText, line)`
-- [x] テスト実行して回帰がないことを確認
+#### sub1 デフォルト設定の追加
 
-#### sub4 extractWordsFromLine の簡略化
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-@ref: lines 388-391
-- [x] useImprovedDetection パラメータのチェックを削除
-- [x] `false` の場合は `extractWordsFromLineLegacy()` を呼び出すよう変更
+@target: ~/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano.vim @ref: lines 21-33
 
-### process4 テストファイルの移行
-#### sub1 旧動作に依存するテストの更新
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/single_char_detection_test.ts`
-@ref: line 21
-- [x] テストが本当に旧動作を検証する必要があるか確認
-- [x] 必要なら `extractWordsFromLineLegacy()` を使用
-- [x] 不要なら新実装に移行
+- [x] `suppress_on_key_repeat` (boolean) - キーリピート時の抑制を有効化（デフォルト: v:true）
+- [x] `key_repeat_threshold` (number) - リピート判定の閾値（デフォルト: 50）
+- [x] `key_repeat_reset_delay` (number) - リピート終了判定の遅延（デフォルト: 300）
 
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/japanese_filtering_test.ts`
-@ref: lines 152, 163
-- [x] 同様の評価と更新を実施
+#### sub2 設定の伝播
 
-### process5 extractWordsFromLineOriginal の削除
-#### sub1 最終確認と削除
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] extractWordsFromLineOriginal への参照が0件であることを確認
-- [ ] 全テストが通ることを確認
-- [ ] extractWordsFromLineOriginal 関数定義を削除
-- [ ] @deprecated コメントも削除
+@target: ~/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano.vim @ref: line 226
+
+- [x] denops側への設定送信時に新しい設定項目も含める
+
+### process3 ヘルパー関数の追加
+
+#### sub1 時間計測用関数の実装
+
+@target: ~/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano.vim
+
+- [x] `s:get_elapsed_time()` - 経過時間をミリ秒で取得する関数を追加
+- [x] `s:reset_repeat_state()` - リピート状態をリセットする関数を追加
 
 ### process10 ユニットテスト
-- [ ] 全テストスイートが通ることを確認
-- [ ] パフォーマンステストの結果が大きく変わらないことを確認
-- [ ] カバレッジレポートの確認
+
+#### sub1 キーリピート検出のテスト
+
+@target: ~/.config/nvim/plugged/hellshake-yano.vim/tests/key_repeat_test.ts
+
+- [x] 通常のhjkl操作でヒントが表示されることを確認
+- [x] 高速連続入力（50ms以下）でヒントが抑制されることを確認
+- [x] リピート終了後、通常動作に戻ることを確認
+
+#### sub2 設定オプションのテスト
+
+- [x] suppress_on_key_repeat=false で機能が無効化されることを確認
+- [x] 各閾値設定が正しく動作することを確認
 
 ### process50 フォローアップ
-#### sub1 extractWordsFromLineLegacy の最適化
-- [ ] 使用箇所が少なければ、段階的に新実装に移行
-- [ ] 必要に応じて設定オプションとして残す
+
+#### sub1 パフォーマンスの最適化
+
+- [ ] 時間計測処理のオーバーヘッドを測定
+- [ ] 必要に応じて最適化を実施
+
+#### sub2 ユーザビリティの改善
+
+- [ ] デフォルト値の調整（ユーザーフィードバックに基づく）
+- [ ] デバッグモードの追加（キーリピート検出状態の可視化）
 
 ### process100 リファクタリング
-- [ ] 不要になったパラメータの削除
-- [ ] 関数シグネチャの簡略化
-- [ ] コメントの更新
+
+- [ ] 重複コードの削除
+- [ ] 関数の責務を明確化
+- [ ] エラーハンドリングの改善
 
 ### process200 ドキュメンテーション
-- [ ] JSDocコメントの更新
-- [ ] 移行に関する変更履歴の記録
-- [ ] README.mdの更新（必要に応じて）
+
+- [ ] README.mdに新機能の説明を追加
+- [ ] 設定オプションの詳細をドキュメント化
+- [ ] トラブルシューティングガイドの追加
