@@ -8,9 +8,9 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import {
-  generateHintsWithGroups,
   assignHintsToWords,
-  type HintKeyConfig
+  generateHintsWithGroups,
+  type HintKeyConfig,
 } from "../denops/hellshake-yano/hint.ts";
 import type { Word } from "../denops/hellshake-yano/word.ts";
 
@@ -19,8 +19,24 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
     it("should generate hints without overlap between single and multi char keys", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
-        multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-        max_single_char_hints: 11
+        multi_char_keys: [
+          "B",
+          "C",
+          "E",
+          "I",
+          "O",
+          "P",
+          "Q",
+          "R",
+          "T",
+          "U",
+          "V",
+          "W",
+          "X",
+          "Y",
+          "Z",
+        ],
+        max_single_char_hints: 11,
       };
 
       const hints = generateHintsWithGroups(50, config);
@@ -36,8 +52,11 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       for (const hint of multiCharHints) {
         if (hint.length === 2) {
           for (const char of hint) {
-            assertEquals(config.multi_char_keys!.includes(char), true,
-              `Hint "${hint}" contains non-multi_char_key character "${char}"`);
+            assertEquals(
+              config.multi_char_keys!.includes(char),
+              true,
+              `Hint "${hint}" contains non-multi_char_key character "${char}"`,
+            );
           }
         }
       }
@@ -46,8 +65,11 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       for (const hint of multiCharHints) {
         if (hint.length === 2) {
           for (const singleChar of config.single_char_keys!) {
-            assertEquals(hint.includes(singleChar), false,
-              `2-char hint "${hint}" should not contain single_char_key "${singleChar}"`);
+            assertEquals(
+              hint.includes(singleChar),
+              false,
+              `2-char hint "${hint}" should not contain single_char_key "${singleChar}"`,
+            );
           }
         }
       }
@@ -57,7 +79,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D"],
         multi_char_keys: ["B", "C"], // 2×2 = 4通りのみ
-        max_single_char_hints: 3
+        max_single_char_hints: 3,
       };
 
       // 3 + 4 = 7個のアルファベットヒント + 数字ヒント
@@ -79,16 +101,35 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       // 数字ヒントが2桁であることを確認
       for (let i = 7; i < 20; i++) {
         assertEquals(hints[i].length, 2);
-        assertEquals(/^\d{2}$/.test(hints[i]), true,
-          `Hint "${hints[i]}" should be a 2-digit number`);
+        assertEquals(
+          /^\d{2}$/.test(hints[i]),
+          true,
+          `Hint "${hints[i]}" should be a 2-digit number`,
+        );
       }
     });
 
     it("should support up to 336 hints (11 single + 225 double-alpha + 100 numbers)", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
-        multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-        max_single_char_hints: 11
+        multi_char_keys: [
+          "B",
+          "C",
+          "E",
+          "I",
+          "O",
+          "P",
+          "Q",
+          "R",
+          "T",
+          "U",
+          "V",
+          "W",
+          "X",
+          "Y",
+          "Z",
+        ],
+        max_single_char_hints: 11,
       };
 
       // 11 + 225 + 100 = 336個のヒントを生成
@@ -113,7 +154,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         assertEquals(/^\d{2}$/.test(hints[i]), true);
 
         // 00から99までの順番であることを確認
-        const expectedNumber = (i - 236).toString().padStart(2, '0');
+        const expectedNumber = (i - 236).toString().padStart(2, "0");
         assertEquals(hints[i], expectedNumber);
       }
     });
@@ -125,7 +166,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       const words: Word[] = [
         { text: "near1", line: 10, col: 15 }, // カーソルに最も近い
         { text: "near2", line: 10, col: 18 },
-        { text: "far1", line: 5, col: 5 },   // カーソルから遠い
+        { text: "far1", line: 5, col: 5 }, // カーソルから遠い
         { text: "far2", line: 15, col: 50 },
         { text: "medium1", line: 11, col: 20 },
         { text: "medium2", line: 9, col: 10 },
@@ -134,15 +175,15 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D"],
         multi_char_keys: ["B", "C"],
-        max_single_char_hints: 3
+        max_single_char_hints: 3,
       };
 
       const hints = generateHintsWithGroups(words.length, config);
       const assignments = assignHintsToWords(words, hints, 10, 16); // カーソル位置
 
       // カーソルに最も近い単語が1文字ヒントを持つべき
-      const near1Assignment = assignments.find(a => a.word.text === "near1");
-      const near2Assignment = assignments.find(a => a.word.text === "near2");
+      const near1Assignment = assignments.find((a) => a.word.text === "near1");
+      const near2Assignment = assignments.find((a) => a.word.text === "near2");
 
       assertExists(near1Assignment);
       assertExists(near2Assignment);
@@ -152,7 +193,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       assertEquals(["A", "S", "D"].includes(near1Assignment.hint), true);
 
       // 遠い単語は2文字ヒントを持つべき
-      const far1Assignment = assignments.find(a => a.word.text === "far1");
+      const far1Assignment = assignments.find((a) => a.word.text === "far1");
       assertExists(far1Assignment);
       assertEquals(far1Assignment.hint.length, 2);
     });
@@ -180,15 +221,31 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
 
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
-        multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-        max_single_char_hints: 11
+        multi_char_keys: [
+          "B",
+          "C",
+          "E",
+          "I",
+          "O",
+          "P",
+          "Q",
+          "R",
+          "T",
+          "U",
+          "V",
+          "W",
+          "X",
+          "Y",
+          "Z",
+        ],
+        max_single_char_hints: 11,
       };
 
       const hints = generateHintsWithGroups(words.length, config);
       const assignments = assignHintsToWords(words, hints, 50, 50); // カーソル位置
 
       // 遠距離の単語が数字ヒントを持つことを確認
-      const farAssignments = assignments.filter(a => a.word.text.startsWith("far"));
+      const farAssignments = assignments.filter((a) => a.word.text.startsWith("far"));
 
       let hasNumberHint = false;
       for (const assignment of farAssignments) {
@@ -216,35 +273,35 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
         multi_char_keys: ["B", "C"], // 2×2 = 4通り
-        max_single_char_hints: 1
+        max_single_char_hints: 1,
       };
 
       // 1 + 4 + 100 = 105個まで対応可能
       const hints = generateHintsWithGroups(105, config);
 
       assertEquals(hints.length, 105);
-      assertEquals(hints[0], "A");       // 1文字
-      assertEquals(hints[1], "BB");      // 2文字アルファベット
-      assertEquals(hints[5], "00");      // 2桁数字開始
-      assertEquals(hints[104], "99");    // 最後の2桁数字
+      assertEquals(hints[0], "A"); // 1文字
+      assertEquals(hints[1], "BB"); // 2文字アルファベット
+      assertEquals(hints[5], "00"); // 2桁数字開始
+      assertEquals(hints[104], "99"); // 最後の2桁数字
     });
 
     it("should generate 3-char hints if even numbers are exhausted", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
         multi_char_keys: ["B"], // 1×1 = 1通りのみ
-        max_single_char_hints: 1
+        max_single_char_hints: 1,
       };
 
       // 1 + 1 + 100 = 102個を超える場合
       const hints = generateHintsWithGroups(103, config);
 
       assertEquals(hints.length, 103);
-      assertEquals(hints[0], "A");       // 1文字
-      assertEquals(hints[1], "BB");      // 2文字
-      assertEquals(hints[2], "00");      // 数字開始
-      assertEquals(hints[101], "99");    // 最後の数字
-      assertEquals(hints[102], "BBB");   // 3文字開始
+      assertEquals(hints[0], "A"); // 1文字
+      assertEquals(hints[1], "BB"); // 2文字
+      assertEquals(hints[2], "00"); // 数字開始
+      assertEquals(hints[101], "99"); // 最後の数字
+      assertEquals(hints[102], "BBB"); // 3文字開始
     });
   });
 });

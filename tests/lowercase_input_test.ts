@@ -7,7 +7,7 @@ class MockDenops implements Denops {
   name = "test";
 
   private commands: string[] = [];
-  private calls: Array<{name: string, args: any[]}> = [];
+  private calls: Array<{ name: string; args: any[] }> = [];
   private feedKeysBuffer: string[] = [];
 
   async cmd(command: string): Promise<void> {
@@ -65,7 +65,7 @@ class MockDenops implements Denops {
     return this.commands;
   }
 
-  getCalls(): Array<{name: string, args: any[]}> {
+  getCalls(): Array<{ name: string; args: any[] }> {
     return this.calls;
   }
 
@@ -122,7 +122,7 @@ Deno.test("小文字j入力でヒントがキャンセルされカーソルが�
   assertEquals(commands[0], "echo 'Hints cleared'");
 
   // feedkeysで'j'が送信されることを確認
-  const feedKeysCall = calls.find(call => call.name === "feedkeys");
+  const feedKeysCall = calls.find((call) => call.name === "feedkeys");
   assertExists(feedKeysCall);
   assertEquals(feedKeysCall.args[0], "j");
   assertEquals(feedKeysCall.args[1], "n");
@@ -143,7 +143,7 @@ Deno.test("小文字k入力でヒントがキャンセルされカーソルが�
 
   assertEquals(commands[0], "echo 'Hints cleared'");
 
-  const feedKeysCall = calls.find(call => call.name === "feedkeys");
+  const feedKeysCall = calls.find((call) => call.name === "feedkeys");
   assertExists(feedKeysCall);
   assertEquals(feedKeysCall.args[0], "k");
 
@@ -245,4 +245,3 @@ Deno.test("小文字と大文字の境界値テスト", async () => {
   assertEquals(denops.getCommands()[0], "echo 'Processing hint input'");
   assertEquals(denops.getFeedKeysBuffer().length, 0);
 });
-

@@ -1,9 +1,6 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { test, generateTestBuffer } from "./testRunner.ts";
-import {
-  mockBuffer,
-  mockCursor,
-} from "./helpers/mock.ts";
+import { generateTestBuffer, test } from "./testRunner.ts";
+import { mockBuffer, mockCursor } from "./helpers/mock.ts";
 
 // 単語検出機能をインポート
 import { extractWordsFromLine, type Word } from "../denops/hellshake-yano/word.ts";
@@ -59,7 +56,10 @@ test("Process50-Sub6: kebab-case分割検出（'hit-a-hint', 'Process50-sub1'等
   const wordTexts = words.map((w: Word) => w.text);
 
   // kebab-caseが適切に分割されるべき
-  assertExists(wordTexts.find((w: string) => w === "Process50"), "'Process50'が検出されませんでした");
+  assertExists(
+    wordTexts.find((w: string) => w === "Process50"),
+    "'Process50'が検出されませんでした",
+  );
   assertExists(wordTexts.find((w: string) => w === "sub1"), "'sub1'が検出されませんでした");
   assertExists(wordTexts.find((w: string) => w === "sub2"), "'sub2'が検出されませんでした");
   assertExists(wordTexts.find((w: string) => w === "sub3"), "'sub3'が検出されませんでした");
@@ -90,8 +90,14 @@ test("Process50-Sub6: 数字を含む単語検出（'Process8', 'Process9', 'Pro
   // 数字を含む単語が検出されるべき
   assertExists(wordTexts.find((w: string) => w === "Process8"), "'Process8'が検出されませんでした");
   assertExists(wordTexts.find((w: string) => w === "Process9"), "'Process9'が検出されませんでした");
-  assertExists(wordTexts.find((w: string) => w === "Process10"), "'Process10'が検出されませんでした");
-  assertExists(wordTexts.find((w: string) => w === "Process50"), "'Process50'が検出されませんでした");
+  assertExists(
+    wordTexts.find((w: string) => w === "Process10"),
+    "'Process10'が検出されませんでした",
+  );
+  assertExists(
+    wordTexts.find((w: string) => w === "Process50"),
+    "'Process50'が検出されませんでした",
+  );
   assertExists(wordTexts.find((w: string) => w === "sub1"), "'sub1'が検出されませんでした");
 });
 
@@ -106,30 +112,74 @@ test("Process50-Sub6: 実際のサンプルテキスト全体での検出", asyn
     allWords.push(...lineWords);
   });
 
-  const wordTexts = allWords.map(w => w.text);
+  const wordTexts = allWords.map((w) => w.text);
   const uniqueWords = [...new Set(wordTexts)];
 
   // 期待される重要な単語が検出されることを確認
   const expectedWords = [
     // 1文字単語
-    "a", "I",
+    "a",
+    "I",
     // 数字のみ
-    "2025", "09", "13", "8", "9", "10", "50", "1", "2", "3", "4", "5",
+    "2025",
+    "09",
+    "13",
+    "8",
+    "9",
+    "10",
+    "50",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
     // kebab-case分割
-    "hit", "hint", "Process8", "Process9", "Process10", "Process50", "sub1", "sub2", "sub3", "sub4", "sub5",
+    "hit",
+    "hint",
+    "Process8",
+    "Process9",
+    "Process10",
+    "Process50",
+    "sub1",
+    "sub2",
+    "sub3",
+    "sub4",
+    "sub5",
     // 日本語単語
-    "セッション", "情報", "日付", "プロジェクト", "目的", "移動", "自動的", "機能", "発火", "画面", "内", "単語", "ヒント", "表示", "ジャンプ", "プラグイン", "最終", "更新", "実装", "完了",
+    "セッション",
+    "情報",
+    "日付",
+    "プロジェクト",
+    "目的",
+    "移動",
+    "自動的",
+    "機能",
+    "発火",
+    "画面",
+    "内",
+    "単語",
+    "ヒント",
+    "表示",
+    "ジャンプ",
+    "プラグイン",
+    "最終",
+    "更新",
+    "実装",
+    "完了",
     // 英語単語
-    "hellshake", "yano", "vim", "denops", "ベース"
+    "hellshake",
+    "yano",
+    "vim",
+    "denops",
+    "ベース",
   ];
 
   let missingWords = 0;
-  expectedWords.forEach(expectedWord => {
+  expectedWords.forEach((expectedWord) => {
     if (!wordTexts.includes(expectedWord)) {
       missingWords++;
     }
   });
-
 
   // Process50 Sub6の目標:
   // - 1文字単語の検出（I, a）✓
@@ -140,8 +190,11 @@ test("Process50-Sub6: 実際のサンプルテキスト全体での検出", asyn
   //
   // 大幅な改善が達成されたため、15個以下の取りこぼしを許容
   const maxAllowedMissingWords = 15;
-  assertEquals(missingWords <= maxAllowedMissingWords, true,
-    `取りこぼし単語数が${missingWords}個で、許容値${maxAllowedMissingWords}個を超えています`);
+  assertEquals(
+    missingWords <= maxAllowedMissingWords,
+    true,
+    `取りこぼし単語数が${missingWords}個で、許容値${maxAllowedMissingWords}個を超えています`,
+  );
 });
 
 test("Process50-Sub6: snake_case分割の改善確認", async () => {

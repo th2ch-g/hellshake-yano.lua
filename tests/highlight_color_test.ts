@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Config } from "../denops/hellshake-yano/main.ts";
-import { validateConfig, getDefaultConfig } from "../denops/hellshake-yano/main.ts";
+import { getDefaultConfig, validateConfig } from "../denops/hellshake-yano/main.ts";
 
 /**
  * ハイライト色設定機能のテスト
@@ -118,7 +118,10 @@ Deno.test("ハイライト色設定: 無効な型のテスト", () => {
 
   const validation1 = validateConfig(invalidConfig1);
   assertEquals(validation1.valid, false);
-  assertEquals(validation1.errors.some(e => e.includes("highlight_hint_marker must be a string")), true);
+  assertEquals(
+    validation1.errors.some((e) => e.includes("highlight_hint_marker must be a string")),
+    true,
+  );
 
   // highlight_hint_marker_current が配列の場合
   const invalidConfig2: any = {
@@ -127,7 +130,10 @@ Deno.test("ハイライト色設定: 無効な型のテスト", () => {
 
   const validation2 = validateConfig(invalidConfig2);
   assertEquals(validation2.valid, false);
-  assertEquals(validation2.errors.some(e => e.includes("highlight_hint_marker_current must be a string")), true);
+  assertEquals(
+    validation2.errors.some((e) => e.includes("highlight_hint_marker_current must be a string")),
+    true,
+  );
 
   // highlight_hint_marker が空文字列の場合
   const invalidConfig3: Partial<Config> = {
@@ -136,7 +142,10 @@ Deno.test("ハイライト色設定: 無効な型のテスト", () => {
 
   const validation3 = validateConfig(invalidConfig3);
   assertEquals(validation3.valid, false);
-  assertEquals(validation3.errors.some(e => e.includes("highlight_hint_marker must be a non-empty string")), true);
+  assertEquals(
+    validation3.errors.some((e) => e.includes("highlight_hint_marker must be a non-empty string")),
+    true,
+  );
 });
 
 Deno.test("ハイライト色設定: null と undefined のテスト", () => {
@@ -184,7 +193,7 @@ Deno.test("ハイライト色設定: 特殊文字を含む無効な名前のテ�
     "Search:Invalid",
     "Search;Invalid",
     "Search'Invalid",
-    "Search\"Invalid",
+    'Search"Invalid',
     "Search`Invalid",
     "Search~Invalid",
     "Search!Invalid",
@@ -199,7 +208,14 @@ Deno.test("ハイライト色設定: 特殊文字を含む無効な名前のテ�
 
     const validation = validateConfig(config);
     assertEquals(validation.valid, false, `${invalidName} should be invalid`);
-    assertEquals(validation.errors.some(e => e.includes("highlight_hint_marker must contain only alphanumeric characters and underscores")), true);
+    assertEquals(
+      validation.errors.some((e) =>
+        e.includes(
+          "highlight_hint_marker must contain only alphanumeric characters and underscores",
+        )
+      ),
+      true,
+    );
   }
 });
 
@@ -243,7 +259,12 @@ Deno.test("ハイライト色設定: 長すぎる名前のテスト", () => {
 
   const validation = validateConfig(config);
   assertEquals(validation.valid, false);
-  assertEquals(validation.errors.some(e => e.includes("highlight_hint_marker must be 100 characters or less")), true);
+  assertEquals(
+    validation.errors.some((e) =>
+      e.includes("highlight_hint_marker must be 100 characters or less")
+    ),
+    true,
+  );
 });
 
 Deno.test("ハイライト色設定: 数字で始まる無効な名前のテスト", () => {
@@ -261,7 +282,12 @@ Deno.test("ハイライト色設定: 数字で始まる無効な名前のテス�
 
     const validation = validateConfig(config);
     assertEquals(validation.valid, false, `${invalidName} should be invalid`);
-    assertEquals(validation.errors.some(e => e.includes("highlight_hint_marker must start with a letter or underscore")), true);
+    assertEquals(
+      validation.errors.some((e) =>
+        e.includes("highlight_hint_marker must start with a letter or underscore")
+      ),
+      true,
+    );
   }
 });
 

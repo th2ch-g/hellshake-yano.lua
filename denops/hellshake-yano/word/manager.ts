@@ -8,12 +8,12 @@
 import type { Denops } from "@denops/std";
 import type { Word } from "../word.ts";
 import {
-  type WordDetector,
-  type WordDetectionConfig,
-  type WordDetectionResult,
+  HybridWordDetector,
   RegexWordDetector,
   TinySegmenterWordDetector,
-  HybridWordDetector,
+  type WordDetectionConfig,
+  type WordDetectionResult,
+  type WordDetector,
 } from "./detector.ts";
 
 /**
@@ -187,7 +187,7 @@ export class WordDetectionManager {
   async detectWords(
     text: string,
     startLine: number = 1,
-    denops?: Denops
+    denops?: Denops,
   ): Promise<WordDetectionResult> {
     if (!this.initialized) {
       await this.initialize();
@@ -209,7 +209,7 @@ export class WordDetectionManager {
             performance: {
               duration: Date.now() - startTime,
               wordCount: cached.words.length,
-              linesProcessed: text.split('\n').length,
+              linesProcessed: text.split("\n").length,
             },
           };
         }
@@ -231,7 +231,8 @@ export class WordDetectionManager {
       }
 
       // Update statistics
-      this.stats.detector_usage[detector.name] = (this.stats.detector_usage[detector.name] || 0) + 1;
+      this.stats.detector_usage[detector.name] = (this.stats.detector_usage[detector.name] || 0) +
+        1;
       const duration = Date.now() - startTime;
       this.updateAverageDuration(duration);
 
@@ -242,13 +243,12 @@ export class WordDetectionManager {
         performance: {
           duration,
           wordCount: words.length,
-          linesProcessed: text.split('\n').length,
+          linesProcessed: text.split("\n").length,
         },
       };
-
     } catch (error) {
       this.stats.errors++;
-// console.error("[WordDetectionManager] Detection failed:", error);
+      // console.error("[WordDetectionManager] Detection failed:", error);
 
       // Try fallback detector if enabled
       if (this.config.enable_fallback) {
@@ -264,12 +264,12 @@ export class WordDetectionManager {
               performance: {
                 duration: Date.now() - startTime,
                 wordCount: words.length,
-                linesProcessed: text.split('\n').length,
+                linesProcessed: text.split("\n").length,
               },
             };
           }
         } catch (fallbackError) {
-// console.error("[WordDetectionManager] Fallback detection also failed:", fallbackError);
+          // console.error("[WordDetectionManager] Fallback detection also failed:", fallbackError);
         }
       }
 
@@ -281,7 +281,7 @@ export class WordDetectionManager {
         performance: {
           duration: Date.now() - startTime,
           wordCount: 0,
-          linesProcessed: text.split('\n').length,
+          linesProcessed: text.split("\n").length,
         },
       };
     }
@@ -308,7 +308,7 @@ export class WordDetectionManager {
 
       // Get lines content
       const lines = await denops.call("getbufline", "%", topLine, bottomLine) as string[];
-      const text = lines.join('\n');
+      const text = lines.join("\n");
 
       return this.detectWords(text, topLine, denops);
     } catch (error) {
@@ -336,7 +336,7 @@ export class WordDetectionManager {
    */
   private async selectDetector(text: string): Promise<WordDetector | null> {
     const availableDetectors = Array.from(this.detectors.values())
-      .filter(d => d.canHandle(text))
+      .filter((d) => d.canHandle(text))
       .sort((a, b) => b.priority - a.priority);
 
     if (availableDetectors.length === 0) {
@@ -345,21 +345,22 @@ export class WordDetectionManager {
 
     // Strategy-based selection
     // word_detection_strategyとstrategyの両方をサポート（後方互換性）
-    const strategy = (this.config as any).word_detection_strategy || this.config.strategy || this.config.default_strategy;
+    const strategy = (this.config as any).word_detection_strategy || this.config.strategy ||
+      this.config.default_strategy;
 
     switch (strategy) {
       case "regex":
-        return availableDetectors.find(d => d.name.includes("Regex")) || availableDetectors[0];
+        return availableDetectors.find((d) => d.name.includes("Regex")) || availableDetectors[0];
 
       case "tinysegmenter":
-        const segmenterDetector = availableDetectors.find(d => d.name.includes("TinySegmenter"));
+        const segmenterDetector = availableDetectors.find((d) => d.name.includes("TinySegmenter"));
         if (segmenterDetector && await segmenterDetector.isAvailable()) {
           return segmenterDetector;
         }
         return availableDetectors[0];
 
       case "hybrid":
-        const hybridDetector = availableDetectors.find(d => d.name.includes("Hybrid"));
+        const hybridDetector = availableDetectors.find((d) => d.name.includes("Hybrid"));
         if (hybridDetector && await hybridDetector.isAvailable()) {
           return hybridDetector;
         }
@@ -370,7 +371,7 @@ export class WordDetectionManager {
         if (this.config.auto_detect_language) {
           const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
           if (hasJapanese) {
-            const japaneseDetector = availableDetectors.find(d =>
+            const japaneseDetector = availableDetectors.find((d) =>
               d.supportedLanguages.includes("ja") && d.priority > 1
             );
             if (japaneseDetector && await japaneseDetector.isAvailable()) {
@@ -413,7 +414,7 @@ export class WordDetectionManager {
   private async detectWithTimeout(
     detector: WordDetector,
     text: string,
-    startLine: number
+    startLine: number,
   ): Promise<Word[]> {
     if (!this.config.timeout_ms) {
       return detector.detectWords(text, startLine);
@@ -425,11 +426,11 @@ export class WordDetectionManager {
       }, this.config.timeout_ms);
 
       detector.detectWords(text, startLine)
-        .then(result => {
+        .then((result) => {
           clearTimeout(timeoutId);
           resolve(result);
         })
-        .catch(error => {
+        .catch((error) => {
           clearTimeout(timeoutId);
           reject(error);
         });
@@ -612,7 +613,6 @@ export class WordDetectionManager {
     if (this.config.cache_enabled) {
       this.clearCache();
     }
-
   }
 
   /**
@@ -627,7 +627,7 @@ export class WordDetectionManager {
    * ```
    */
   getAvailableDetectors(): Array<{ name: string; priority: number; languages: string[] }> {
-    return Array.from(this.detectors.values()).map(d => ({
+    return Array.from(this.detectors.values()).map((d) => ({
       name: d.name,
       priority: d.priority,
       languages: d.supportedLanguages,
@@ -668,7 +668,9 @@ export class WordDetectionManager {
    * @returns Required<WordDetectionManagerConfig> - デフォルト値で補完された設定
    * @since 1.0.0
    */
-  private mergeWithDefaults(config: WordDetectionManagerConfig): Required<WordDetectionManagerConfig> {
+  private mergeWithDefaults(
+    config: WordDetectionManagerConfig,
+  ): Required<WordDetectionManagerConfig> {
     // デフォルト値
     const defaults = {
       // Detection settings
@@ -711,7 +713,7 @@ export class WordDetectionManager {
     // 渡されたconfigの値を優先
     const merged = {
       ...defaults,
-      ...config
+      ...config,
     };
 
     // word_detection_strategyがある場合はstrategyに反映
@@ -765,4 +767,3 @@ export function getWordDetectionManager(config?: WordDetectionManagerConfig): Wo
 export function resetWordDetectionManager(): void {
   globalManager = null;
 }
-

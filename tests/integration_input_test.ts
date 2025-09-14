@@ -1,7 +1,7 @@
 import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type { Denops } from "@denops/std";
 import { MockDenops } from "./helpers/mock.ts";
-import { generateHints, assignHintsToWords } from "../denops/hellshake-yano/hint.ts";
+import { assignHintsToWords, generateHints } from "../denops/hellshake-yano/hint.ts";
 import type { Word } from "../denops/hellshake-yano/word.ts";
 
 /**
@@ -45,16 +45,20 @@ class HintSystemSimulator {
     this.visible = true;
   }
 
-  async selectHint(input: string): Promise<{ jumped: boolean; position?: { line: number; col: number } }> {
+  async selectHint(
+    input: string,
+  ): Promise<{ jumped: boolean; position?: { line: number; col: number } }> {
     if (!this.visible) {
       throw new Error("Hints not visible");
     }
 
     // 完全一致する単一文字ヒントをチェック
-    const exactMatch = this.hints.find(h => h.hint === input);
+    const exactMatch = this.hints.find((h) => h.hint === input);
 
     // 複数文字ヒントの候補をチェック
-    const multiCharCandidates = this.hints.filter(h => h.hint.startsWith(input) && h.hint.length > input.length);
+    const multiCharCandidates = this.hints.filter((h) =>
+      h.hint.startsWith(input) && h.hint.length > input.length
+    );
 
     // 単一文字ヒントが存在し、複数文字候補もある場合
     if (exactMatch && multiCharCandidates.length > 0) {
@@ -67,7 +71,7 @@ class HintSystemSimulator {
       this.visible = false;
       return {
         jumped: true,
-        position: { line: exactMatch.word.line, col: exactMatch.word.col }
+        position: { line: exactMatch.word.line, col: exactMatch.word.col },
       };
     }
 
@@ -80,9 +84,12 @@ class HintSystemSimulator {
     throw new Error(`No matching hint: ${input}`);
   }
 
-  async selectMultiCharHint(firstChar: string, secondChar: string): Promise<{ line: number; col: number }> {
+  async selectMultiCharHint(
+    firstChar: string,
+    secondChar: string,
+  ): Promise<{ line: number; col: number }> {
     const fullHint = firstChar + secondChar;
-    const target = this.hints.find(h => h.hint === fullHint);
+    const target = this.hints.find((h) => h.hint === fullHint);
 
     if (!target) {
       this.visible = false; // エラー時もヒントを非表示に

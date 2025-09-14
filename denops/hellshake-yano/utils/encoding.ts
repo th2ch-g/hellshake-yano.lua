@@ -136,7 +136,9 @@ export function getEncodingInfo(text: string): {
   charToByteMap: Array<{ char: string; charIndex: number; byteStart: number; byteLength: number }>;
 } {
   const encoder = new TextEncoder();
-  const charToByteMap: Array<{ char: string; charIndex: number; byteStart: number; byteLength: number }> = [];
+  const charToByteMap: Array<
+    { char: string; charIndex: number; byteStart: number; byteLength: number }
+  > = [];
 
   let bytePosition = 0;
   for (let i = 0; i < text.length; i++) {
@@ -147,7 +149,7 @@ export function getEncodingInfo(text: string): {
       char,
       charIndex: i,
       byteStart: bytePosition,
-      byteLength: charBytes.length
+      byteLength: charBytes.length,
     });
 
     bytePosition += charBytes.length;
@@ -157,7 +159,7 @@ export function getEncodingInfo(text: string): {
     charLength: text.length,
     byteLength: encoder.encode(text).length,
     hasMultibyte: hasMultibyteCharacters(text),
-    charToByteMap
+    charToByteMap,
   };
 }
 
@@ -196,8 +198,10 @@ export function charIndicesToByteIndices(text: string, charIndices: number[]): n
     const charByteLength = encoder.encode(char).length;
 
     // Check if this character position matches any of our target indices
-    while (processedCount < sortedIndices.length &&
-           sortedIndices[processedCount].index === currentCharIndex) {
+    while (
+      processedCount < sortedIndices.length &&
+      sortedIndices[processedCount].index === currentCharIndex
+    ) {
       result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
       processedCount++;
     }

@@ -20,7 +20,7 @@ interface SegmentationResult {
   /** エラーメッセージ（失敗時のみ） */
   error?: string;
   /** セグメンテーションのソース */
-  source: 'tinysegmenter' | 'fallback';
+  source: "tinysegmenter" | "fallback";
 }
 
 /**
@@ -106,7 +106,7 @@ export class TinySegmenter {
         // 単位があれば結合
         if (j < segments.length) {
           const unit = segments[j];
-          if (unit === '%' || unit === '％' || /^(年|月|日|時|分|秒)$/.test(unit)) {
+          if (unit === "%" || unit === "％" || /^(年|月|日|時|分|秒)$/.test(unit)) {
             number += unit;
             j++;
           }
@@ -118,10 +118,10 @@ export class TinySegmenter {
       }
 
       // 括弧内の内容を一つのセグメントにする
-      if (current === '（' || current === '(') {
+      if (current === "（" || current === "(") {
         let j = i + 1;
         let content = current;
-        while (j < segments.length && segments[j] !== '）' && segments[j] !== ')') {
+        while (j < segments.length && segments[j] !== "）" && segments[j] !== ")") {
           content += segments[j];
           j++;
         }
@@ -164,7 +164,7 @@ export class TinySegmenter {
         segments: await this.fallbackSegmentation(text),
         success: false,
         error: "TinySegmenter disabled",
-        source: 'fallback'
+        source: "fallback",
       };
     }
 
@@ -172,7 +172,7 @@ export class TinySegmenter {
       return {
         segments: [],
         success: true,
-        source: 'tinysegmenter'
+        source: "tinysegmenter",
       };
     }
 
@@ -181,7 +181,7 @@ export class TinySegmenter {
       return {
         segments: this.cache.get(text)!,
         success: true,
-        source: 'tinysegmenter'
+        source: "tinysegmenter",
       };
     }
 
@@ -205,16 +205,16 @@ export class TinySegmenter {
       return {
         segments,
         success: true,
-        source: 'tinysegmenter'
+        source: "tinysegmenter",
       };
     } catch (error) {
-// console.warn("[TinySegmenter] Segmentation failed:", error);
+      // console.warn("[TinySegmenter] Segmentation failed:", error);
 
       return {
         segments: await this.fallbackSegmentation(text),
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        source: 'fallback'
+        error: error instanceof Error ? error.message : "Unknown error",
+        source: "fallback",
       };
     }
   }
@@ -251,7 +251,7 @@ export class TinySegmenter {
       segments.push(currentSegment);
     }
 
-    return segments.filter(s => s.trim().length > 0);
+    return segments.filter((s) => s.trim().length > 0);
   }
 
   /**
@@ -262,13 +262,13 @@ export class TinySegmenter {
    * @since 1.0.0
    */
   private getCharacterType(char: string): string {
-    if (/[\u4E00-\u9FAF]/.test(char)) return 'kanji';
-    if (/[\u3040-\u309F]/.test(char)) return 'hiragana';
-    if (/[\u30A0-\u30FF]/.test(char)) return 'katakana';
-    if (/[a-zA-Z]/.test(char)) return 'latin';
-    if (/[0-9]/.test(char)) return 'digit';
-    if (/\s/.test(char)) return 'space';
-    return 'other';
+    if (/[\u4E00-\u9FAF]/.test(char)) return "kanji";
+    if (/[\u3040-\u309F]/.test(char)) return "hiragana";
+    if (/[\u30A0-\u30FF]/.test(char)) return "katakana";
+    if (/[a-zA-Z]/.test(char)) return "latin";
+    if (/[0-9]/.test(char)) return "digit";
+    if (/\s/.test(char)) return "space";
+    return "other";
   }
 
   /**
@@ -333,7 +333,7 @@ export class TinySegmenter {
     return {
       size: this.cache.size,
       maxSize: this.maxCacheSize,
-      hitRate: 0 // Would need to track hits/misses for accurate rate
+      hitRate: 0, // Would need to track hits/misses for accurate rate
     };
   }
 
@@ -390,7 +390,7 @@ export class TinySegmenter {
       "今日は良い天気ですね",
       "Hello World", // Mixed content
       "プログラミング言語",
-      "" // Empty string
+      "", // Empty string
     ];
 
     const results: SegmentationResult[] = [];
@@ -404,7 +404,7 @@ export class TinySegmenter {
 
     return {
       success: successCount === testCases.length,
-      results
+      results,
     };
   }
 }
@@ -421,4 +421,3 @@ export class TinySegmenter {
  */
 export const tinysegmenter = TinySegmenter.getInstance();
 export type { SegmentationResult };
-

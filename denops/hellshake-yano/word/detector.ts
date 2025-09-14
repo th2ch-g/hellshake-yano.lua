@@ -8,7 +8,7 @@
 
 import type { Denops } from "@denops/std";
 import type { Word } from "../word.ts";
-import { TinySegmenter, type SegmentationResult } from "../segmenter.ts";
+import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 
 // Position-aware segment interface for tracking original positions
@@ -98,7 +98,7 @@ export class RegexWordDetector implements WordDetector {
 
   async detectWords(text: string, startLine: number): Promise<Word[]> {
     const words: Word[] = [];
-    const lines = text.split('\n');
+    const lines = text.split("\n");
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -153,8 +153,8 @@ export class RegexWordDetector implements WordDetector {
       const baseIndex = originalMatch.index;
 
       // kebab-case splitting
-      if (text.includes('-') && /^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)+$/.test(text)) {
-        const parts = text.split('-');
+      if (text.includes("-") && /^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)+$/.test(text)) {
+        const parts = text.split("-");
         let currentIndex = baseIndex;
 
         for (const part of parts) {
@@ -163,10 +163,9 @@ export class RegexWordDetector implements WordDetector {
           }
           currentIndex += part.length + 1;
         }
-      }
-      // snake_case splitting
-      else if (text.includes('_') && /^[a-zA-Z0-9]+(_[a-zA-Z0-9]+)+$/.test(text)) {
-        const parts = text.split('_');
+      } // snake_case splitting
+      else if (text.includes("_") && /^[a-zA-Z0-9]+(_[a-zA-Z0-9]+)+$/.test(text)) {
+        const parts = text.split("_");
         let currentIndex = baseIndex;
 
         for (const part of parts) {
@@ -175,10 +174,13 @@ export class RegexWordDetector implements WordDetector {
           }
           currentIndex += part.length + 1;
         }
-      }
-      // Japanese word boundary splitting (only if Japanese is enabled)
-      else if (this.config.use_japanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 4) {
-        const japaneseWordRegex = /[\u4E00-\u9FAF\u3400-\u4DBF]+|[\u3040-\u309F]+|[\u30A0-\u30FF]+|[a-zA-Z0-9]+/g;
+      } // Japanese word boundary splitting (only if Japanese is enabled)
+      else if (
+        this.config.use_japanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) &&
+        text.length > 4
+      ) {
+        const japaneseWordRegex =
+          /[\u4E00-\u9FAF\u3400-\u4DBF]+|[\u3040-\u309F]+|[\u30A0-\u30FF]+|[a-zA-Z0-9]+/g;
         let jpMatch;
         japaneseWordRegex.lastIndex = 0;
 
@@ -186,12 +188,11 @@ export class RegexWordDetector implements WordDetector {
           if (jpMatch[0].length >= 1) {
             splitMatches.push({
               text: jpMatch[0],
-              index: baseIndex + jpMatch.index
+              index: baseIndex + jpMatch.index,
             });
           }
         }
-      }
-      // Regular words
+      } // Regular words
       else {
         splitMatches.push(originalMatch);
       }
@@ -203,7 +204,7 @@ export class RegexWordDetector implements WordDetector {
       const numberRegex = /\b\d\b/g;
       let numberMatch: RegExpExecArray | null;
       while ((numberMatch = numberRegex.exec(lineText)) !== null) {
-        const isAlreadyMatched = splitMatches.some(existing =>
+        const isAlreadyMatched = splitMatches.some((existing) =>
           existing.index <= numberMatch!.index &&
           existing.index + existing.text.length >= numberMatch!.index + numberMatch![0].length
         );
@@ -217,7 +218,7 @@ export class RegexWordDetector implements WordDetector {
       const singleCharRegex = /\b[a-zA-Z]\b/g;
       let charMatch: RegExpExecArray | null;
       while ((charMatch = singleCharRegex.exec(lineText)) !== null) {
-        const isAlreadyMatched = splitMatches.some(existing =>
+        const isAlreadyMatched = splitMatches.some((existing) =>
           existing.index <= charMatch!.index &&
           existing.index + existing.text.length >= charMatch!.index + charMatch![0].length
         );
@@ -300,22 +301,20 @@ export class RegexWordDetector implements WordDetector {
 
     // Length filters
     if (this.config.min_word_length !== undefined) {
-      filtered = filtered.filter(w => w.text.length >= this.config.min_word_length!);
+      filtered = filtered.filter((w) => w.text.length >= this.config.min_word_length!);
     }
     if (this.config.max_word_length !== undefined) {
-      filtered = filtered.filter(w => w.text.length <= this.config.max_word_length!);
+      filtered = filtered.filter((w) => w.text.length <= this.config.max_word_length!);
     }
 
     // Japanese filter
     if (!this.config.use_japanese) {
-      filtered = filtered.filter(w =>
-        !/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
-      );
+      filtered = filtered.filter((w) => !/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
     }
 
     // Number filter
     if (this.config.exclude_numbers) {
-      filtered = filtered.filter(w => !/^\d+$/.test(w.text));
+      filtered = filtered.filter((w) => !/^\d+$/.test(w.text));
     }
 
     return filtered;
@@ -333,7 +332,7 @@ export class RegexWordDetector implements WordDetector {
     // 渡されたconfigの値を優先（use_japaneseは渡された値をそのまま使用）
     return {
       ...defaults,
-      ...config
+      ...config,
     };
   }
 }
@@ -362,7 +361,7 @@ export class TinySegmenterWordDetector implements WordDetector {
 
   async detectWords(text: string, startLine: number): Promise<Word[]> {
     const words: Word[] = [];
-    const lines = text.split('\n');
+    const lines = text.split("\n");
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -386,7 +385,7 @@ export class TinySegmenterWordDetector implements WordDetector {
           words.push(...fallbackWords);
         }
       } catch (error) {
-// console.warn(`TinySegmenter failed for line ${lineNumber}:`, error);
+        // console.warn(`TinySegmenter failed for line ${lineNumber}:`, error);
         const fallbackWords = await this.fallbackDetection(lineText, lineNumber);
         words.push(...fallbackWords);
       }
@@ -426,9 +425,10 @@ export class TinySegmenterWordDetector implements WordDetector {
     for (const segment of mergedSegments) {
       if (segment.text.trim().length > 0) {
         // 単語の長さフィルタリング
-        if (segment.text.length >= (this.config.min_word_length || 1) &&
-            segment.text.length <= (this.config.max_word_length || 50)) {
-
+        if (
+          segment.text.length >= (this.config.min_word_length || 1) &&
+          segment.text.length <= (this.config.max_word_length || 50)
+        ) {
           // 数字除外オプション
           if (this.config.exclude_numbers && /^\d+$/.test(segment.text)) {
             continue;
@@ -476,7 +476,7 @@ export class TinySegmenterWordDetector implements WordDetector {
           text: segment,
           startIndex: segmentIndex,
           endIndex: segmentIndex + segment.length,
-          originalIndex: segmentIndex
+          originalIndex: segmentIndex,
         });
         currentIndex = segmentIndex + segment.length;
       }
@@ -511,13 +511,16 @@ export class TinySegmenterWordDetector implements WordDetector {
       // 短いセグメントの処理
       if (segment.text.length <= mergeThreshold) {
         // 助詞・接続詞の場合は前の単語と結合
-        if (mergeParticles && (particlePattern.test(segment.text) || conjunctionPattern.test(segment.text))) {
+        if (
+          mergeParticles &&
+          (particlePattern.test(segment.text) || conjunctionPattern.test(segment.text))
+        ) {
           if (buffer) {
             buffer = {
               text: buffer.text + segment.text,
               startIndex: buffer.startIndex,
               endIndex: segment.endIndex,
-              originalIndex: buffer.originalIndex
+              originalIndex: buffer.originalIndex,
             };
           } else if (result.length > 0) {
             // 前の結果と結合
@@ -526,7 +529,7 @@ export class TinySegmenterWordDetector implements WordDetector {
               text: lastResult.text + segment.text,
               startIndex: lastResult.startIndex,
               endIndex: segment.endIndex,
-              originalIndex: lastResult.originalIndex
+              originalIndex: lastResult.originalIndex,
             };
           } else {
             buffer = segment;
@@ -538,7 +541,7 @@ export class TinySegmenterWordDetector implements WordDetector {
               text: buffer.text + segment.text,
               startIndex: buffer.startIndex,
               endIndex: segment.endIndex,
-              originalIndex: buffer.originalIndex
+              originalIndex: buffer.originalIndex,
             };
           } else {
             buffer = segment;
@@ -550,7 +553,7 @@ export class TinySegmenterWordDetector implements WordDetector {
               text: buffer.text + segment.text,
               startIndex: buffer.startIndex,
               endIndex: segment.endIndex,
-              originalIndex: buffer.originalIndex
+              originalIndex: buffer.originalIndex,
             };
             if (merged.text.length >= minLength) {
               result.push(merged);
@@ -565,7 +568,7 @@ export class TinySegmenterWordDetector implements WordDetector {
               text: lastResult.text + segment.text,
               startIndex: lastResult.startIndex,
               endIndex: segment.endIndex,
-              originalIndex: lastResult.originalIndex
+              originalIndex: lastResult.originalIndex,
             };
           } else {
             buffer = segment;
@@ -582,7 +585,7 @@ export class TinySegmenterWordDetector implements WordDetector {
               text: lastResult.text + buffer.text,
               startIndex: lastResult.startIndex,
               endIndex: buffer.endIndex,
-              originalIndex: lastResult.originalIndex
+              originalIndex: lastResult.originalIndex,
             };
           }
           buffer = null;
@@ -601,7 +604,7 @@ export class TinySegmenterWordDetector implements WordDetector {
           text: lastResult.text + buffer.text,
           startIndex: lastResult.startIndex,
           endIndex: buffer.endIndex,
-          originalIndex: lastResult.originalIndex
+          originalIndex: lastResult.originalIndex,
         };
       }
     }
@@ -695,10 +698,10 @@ export class TinySegmenterWordDetector implements WordDetector {
 
     // Length filters
     if (this.config.min_word_length !== undefined) {
-      filtered = filtered.filter(w => w.text.length >= this.config.min_word_length!);
+      filtered = filtered.filter((w) => w.text.length >= this.config.min_word_length!);
     }
     if (this.config.max_word_length !== undefined) {
-      filtered = filtered.filter(w => w.text.length <= this.config.max_word_length!);
+      filtered = filtered.filter((w) => w.text.length <= this.config.max_word_length!);
     }
 
     return filtered;
@@ -713,7 +716,7 @@ export class TinySegmenterWordDetector implements WordDetector {
       fallback_to_regex: true,
       min_word_length: 1,
       max_word_length: 50,
-      ...config
+      ...config,
     };
   }
 }
@@ -738,7 +741,7 @@ export class HybridWordDetector implements WordDetector {
   }
 
   async detectWords(text: string, startLine: number): Promise<Word[]> {
-    const lines = text.split('\n');
+    const lines = text.split("\n");
     const allWords: Word[] = [];
 
     // デバッグログ：設定の確認
@@ -753,11 +756,9 @@ export class HybridWordDetector implements WordDetector {
 
       // use_japanese 設定に基づいて処理を決定
       if (this.config.use_japanese === true) {
-
         // 日本語モード：TinySegmenterが利用可能で日本語を含む場合は使用
         const isSegmenterAvailable = await this.segmenterDetector.isAvailable();
         const hasJapanese = this.segmenterDetector.canHandle(lineText);
-
 
         if (this.config.enable_tinysegmenter && isSegmenterAvailable && hasJapanese) {
           const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber);
@@ -795,7 +796,7 @@ export class HybridWordDetector implements WordDetector {
   private mergeWordResults(segmenterWords: Word[], regexWords: Word[]): Word[] {
     const merged = [...segmenterWords];
     const segmenterPositions = new Set(
-      segmenterWords.map(w => `${w.line}:${w.col}:${w.text}`)
+      segmenterWords.map((w) => `${w.line}:${w.col}:${w.text}`),
     );
 
     // Add regex words that don't overlap with segmenter results
@@ -803,7 +804,7 @@ export class HybridWordDetector implements WordDetector {
       const position = `${regexWord.line}:${regexWord.col}:${regexWord.text}`;
       if (!segmenterPositions.has(position)) {
         // Check for overlap by position range
-        const overlaps = segmenterWords.some(sw =>
+        const overlaps = segmenterWords.some((sw) =>
           sw.line === regexWord.line &&
           sw.col <= regexWord.col &&
           sw.col + sw.text.length >= regexWord.col + regexWord.text.length
@@ -820,7 +821,7 @@ export class HybridWordDetector implements WordDetector {
 
   private deduplicateWords(words: Word[]): Word[] {
     const seen = new Set<string>();
-    return words.filter(word => {
+    return words.filter((word) => {
       const key = `${word.text}:${word.line}:${word.col}`;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -843,8 +844,7 @@ export class HybridWordDetector implements WordDetector {
     // 渡されたconfigの値を優先（特にuse_japaneseは重要）
     return {
       ...defaults,
-      ...config
+      ...config,
     };
   }
 }
-

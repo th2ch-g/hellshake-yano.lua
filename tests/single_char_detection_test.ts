@@ -10,7 +10,20 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       const words = extractWordsFromLine(line, 1, true);
 
       assertEquals(words.length, 12);
-      assertEquals(words.map(w => w.text), ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]);
+      assertEquals(words.map((w) => w.text), [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+      ]);
       assertEquals(words[0].col, 1);
       assertEquals(words[1].col, 3);
       assertEquals(words[2].col, 5);
@@ -30,7 +43,7 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       const words = extractWordsFromLine(line, 1, true);
 
       assertEquals(words.length, 10);
-      assertEquals(words.map(w => w.text), ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]);
+      assertEquals(words.map((w) => w.text), ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]);
     });
   });
 
@@ -39,11 +52,18 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       const line = "test a I word hello world the end";
       const words = extractWordsFromLine(line, 1, true);
 
-      const singleCharWords = words.filter(w => w.text.length === 1);
-      const multiCharWords = words.filter(w => w.text.length > 1);
+      const singleCharWords = words.filter((w) => w.text.length === 1);
+      const multiCharWords = words.filter((w) => w.text.length > 1);
 
-      assertEquals(singleCharWords.map(w => w.text), ["a", "I"]);
-      assertEquals(multiCharWords.map(w => w.text), ["test", "word", "hello", "world", "the", "end"]);
+      assertEquals(singleCharWords.map((w) => w.text), ["a", "I"]);
+      assertEquals(multiCharWords.map((w) => w.text), [
+        "test",
+        "word",
+        "hello",
+        "world",
+        "the",
+        "end",
+      ]);
     });
 
     await t.step("should preserve column positions correctly", () => {
@@ -60,12 +80,31 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
   await t.step("Target characters for hint assignment", async (t) => {
     await t.step("should detect all problem characters mentioned in issue", () => {
       // 問題で報告された文字をテスト
-      const problemChars = ["A", "S", "D", "F", "G", "J", "K", "L", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];
+      const problemChars = [
+        "A",
+        "S",
+        "D",
+        "F",
+        "G",
+        "J",
+        "K",
+        "L",
+        "Q",
+        "W",
+        "E",
+        "R",
+        "T",
+        "Y",
+        "U",
+        "I",
+        "O",
+        "P",
+      ];
       const line = problemChars.join(" ");
       const words = extractWordsFromLine(line, 1, true);
 
       assertEquals(words.length, problemChars.length);
-      assertEquals(words.map(w => w.text), problemChars);
+      assertEquals(words.map((w) => w.text), problemChars);
     });
 
     await t.step("should detect single_char_keys", () => {
@@ -74,16 +113,32 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       const words = extractWordsFromLine(line, 1, true);
 
       assertEquals(words.length, singleCharKeys.length);
-      assertEquals(words.map(w => w.text), singleCharKeys);
+      assertEquals(words.map((w) => w.text), singleCharKeys);
     });
 
     await t.step("should detect multi_char_keys", () => {
-      const multiCharKeys = ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+      const multiCharKeys = [
+        "B",
+        "C",
+        "E",
+        "I",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+      ];
       const line = multiCharKeys.join(" ");
       const words = extractWordsFromLine(line, 1, true);
 
       assertEquals(words.length, multiCharKeys.length);
-      assertEquals(words.map(w => w.text), multiCharKeys);
+      assertEquals(words.map((w) => w.text), multiCharKeys);
     });
   });
 
@@ -102,8 +157,8 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       const line = "A, B; C. D! E? F:";
       const words = extractWordsFromLine(line, 1, true);
 
-      const singleCharWords = words.filter(w => w.text.length === 1);
-      assertEquals(singleCharWords.map(w => w.text), ["A", "B", "C", "D", "E", "F"]);
+      const singleCharWords = words.filter((w) => w.text.length === 1);
+      assertEquals(singleCharWords.map((w) => w.text), ["A", "B", "C", "D", "E", "F"]);
     });
   });
 });

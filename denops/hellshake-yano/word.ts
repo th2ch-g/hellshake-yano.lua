@@ -317,7 +317,6 @@ function splitJapaneseTextImproved(
     });
 }
 
-
 /**
  * 1行から単語を抽出（改善版 - Process50 Sub6対応）
  * @description 改善された単語抽出アルゴリズム。kebab-case、snake_case、日本語文字種別分割などをサポート

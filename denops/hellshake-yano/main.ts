@@ -57,6 +57,10 @@ export interface Config {
   // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
   highlight_hint_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
   highlight_hint_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
+  // Process2: キーリピート検出設定
+  suppress_on_key_repeat?: boolean; // キーリピート時のヒント表示抑制（デフォルト: true）
+  key_repeat_threshold?: number; // リピート判定の閾値（ミリ秒、デフォルト: 50）
+  key_repeat_reset_delay?: number; // リピート終了判定の遅延（ミリ秒、デフォルト: 300）
 }
 
 // グローバル状態

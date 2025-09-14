@@ -1,10 +1,10 @@
 import { assertEquals, assertNotEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
 import { TinySegmenter } from "../denops/hellshake-yano/segmenter.ts";
 import {
+  HybridWordDetector,
   RegexWordDetector,
   TinySegmenterWordDetector,
-  HybridWordDetector,
-  type WordDetectionConfig
+  type WordDetectionConfig,
 } from "../denops/hellshake-yano/word/detector.ts";
 import { WordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
 
@@ -17,7 +17,6 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
     assertEquals(result.success, true);
     assertEquals(result.source, "tinysegmenter");
     assertEquals(result.segments.length > 0, true);
-
   });
 
   await t.step("Handle empty text", async () => {
@@ -32,7 +31,6 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
 
     assertEquals(result.success, true);
     assertEquals(result.segments.length > 0, true);
-
   });
 
   await t.step("Check Japanese detection", () => {
@@ -88,7 +86,7 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
     }
 
     // At least some tests should pass
-    const passCount = testResult.results.filter(r => r.success).length;
+    const passCount = testResult.results.filter((r) => r.success).length;
     assertEquals(passCount > 0, true);
   });
 });
@@ -106,14 +104,13 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(words.length > 0, true);
     assertEquals(detector.canHandle("any text"), true);
     assertEquals(await detector.isAvailable(), true);
-
   });
 
   await t.step("TinySegmenterWordDetector basic functionality", async () => {
     const config: WordDetectionConfig = {
       enable_tinysegmenter: true,
       segmenter_threshold: 3,
-      use_japanese: true
+      use_japanese: true,
     };
 
     const detector = new TinySegmenterWordDetector(config);
@@ -125,14 +122,13 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(detector.canHandle("日本語テキスト"), true);
     assertEquals(detector.canHandle("English text"), false);
     assertEquals(await detector.isAvailable(), true);
-
   });
 
   await t.step("HybridWordDetector auto-detection", async () => {
     const config: WordDetectionConfig = {
       use_japanese: true,
       enable_tinysegmenter: true,
-      segmenter_threshold: 3
+      segmenter_threshold: 3,
     };
 
     const detector = new HybridWordDetector(config);
@@ -151,7 +147,6 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(mixedWords.length > 0, true);
     assertEquals(detector.canHandle("anything"), true);
     assertEquals(await detector.isAvailable(), true);
-
   });
 
   await t.step("Compare detection strategies", async () => {
@@ -164,7 +159,6 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     const regexWords = await regexDetector.detectWords(testText, 1);
     const segmenterWords = await segmenterDetector.detectWords(testText, 1);
     const hybridWords = await hybridDetector.detectWords(testText, 1);
-
 
     // All should detect some words
     assertEquals(regexWords.length > 0, true);
@@ -182,7 +176,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
       strategy: "hybrid",
       use_japanese: true,
       enable_tinysegmenter: true,
-      cache_enabled: true
+      cache_enabled: true,
     });
 
     await manager.initialize();
@@ -193,21 +187,21 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     const availability = await manager.testDetectors();
 
     // At least regex should be available
-    assertEquals(Object.values(availability).some(v => v), true);
+    assertEquals(Object.values(availability).some((v) => v), true);
   });
 
   await t.step("Strategy-based detection", async () => {
     const testCases = [
       { strategy: "regex" as const, text: "simple english text" },
       { strategy: "tinysegmenter" as const, text: "日本語のテストテキスト" },
-      { strategy: "hybrid" as const, text: "Mixed 日本語 and English" }
+      { strategy: "hybrid" as const, text: "Mixed 日本語 and English" },
     ];
 
     for (const testCase of testCases) {
       const manager = new WordDetectionManager({
         strategy: testCase.strategy,
         use_japanese: true,
-        enable_tinysegmenter: true
+        enable_tinysegmenter: true,
       });
 
       await manager.initialize();
@@ -219,9 +213,9 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
 
       console.log({
         text: testCase.text,
-        words: result.words.map(w => w.text),
+        words: result.words.map((w) => w.text),
         detector: result.detector,
-        duration: result.performance.duration
+        duration: result.performance.duration,
       });
     }
   });
@@ -233,7 +227,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
       enable_tinysegmenter: false,
       enable_fallback: true,
       fallback_to_regex: true,
-      use_japanese: true
+      use_japanese: true,
     });
 
     await manager.initialize();
@@ -246,16 +240,15 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
       success: result.success,
       detector: result.detector,
       wordCount: result.words.length,
-      error: result.error
+      error: result.error,
     });
-
   });
 
   await t.step("Performance monitoring and caching", async () => {
     const manager = new WordDetectionManager({
       cache_enabled: true,
       cache_max_size: 100,
-      performance_monitoring: true
+      performance_monitoring: true,
     });
 
     await manager.initialize();
@@ -280,13 +273,12 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     assertEquals(stats2.total_calls, 2);
     assertEquals(cache2.size >= 1, true);
     assertEquals(cache2.hitRate > 0, true);
-
   });
 
   await t.step("Configuration updates", async () => {
     const manager = new WordDetectionManager({
       strategy: "regex",
-      use_japanese: false
+      use_japanese: false,
     });
 
     await manager.initialize();
@@ -297,7 +289,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     // Update configuration
     manager.updateConfig({
       strategy: "hybrid",
-      use_japanese: true
+      use_japanese: true,
     });
 
     // Test with new configuration
@@ -313,7 +305,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     const manager = new WordDetectionManager({
       strategy: "hybrid",
       cache_enabled: true,
-      timeout_ms: 10000 // 10 second timeout
+      timeout_ms: 10000, // 10 second timeout
     });
 
     await manager.initialize();
@@ -329,7 +321,6 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
 
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
-
 
     // Should complete within reasonable time
     assertEquals(duration < 5000, true); // Less than 5 seconds
@@ -361,11 +352,11 @@ function calculateTotal(items) {
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
-    const words = result.words.map(w => w.text);
+    const words = result.words.map((w) => w.text);
 
     // Should detect both English and Japanese words
-    const hasEnglish = words.some(w => /[a-zA-Z]/.test(w));
-    const hasJapanese = words.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w));
+    const hasEnglish = words.some((w) => /[a-zA-Z]/.test(w));
+    const hasJapanese = words.some((w) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w));
 
     assertEquals(hasEnglish, true);
     assertEquals(hasJapanese, true);
@@ -389,7 +380,7 @@ For more information, see the 詳細ドキュメント.
     const manager = new WordDetectionManager({
       strategy: "hybrid",
       use_japanese: true,
-      min_word_length: 2
+      min_word_length: 2,
     });
 
     await manager.initialize();
@@ -398,7 +389,6 @@ For more information, see the 詳細ドキュメント.
 
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
-
   });
 
   await t.step("Configuration file with Japanese keys", async () => {
@@ -416,7 +406,7 @@ For more information, see the 詳細ドキュメント.
     const manager = new WordDetectionManager({
       strategy: "tinysegmenter",
       use_japanese: true,
-      enable_tinysegmenter: true
+      enable_tinysegmenter: true,
     });
 
     await manager.initialize();
@@ -425,7 +415,5 @@ For more information, see the 詳細ドキュメント.
 
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
-
   });
 });
-

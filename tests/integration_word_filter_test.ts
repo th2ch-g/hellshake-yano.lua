@@ -5,8 +5,16 @@
 
 import { assert, assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
-import { extractWordsFromLineWithEnhancedConfig, type EnhancedWordConfig, type Word } from "../denops/hellshake-yano/word.ts";
-import { calculateHintPosition, assignHintsToWords, generateHints } from "../denops/hellshake-yano/hint.ts";
+import {
+  type EnhancedWordConfig,
+  extractWordsFromLineWithEnhancedConfig,
+  type Word,
+} from "../denops/hellshake-yano/word.ts";
+import {
+  assignHintsToWords,
+  calculateHintPosition,
+  generateHints,
+} from "../denops/hellshake-yano/hint.ts";
 
 describe("Integration Test - Word Filtering & Hint Positioning", () => {
   describe("End-to-end word detection and hint assignment", () => {
@@ -71,11 +79,11 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       assert(words.length > 1); // 複数の単語として抽出
 
       // 日本語文字が含まれることを確認
-      const japaneseChars = words.filter(w => /[\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
+      const japaneseChars = words.filter((w) => /[\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
       assert(japaneseChars.length > 0);
 
       // 英単語も含まれることを確認
-      const englishWords = words.filter(w => w.text === "code" || w.text === "implement");
+      const englishWords = words.filter((w) => w.text === "code" || w.text === "implement");
       assertEquals(englishWords.length, 2);
 
       // ヒント位置計算
@@ -93,7 +101,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const lines = [
         "第一行first line",
         "  indented second行",
-        "最後のlast line"
+        "最後のlast line",
       ];
       const config: EnhancedWordConfig = { use_japanese: false };
 
@@ -119,7 +127,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       assertEquals(allWords[5].line, 3);
 
       // ヒント位置が正しく計算されること
-      allWords.forEach(word => {
+      allWords.forEach((word) => {
         const position = calculateHintPosition(word, "start");
         assertEquals(position.line, word.line);
         assertEquals(position.col, word.col);
@@ -145,13 +153,11 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
 
       // Phase 2: ヒント生成と位置計算
-      const hints = generateHints(words.length,
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
+      const hints = generateHints(words.length, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
       const hintMappings = assignHintsToWords(words, hints, 1, 1);
 
       // Phase 3: 位置計算
-      const positions = words.map(word =>
-        calculateHintPosition(word, "start"));
+      const positions = words.map((word) => calculateHintPosition(word, "start"));
 
       const endTime = Date.now();
 
@@ -180,7 +186,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const config1: EnhancedWordConfig = { use_japanese: false };
       const words1 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config1);
       assertEquals(words1.length, 3);
-      assertEquals(words1.map(w => w.text), ["config", "change", "apply"]);
+      assertEquals(words1.map((w) => w.text), ["config", "change", "apply"]);
 
       // 設定2: 日本語包含（個別分割）
       const config2: EnhancedWordConfig = { use_japanese: true };
@@ -189,14 +195,14 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       assert(words2.length > 3);
 
       // 日本語文字と英単語の両方が含まれることを確認
-      const hasJapanese = words2.some(w => /[\u4E00-\u9FAF]/.test(w.text));
-      const hasEnglish = words2.some(w => /^[a-zA-Z]+$/.test(w.text));
+      const hasJapanese = words2.some((w) => /[\u4E00-\u9FAF]/.test(w.text));
+      const hasEnglish = words2.some((w) => /^[a-zA-Z]+$/.test(w.text));
       assert(hasJapanese);
       assert(hasEnglish);
 
       // 両方の設定でヒント位置計算が正常に動作すること
-      [words1, words2].forEach(words => {
-        words.forEach(word => {
+      [words1, words2].forEach((words) => {
+        words.forEach((word) => {
           const startPos = calculateHintPosition(word, "start");
           const endPos = calculateHintPosition(word, "end");
           const overlayPos = calculateHintPosition(word, "overlay");
@@ -234,7 +240,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         assertExists(words);
 
         // 抽出された単語の位置計算が正常に動作すること
-        words.forEach(word => {
+        words.forEach((word) => {
           const position = calculateHintPosition(word, "start");
           assertEquals(position.line, index + 1);
           assertEquals(position.col, word.col);

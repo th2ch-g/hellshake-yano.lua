@@ -5,14 +5,21 @@
 
 import { assertEquals } from "@std/assert";
 import {
-  extractWordsFromLineWithConfig,
   detectWordsWithConfig,
   detectWordsWithManager,
+  type EnhancedWordConfig,
+  extractWordsFromLineWithConfig,
   type WordConfig,
-  type EnhancedWordConfig
 } from "../denops/hellshake-yano/word.ts";
-import { RegexWordDetector, HybridWordDetector, TinySegmenterWordDetector } from "../denops/hellshake-yano/word/detector.ts";
-import { WordDetectionManager, resetWordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
+import {
+  HybridWordDetector,
+  RegexWordDetector,
+  TinySegmenterWordDetector,
+} from "../denops/hellshake-yano/word/detector.ts";
+import {
+  resetWordDetectionManager,
+  WordDetectionManager,
+} from "../denops/hellshake-yano/word/manager.ts";
 
 // モックDenopsオブジェクト
 const mockDenops = {
@@ -32,13 +39,12 @@ const mockDenops = {
 } as any;
 
 Deno.test("use_japanese設定の伝播検証", async (t) => {
-
   await t.step("extractWordsFromLineWithConfig: use_japanese=trueが維持される", () => {
     const config: WordConfig = { use_japanese: true };
     const words = extractWordsFromLineWithConfig("私は本", 1, config);
 
     // 日本語文字が個別に検出されることを確認
-    const wordTexts = words.map(w => w.text);
+    const wordTexts = words.map((w) => w.text);
     assertEquals(wordTexts.includes("私"), true, "「私」が検出されるべき");
     assertEquals(wordTexts.includes("は"), true, "「は」が検出されるべき");
     assertEquals(wordTexts.includes("本"), true, "「本」が検出されるべき");
@@ -47,14 +53,13 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
   await t.step("detectWordsWithConfig: use_japanese=trueが維持される", async () => {
     const config: WordConfig = {
       use_japanese: true,
-      use_improved_detection: false  // extractWordsFromLineWithConfigを強制使用
+      use_improved_detection: false, // extractWordsFromLineWithConfigを強制使用
     };
     const words = await detectWordsWithConfig(mockDenops, config);
 
     // 日本語が検出されることを確認
-    const hasJapanese = words.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
+    const hasJapanese = words.some((w) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
     assertEquals(hasJapanese, true, "日本語文字が検出されるべき");
-
   });
 
   await t.step("RegexWordDetector: 初期化時のuse_japanese設定", () => {
@@ -63,7 +68,11 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
 
     // 内部設定を確認（プライベートプロパティへの直接アクセス）
     const internalConfig = (detector as any).config;
-    assertEquals(internalConfig.use_japanese, true, "RegexWordDetectorのuse_japaneseはtrueであるべき");
+    assertEquals(
+      internalConfig.use_japanese,
+      true,
+      "RegexWordDetectorのuse_japaneseはtrueであるべき",
+    );
   });
 
   await t.step("HybridWordDetector: 初期化時のuse_japanese設定", () => {
@@ -72,7 +81,11 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
 
     // 内部設定を確認
     const internalConfig = (detector as any).config;
-    assertEquals(internalConfig.use_japanese, true, "HybridWordDetectorのuse_japaneseはtrueであるべき");
+    assertEquals(
+      internalConfig.use_japanese,
+      true,
+      "HybridWordDetectorのuse_japaneseはtrueであるべき",
+    );
   });
 
   await t.step("TinySegmenterWordDetector: 初期化時のuse_japanese設定", () => {
@@ -81,7 +94,11 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
 
     // 内部設定を確認
     const internalConfig = (detector as any).config;
-    assertEquals(internalConfig.use_japanese, true, "TinySegmenterWordDetectorのuse_japaneseはtrueであるべき");
+    assertEquals(
+      internalConfig.use_japanese,
+      true,
+      "TinySegmenterWordDetectorのuse_japaneseはtrueであるべき",
+    );
   });
 
   await t.step("WordDetectionManager: 初期化時のuse_japanese設定", () => {
@@ -91,7 +108,11 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
 
     // 内部設定を確認
     const internalConfig = (manager as any).config;
-    assertEquals(internalConfig.use_japanese, true, "WordDetectionManagerのuse_japaneseはtrueであるべき");
+    assertEquals(
+      internalConfig.use_japanese,
+      true,
+      "WordDetectionManagerのuse_japaneseはtrueであるべき",
+    );
   });
 
   await t.step("detectWordsWithManager: use_japanese=trueが維持される", async () => {
@@ -106,10 +127,11 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
     const result = await detectWordsWithManager(mockDenops, config);
 
     // 日本語が検出されることを確認
-    const hasJapanese = result.words.some(w => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
+    const hasJapanese = result.words.some((w) =>
+      /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
+    );
     assertEquals(hasJapanese, true, "日本語文字が検出されるべき");
     assertEquals(result.success, true, "検出は成功するべき");
-
   });
 
   await t.step("デフォルト値の上書きチェック", () => {
@@ -124,7 +146,7 @@ Deno.test("use_japanese設定の伝播検証", async (t) => {
     assertEquals(
       regexConfig.use_japanese === false || regexConfig.use_japanese === undefined,
       true,
-      "RegexWordDetectorのデフォルトはfalseまたはundefinedであるべき"
+      "RegexWordDetectorのデフォルトはfalseまたはundefinedであるべき",
     );
   });
 
@@ -154,18 +176,16 @@ Deno.test("設定伝播の統合テスト", async (t) => {
     const vimConfig = {
       use_japanese: true,
       enable_tinysegmenter: true,
-      word_detection_strategy: 'hybrid',
+      word_detection_strategy: "hybrid",
       use_improved_detection: true,
     };
 
     // detectWordsWithManagerを通じて処理
     const result = await detectWordsWithManager(mockDenops, vimConfig);
 
-
     if (result.words.length > 0) {
-
       // 日本語文字が個別に検出されていることを確認
-      const japaneseChars = result.words.filter(w =>
+      const japaneseChars = result.words.filter((w) =>
         w.text.length === 1 && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
       );
 

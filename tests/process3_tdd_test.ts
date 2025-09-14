@@ -32,13 +32,11 @@ const createMockDenops = (mockLines: string[]): MockDenops => ({
       return Promise.resolve(mockLines.length);
     }
     return Promise.resolve("");
-  }
+  },
 });
 
 // Import functions to test
-import {
-  extractWordsFromLineLegacy,
-} from "../denops/hellshake-yano/word.ts";
+import { extractWordsFromLineLegacy } from "../denops/hellshake-yano/word.ts";
 
 // We need to access private functions for testing, so we'll use dynamic imports
 // This is a temporary solution for TDD testing
@@ -75,7 +73,6 @@ Deno.test("TDD Process3: RED Phase - detectWordsStandard function call test", as
 
     // TODO: Once detectWordsStandard is updated, this test will verify:
     // assertEquals(legacyFunctionCalled, true, "detectWordsStandard should call extractWordsFromLineLegacy");
-
   } finally {
     // Restore original function
     (globalThis as any).extractWordsFromLineLegacy = originalLegacyFunction;
