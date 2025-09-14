@@ -2,7 +2,7 @@
  * 日本語検出のデバッグテスト
  */
 
-import { detectWordsWithManager, detectWordsWithConfig, type EnhancedWordConfig, type WordConfig } from "../denops/hellshake-yano/word.ts";
+import { detectWordsWithManager, detectWordsWithEnhancedConfig, extractWordsFromLineWithEnhancedConfig, type EnhancedWordConfig } from "../denops/hellshake-yano/word.ts";
 import { getWordDetectionManager, resetWordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
 
 // モックDenopsオブジェクト
@@ -50,6 +50,7 @@ Deno.test("日本語検出デバッグ", async (t) => {
 
     const result = await detectWordsWithManager(mockDenops, config);
 
+    console.log("Manager Result:", {
       detector: result.detector,
       success: result.success,
       wordCount: result.words.length,
@@ -57,35 +58,40 @@ Deno.test("日本語検出デバッグ", async (t) => {
     });
 
     if (result.words.length > 0) {
+      console.log("Words detected:", result.words.map(w => w.text));
     } else {
+      console.log("No words detected");
     }
 
     // Manager configuration check
     const manager = getWordDetectionManager();
   });
 
-  await t.step("detectWordsWithConfig with use_japanese: true", async () => {
-    const config: WordConfig = {
+  await t.step("detectWordsWithEnhancedConfig with use_japanese: true", async () => {
+    const config: EnhancedWordConfig = {
       use_japanese: true,
-      use_improved_detection: false, // Force using extractWordsFromLineWithConfig
+      strategy: "regex", // Use regex strategy for consistent behavior
     };
 
 
-    const words = await detectWordsWithConfig(mockDenops, config);
+    const words = await detectWordsWithEnhancedConfig(mockDenops, config);
 
+    console.log("Enhanced Config Result:", { wordCount: words.length });
     if (words.length > 0) {
+      console.log("Words detected:", words.map(w => w.text));
     } else {
+      console.log("No words detected");
     }
   });
 
-  await t.step("Direct call to extractWordsFromLineWithConfig", async () => {
-    const { extractWordsFromLineWithConfig } = await import("../denops/hellshake-yano/word.ts");
-
-    const config: WordConfig = {
+  await t.step("Direct call to extractWordsFromLineWithEnhancedConfig", async () => {
+    const config: EnhancedWordConfig = {
       use_japanese: true,
     };
 
-    const words = extractWordsFromLineWithConfig("私は本を読む", 1, config);
+    const words = extractWordsFromLineWithEnhancedConfig("私は本を読む", 1, config);
 
+    console.log("Direct call result:", { wordCount: words.length });
+    console.log("Words:", words.map(w => w.text));
   });
 });

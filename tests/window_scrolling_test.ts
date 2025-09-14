@@ -7,7 +7,7 @@
 
 import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
-import { detectWordsWithConfig, type WordConfig } from "../denops/hellshake-yano/word.ts";
+import { detectWordsWithEnhancedConfig, type EnhancedWordConfig } from "../denops/hellshake-yano/word.ts";
 
 describe("Window Scrolling Detection", () => {
   describe("Visible window detection", () => {
@@ -28,18 +28,27 @@ describe("Window Scrolling Detection", () => {
             }
             return lines[lineNumber] || "";
           }
+          if (fn === "getbufline") {
+            // getbufline("%", startLine, endLine) をmock
+            const [buffer, startLine, endLine] = args;
+            const result: string[] = [];
+            for (let i = startLine; i <= endLine; i++) {
+              result.push(`Line ${i}: word${i} test${i} sample${i}`);
+            }
+            return result;
+          }
           return null;
         }
       });
 
-      const config: WordConfig = {
-        use_improved_detection: true,
+      const config: EnhancedWordConfig = {
+        strategy: "regex",
         use_japanese: false
       };
 
       // ウィンドウ位置1: 行1-20
       const denops1 = createMockDenops(1, 20);
-      const words1 = await detectWordsWithConfig(denops1 as any, config);
+      const words1 = await detectWordsWithEnhancedConfig(denops1 as any, config);
 
       // 行1-20の単語のみが検出されるべき
       const texts1 = words1.map(w => w.text);
@@ -50,7 +59,7 @@ describe("Window Scrolling Detection", () => {
 
       // ウィンドウ位置2: 行50-70（PgDn後）
       const denops2 = createMockDenops(50, 70);
-      const words2 = await detectWordsWithConfig(denops2 as any, config);
+      const words2 = await detectWordsWithEnhancedConfig(denops2 as any, config);
 
       // 行50-70の単語のみが検出されるべき
       const texts2 = words2.map(w => w.text);
@@ -62,7 +71,7 @@ describe("Window Scrolling Detection", () => {
 
       // ウィンドウ位置3: 行80-100（ファイル末尾）
       const denops3 = createMockDenops(80, 100);
-      const words3 = await detectWordsWithConfig(denops3 as any, config);
+      const words3 = await detectWordsWithEnhancedConfig(denops3 as any, config);
 
       // 行80-100の単語のみが検出されるべき
       const texts3 = words3.map(w => w.text);
@@ -84,16 +93,24 @@ describe("Window Scrolling Detection", () => {
             const lineNumber = args[0];
             return `Line ${lineNumber}: small window test`;
           }
+          if (fn === "getbufline") {
+            const [buffer, startLine, endLine] = args;
+            const result: string[] = [];
+            for (let i = startLine; i <= endLine; i++) {
+              result.push(`Line ${i}: small window test`);
+            }
+            return result;
+          }
           return null;
         }
       };
 
-      const config: WordConfig = {
-        use_improved_detection: true,
+      const config: EnhancedWordConfig = {
+        strategy: "regex",
         use_japanese: false
       };
 
-      const words = await detectWordsWithConfig(mockDenops as any, config);
+      const words = await detectWordsWithEnhancedConfig(mockDenops as any, config);
 
       // 5行分の単語のみが検出される
       assertEquals(words.every(w => w.line >= 10 && w.line <= 14), true);
@@ -117,16 +134,23 @@ describe("Window Scrolling Detection", () => {
             }
             return "";
           }
+          if (fn === "getbufline") {
+            const [buffer, startLine, endLine] = args;
+            if (startLine === 42 && endLine === 42) {
+              return ["Single line with multiple words here"];
+            }
+            return [];
+          }
           return null;
         }
       };
 
-      const config: WordConfig = {
-        use_improved_detection: true,
+      const config: EnhancedWordConfig = {
+        strategy: "regex",
         use_japanese: false
       };
 
-      const words = await detectWordsWithConfig(mockDenops as any, config);
+      const words = await detectWordsWithEnhancedConfig(mockDenops as any, config);
 
       // 1行分の単語のみ
       assertEquals(words.every(w => w.line === 42), true);
@@ -153,22 +177,30 @@ describe("Window Scrolling Detection", () => {
             const lineNumber = args[0];
             return `Line ${lineNumber}: content`;
           }
+          if (fn === "getbufline") {
+            const [buffer, startLine, endLine] = args;
+            const result: string[] = [];
+            for (let i = startLine; i <= endLine; i++) {
+              result.push(`Line ${i}: content`);
+            }
+            return result;
+          }
           return null;
         }
       };
 
-      const config: WordConfig = {
-        use_improved_detection: true,
+      const config: EnhancedWordConfig = {
+        strategy: "regex",
         use_japanese: false
       };
 
       // 最初の検出
-      const words1 = await detectWordsWithConfig(mockDenops as any, config);
+      const words1 = await detectWordsWithEnhancedConfig(mockDenops as any, config);
       const lines1 = words1.map(w => w.line);
 
       // 2回目の検出（スクロール後を想定）
       mockDenops.callCount = 3; // スクロール後の状態にリセット
-      const words2 = await detectWordsWithConfig(mockDenops as any, config);
+      const words2 = await detectWordsWithEnhancedConfig(mockDenops as any, config);
       const lines2 = words2.map(w => w.line);
 
       // 異なる行範囲の単語が検出されるべき

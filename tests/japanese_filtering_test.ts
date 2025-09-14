@@ -148,6 +148,7 @@ describe("Japanese Filtering Tests", () => {
     it("should maintain backward compatibility with useImprovedDetection=false", () => {
       const line = "hello world test";
 
+      // Process4 Analysis: この行は後方互換性テストのため意図的に従来動作を使用
       // 改善版無効の場合（従来の動作）
       const wordsOld = extractWordsFromLine(line, 1, false);
 
@@ -159,6 +160,7 @@ describe("Japanese Filtering Tests", () => {
     it("should handle single chars only with improved detection", () => {
       const line = "A B C D E";
 
+      // Process4 Analysis: この行は従来動作との差分確認のため意図的に従来動作を使用
       // 改善版無効（従来）
       const wordsOld = extractWordsFromLine(line, 1, false);
       assertEquals(wordsOld.length, 0); // 1文字は検出されない

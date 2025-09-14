@@ -18,6 +18,8 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
 
     await t.step("should NOT detect single characters without improved detection", () => {
       const line = "A B C D E F G H I J K L";
+      // Process4 Analysis: この行は意図的に従来動作をテストしています
+      // useImprovedDetection=false により新実装内で従来動作をエミュレート
       const words = extractWordsFromLine(line, 1, false);
 
       assertEquals(words.length, 0); // 従来版では1文字単語は検出されない
