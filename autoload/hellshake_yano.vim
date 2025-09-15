@@ -6,6 +6,13 @@
 let s:save_cpo = &cpo
 set cpo&vim
 
+" エラーメッセージを統一形式で表示する関数
+function! s:show_error(message) abort
+  echohl ErrorMsg
+  echomsg a:message
+  echohl None
+endfunction
+
 " スクリプトローカル変数
 let s:motion_count = {}  " バッファごとの移動カウント
 let s:last_motion_time = {}  " バッファごとの最後の移動時刻
@@ -179,9 +186,7 @@ function! s:setup_motion_mappings() abort
     if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
       execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
     else
-      echohl WarningMsg
-      echomsg '[hellshake-yano] Invalid key in motion keys: ' . string(key)
-      echohl None
+      call s:show_error('[hellshake-yano] Error: Invalid key in motion keys: ' . string(key))
     endif
   endfor
 endfunction
@@ -206,9 +211,7 @@ function! s:trigger_hints() abort
     call denops#notify('hellshake-yano', 'showHints', [])
     let s:hints_visible = v:true
   catch
-    echohl ErrorMsg
-    echomsg '[hellshake-yano] Failed to show hints: ' . v:exception
-    echohl None
+    call s:show_error('[hellshake-yano] Error: Failed to show hints: ' . v:exception)
   endtry
 endfunction
 
@@ -227,9 +230,7 @@ function! hellshake_yano#hide() abort
     call denops#notify('hellshake-yano', 'hideHints', [])
     let s:hints_visible = v:false
   catch
-    echohl ErrorMsg
-    echomsg '[hellshake-yano] Failed to hide hints: ' . v:exception
-    echohl None
+    call s:show_error('[hellshake-yano] Error: Failed to hide hints: ' . v:exception)
   endtry
 endfunction
 
@@ -275,17 +276,15 @@ function! hellshake_yano#set_count(count) abort
   if a:count > 0
     let g:hellshake_yano.motion_count = a:count
     call hellshake_yano#reset_count()
-    
+
     " denops側に設定を通知
     if exists('g:hellshake_yano_ready') && g:hellshake_yano_ready
       call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
     endif
-    
+
     echo printf('[hellshake-yano] Motion count set to %d', a:count)
   else
-    echohl ErrorMsg
-    echomsg '[hellshake-yano] Count must be greater than 0'
-    echohl None
+    call s:show_error('[hellshake-yano] Error: Count must be greater than 0')
   endif
 endfunction
 
@@ -294,17 +293,15 @@ function! hellshake_yano#set_timeout(timeout) abort
   if a:timeout > 0
     let g:hellshake_yano.motion_timeout = a:timeout
     call hellshake_yano#reset_count()
-    
+
     " denops側に設定を通知
     if exists('g:hellshake_yano_ready') && g:hellshake_yano_ready
       call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
     endif
-    
+
     echo printf('[hellshake-yano] Timeout set to %dms', a:timeout)
   else
-    echohl ErrorMsg
-    echomsg '[hellshake-yano] Timeout must be greater than 0'
-    echohl None
+    call s:show_error('[hellshake-yano] Error: Timeout must be greater than 0')
   endif
 endfunction
 
@@ -348,9 +345,7 @@ function! hellshake_yano#update_highlight(marker_group, current_group) abort
 
     echo printf('[hellshake-yano] Highlight updated: marker=%s, current=%s', a:marker_group, a:current_group)
   catch
-    echohl ErrorMsg
-    echomsg '[hellshake-yano] Failed to update highlight: ' . v:exception
-    echohl None
+    call s:show_error('[hellshake-yano] Error: Failed to update highlight: ' . v:exception)
   endtry
 endfunction
 
@@ -392,24 +387,18 @@ endfunction
 function! hellshake_yano#set_counted_motions(keys) abort
   " 引数の検証
   if type(a:keys) != v:t_list
-    echohl ErrorMsg
-    echomsg '[hellshake-yano] counted_motions must be a list'
-    echohl None
+    call s:show_error('[hellshake-yano] Error: counted_motions must be a list')
     return
   endif
 
   " 各キーの検証
   for key in a:keys
     if type(key) != v:t_string || len(key) != 1
-      echohl ErrorMsg
-      echomsg '[hellshake-yano] Each motion key must be a single character string: ' . string(key)
-      echohl None
+      call s:show_error('[hellshake-yano] Error: Each motion key must be a single character string: ' . string(key))
       return
     endif
     if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') == -1
-      echohl WarningMsg
-      echomsg '[hellshake-yano] Potentially invalid key: ' . string(key)
-      echohl None
+      call s:show_error('[hellshake-yano] Error: Potentially invalid key: ' . string(key))
     endif
   endfor
 
@@ -432,6 +421,75 @@ function! hellshake_yano#set_counted_motions(keys) abort
   endif
 
   echo printf('[hellshake-yano] Counted motions set to: %s', string(a:keys))
+endfunction
+
+" テスト用の公開関数（デバッグ目的）
+function! hellshake_yano#test_validate_highlight_group_name(name) abort
+  " plugin/hellshake-yano.vimの関数を直接呼び出せないので、ここで再実装
+  " 空チェック
+  if empty(a:name)
+    throw '[hellshake-yano] Error: Highlight group name cannot be empty'
+  endif
+
+  " 文字列型チェック
+  if type(a:name) != v:t_string
+    throw '[hellshake-yano] Error: Highlight group name must be a string'
+  endif
+
+  " 長さチェック（100文字以下）
+  if len(a:name) > 100
+    throw '[hellshake-yano] Error: Highlight group name must be 100 characters or less'
+  endif
+
+  " 先頭文字チェック（英字またはアンダースコア）
+  if a:name !~# '^[a-zA-Z_]'
+    throw '[hellshake-yano] Error: Highlight group name must start with a letter or underscore'
+  endif
+
+  " 使用可能文字チェック（英数字とアンダースコアのみ）
+  if a:name !~# '^[a-zA-Z0-9_]\+$'
+    throw '[hellshake-yano] Error: Highlight group name must contain only alphanumeric characters and underscores'
+  endif
+
+  return v:true
+endfunction
+
+function! hellshake_yano#test_validate_color_value(color) abort
+  " 空またはundefinedの場合は有効（オプション値）
+  if empty(a:color)
+    return v:true
+  endif
+
+  " 文字列型チェック
+  if type(a:color) != v:t_string
+    throw '[hellshake-yano] Error: Color value must be a string'
+  endif
+
+  " 16進数色の場合
+  if a:color =~# '^#'
+    " 16進数形式チェック（#fff または #ffffff）
+    if a:color !~# '^#\([0-9a-fA-F]\{3\}\|[0-9a-fA-F]\{6\}\)$'
+      throw '[hellshake-yano] Error: Invalid hex color format. Use #fff or #ffffff'
+    endif
+    return v:true
+  endif
+
+  " 標準色名チェック
+  let valid_colors = [
+        \ 'Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta',
+        \ 'White', 'Black', 'Gray', 'NONE', 'None',
+        \ 'DarkRed', 'DarkGreen', 'DarkBlue', 'DarkYellow', 'DarkCyan', 'DarkMagenta',
+        \ 'LightRed', 'LightGreen', 'LightBlue', 'LightYellow', 'LightCyan', 'LightMagenta',
+        \ 'DarkGray', 'LightGray', 'Brown', 'Orange'
+        \ ]
+
+  " 大文字小文字を無視して正規化した色名でチェック
+  let normalized_color = substitute(a:color, '^\(.\)\(.*\)', '\u\1\L\2', '')
+  if index(valid_colors, normalized_color) == -1
+    throw '[hellshake-yano] Error: Invalid color name: ' . a:color
+  endif
+
+  return v:true
 endfunction
 
 " 保存と復元
