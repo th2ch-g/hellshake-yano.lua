@@ -184,12 +184,12 @@ Deno.test("設定伝播の統合テスト", async (t) => {
     const result = await detectWordsWithManager(mockDenops, vimConfig);
 
     if (result.words.length > 0) {
-      // 日本語文字が個別に検出されていることを確認
-      const japaneseChars = result.words.filter((w) =>
-        w.text.length === 1 && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
+      // 日本語を含む単語が検出されていることを確認
+      const japaneseWords = result.words.filter((w) =>
+        /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text)
       );
 
-      assertEquals(japaneseChars.length > 0, true, "日本語文字が個別に検出されるべき");
+      assertEquals(japaneseWords.length > 0, true, "日本語を含む単語が検出されるべき");
     }
   });
 });

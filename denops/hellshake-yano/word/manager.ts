@@ -607,11 +607,79 @@ export class WordDetectionManager {
    * ```
    */
   updateConfig(newConfig: Partial<WordDetectionManagerConfig>): void {
+    // 設定をマージ
     this.config = { ...this.config, ...newConfig };
 
-    // Clear cache if config affects detection
-    if (this.config.cache_enabled) {
+    // word_detection_strategyがある場合はstrategyに反映（後方互換性）
+    if ((newConfig as any).word_detection_strategy) {
+      this.config.strategy = (newConfig as any).word_detection_strategy;
+      this.config.default_strategy = (newConfig as any).word_detection_strategy;
+    }
+
+    // 設定変更に影響するキャッシュをクリア
+    if (this.affectsDetection(newConfig)) {
       this.clearCache();
+    }
+
+    // 検出戦略が変更された場合はディテクターを再初期化
+    if (this.shouldReinitializeDetectors(newConfig)) {
+      this.reinitializeDetectors();
+    }
+  }
+
+  /**
+   * 設定変更が検出結果に影響するかチェック
+   * @param newConfig - 新しい設定
+   * @returns 影響する場合はtrue
+   */
+  private affectsDetection(newConfig: Partial<WordDetectionManagerConfig>): boolean {
+    const affectingKeys = [
+      'strategy',
+      'word_detection_strategy',
+      'use_japanese',
+      'enable_tinysegmenter',
+      'segmenter_threshold',
+      'min_word_length',
+      'max_word_length'
+    ];
+
+    return affectingKeys.some(key => key in newConfig);
+  }
+
+  /**
+   * ディテクターの再初期化が必要かチェック
+   * @param newConfig - 新しい設定
+   * @returns 再初期化が必要な場合はtrue
+   */
+  private shouldReinitializeDetectors(newConfig: Partial<WordDetectionManagerConfig>): boolean {
+    const reinitKeys = [
+      'strategy',
+      'word_detection_strategy',
+      'enable_tinysegmenter',
+      'use_japanese'
+    ];
+
+    return reinitKeys.some(key => key in newConfig);
+  }
+
+  /**
+   * ディテクターを再初期化
+   */
+  private reinitializeDetectors(): void {
+    try {
+      // 既存のディテクターをクリア
+      this.detectors.clear();
+
+      // 新しい設定でディテクターを再作成
+      const regexDetector = new RegexWordDetector(this.config);
+      const segmenterDetector = new TinySegmenterWordDetector(this.config);
+      const hybridDetector = new HybridWordDetector(this.config);
+
+      this.registerDetector(regexDetector);
+      this.registerDetector(segmenterDetector);
+      this.registerDetector(hybridDetector);
+    } catch (error) {
+      // console.error("[WordDetectionManager] Failed to reinitialize detectors:", error);
     }
   }
 
@@ -675,8 +743,7 @@ export class WordDetectionManager {
     const defaults = {
       // Detection settings
       strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
-      use_japanese: false,
-      // use_improved_detection: 統合済み（常に有効）
+      use_japanese: false, // デフォルトはfalse、但し明示的な設定を優先
       enable_tinysegmenter: true,
       segmenter_threshold: 4,
       segmenter_cache_size: 1000,
@@ -710,11 +777,16 @@ export class WordDetectionManager {
       batch_size: 100,
     };
 
-    // 渡されたconfigの値を優先
+    // 渡されたconfigの値を優先（use_japaneseが明示的に設定されている場合はそれを使用）
     const merged = {
       ...defaults,
       ...config,
     };
+
+    // use_japaneseが明示的に設定されている場合、その値を確実に適用
+    if (config.use_japanese !== undefined) {
+      merged.use_japanese = config.use_japanese;
+    }
 
     // word_detection_strategyがある場合はstrategyに反映
     if ((config as any).word_detection_strategy) {

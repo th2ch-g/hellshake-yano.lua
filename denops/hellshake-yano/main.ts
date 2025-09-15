@@ -6,7 +6,7 @@ import {
   type EnhancedWordConfig,
   extractWordsFromLineWithConfig,
 } from "./word.ts";
-import { getWordDetectionManager, resetWordDetectionManager } from "./word/manager.ts";
+import { getWordDetectionManager, resetWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import {
   assignHintsToWords,
   calculateHintPosition,
@@ -61,6 +61,9 @@ export interface Config {
   suppress_on_key_repeat?: boolean; // キーリピート時のヒント表示抑制（デフォルト: true）
   key_repeat_threshold?: number; // リピート判定の閾値（ミリ秒、デフォルト: 50）
   key_repeat_reset_delay?: number; // リピート終了判定の遅延（ミリ秒、デフォルト: 300）
+  // Process 50 Sub2: デバッグモード機能
+  debug_mode?: boolean; // デバッグモードの有効/無効（デフォルト: false）
+  performance_log?: boolean; // パフォーマンスログの有効/無効（デフォルト: false）
 }
 
 // グローバル状態
@@ -116,6 +119,9 @@ let config: Config = {
   // Process 50 Sub5: ハイライト色設定のデフォルト値
   highlight_hint_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
   highlight_hint_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
+  // Process 50 Sub2: デバッグモード機能のデフォルト値
+  debug_mode: false, // デバッグモード無効
+  performance_log: false, // パフォーマンスログ無効
 };
 
 let currentHints: HintMapping[] = [];
@@ -135,6 +141,151 @@ let wordsCache: {
 } | null = null;
 let hintsCache: { wordCount: number; hints: string[] } | null = null;
 
+// Process 50 Sub2: デバッグモード機能用の状態管理
+interface PerformanceMetrics {
+  showHints: number[];
+  hideHints: number[];
+  wordDetection: number[];
+  hintGeneration: number[];
+}
+
+let performanceMetrics: PerformanceMetrics = {
+  showHints: [],
+  hideHints: [],
+  wordDetection: [],
+  hintGeneration: [],
+};
+
+interface DebugInfo {
+  config: Config;
+  hintsVisible: boolean;
+  currentHints: HintMapping[];
+  metrics: PerformanceMetrics;
+  timestamp: number;
+}
+
+/**
+ * Process 50 Sub2: パフォーマンス測定
+ * @param operation - 操作名
+ * @param startTime - 開始時刻
+ * @param endTime - 終了時刻
+ */
+function recordPerformance(operation: keyof PerformanceMetrics, startTime: number, endTime: number): void {
+  if (!config.performance_log) return;
+
+  const duration = endTime - startTime;
+  performanceMetrics[operation].push(duration);
+
+  // 最新50件のみ保持（メモリ使用量制限）
+  if (performanceMetrics[operation].length > 50) {
+    performanceMetrics[operation] = performanceMetrics[operation].slice(-50);
+  }
+
+  // デバッグモードの場合はコンソールにもログ出力
+  if (config.debug_mode) {
+    console.log(`[hellshake-yano:PERF] ${operation}: ${duration}ms`);
+  }
+}
+
+/**
+ * Process 50 Sub2: デバッグ情報収集
+ * @returns デバッグ情報オブジェクト
+ */
+function collectDebugInfo(): DebugInfo {
+  return {
+    config: { ...config },
+    hintsVisible,
+    currentHints: [...currentHints],
+    metrics: {
+      showHints: [...performanceMetrics.showHints],
+      hideHints: [...performanceMetrics.hideHints],
+      wordDetection: [...performanceMetrics.wordDetection],
+      hintGeneration: [...performanceMetrics.hintGeneration],
+    },
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Process 50 Sub2: デバッグ情報のクリア
+ */
+function clearDebugInfo(): void {
+  performanceMetrics = {
+    showHints: [],
+    hideHints: [],
+    wordDetection: [],
+    hintGeneration: [],
+  };
+}
+
+/**
+ * 後方互換性のあるフラグを正規化する
+ * @param cfg - 設定オブジェクト
+ * @returns 正規化された設定
+ */
+function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
+  const normalized = { ...cfg };
+
+  // use_improved_detection は統合済み（常に有効）として削除
+  if ('use_improved_detection' in normalized) {
+    delete normalized.use_improved_detection;
+  }
+
+  return normalized;
+}
+
+/**
+ * メイン設定をマネージャー用設定に変換する
+ * @param config - メイン設定
+ * @returns マネージャー用設定
+ */
+function convertConfigForManager(config: Config): WordDetectionManagerConfig {
+  return {
+    // 基本設定
+    strategy: config.word_detection_strategy || "hybrid",
+    use_japanese: config.use_japanese,
+    enable_tinysegmenter: config.enable_tinysegmenter,
+    segmenter_threshold: config.segmenter_threshold,
+
+    // 日本語分割精度設定
+    min_word_length: config.japanese_min_word_length,
+    // japanese_merge_particles、japanese_merge_thresholdは
+    // マネージャーレベルでは直接サポートされていないため除外
+
+    // パフォーマンス設定
+    cache_enabled: true,
+    auto_detect_language: true,
+    performance_monitoring: false, // デバッグ情報が必要な場合のみ有効
+
+    // タイムアウト設定（motion_timeoutから算出）
+    timeout_ms: Math.max(config.motion_timeout || 2000, 1000),
+
+    // デフォルトストラテジー
+    default_strategy: config.word_detection_strategy || "hybrid",
+  };
+}
+
+/**
+ * メインとマネージャーの設定を同期する
+ * @param config - メイン設定
+ */
+function syncManagerConfig(config: Config): void {
+  try {
+    // マネージャー用設定に変換
+    const managerConfig = convertConfigForManager(config);
+
+    // マネージャーを取得または作成し、設定を更新
+    const manager = getWordDetectionManager(managerConfig);
+
+    // 既存のマネージャーがある場合は設定を更新
+    if (manager) {
+      manager.updateConfig(managerConfig);
+    }
+  } catch (error) {
+    // console.warn("[hellshake-yano] Failed to sync manager config:", error);
+  }
+}
+
 /**
  * プラグインのメインエントリポイント
  */
@@ -147,6 +298,9 @@ export async function main(denops: Denops): Promise<void> {
     ) as number;
   }
 
+  // プラグイン初期化時にマネージャーに初期設定を同期
+  syncManagerConfig(config);
+
   // dispatcherの設定
   denops.dispatcher = {
     /**
@@ -154,7 +308,10 @@ export async function main(denops: Denops): Promise<void> {
      */
     updateConfig(newConfig: unknown): void {
       // 型安全のため、Partial<Config>として処理
-      const cfg = newConfig as Partial<Config>;
+      let cfg = newConfig as Partial<Config>;
+
+      // 後方互換性のあるフラグを正規化
+      cfg = normalizeBackwardCompatibleFlags(cfg);
 
       // カスタムマーカー設定の検証と適用
       if (cfg.markers && Array.isArray(cfg.markers)) {
@@ -362,6 +519,22 @@ export async function main(denops: Denops): Promise<void> {
           // console.warn(`[hellshake-yano] Invalid highlight_hint_marker_current: ${currentResult.errors.join(', ')}`);
         }
       }
+
+      // Process 50 Sub2: デバッグモード機能の設定適用
+      if (typeof cfg.debug_mode === "boolean") {
+        config.debug_mode = cfg.debug_mode;
+      }
+
+      if (typeof cfg.performance_log === "boolean") {
+        config.performance_log = cfg.performance_log;
+        // パフォーマンスログが無効化された場合、既存のメトリクスをクリア
+        if (!cfg.performance_log) {
+          clearDebugInfo();
+        }
+      }
+
+      // 設定更新後、マネージャーに設定を伝播
+      syncManagerConfig(config);
     },
 
     /**
@@ -387,6 +560,7 @@ export async function main(denops: Denops): Promise<void> {
      * 内部的なヒント表示処理（最適化版）
      */
     async showHintsInternal(): Promise<void> {
+      const startTime = performance.now(); // Process 50 Sub2: パフォーマンス計測開始
       lastShowHintsTime = Date.now();
 
       // デバウンスタイムアウトをクリア
@@ -481,6 +655,10 @@ export async function main(denops: Denops): Promise<void> {
           await displayHintsOptimized(denops, currentHints);
           hintsVisible = true;
 
+          // Process 50 Sub2: パフォーマンス計測終了
+          const endTime = performance.now();
+          recordPerformance("showHints", startTime, endTime);
+
           // ユーザー入力を待機
           await waitForUserInput(denops);
           return; // 成功した場合はリトライループを抜ける
@@ -514,12 +692,18 @@ export async function main(denops: Denops): Promise<void> {
      * ヒントを非表示
      */
     async hideHints(): Promise<void> {
+      const startTime = performance.now(); // Process 50 Sub2: パフォーマンス計測開始
+
       // デバウンスタイムアウトをクリア
       if (debounceTimeoutId) {
         clearTimeout(debounceTimeoutId);
         debounceTimeoutId = undefined;
       }
       await hideHints(denops);
+
+      // Process 50 Sub2: パフォーマンス計測終了
+      const endTime = performance.now();
+      recordPerformance("hideHints", startTime, endTime);
     },
 
     /**
@@ -806,6 +990,39 @@ export async function main(denops: Denops): Promise<void> {
         // console.error("[hellshake-yano] Error in testStress:", error);
         await denops.cmd("echohl ErrorMsg | echo 'Stress test failed' | echohl None");
       }
+    },
+
+    /**
+     * Process 50 Sub2: デバッグ情報を取得
+     */
+    getDebugInfo(): DebugInfo {
+      return collectDebugInfo();
+    },
+
+    /**
+     * Process 50 Sub2: パフォーマンス情報をクリア
+     */
+    clearPerformanceLog(): void {
+      clearDebugInfo();
+    },
+
+    /**
+     * Process 50 Sub2: デバッグモードのトグル
+     */
+    toggleDebugMode(): boolean {
+      config.debug_mode = !config.debug_mode;
+      return config.debug_mode;
+    },
+
+    /**
+     * Process 50 Sub2: パフォーマンスログのトグル
+     */
+    togglePerformanceLog(): boolean {
+      config.performance_log = !config.performance_log;
+      if (!config.performance_log) {
+        clearDebugInfo();
+      }
+      return config.performance_log;
     },
   };
 }
@@ -1869,17 +2086,27 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
 
   // Process 50 Sub5: highlight_hint_marker の検証（fg/bg対応）
   if (cfg.highlight_hint_marker !== undefined) {
-    const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
-    if (!markerResult.valid) {
-      errors.push(...markerResult.errors.map((e) => `highlight_hint_marker: ${e}`));
+    // null チェック
+    if (cfg.highlight_hint_marker === null) {
+      errors.push("highlight_hint_marker must be a string");
+    } else {
+      const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
+      if (!markerResult.valid) {
+        errors.push(...markerResult.errors);
+      }
     }
   }
 
   // Process 50 Sub5: highlight_hint_marker_current の検証（fg/bg対応）
   if (cfg.highlight_hint_marker_current !== undefined) {
-    const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
-    if (!currentResult.valid) {
-      errors.push(...currentResult.errors.map((e) => `highlight_hint_marker_current: ${e}`));
+    // null チェック
+    if (cfg.highlight_hint_marker_current === null) {
+      errors.push("highlight_hint_marker_current must be a string");
+    } else {
+      const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
+      if (!currentResult.valid) {
+        errors.push(...currentResult.errors.map((e) => e.replace("highlight_hint_marker", "highlight_hint_marker_current")));
+      }
     }
   }
 
@@ -2045,10 +2272,43 @@ export function validateHighlightColor(
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
+  // null と undefined のチェック
+  if (colorConfig === null) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  // 数値や配列などの無効な型チェック
+  if (typeof colorConfig === "number") {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  if (Array.isArray(colorConfig)) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
   // 文字列の場合（従来のハイライトグループ名）
   if (typeof colorConfig === "string") {
+    // 空文字列チェック
+    if (colorConfig === "") {
+      errors.push("highlight_hint_marker must be a non-empty string");
+      return { valid: false, errors };
+    }
+
+    // ハイライトグループ名のバリデーション
     if (!validateHighlightGroupName(colorConfig)) {
-      errors.push(`Invalid highlight group name: ${colorConfig}`);
+      // より詳細なエラーメッセージを提供
+      if (!/^[a-zA-Z_]/.test(colorConfig)) {
+        errors.push("highlight_hint_marker must start with a letter or underscore");
+      } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
+        errors.push("highlight_hint_marker must contain only alphanumeric characters and underscores");
+      } else if (colorConfig.length > 100) {
+        errors.push("highlight_hint_marker must be 100 characters or less");
+      } else {
+        errors.push(`Invalid highlight group name: ${colorConfig}`);
+      }
     }
     return { valid: errors.length === 0, errors };
   }

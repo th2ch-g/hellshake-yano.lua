@@ -33,6 +33,8 @@ let s:default_config = {
       \ 'suppress_on_key_repeat': v:true,
       \ 'key_repeat_threshold': 50,
       \ 'key_repeat_reset_delay': 300,
+      \ 'debug_mode': v:false,
+      \ 'performance_log': v:false,
       \ }
 
 " ユーザー設定でデフォルト設定を上書き（ユーザー設定が優先）
@@ -70,9 +72,7 @@ function! s:apply_custom_highlights() abort
     try
       call s:apply_highlight('HellshakeYanoMarker', g:hellshake_yano.highlight_hint_marker)
     catch
-      echohl WarningMsg
-      echomsg '[hellshake-yano] Invalid highlight_hint_marker: ' . string(g:hellshake_yano.highlight_hint_marker)
-      echohl None
+      call s:show_error('[hellshake-yano] Error: Invalid highlight_hint_marker: ' . string(g:hellshake_yano.highlight_hint_marker))
     endtry
   endif
 
@@ -81,18 +81,29 @@ function! s:apply_custom_highlights() abort
     try
       call s:apply_highlight('HellshakeYanoMarkerCurrent', g:hellshake_yano.highlight_hint_marker_current)
     catch
-      echohl WarningMsg
-      echomsg '[hellshake-yano] Invalid highlight_hint_marker_current: ' . string(g:hellshake_yano.highlight_hint_marker_current)
-      echohl None
+      call s:show_error('[hellshake-yano] Error: Invalid highlight_hint_marker_current: ' . string(g:hellshake_yano.highlight_hint_marker_current))
     endtry
   endif
 endfunction
 
 " 個別のハイライト設定を適用する関数
 function! s:apply_highlight(hlgroup_name, color_config) abort
+  " ハイライトグループ名の検証
+  try
+    call s:validate_highlight_group_name(a:hlgroup_name)
+  catch
+    call s:show_error(v:exception)
+    return
+  endtry
+
   " 文字列の場合（従来のハイライトグループ名）
   if type(a:color_config) == v:t_string
-    execute 'highlight default link ' . a:hlgroup_name . ' ' . a:color_config
+    try
+      call s:validate_highlight_group_name(a:color_config)
+      execute 'highlight default link ' . a:hlgroup_name . ' ' . a:color_config
+    catch
+      call s:show_error(v:exception)
+    endtry
     return
   endif
 
@@ -102,28 +113,40 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
 
     " fg（前景色）の処理
     if has_key(a:color_config, 'fg') && !empty(a:color_config.fg)
-      let l:fg_color = s:normalize_color_name(a:color_config.fg)
-      if a:color_config.fg =~# '^#'
-        " 16進数色の場合はguifgのみ
-        call add(l:cmd_parts, 'guifg=' . a:color_config.fg)
-      else
-        " 色名の場合はctermfgとguifgの両方
-        call add(l:cmd_parts, 'ctermfg=' . l:fg_color)
-        call add(l:cmd_parts, 'guifg=' . l:fg_color)
-      endif
+      try
+        call s:validate_color_value(a:color_config.fg)
+        let l:fg_color = s:normalize_color_name(a:color_config.fg)
+        if a:color_config.fg =~# '^#'
+          " 16進数色の場合はguifgのみ
+          call add(l:cmd_parts, 'guifg=' . a:color_config.fg)
+        else
+          " 色名の場合はctermfgとguifgの両方
+          call add(l:cmd_parts, 'ctermfg=' . l:fg_color)
+          call add(l:cmd_parts, 'guifg=' . l:fg_color)
+        endif
+      catch
+        call s:show_error(v:exception)
+        return
+      endtry
     endif
 
     " bg（背景色）の処理
     if has_key(a:color_config, 'bg') && !empty(a:color_config.bg)
-      let l:bg_color = s:normalize_color_name(a:color_config.bg)
-      if a:color_config.bg =~# '^#'
-        " 16進数色の場合はguibgのみ
-        call add(l:cmd_parts, 'guibg=' . a:color_config.bg)
-      else
-        " 色名の場合はctermbgとguibgの両方
-        call add(l:cmd_parts, 'ctermbg=' . l:bg_color)
-        call add(l:cmd_parts, 'guibg=' . l:bg_color)
-      endif
+      try
+        call s:validate_color_value(a:color_config.bg)
+        let l:bg_color = s:normalize_color_name(a:color_config.bg)
+        if a:color_config.bg =~# '^#'
+          " 16進数色の場合はguibgのみ
+          call add(l:cmd_parts, 'guibg=' . a:color_config.bg)
+        else
+          " 色名の場合はctermbgとguibgの両方
+          call add(l:cmd_parts, 'ctermbg=' . l:bg_color)
+          call add(l:cmd_parts, 'guibg=' . l:bg_color)
+        endif
+      catch
+        call s:show_error(v:exception)
+        return
+      endtry
     endif
 
     " ハイライトコマンドを実行
@@ -133,7 +156,7 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
   endif
 
   " その他の型の場合はエラー
-  throw 'Invalid color configuration type: ' . type(a:color_config)
+  call s:show_error('[hellshake-yano] Error: Invalid color configuration type')
 endfunction
 
 " モーションキーのマッピングを設定する関数
@@ -145,9 +168,7 @@ function! s:setup_motion_mappings() abort
       if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
         execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
       else
-        echohl WarningMsg
-        echomsg '[hellshake-yano] Invalid key in counted_motions: ' . string(key)
-        echohl None
+        call s:show_error('[hellshake-yano] Error: Invalid key in counted_motions: ' . string(key))
       endif
     endfor
   elseif g:hellshake_yano.trigger_on_hjkl
@@ -169,12 +190,86 @@ function! s:normalize_color_name(color) abort
   return substitute(a:color, '^\(.\)\(.*\)', '\u\1\L\2', '')
 endfunction
 
+" ハイライトグループ名の検証関数
+function! s:validate_highlight_group_name(name) abort
+  " 空チェック
+  if empty(a:name)
+    throw '[hellshake-yano] Error: Highlight group name cannot be empty'
+  endif
+
+  " 文字列型チェック
+  if type(a:name) != v:t_string
+    throw '[hellshake-yano] Error: Highlight group name must be a string'
+  endif
+
+  " 長さチェック（100文字以下）
+  if len(a:name) > 100
+    throw '[hellshake-yano] Error: Highlight group name must be 100 characters or less'
+  endif
+
+  " 先頭文字チェック（英字またはアンダースコア）
+  if a:name !~# '^[a-zA-Z_]'
+    throw '[hellshake-yano] Error: Highlight group name must start with a letter or underscore'
+  endif
+
+  " 使用可能文字チェック（英数字とアンダースコアのみ）
+  if a:name !~# '^[a-zA-Z0-9_]\+$'
+    throw '[hellshake-yano] Error: Highlight group name must contain only alphanumeric characters and underscores'
+  endif
+
+  return v:true
+endfunction
+
+" 色値の検証関数
+function! s:validate_color_value(color) abort
+  " 空またはundefinedの場合は有効（オプション値）
+  if empty(a:color)
+    return v:true
+  endif
+
+  " 文字列型チェック
+  if type(a:color) != v:t_string
+    throw '[hellshake-yano] Error: Color value must be a string'
+  endif
+
+  " 16進数色の場合
+  if a:color =~# '^#'
+    " 16進数形式チェック（#fff または #ffffff）
+    if a:color !~# '^#\([0-9a-fA-F]\{3\}\|[0-9a-fA-F]\{6\}\)$'
+      throw '[hellshake-yano] Error: Invalid hex color format. Use #fff or #ffffff'
+    endif
+    return v:true
+  endif
+
+  " 標準色名チェック
+  let valid_colors = [
+        \ 'Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta',
+        \ 'White', 'Black', 'Gray', 'NONE', 'None',
+        \ 'DarkRed', 'DarkGreen', 'DarkBlue', 'DarkYellow', 'DarkCyan', 'DarkMagenta',
+        \ 'LightRed', 'LightGreen', 'LightBlue', 'LightYellow', 'LightCyan', 'LightMagenta',
+        \ 'DarkGray', 'LightGray', 'Brown', 'Orange'
+        \ ]
+
+  " 大文字小文字を無視して正規化した色名でチェック
+  let normalized_color = s:normalize_color_name(a:color)
+  if index(valid_colors, normalized_color) == -1
+    throw '[hellshake-yano] Error: Invalid color name: ' . a:color
+  endif
+
+  return v:true
+endfunction
+
+" エラーメッセージを統一形式で表示する関数
+function! s:show_error(message) abort
+  echohl ErrorMsg
+  echomsg a:message
+  echohl None
+endfunction
+
 " denopsの初期化確認
 function! s:check_denops() abort
   if !exists('g:loaded_denops')
-    echohl WarningMsg
-    echomsg '[hellshake-yano] denops.vim is not loaded. Please install denops.vim first.'
-    echohl None
+    call s:show_error('[hellshake-yano] Error: denops.vim is not loaded. Please install denops.vim first.')
     return 0
   endif
   return 1
@@ -275,6 +370,7 @@ else
     autocmd User DenopsReady ++once call s:initialize()
   augroup END
 endif
+
 
 " 保存と復元
 let &cpo = s:save_cpo

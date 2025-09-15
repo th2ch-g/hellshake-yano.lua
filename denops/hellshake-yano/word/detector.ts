@@ -176,6 +176,14 @@ export class RegexWordDetector implements WordDetector {
           }
           currentIndex += part.length + 1;
         }
+      } // 0xFF / 0b1010 の先頭0を境界として分割（例: 0xFF -> xFF, 0b1010 -> b1010）
+      else if (/^0[xX][0-9a-fA-F]+$/.test(text)) {
+        // 'x' 以降を単語として扱う
+        const sub = text.slice(1); // drop leading '0'
+        splitMatches.push({ text: sub, index: baseIndex + 1 });
+      } else if (/^0[bB][01]+$/.test(text)) {
+        const sub = text.slice(1);
+        splitMatches.push({ text: sub, index: baseIndex + 1 });
       } // Japanese word boundary splitting (only if Japanese is enabled)
       else if (
         this.config.use_japanese && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) &&
@@ -241,7 +249,7 @@ export class RegexWordDetector implements WordDetector {
       });
 
     // 5. Performance protection
-    const finalMatches = uniqueMatches.slice(0, 200);
+    const finalMatches = uniqueMatches.slice(0, 100);
 
     for (const match of finalMatches) {
       // Calculate byte position for UTF-8 compatibility
@@ -460,7 +468,8 @@ export class TinySegmenterWordDetector implements WordDetector {
   private async fallbackDetection(lineText: string, lineNumber: number): Promise<Word[]> {
     // Use simplified regex detection as fallback
     const regexDetector = new RegexWordDetector(this.config);
-    return regexDetector.detectWords(lineText, lineNumber);
+    const singleLineText = lineText + "\n";
+    return regexDetector.detectWords(singleLineText, lineNumber);
   }
 
   /**

@@ -13,6 +13,9 @@ hellshake-yano.vimは、日本語テキストの単語境界を正確に検出�
 - **混在テキスト対応**: 日本語・英語が混在したテキストでも完璧に動作
 - **UTF-8完全対応**: マルチバイト日本語文字のバイト位置を正確に計算
 - **カスタマイズ可能な精度**: 用途に応じて単語検出アルゴリズムを調整可能
+- **キーリピート抑制**: hjklキーの高速連打時にヒント表示を抑制してスムーズなスクロールを実現
+- **デバッグモード**: プラグインの動作状態を詳細に確認できるデバッグ機能
+- **パフォーマンスログ**: 実行時間を記録して性能のボトルネックを特定
 
 ## インストール
 
@@ -72,9 +75,47 @@ let g:hellshake_yano = {
 | `use_hint_groups`               | 真偽値      | v:true          | ヒントグループ機能を有効化                        |
 | `use_numbers`                   | 真偽値      | v:true          | 数字キーをヒントに使用可能にする                  |
 | `max_single_char_hints`         | 数値        | -               | オプション：1文字ヒントを制限                     |
-| `use_japanese`                  | 真偽値      | -               | 日本語単語検出を有効化                            |
+| `use_japanese`                  | 真偽値      | v:true          | 日本語単語検出を有効化                            |
 | `highlight_hint_marker`         | 文字列/辞書 | 'DiffAdd'       | マーカーのハイライト                              |
 | `highlight_hint_marker_current` | 文字列/辞書 | 'DiffText'      | 現在のマーカーのハイライト                        |
+| `suppress_on_key_repeat`        | 真偽値      | v:true          | 高速キーリピート時のヒント抑制                    |
+| `key_repeat_threshold`          | 数値        | 50              | キーリピート検出閾値（ミリ秒）                    |
+| `key_repeat_reset_delay`        | 数値        | 300             | キーリピート後のリセット遅延（ミリ秒）            |
+| `debug_mode`                    | 真偽値      | v:false         | デバッグモードを有効化                            |
+| `performance_log`               | 真偽値      | v:false         | パフォーマンスログを有効化                        |
+
+### キーリピート抑制
+
+hjklキーを高速で連打している際、ヒント表示を一時的に抑制してスムーズなスクロールを維持します。タイミングは設定可能で、機能を無効化することもできます。
+
+- 有効/無効: `g:hellshake_yano.suppress_on_key_repeat`（デフォルト: `v:true`）
+- リピート閾値: `g:hellshake_yano.key_repeat_threshold` ミリ秒（デフォルト: `50`）
+- リセット遅延: `g:hellshake_yano.key_repeat_reset_delay` ミリ秒（デフォルト: `300`）
+
+設定例は後述の設定例セクションを参照してください。
+
+### デバッグモード
+
+プラグインには、トラブルシューティングとパフォーマンス分析のための包括的なデバッグモードが含まれています：
+
+- 有効/無効: `g:hellshake_yano.debug_mode`（デフォルト: `v:false`）
+- デバッグ情報表示: `:HellshakeDebug` または `:HellshakeShowDebug`
+
+デバッグモードで表示される情報：
+- 現在のプラグイン設定
+- モーションカウントとタイミング情報
+- キーリピート検出状態
+- バッファ固有の状態
+- パフォーマンスメトリクス（performance_log有効時）
+
+### パフォーマンスログ
+
+組み込みのパフォーマンスログでプラグインのパフォーマンスを追跡：
+
+- 有効/無効: `g:hellshake_yano.performance_log`（デフォルト: `v:false`）
+- 主要な操作の実行時間を記録
+- パフォーマンスのボトルネック特定に役立つ
+- デバッグモード有効時に確認可能
 
 ### ヒントグループ設定
 
@@ -129,6 +170,25 @@ let g:hellshake_yano = {
   \ 'single_char_keys': split('ASDFGHJKL', '\zs'),
   \ 'multi_char_keys': split('QWERTYUIOPZXCVBNM', '\zs')
   \ }
+
+" キーリピート検出設定
+" 高速スクロール時のヒント表示抑制（スムーズなスクロール優先）
+let g:hellshake_yano = {
+  \ 'suppress_on_key_repeat': v:true,    " キーリピート抑制を有効化（デフォルト: true）
+  \ 'key_repeat_threshold': 50,          " リピート検出閾値（ミリ秒、デフォルト: 50）
+  \ 'key_repeat_reset_delay': 300        " リピート状態リセット遅延（ミリ秒、デフォルト: 300）
+  \ }
+
+" キーリピート抑制を無効化（常にヒントを表示）
+let g:hellshake_yano = {
+  \ 'suppress_on_key_repeat': v:false
+  \ }
+
+" カスタムキーリピートタイミング
+let g:hellshake_yano = {
+  \ 'key_repeat_threshold': 100,         " ゆっくりしたタイピング用の緩い閾値
+  \ 'key_repeat_reset_delay': 500        " 通常動作に戻るまでの遅延を長く
+  \ }
 ```
 
 ## 使用方法
@@ -146,9 +206,21 @@ let g:hellshake_yano = {
 
 ### コマンド
 
+#### 基本コマンド
 - `:HellshakeEnable` - プラグインを有効化
 - `:HellshakeDisable` - プラグインを無効化
 - `:HellshakeToggle` - プラグインの有効/無効を切り替え
+- `:HellshakeShow` - ヒントを即座に表示
+- `:HellshakeHide` - 表示中のヒントを非表示
+
+#### 設定コマンド
+- `:HellshakeSetCount <数値>` - モーションカウント閾値を設定
+- `:HellshakeSetTimeout <ミリ秒>` - モーションタイムアウトをミリ秒で設定
+- `:HellshakeSetCountedMotions <キー>` - カスタムモーションキーを設定
+
+#### デバッグコマンド
+- `:HellshakeDebug` - 包括的なデバッグ情報を表示
+- `:HellshakeShowDebug` - `:HellshakeDebug`のエイリアス
 
 ## 技術的詳細
 
@@ -168,6 +240,60 @@ let g:hellshake_yano = {
    - 改善: 一般的なパターンの強化ルール
    - 精密: 複雑なケースのための高度な検出
 
+## トラブルシューティング
+
+### よくある問題と解決方法
+
+#### ヒントが表示されない
+1. プラグインが有効か確認: `:echo g:hellshake_yano.enabled`
+2. モーションカウント設定を確認: `:echo g:hellshake_yano.motion_count`
+3. denopsが正しくインストール・動作しているか確認
+4. `:HellshakeDebug`で現在の状態を確認
+
+#### スクロール中にヒントが表示される
+- キーリピート抑制設定を調整:
+  ```vim
+  let g:hellshake_yano.suppress_on_key_repeat = v:true
+  let g:hellshake_yano.key_repeat_threshold = 30  " より積極的な抑制
+  ```
+
+#### パフォーマンスの問題
+1. パフォーマンスログを有効にしてボトルネックを特定:
+   ```vim
+   let g:hellshake_yano.performance_log = v:true
+   ```
+2. `:HellshakeDebug`でパフォーマンスメトリクスを表示
+3. ヒントマーカーの数を削減を検討
+4. 必要なければ日本語単語検出を無効化:
+   ```vim
+   let g:hellshake_yano.use_japanese = v:false
+   ```
+
+#### 日本語テキストで単語検出が正しくない
+1. UTF-8エンコーディングを確認: `:set encoding?` で`utf-8`が表示されること
+2. ファイルエンコーディングを確認: `:set fileencoding?`
+3. 日本語検出が有効か確認: `:echo g:hellshake_yano.use_japanese`
+
+#### ハイライトが見えない
+1. カラースキームとの互換性を確認
+2. 別のハイライトグループを試す:
+   ```vim
+   let g:hellshake_yano.highlight_hint_marker = 'Search'
+   let g:hellshake_yano.highlight_hint_marker_current = 'IncSearch'
+   ```
+3. カスタム色を使用:
+   ```vim
+   let g:hellshake_yano.highlight_hint_marker = {'fg': '#00ff00', 'bg': '#000000'}
+   ```
+
+### デバッグ情報
+
+問題を報告する際は、以下の出力を含めてください:
+1. `:HellshakeDebug` - 完全なデバッグ情報
+2. `:echo g:hellshake_yano` - 現在の設定
+3. `:version` - Neovimのバージョン
+4. 問題を再現する最小限の設定
+
 ## 開発
 
 ### ビルド
@@ -177,7 +303,13 @@ let g:hellshake_yano = {
 deno task build
 
 # テストの実行
-deno test
+deno test -A
+
+# 特定のテストファイルを実行
+deno test -A tests/refactor_test.ts
+
+# デバッグ用トレース付きで実行
+deno test -A --trace-leaks
 ```
 
 ### ディレクトリ構造
@@ -185,15 +317,22 @@ deno test
 ```
 hellshake-yano.vim/
 ├── autoload/
-│   └── hellshake/
-│       └── yano.vim      # Vim側のインターフェース
+│   └── hellshake-yano.vim # VimScriptインターフェース
 ├── denops/
 │   └── hellshake-yano/
-│       ├── main.ts       # メインエントリポイント
-│       ├── detector.ts   # 単語検出ロジック
-│       └── utils.ts      # ユーティリティ関数
+│       ├── main.ts         # メインエントリポイント
+│       ├── word/
+│       │   ├── detector.ts # 単語検出ロジック
+│       │   └── manager.ts  # 単語マネージャー
+│       └── utils/
+│           └── encoding.ts # UTF-8エンコーディングユーティリティ
 ├── plugin/
-│   └── hellshake-yano.vim # プラグインの初期化
+│   └── hellshake-yano.vim # プラグイン初期化
+├── tests/                  # 包括的なテストスイート
+│   ├── refactor_test.ts   # VimScriptリファクタリングテスト
+│   └── helpers/
+│       └── mock.ts        # テストユーティリティ
+├── PLAN.md                # 開発計画
 └── README.md
 ```
 

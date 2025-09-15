@@ -20,13 +20,15 @@
  * ```
  */
 export function charIndexToByteIndex(text: string, charIndex: number): number {
+  // 範囲外チェックと空文字列チェック
   if (charIndex <= 0) return 0;
+  if (text.length === 0) return 0;
   if (charIndex >= text.length) return new TextEncoder().encode(text).length;
 
-  // Extract substring from start to character index
+  // 開始から指定された文字インデックスまでの部分文字列を抽出
   const substring = text.substring(0, charIndex);
 
-  // Convert to UTF-8 bytes and return length
+  // UTF-8バイトに変換して長さを返す
   return new TextEncoder().encode(substring).length;
 }
 
@@ -46,33 +48,42 @@ export function charIndexToByteIndex(text: string, charIndex: number): number {
  * ```
  */
 export function byteIndexToCharIndex(text: string, byteIndex: number): number {
+  // 範囲外チェック
   if (byteIndex <= 0) return 0;
+  if (text.length === 0) return 0;
 
   const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
   const fullBytes = encoder.encode(text);
 
+  // byteIndexが全体のバイト長以上の場合は文字列長を返す
   if (byteIndex >= fullBytes.length) return text.length;
 
-  // Find character index by decoding byte slice
-  try {
-    const byteSlice = fullBytes.slice(0, byteIndex);
-    const decodedText = decoder.decode(byteSlice, { stream: false });
-    return decodedText.length;
-  } catch (error) {
-    // If decoding fails (e.g., byte index is in middle of multi-byte character),
-    // find the previous valid character boundary
-    for (let i = byteIndex - 1; i >= 0; i--) {
-      try {
-        const byteSlice = fullBytes.slice(0, i);
-        const decodedText = decoder.decode(byteSlice, { stream: false });
-        return decodedText.length;
-      } catch {
-        continue;
+  // より効率的なアプローチ: 文字ごとに累積バイト数を計算
+  let currentByteIndex = 0;
+  for (let charIndex = 0; charIndex < text.length; charIndex++) {
+    const char = text[charIndex];
+    const charByteLength = encoder.encode(char).length;
+
+    // 現在の文字の終端バイト位置
+    const nextByteIndex = currentByteIndex + charByteLength;
+
+    // 指定されたバイトインデックスが現在の文字の範囲内にある場合
+    if (byteIndex < nextByteIndex) {
+      // マルチバイト文字の境界チェック
+      if (byteIndex === currentByteIndex) {
+        // 文字の開始位置の場合、その文字のインデックスを返す
+        return charIndex;
+      } else {
+        // マルチバイト文字の途中の場合、前の文字境界を返す
+        return charIndex;
       }
     }
-    return 0;
+
+    currentByteIndex = nextByteIndex;
   }
+
+  // ここに到達することは通常ないが、安全のため文字列長を返す
+  return text.length;
 }
 
 /**
@@ -91,6 +102,8 @@ export function byteIndexToCharIndex(text: string, byteIndex: number): number {
  * ```
  */
 export function getCharByteLength(text: string, charIndex: number): number {
+  // 範囲外チェックと空文字列チェック
+  if (text.length === 0) return 0;
   if (charIndex < 0 || charIndex >= text.length) return 0;
 
   const char = text[charIndex];
@@ -179,14 +192,17 @@ export function getEncodingInfo(text: string): {
  * ```
  */
 export function charIndicesToByteIndices(text: string, charIndices: number[]): number[] {
+  // 空の入力チェック
   if (charIndices.length === 0) return [];
+  if (text.length === 0) return charIndices.map(() => 0);
 
   const encoder = new TextEncoder();
   const result: number[] = [];
+  const fullTextByteLength = encoder.encode(text).length;
 
-  // Sort indices to process efficiently
+  // インデックスをソートして効率的に処理
   const sortedIndices = charIndices
-    .map((index, originalIndex) => ({ index, originalIndex }))
+    .map((index, originalIndex) => ({ index: Math.max(0, index), originalIndex }))
     .sort((a, b) => a.index - b.index);
 
   let currentCharIndex = 0;
@@ -197,7 +213,7 @@ export function charIndicesToByteIndices(text: string, charIndices: number[]): n
     const char = text[i];
     const charByteLength = encoder.encode(char).length;
 
-    // Check if this character position matches any of our target indices
+    // この文字位置がターゲットインデックスのいずれかと一致するかチェック
     while (
       processedCount < sortedIndices.length &&
       sortedIndices[processedCount].index === currentCharIndex
@@ -210,9 +226,14 @@ export function charIndicesToByteIndices(text: string, charIndices: number[]): n
     currentByteIndex += charByteLength;
   }
 
-  // Handle indices at or beyond text length
+  // 文字列長以上のインデックスを処理
   while (processedCount < sortedIndices.length) {
-    result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
+    const targetIndex = charIndices[sortedIndices[processedCount].originalIndex];
+    if (targetIndex >= text.length) {
+      result[sortedIndices[processedCount].originalIndex] = fullTextByteLength;
+    } else {
+      result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
+    }
     processedCount++;
   }
 

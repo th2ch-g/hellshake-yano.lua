@@ -71,9 +71,18 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       const words = extractWordsFromLine(line, 1, true);
 
       assertEquals(words.length, 3);
-      assertEquals(words[0], { text: "A", line: 1, col: 1 });
-      assertEquals(words[1], { text: "B", line: 1, col: 3 });
-      assertEquals(words[2], { text: "C", line: 1, col: 5 });
+      // プロパティ毎に個別にテスト（byteColが自動追加されるため）
+      assertEquals(words[0].text, "A");
+      assertEquals(words[0].line, 1);
+      assertEquals(words[0].col, 1);
+
+      assertEquals(words[1].text, "B");
+      assertEquals(words[1].line, 1);
+      assertEquals(words[1].col, 3);
+
+      assertEquals(words[2].text, "C");
+      assertEquals(words[2].line, 1);
+      assertEquals(words[2].col, 5);
     });
   });
 
