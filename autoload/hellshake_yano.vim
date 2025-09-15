@@ -44,6 +44,8 @@ endfunction
 
 " hjkl移動時の処理
 function! hellshake_yano#motion(key) abort
+  let start_time = s:get_elapsed_time()
+
   " プラグインが無効な場合は通常の動作
   if !get(g:hellshake_yano, 'enabled', v:true)
     return a:key
@@ -57,6 +59,10 @@ function! hellshake_yano#motion(key) abort
   let config = s:get_key_repeat_config()
 
   if s:handle_key_repeat_detection(bufnr, current_time, config)
+    " デバッグ表示（キーリピート時）
+    if get(g:hellshake_yano, 'debug_mode', v:false)
+      call hellshake_yano#show_debug()
+    endif
     return a:key
   endif
 
@@ -74,11 +80,30 @@ function! hellshake_yano#motion(key) abort
   if !get(s:is_key_repeating, bufnr, v:false) && s:motion_count[bufnr] >= g:hellshake_yano.motion_count
     call s:reset_count(bufnr)
     call s:trigger_hints()
+
+    " パフォーマンスログ
+    let end_time = s:get_elapsed_time()
+    call s:log_performance('motion_with_hints', end_time - start_time, {
+          \ 'key': a:key,
+          \ 'count': g:hellshake_yano.motion_count
+          \ })
   else
     " タイムアウト用タイマーを設定
     let s:timer_id[bufnr] = timer_start(
           \ g:hellshake_yano.motion_timeout,
           \ {-> s:reset_count(bufnr)})
+
+    " パフォーマンスログ
+    let end_time = s:get_elapsed_time()
+    call s:log_performance('motion_normal', end_time - start_time, {
+          \ 'key': a:key,
+          \ 'count': s:motion_count[bufnr]
+          \ })
+  endif
+
+  " デバッグ表示（通常時）
+  if get(g:hellshake_yano, 'debug_mode', v:false)
+    call hellshake_yano#show_debug()
   endif
 
   " 元のキーの動作を返す
@@ -349,12 +374,62 @@ function! hellshake_yano#update_highlight(marker_group, current_group) abort
   endtry
 endfunction
 
-" デバッグ情報を表示
+" デバッグ情報を取得（詳細版）
+function! s:get_debug_info() abort
+  let bufnr = s:bufnr()
+  call s:init_count(bufnr)
+
+  let debug_info = {}
+  " 基本設定情報
+  let debug_info.enabled = get(g:hellshake_yano, 'enabled', v:false)
+  let debug_info.debug_mode = get(g:hellshake_yano, 'debug_mode', v:false)
+  let debug_info.performance_log = get(g:hellshake_yano, 'performance_log', v:false)
+
+  " 動作設定
+  let debug_info.motion_count = get(g:hellshake_yano, 'motion_count', 0)
+  let debug_info.motion_timeout = get(g:hellshake_yano, 'motion_timeout', 0)
+  let debug_info.counted_motions = s:get_motion_keys()
+
+  " バッファ状態
+  let debug_info.current_buffer = bufnr
+  let debug_info.current_count = get(s:motion_count, bufnr, 0)
+  let debug_info.hints_visible = s:hints_visible
+  let debug_info.denops_ready = exists('g:hellshake_yano_ready') ? g:hellshake_yano_ready : v:false
+
+  " キーリピート検出状態
+  let debug_info.key_repeat = {
+        \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
+        \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
+        \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300),
+        \ 'is_repeating': get(s:is_key_repeating, bufnr, v:false),
+        \ 'last_key_time': get(s:last_key_time, bufnr, 0),
+        \ 'current_time': s:get_elapsed_time()
+        \ }
+
+  " 時間計測データ
+  let debug_info.timing = {
+        \ 'last_motion_time': get(s:last_motion_time, bufnr, 0),
+        \ 'timer_active': has_key(s:timer_id, bufnr),
+        \ 'repeat_timer_active': has_key(s:repeat_end_timer, bufnr)
+        \ }
+
+  " ハイライト設定
+  let debug_info.highlight = {
+        \ 'hint_marker': get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'),
+        \ 'hint_marker_current': get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText')
+        \ }
+
+  return debug_info
+endfunction
+
+" デバッグ情報を表示形式に整形
 function! s:build_debug_info(bufnr) abort
   call s:init_count(a:bufnr)
   let l:lines = []
   call add(l:lines, '=== hellshake-yano Debug Info ===')
   call add(l:lines, 'Enabled: ' . (has_key(g:hellshake_yano, 'enabled') ? g:hellshake_yano.enabled : 'v:false'))
+  call add(l:lines, 'Debug mode: ' . (get(g:hellshake_yano, 'debug_mode', v:false) ? 'ON' : 'OFF'))
+  call add(l:lines, 'Performance log: ' . (get(g:hellshake_yano, 'performance_log', v:false) ? 'ON' : 'OFF'))
   call add(l:lines, 'Motion count threshold: ' . get(g:hellshake_yano, 'motion_count', 0))
   call add(l:lines, 'Timeout: ' . get(g:hellshake_yano, 'motion_timeout', 0) . 'ms')
   call add(l:lines, 'Current buffer: ' . a:bufnr)
@@ -369,11 +444,62 @@ function! s:build_debug_info(bufnr) abort
   call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'key_repeat_threshold', 50) . 'ms')
   call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'key_repeat_reset_delay', 300) . 'ms')
   call add(l:lines, 'Key repeating (current buffer): ' . (get(s:is_key_repeating, a:bufnr, v:false) ? 1 : 0))
+
+  " デバッグモード専用情報
+  if get(g:hellshake_yano, 'debug_mode', v:false)
+    call add(l:lines, '--- Debug Mode Details ---')
+    call add(l:lines, 'Last key time: ' . get(s:last_key_time, a:bufnr, 0))
+    call add(l:lines, 'Current time: ' . s:get_elapsed_time())
+    call add(l:lines, 'Time since last key: ' . (s:get_elapsed_time() - get(s:last_key_time, a:bufnr, 0)) . 'ms')
+    call add(l:lines, 'Motion timer active: ' . (has_key(s:timer_id, a:bufnr) ? 'YES' : 'NO'))
+    call add(l:lines, 'Repeat timer active: ' . (has_key(s:repeat_end_timer, a:bufnr) ? 'YES' : 'NO'))
+  endif
+
   return l:lines
 endfunction
 
 function! hellshake_yano#get_debug_info() abort
   return s:build_debug_info(s:bufnr())
+endfunction
+
+" デバッグ表示関数（debug_mode がtrueの時のみ動作）
+function! hellshake_yano#show_debug() abort
+  if !get(g:hellshake_yano, 'debug_mode', v:false)
+    return
+  endif
+
+  let debug_info = s:get_debug_info()
+
+  " ステータスライン用の簡潔な形式
+  let status_msg = printf('[hellshake-yano] Count:%d Repeat:%s Debug:ON',
+        \ debug_info.current_count,
+        \ (debug_info.key_repeat.is_repeating ? 'YES' : 'NO'))
+
+  " エコーエリアに表示
+  echohl WarningMsg
+  echo status_msg
+  echohl None
+endfunction
+
+" パフォーマンスログ関数（performance_log がtrueの時のみ動作）
+function! s:log_performance(operation, time_ms, ...) abort
+  if !get(g:hellshake_yano, 'performance_log', v:false)
+    return
+  endif
+
+  let bufnr = s:bufnr()
+  let extra_info = a:0 > 0 ? a:1 : {}
+
+  let log_entry = printf('[hellshake-yano:PERF] %s buf:%d time:%dms',
+        \ a:operation, bufnr, a:time_ms)
+
+  " 追加情報があれば付加
+  if !empty(extra_info) && type(extra_info) == v:t_dict
+    let log_entry .= ' ' . string(extra_info)
+  endif
+
+  " ログ出力（echomsg を使用してメッセージ履歴に保存）
+  echomsg log_entry
 endfunction
 
 function! hellshake_yano#debug() abort

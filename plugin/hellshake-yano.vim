@@ -33,6 +33,8 @@ let s:default_config = {
       \ 'suppress_on_key_repeat': v:true,
       \ 'key_repeat_threshold': 50,
       \ 'key_repeat_reset_delay': 300,
+      \ 'debug_mode': v:false,
+      \ 'performance_log': v:false,
       \ }
 
 " ユーザー設定でデフォルト設定を上書き（ユーザー設定が優先）

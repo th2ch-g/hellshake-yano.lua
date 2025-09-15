@@ -61,6 +61,9 @@ export interface Config {
   suppress_on_key_repeat?: boolean; // キーリピート時のヒント表示抑制（デフォルト: true）
   key_repeat_threshold?: number; // リピート判定の閾値（ミリ秒、デフォルト: 50）
   key_repeat_reset_delay?: number; // リピート終了判定の遅延（ミリ秒、デフォルト: 300）
+  // Process 50 Sub2: デバッグモード機能
+  debug_mode?: boolean; // デバッグモードの有効/無効（デフォルト: false）
+  performance_log?: boolean; // パフォーマンスログの有効/無効（デフォルト: false）
 }
 
 // グローバル状態
@@ -116,6 +119,9 @@ let config: Config = {
   // Process 50 Sub5: ハイライト色設定のデフォルト値
   highlight_hint_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
   highlight_hint_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
+  // Process 50 Sub2: デバッグモード機能のデフォルト値
+  debug_mode: false, // デバッグモード無効
+  performance_log: false, // パフォーマンスログ無効
 };
 
 let currentHints: HintMapping[] = [];
@@ -134,6 +140,83 @@ let wordsCache: {
   words: any[];
 } | null = null;
 let hintsCache: { wordCount: number; hints: string[] } | null = null;
+
+// Process 50 Sub2: デバッグモード機能用の状態管理
+interface PerformanceMetrics {
+  showHints: number[];
+  hideHints: number[];
+  wordDetection: number[];
+  hintGeneration: number[];
+}
+
+let performanceMetrics: PerformanceMetrics = {
+  showHints: [],
+  hideHints: [],
+  wordDetection: [],
+  hintGeneration: [],
+};
+
+interface DebugInfo {
+  config: Config;
+  hintsVisible: boolean;
+  currentHints: HintMapping[];
+  metrics: PerformanceMetrics;
+  timestamp: number;
+}
+
+/**
+ * Process 50 Sub2: パフォーマンス測定
+ * @param operation - 操作名
+ * @param startTime - 開始時刻
+ * @param endTime - 終了時刻
+ */
+function recordPerformance(operation: keyof PerformanceMetrics, startTime: number, endTime: number): void {
+  if (!config.performance_log) return;
+
+  const duration = endTime - startTime;
+  performanceMetrics[operation].push(duration);
+
+  // 最新50件のみ保持（メモリ使用量制限）
+  if (performanceMetrics[operation].length > 50) {
+    performanceMetrics[operation] = performanceMetrics[operation].slice(-50);
+  }
+
+  // デバッグモードの場合はコンソールにもログ出力
+  if (config.debug_mode) {
+    console.log(`[hellshake-yano:PERF] ${operation}: ${duration}ms`);
+  }
+}
+
+/**
+ * Process 50 Sub2: デバッグ情報収集
+ * @returns デバッグ情報オブジェクト
+ */
+function collectDebugInfo(): DebugInfo {
+  return {
+    config: { ...config },
+    hintsVisible,
+    currentHints: [...currentHints],
+    metrics: {
+      showHints: [...performanceMetrics.showHints],
+      hideHints: [...performanceMetrics.hideHints],
+      wordDetection: [...performanceMetrics.wordDetection],
+      hintGeneration: [...performanceMetrics.hintGeneration],
+    },
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Process 50 Sub2: デバッグ情報のクリア
+ */
+function clearDebugInfo(): void {
+  performanceMetrics = {
+    showHints: [],
+    hideHints: [],
+    wordDetection: [],
+    hintGeneration: [],
+  };
+}
 
 /**
  * 後方互換性のあるフラグを正規化する
@@ -437,6 +520,19 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
+      // Process 50 Sub2: デバッグモード機能の設定適用
+      if (typeof cfg.debug_mode === "boolean") {
+        config.debug_mode = cfg.debug_mode;
+      }
+
+      if (typeof cfg.performance_log === "boolean") {
+        config.performance_log = cfg.performance_log;
+        // パフォーマンスログが無効化された場合、既存のメトリクスをクリア
+        if (!cfg.performance_log) {
+          clearDebugInfo();
+        }
+      }
+
       // 設定更新後、マネージャーに設定を伝播
       syncManagerConfig(config);
     },
@@ -464,6 +560,7 @@ export async function main(denops: Denops): Promise<void> {
      * 内部的なヒント表示処理（最適化版）
      */
     async showHintsInternal(): Promise<void> {
+      const startTime = performance.now(); // Process 50 Sub2: パフォーマンス計測開始
       lastShowHintsTime = Date.now();
 
       // デバウンスタイムアウトをクリア
@@ -558,6 +655,10 @@ export async function main(denops: Denops): Promise<void> {
           await displayHintsOptimized(denops, currentHints);
           hintsVisible = true;
 
+          // Process 50 Sub2: パフォーマンス計測終了
+          const endTime = performance.now();
+          recordPerformance("showHints", startTime, endTime);
+
           // ユーザー入力を待機
           await waitForUserInput(denops);
           return; // 成功した場合はリトライループを抜ける
@@ -591,12 +692,18 @@ export async function main(denops: Denops): Promise<void> {
      * ヒントを非表示
      */
     async hideHints(): Promise<void> {
+      const startTime = performance.now(); // Process 50 Sub2: パフォーマンス計測開始
+
       // デバウンスタイムアウトをクリア
       if (debounceTimeoutId) {
         clearTimeout(debounceTimeoutId);
         debounceTimeoutId = undefined;
       }
       await hideHints(denops);
+
+      // Process 50 Sub2: パフォーマンス計測終了
+      const endTime = performance.now();
+      recordPerformance("hideHints", startTime, endTime);
     },
 
     /**
@@ -883,6 +990,39 @@ export async function main(denops: Denops): Promise<void> {
         // console.error("[hellshake-yano] Error in testStress:", error);
         await denops.cmd("echohl ErrorMsg | echo 'Stress test failed' | echohl None");
       }
+    },
+
+    /**
+     * Process 50 Sub2: デバッグ情報を取得
+     */
+    getDebugInfo(): DebugInfo {
+      return collectDebugInfo();
+    },
+
+    /**
+     * Process 50 Sub2: パフォーマンス情報をクリア
+     */
+    clearPerformanceLog(): void {
+      clearDebugInfo();
+    },
+
+    /**
+     * Process 50 Sub2: デバッグモードのトグル
+     */
+    toggleDebugMode(): boolean {
+      config.debug_mode = !config.debug_mode;
+      return config.debug_mode;
+    },
+
+    /**
+     * Process 50 Sub2: パフォーマンスログのトグル
+     */
+    togglePerformanceLog(): boolean {
+      config.performance_log = !config.performance_log;
+      if (!config.performance_log) {
+        clearDebugInfo();
+      }
+      return config.performance_log;
     },
   };
 }
