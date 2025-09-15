@@ -160,7 +160,8 @@ Deno.test("Legacy Behavior Tests: extractWordsFromLineLegacy", async (t) => {
     // Check positions with multibyte characters
     assertEquals(utf8Words[0].col, 1, "First word at column 1");
     assertEquals(utf8Words[1].col, 7, "Japanese word at column 7");
-    assertEquals(utf8Words[2].col, 10, "Last word at column 10");
+    // "世界" takes 4 display columns (2 chars × 2 cols each), so "test" starts at col 12
+    assertEquals(utf8Words[2].col, 12, "Last word at column 12 (accounting for wide chars)");
 
     // Byte positions should account for UTF-8 encoding
     assertEquals(utf8Words[0].byteCol, 1, "First word at byte 1");

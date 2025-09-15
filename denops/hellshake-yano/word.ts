@@ -5,9 +5,9 @@ import { charIndexToByteIndex } from "./utils/encoding.ts";
 
 /**
  * 日本語除外機能の設定インターフェース（後方互換性のため保持）
- * @description 単語検出時の日本語サポート設定
+ *
+ * @deprecated v2.0.0以降は新しいEnhancedWordConfigを使用してください
  * @since 1.0.0
- * @deprecated 新しいEnhancedWordConfigを使用してください
  */
 export interface WordConfig {
   /** 日本語を含む単語検出を行うか（デフォルト: false） */
@@ -17,9 +17,12 @@ export interface WordConfig {
 }
 
 /**
- * 新しい単語検出設定インターフェース（WordDetectionManagerConfig のエイリアス）
- * @description 高機能単語検出マネージャー用の設定インターフェース
- * @since 1.0.0
+ * 新しい単語検出設定インターフェース
+ *
+ * WordDetectionManagerConfigを拡張し、後方互換性を保ちつつ
+ * 高度な単語検出機能を提供します。
+ *
+ * @since 2.0.0
  */
 export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   /** 後方互換性のための単語検出ストラテジー */
@@ -28,7 +31,7 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
 
 /**
  * 単語情報インターフェース
- * @description 検出された単語の情報を格納するインターフェース
+ *
  * @since 1.0.0
  */
 export interface Word {
@@ -355,13 +358,64 @@ function splitJapaneseTextImproved(
 }
 
 /**
- * 1行から単語を抽出
- * @description 改善された単語抽出アルゴリズム。kebab-case、snake_case、日本語文字種別分割などをサポート
+ * 文字が全角（2列幅）かどうかを判定する
+ *
+ * CJK文字、ひらがな、カタカナ、全角記号などは2列分の幅を持ちます。
+ *
+ * @param char - 判定する文字
+ * @returns 全角文字の場合はtrue
+ * @since 2.1.0
+ */
+function isWideCharacter(char: string): boolean {
+  const code = char.charCodeAt(0);
+  // CJK統合漢字、ひらがな、カタカナ、CJK記号など
+  return (code >= 0x3000 && code <= 0x9FFF) ||
+         (code >= 0xFF00 && code <= 0xFFEF) ||
+         (code >= 0x2E80 && code <= 0x2FFF);
+}
+
+/**
+ * タブ文字と全角文字を考慮して文字インデックスから表示列位置を計算する
+ *
+ * タブ文字は次のタブストップまでの距離として計算され、
+ * 日本語などの全角文字は2列分として計算されます。
+ * Vimの表示と一致する正確な位置を返します。
+ *
+ * @param text - 対象のテキスト
+ * @param charIndex - 文字インデックス（0ベース）
+ * @param tabWidth - タブ幅（デフォルト: 8）
+ * @returns 表示列位置（0ベース）
+ * @since 2.1.0
+ */
+function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number {
+  let displayCol = 0;
+  for (let i = 0; i < charIndex && i < text.length; i++) {
+    if (text[i] === '\t') {
+      // タブの場合、次のタブストップまでの距離を加算
+      displayCol += tabWidth - (displayCol % tabWidth);
+    } else if (isWideCharacter(text[i])) {
+      // 全角文字は2列分
+      displayCol += 2;
+    } else {
+      // 半角文字は1列
+      displayCol += 1;
+    }
+  }
+  return displayCol;
+}
+
+/**
+ * 1行から単語を抽出する
+ *
+ * 改善された単語抽出アルゴリズムにより、kebab-case、snake_case、
+ * CamelCase、日本語文字種別分割などを適切に処理します。
+ * タブ文字を含む行でも正確な表示位置を計算します。
+ *
  * @param lineText - 解析する行のテキスト
- * @param lineNumber - 行番号
+ * @param lineNumber - 行番号（1ベース）
  * @param useImprovedDetection - 改善版検出を使用するか（デフォルト: false）
  * @param excludeJapanese - 日本語を除外するか（デフォルト: false）
- * @returns Word[] - 抽出された単語の配列
+ * @returns 抽出された単語の配列
  * @since 1.0.0
  * @example
  * ```typescript
@@ -501,11 +555,13 @@ export function extractWordsFromLine(
   for (const match of finalMatches) {
     // Calculate byte position for UTF-8 compatibility
     const byteIndex = charIndexToByteIndex(lineText, match.index);
+    // Calculate display column considering tab characters
+    const displayCol = getDisplayColumn(lineText, match.index);
 
     words.push({
       text: match.text,
       line: lineNumber,
-      col: match.index + 1, // Vimの列番号は1から始まる
+      col: displayCol + 1, // Vimの列番号は1から始まる（タブ展開後の表示位置）
       byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
     });
   }
@@ -767,11 +823,13 @@ export function extractWordsFromLineLegacy(
   for (const match of matches) {
     // Calculate byte position for UTF-8 compatibility
     const byteIndex = charIndexToByteIndex(lineText, match.index);
+    // Calculate display column considering tab characters
+    const displayCol = getDisplayColumn(lineText, match.index);
 
     words.push({
       text: match.text,
       line: lineNumber,
-      col: match.index + 1, // Vimの列番号は1から始まる
+      col: displayCol + 1, // Vimの列番号は1から始まる（タブ展開後の表示位置）
       byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
     });
   }

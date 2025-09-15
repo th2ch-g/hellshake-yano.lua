@@ -194,24 +194,26 @@ interface PerformanceMetrics {
 
 /**
  * デバッグ情報を格納するインターフェース
- * @property config - 現在の設定情報
- * @property hintsVisible - ヒントの表示状態
- * @property currentHints - 現在のヒントマッピング配列
- * @property metrics - パフォーマンス測定結果
- * @property timestamp - デバッグ情報取得時刻
  */
 interface DebugInfo {
+  /** 現在の設定情報 */
   config: Config;
+  /** ヒントの表示状態 */
   hintsVisible: boolean;
+  /** 現在のヒントマッピング配列 */
   currentHints: HintMapping[];
+  /** パフォーマンス測定結果 */
   metrics: PerformanceMetrics;
+  /** デバッグ情報取得時刻 */
   timestamp: number;
 }
 
 /**
- * @param operation - 操作名
- * @param startTime - 開始時刻
- * @param endTime - 終了時刻
+ * パフォーマンス測定結果を記録する
+ *
+ * @param operation - 測定対象の操作名
+ * @param startTime - 操作開始時刻（ミリ秒）
+ * @param endTime - 操作終了時刻（ミリ秒）
  */
 function recordPerformance(
   operation: keyof PerformanceMetrics,
@@ -235,7 +237,9 @@ function recordPerformance(
 }
 
 /**
- * @returns デバッグ情報オブジェクト
+ * 現在のデバッグ情報を収集する
+ *
+ * @returns 現在の設定、ヒント状態、パフォーマンス指標を含むデバッグ情報
  */
 function collectDebugInfo(): DebugInfo {
   return {
@@ -266,8 +270,9 @@ function clearDebugInfo(): void {
 
 /**
  * 後方互換性のあるフラグを正規化する
- * @param cfg - 設定オブジェクト
- * @returns 正規化された設定
+ *
+ * @param cfg - 正規化する設定オブジェクト
+ * @returns 後方互換性を保ちつつ正規化された設定
  */
 function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
   const normalized = { ...cfg };
@@ -281,9 +286,10 @@ function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config>
 }
 
 /**
- * メイン設定をマネージャー用設定に変換する
- * @param config - メイン設定
- * @returns マネージャー用設定
+ * メイン設定を単語検出マネージャー用設定に変換する
+ *
+ * @param config - 変換元のメイン設定
+ * @returns WordDetectionManagerが使用する形式の設定
  */
 function convertConfigForManager(config: Config): WordDetectionManagerConfig {
   return {
@@ -312,8 +318,9 @@ function convertConfigForManager(config: Config): WordDetectionManagerConfig {
 }
 
 /**
- * メインとマネージャーの設定を同期する
- * @param config - メイン設定
+ * メイン設定と単語検出マネージャーの設定を同期する
+ *
+ * @param config - 同期元のメイン設定
  */
 function syncManagerConfig(config: Config): void {
   try {
@@ -1502,6 +1509,9 @@ async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[]): P
 
 /**
  * ヒントを非表示にする（エラーハンドリング強化版）
+ *
+ * @param denops - Denopsインスタンス
+ * @throws Vim/Neovim APIエラーが発生した場合（ただし内部でキャッチして継続）
  */
 async function hideHints(denops: Denops): Promise<void> {
   if (!hintsVisible) {
@@ -1660,7 +1670,19 @@ async function highlightCandidateHints(
 }
 
 /**
- * ユーザー入力を待機してジャンプ（エラーハンドリング強化版）
+ * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする
+ *
+ * ユーザーが入力したヒント文字列に対応する位置にカーソルを移動します。
+ * 複数文字のヒントにも対応し、タイムアウト機能を備えています。
+ *
+ * @param denops - Denopsインスタンス
+ * @throws ユーザーがESCでキャンセルした場合
+ * @example
+ * ```typescript
+ * // ヒント表示後に呼び出し
+ * await waitForUserInput(denops);
+ * // ユーザーが "A" を入力すると、ヒント "A" の位置にジャンプ
+ * ```
  */
 async function waitForUserInput(denops: Denops): Promise<void> {
   let timeoutId: number | undefined;
