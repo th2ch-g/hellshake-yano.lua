@@ -77,9 +77,14 @@ let g:hellshake_yano = {
 | `use_hint_groups`               | boolean     | v:true          | Enable hint groups feature                              |
 | `use_numbers`                   | boolean     | v:true          | Allow number keys for hints                             |
 | `max_single_char_hints`         | number      | -               | Optional: limit single-character hints                  |
-| `use_japanese`                  | boolean     | -               | Enable Japanese word detection                          |
+| `use_japanese`                  | boolean     | v:true          | Enable Japanese word detection                          |
 | `highlight_hint_marker`         | string/dict | 'DiffAdd'       | Highlight for hint markers                              |
 | `highlight_hint_marker_current` | string/dict | 'DiffText'      | Highlight for current hint marker                       |
+| `suppress_on_key_repeat`        | boolean     | v:true          | Suppress hints during rapid key repeat                  |
+| `key_repeat_threshold`          | number      | 50              | Key repeat detection threshold (ms)                     |
+| `key_repeat_reset_delay`        | number      | 300             | Delay before reset after key repeat (ms)                |
+| `debug_mode`                    | boolean     | v:false         | Enable debug mode                                       |
+| `performance_log`               | boolean     | v:false         | Enable performance logging                              |
 
 ### Key Repeat Suppression
 
@@ -90,6 +95,29 @@ During rapid hjkl key repetition, hint display is temporarily suppressed to keep
 - Reset delay: `g:hellshake_yano.key_repeat_reset_delay` in ms (default: `300`)
 
 See the example configuration below for quick copies.
+
+### Debug Mode
+
+The plugin includes a comprehensive debug mode for troubleshooting and performance analysis:
+
+- Enable/disable: `g:hellshake_yano.debug_mode` (default: `v:false`)
+- Show debug info: `:HellshakeDebug` or `:HellshakeShowDebug`
+
+Debug mode displays:
+- Current plugin configuration
+- Motion count and timing information
+- Key repeat detection state
+- Buffer-specific state
+- Performance metrics (when performance_log is enabled)
+
+### Performance Logging
+
+Track plugin performance with built-in performance logging:
+
+- Enable/disable: `g:hellshake_yano.performance_log` (default: `v:false`)
+- Records execution time for key operations
+- Helps identify performance bottlenecks
+- Viewable through debug mode when enabled
 
 ### Hint Groups Configuration
 
@@ -184,9 +212,21 @@ in Japanese text just as you would in English.
 
 ### Commands
 
+#### Basic Commands
 - `:HellshakeEnable` - Enable the plugin
 - `:HellshakeDisable` - Disable the plugin
 - `:HellshakeToggle` - Toggle plugin on/off
+- `:HellshakeShow` - Show hints immediately
+- `:HellshakeHide` - Hide visible hints
+
+#### Configuration Commands
+- `:HellshakeSetCount <number>` - Set motion count threshold
+- `:HellshakeSetTimeout <ms>` - Set motion timeout in milliseconds
+- `:HellshakeSetCountedMotions <keys>` - Set custom motion keys to track
+
+#### Debug Commands
+- `:HellshakeDebug` - Show comprehensive debug information
+- `:HellshakeShowDebug` - Alias for `:HellshakeDebug`
 
 ## Technical Details
 
@@ -210,6 +250,60 @@ The plugin intelligently detects word boundaries in Japanese text using:
    - Improved: Enhanced rules for common patterns
    - Precise: Advanced detection for complex cases
 
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Hints not appearing
+1. Check if the plugin is enabled: `:echo g:hellshake_yano.enabled`
+2. Verify motion count setting: `:echo g:hellshake_yano.motion_count`
+3. Ensure denops is properly installed and running
+4. Use `:HellshakeDebug` to check current state
+
+#### Hints appear during scrolling
+- Adjust key repeat suppression settings:
+  ```vim
+  let g:hellshake_yano.suppress_on_key_repeat = v:true
+  let g:hellshake_yano.key_repeat_threshold = 30  " More aggressive suppression
+  ```
+
+#### Performance issues
+1. Enable performance logging to identify bottlenecks:
+   ```vim
+   let g:hellshake_yano.performance_log = v:true
+   ```
+2. Run `:HellshakeDebug` to view performance metrics
+3. Consider reducing the number of hint markers
+4. Disable Japanese word detection if not needed:
+   ```vim
+   let g:hellshake_yano.use_japanese = v:false
+   ```
+
+#### Incorrect word detection in Japanese text
+1. Ensure UTF-8 encoding: `:set encoding?` should show `utf-8`
+2. Check file encoding: `:set fileencoding?`
+3. Verify Japanese detection is enabled: `:echo g:hellshake_yano.use_japanese`
+
+#### Highlight not visible
+1. Check your colorscheme compatibility
+2. Try using different highlight groups:
+   ```vim
+   let g:hellshake_yano.highlight_hint_marker = 'Search'
+   let g:hellshake_yano.highlight_hint_marker_current = 'IncSearch'
+   ```
+3. Use custom colors:
+   ```vim
+   let g:hellshake_yano.highlight_hint_marker = {'fg': '#00ff00', 'bg': '#000000'}
+   ```
+
+### Debug Information
+
+When reporting issues, please include the output of:
+1. `:HellshakeDebug` - Full debug information
+2. `:echo g:hellshake_yano` - Current configuration
+3. `:version` - Neovim version
+4. Your minimal configuration that reproduces the issue
+
 ## Development
 
 ### Build
@@ -219,7 +313,13 @@ The plugin intelligently detects word boundaries in Japanese text using:
 deno task build
 
 # Run tests
-deno test
+deno test -A
+
+# Run specific test file
+deno test -A tests/refactor_test.ts
+
+# Run with trace for debugging
+deno test -A --trace-leaks
 ```
 
 ### Directory Structure
@@ -227,15 +327,22 @@ deno test
 ```
 hellshake-yano.vim/
 ├── autoload/
-│   └── hellshake/
-│       └── yano.vim      # Vim-side interface
+│   └── hellshake-yano.vim # VimScript interface
 ├── denops/
 │   └── hellshake-yano/
-│       ├── main.ts       # Main entry point
-│       ├── detector.ts   # Word detection logic
-│       └── utils.ts      # Utility functions
+│       ├── main.ts         # Main entry point
+│       ├── word/
+│       │   ├── detector.ts # Word detection logic
+│       │   └── manager.ts  # Word manager
+│       └── utils/
+│           └── encoding.ts # UTF-8 encoding utilities
 ├── plugin/
 │   └── hellshake-yano.vim # Plugin initialization
+├── tests/                  # Comprehensive test suite
+│   ├── refactor_test.ts   # VimScript refactoring tests
+│   └── helpers/
+│       └── mock.ts        # Test utilities
+├── PLAN.md                # Development plan
 └── README.md
 ```
 
