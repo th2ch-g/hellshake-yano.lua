@@ -1,7 +1,7 @@
 import type { Word } from "./word.ts";
 
 /**
- * Process 50 Sub3: ヒント表示位置の型定義
+ * ヒント表示位置の型定義
  * @description ヒントの表示位置とモードを定義するインターフェース
  * @since 1.0.0
  */
@@ -352,7 +352,7 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
 }
 
 /**
- * Process 50 Sub3: ヒント表示位置を計算する
+ * ヒント表示位置を計算する
  * @description 単語とヒント位置設定に基づいてヒントの表示位置を計算
  * @param word - 対象の単語
  * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
@@ -481,7 +481,7 @@ export function calculateHintPositionWithCoordinateSystem(
 }
 
 /**
- * Process 50 Sub2: ヒントキー設定インターフェース
+ * ヒントキー設定インターフェース
  * @description 1文字ヒントと2文字以上ヒントで使用するキーを個別に設定するためのインターフェース
  * @since 1.0.0
  */

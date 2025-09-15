@@ -43,14 +43,11 @@ export interface Config {
   use_numbers: boolean; // 数字(0-9)をヒント文字として使用
   highlight_selected: boolean; // 選択中のヒントをハイライト（UX改善）
   debug_coordinates: boolean; // 座標系デバッグログの有効/無効
-  // Process 50 Sub2: 1文字/2文字ヒント割り当て設定
   single_char_keys?: string[]; // 1文字ヒント専用キー
   multi_char_keys?: string[]; // 2文字以上ヒント専用キー
   max_single_char_hints?: number; // 1文字ヒントの最大数
   use_hint_groups?: boolean; // ヒントグループ機能を使用するか
-  // Process 50 Sub3: 日本語除外機能
   use_japanese?: boolean; // 日本語を含む単語検出を行うか（デフォルト: false）
-  // Process 50 Sub7: 単語検出アブストラクション設定
   word_detection_strategy?: "regex" | "tinysegmenter" | "hybrid"; // 単語検出アルゴリズム（デフォルト: "hybrid"）
   enable_tinysegmenter?: boolean; // TinySegmenterを有効にするか（デフォルト: true）
   segmenter_threshold?: number; // TinySegmenterを使用する最小文字数（デフォルト: 4）
@@ -58,14 +55,11 @@ export interface Config {
   japanese_min_word_length?: number; // 日本語の最小単語長（デフォルト: 2）
   japanese_merge_particles?: boolean; // 助詞や接続詞を前の単語と結合（デフォルト: true）
   japanese_merge_threshold?: number; // 結合する最大文字数（デフォルト: 2）
-  // Process 50 Sub5: ハイライト色設定（fg/bg個別指定対応）
   highlight_hint_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
   highlight_hint_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
-  // Process2: キーリピート検出設定
   suppress_on_key_repeat?: boolean; // キーリピート時のヒント表示抑制（デフォルト: true）
   key_repeat_threshold?: number; // リピート判定の閾値（ミリ秒、デフォルト: 50）
   key_repeat_reset_delay?: number; // リピート終了判定の遅延（ミリ秒、デフォルト: 300）
-  // Process 50 Sub2: デバッグモード機能
   debug_mode?: boolean; // デバッグモードの有効/無効（デフォルト: false）
   performance_log?: boolean; // パフォーマンスログの有効/無効（デフォルト: false）
 }
@@ -85,7 +79,6 @@ let config: Config = {
   use_numbers: true, // デフォルトで数字を使用可能
   highlight_selected: true, // デフォルトで選択中ヒントをハイライト
   debug_coordinates: false, // デフォルトでデバッグログは無効
-  // Process 50 Sub3: デフォルトのキー分離設定
   single_char_keys: [
     "A",
     "S",
@@ -113,17 +106,14 @@ let config: Config = {
   // max_single_char_hints: undefined, // デフォルトは制限なし（single_char_keysの長さ）
   use_hint_groups: true, // デフォルトで有効
   // use_japanese: デフォルト値を設定しない（ユーザー設定を優先）
-  // Process 50 Sub7: 単語検出アブストラクションのデフォルト設定
   word_detection_strategy: "hybrid" as const, // ハイブリッド方式をデフォルトに
   enable_tinysegmenter: true, // TinySegmenterを有効に
   segmenter_threshold: 4, // 4文字以上でセグメンテーション
   japanese_min_word_length: 2, // 2文字以上の単語のみヒント表示
   japanese_merge_particles: true, // 助詞を前の単語と結合
   japanese_merge_threshold: 2, // 2文字以下の単語を結合対象とする
-  // Process 50 Sub5: ハイライト色設定のデフォルト値
   highlight_hint_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
   highlight_hint_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
-  // Process 50 Sub2: デバッグモード機能のデフォルト値
   debug_mode: false, // デバッグモード無効
   performance_log: false, // パフォーマンスログ無効
 };
@@ -459,7 +449,6 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // Process 50 Sub2: ヒントグループ設定の適用
       // single_char_keys の検証と適用
       if (cfg.single_char_keys && Array.isArray(cfg.single_char_keys)) {
         const validKeys = cfg.single_char_keys.filter((k): k is string =>
@@ -498,14 +487,10 @@ export async function main(denops: Denops): Promise<void> {
         config.use_hint_groups = cfg.use_hint_groups;
       }
 
-      // Process 50 Sub3: use_japanese の適用
       if (typeof cfg.use_japanese === "boolean") {
         config.use_japanese = cfg.use_japanese;
       }
 
-      // Process 50 Sub6: use_improved_detection は統合済み（常に有効）
-
-      // Process 50 Sub7: 単語検出アブストラクション設定
       if (typeof cfg.word_detection_strategy === "string") {
         const validStrategies = ["regex", "tinysegmenter", "hybrid"];
         if (validStrategies.includes(cfg.word_detection_strategy)) {
@@ -532,7 +517,6 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // Process 50 Sub5: highlight_hint_marker の検証と適用（fg/bg対応）
       if (cfg.highlight_hint_marker !== undefined) {
         const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
         if (markerResult.valid) {
@@ -545,7 +529,6 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // Process 50 Sub5: highlight_hint_marker_current の検証と適用（fg/bg対応）
       if (cfg.highlight_hint_marker_current !== undefined) {
         const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
         if (currentResult.valid) {
@@ -558,7 +541,6 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // Process 50 Sub2: デバッグモード機能の設定適用
       if (typeof cfg.debug_mode === "boolean") {
         config.debug_mode = cfg.debug_mode;
       }
@@ -598,7 +580,7 @@ export async function main(denops: Denops): Promise<void> {
      * 内部的なヒント表示処理（最適化版）
      */
     async showHintsInternal(): Promise<void> {
-      const startTime = performance.now(); // Process 50 Sub2: パフォーマンス計測開始
+      const startTime = performance.now();
       lastShowHintsTime = Date.now();
 
       // デバウンスタイムアウトをクリア
@@ -693,7 +675,6 @@ export async function main(denops: Denops): Promise<void> {
           await displayHintsOptimized(denops, currentHints);
           hintsVisible = true;
 
-          // Process 50 Sub2: パフォーマンス計測終了
           const endTime = performance.now();
           recordPerformance("showHints", startTime, endTime);
 
@@ -730,8 +711,7 @@ export async function main(denops: Denops): Promise<void> {
      * ヒントを非表示
      */
     async hideHints(): Promise<void> {
-      const startTime = performance.now(); // Process 50 Sub2: パフォーマンス計測開始
-
+      const startTime = performance.now();
       // デバウンスタイムアウトをクリア
       if (debounceTimeoutId) {
         clearTimeout(debounceTimeoutId);
@@ -739,7 +719,6 @@ export async function main(denops: Denops): Promise<void> {
       }
       await hideHints(denops);
 
-      // Process 50 Sub2: パフォーマンス計測終了
       const endTime = performance.now();
       recordPerformance("hideHints", startTime, endTime);
     },
@@ -1070,7 +1049,6 @@ export async function main(denops: Denops): Promise<void> {
  */
 async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[]> {
   try {
-    // Process 50 Sub7: 新しい単語検出マネージャーを使用
     const enhancedConfig: EnhancedWordConfig = {
       strategy: config.word_detection_strategy,
       use_japanese: config.use_japanese,
@@ -1107,7 +1085,6 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
  * キャッシュを使用した最適化済みヒント生成
  */
 function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
-  // Process 50 Sub2: ヒントグループ機能を使用する場合
   if (config.use_hint_groups && (config.single_char_keys || config.multi_char_keys)) {
     const hintConfig: HintKeyConfig = {
       single_char_keys: config.single_char_keys,
@@ -1201,7 +1178,6 @@ async function displayHintsWithExtmarksBatch(
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用
           const position = calculateHintPositionWithCoordinateSystem(
             word,
             config.hint_position,
@@ -1290,7 +1266,6 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
       // バッチ内の各matchを作成
       const matchPromises = batch.map(async ({ word, hint }) => {
         try {
-          // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用してパターンを生成
           const position = calculateHintPositionWithCoordinateSystem(
             word,
             config.hint_position,
@@ -1372,7 +1347,6 @@ async function displayHints(denops: Denops, hints: HintMapping[]): Promise<void>
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用
           const position = calculateHintPositionWithCoordinateSystem(
             word,
             config.hint_position,
@@ -1461,7 +1435,6 @@ async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[]): P
   try {
     for (const { word, hint } of hints) {
       try {
-        // Process 50 Sub3: 座標系対応の新しい位置計算関数を使用してパターンを生成
         const position = calculateHintPositionWithCoordinateSystem(
           word,
           config.hint_position,
@@ -1591,7 +1564,6 @@ async function highlightCandidateHints(
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
       for (const candidate of candidates) {
         try {
-          // Process 50 Sub5: 座標系対応の新しい位置計算関数を使用してカスタム色を適用
           const position = calculateHintPositionWithCoordinateSystem(
             candidate.word,
             config.hint_position,
@@ -1624,7 +1596,6 @@ async function highlightCandidateHints(
       // Vimの場合はmatchadd()でハイライト（フォールバック）
       for (const candidate of candidates) {
         try {
-          // Process 50 Sub5: 座標系対応の新しい位置計算関数を使用してパターンを生成
           const position = calculateHintPositionWithCoordinateSystem(
             candidate.word,
             config.hint_position,
@@ -1780,7 +1751,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
     const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
 
-    // Process 50 Sub3: 1文字/2文字キーの完全分離
     if (config.use_hint_groups) {
       // デフォルトのキー設定
       const singleOnlyKeys = config.single_char_keys ||
@@ -1856,7 +1826,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     let secondChar: number;
 
-    // Process 50 Sub3: 2文字専用キーの場合はタイムアウトなし
     if (config.use_hint_groups) {
       const multiOnlyKeys = config.multi_char_keys ||
         ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
@@ -2113,16 +2082,12 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     }
   }
 
-  // Process 50 Sub3: use_japanese の検証
   if (cfg.use_japanese !== undefined) {
     if (typeof cfg.use_japanese !== "boolean") {
       errors.push("use_japanese must be a boolean");
     }
   }
 
-  // Process 50 Sub6: use_improved_detection は統合済み（検証不要）
-
-  // Process 50 Sub5: highlight_hint_marker の検証（fg/bg対応）
   if (cfg.highlight_hint_marker !== undefined) {
     // null チェック
     if (cfg.highlight_hint_marker === null) {
@@ -2135,7 +2100,6 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     }
   }
 
-  // Process 50 Sub5: highlight_hint_marker_current の検証（fg/bg対応）
   if (cfg.highlight_hint_marker_current !== undefined) {
     // null チェック
     if (cfg.highlight_hint_marker_current === null) {
@@ -2175,7 +2139,6 @@ export function getDefaultConfig(): Config {
     use_numbers: false,
     highlight_selected: false,
     debug_coordinates: false, // デフォルトでデバッグログは無効
-    // Process 50 Sub5: ハイライト色設定のデフォルト値
     highlight_hint_marker: "DiffAdd",
     highlight_hint_marker_current: "DiffText",
   };

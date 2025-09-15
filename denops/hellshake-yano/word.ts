@@ -4,7 +4,7 @@ import type { WordDetectionResult } from "./word/detector.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
 
 /**
- * Process 50 Sub3: 日本語除外機能の設定インターフェース（後方互換性のため保持）
+ * 日本語除外機能の設定インターフェース（後方互換性のため保持）
  * @description 単語検出時の日本語サポート設定
  * @since 1.0.0
  * @deprecated 新しいEnhancedWordConfigを使用してください
@@ -17,7 +17,7 @@ export interface WordConfig {
 }
 
 /**
- * Process 50 Sub7: 新しい単語検出設定インターフェース（WordDetectionManagerConfig のエイリアス）
+ * 新しい単語検出設定インターフェース（WordDetectionManagerConfig のエイリアス）
  * @description 高機能単語検出マネージャー用の設定インターフェース
  * @since 1.0.0
  */
@@ -61,11 +61,19 @@ const wordDetectionCache = new Map<string, Word[]>();
  * console.log(`Found ${words.length} words`);
  * ```
  */
-export function detectWords(text: string, startLine: number, excludeJapanese: boolean): Promise<Word[]>;
+export function detectWords(
+  text: string,
+  startLine: number,
+  excludeJapanese: boolean,
+): Promise<Word[]>;
 export function detectWords(denops: Denops): Promise<Word[]>;
-export async function detectWords(arg1: Denops | string, arg2?: number, arg3?: boolean): Promise<Word[]> {
+export async function detectWords(
+  arg1: Denops | string,
+  arg2?: number,
+  arg3?: boolean,
+): Promise<Word[]> {
   // Overload: string-based API for tests
-  if (typeof arg1 === 'string') {
+  if (typeof arg1 === "string") {
     const text = arg1 as string;
     const startLine = (arg2 ?? 1) as number;
     const excludeJapanese = (arg3 ?? false) as boolean;
@@ -108,7 +116,7 @@ export async function detectWords(arg1: Denops | string, arg2?: number, arg3?: b
     });
     const filteredLineWords = lineWords.filter((w, idx) => {
       for (const entry of Object.values(byText)) {
-        if (entry.count === 2 && entry.indices.includes(idx) && w.text !== 'test') {
+        if (entry.count === 2 && entry.indices.includes(idx) && w.text !== "test") {
           // keep only the first of the two
           return idx === entry.indices[0];
         }
@@ -123,7 +131,6 @@ export async function detectWords(arg1: Denops | string, arg2?: number, arg3?: b
 }
 
 /**
- * Process 50 Sub7: 新しい単語検出マネージャーを使用した高機能版検出
  * @description 高機能単語検出マネージャーを使用して単語を検出。TinySegmenterやハイブリッドモードをサポート
  * @param denops - Denopsインスタンス
  * @param config - 高機能単語検出設定（省略時はデフォルト設定）
@@ -172,7 +179,6 @@ export async function detectWordsWithManager(
 }
 
 /**
- * Process 50 Sub3: 設定に基づいて画面内の単語を検出する（統合版）
  * @deprecated Use detectWordsWithEnhancedConfig instead for better performance and features
  * @description 設定に基づいて単語検出を行う中級レベルの関数。日本語サポートと改善版検出を含む
  * @param denops - Denopsインスタンス
@@ -349,7 +355,7 @@ function splitJapaneseTextImproved(
 }
 
 /**
- * 1行から単語を抽出（改善版 - Process50 Sub6対応）
+ * 1行から単語を抽出
  * @description 改善された単語抽出アルゴリズム。kebab-case、snake_case、日本語文字種別分割などをサポート
  * @param lineText - 解析する行のテキスト
  * @param lineNumber - 行番号
@@ -508,7 +514,7 @@ export function extractWordsFromLine(
 }
 
 /**
- * Process 50 Sub3: 設定に基づいて1行から単語を抽出（統合版）
+ * 設定に基づいて1行から単語を抽出（統合版）
  * @deprecated Use WordDetectionManager.detectWords instead for better performance and features
  * @description 設定オブジェクトに基づいて単語抽出を行うラッパー関数
  * @param lineText - 解析する行のテキスト
@@ -688,7 +694,7 @@ export function extractWordsFromLineWithEnhancedConfig(
 }
 
 /**
- * Process2: レガシー互換性アダプター関数
+ * レガシー互換性アダプター関数
  * @description extractWordsFromLineOriginalと100%互換性のある結果を返すアダプター関数。
  * 将来的には新しい実装をベースとした最適化版に切り替え可能な設計。
  *
@@ -730,8 +736,6 @@ export function extractWordsFromLineLegacy(
   lineNumber: number,
   excludeJapanese = false,
 ): Word[] {
-  // TDD Process5: extractWordsFromLineOriginal統合実装
-  // 元のextractWordsFromLineOriginalのロジックを直接統合
   const words: Word[] = [];
 
   // 空行や短すぎる行はスキップ
