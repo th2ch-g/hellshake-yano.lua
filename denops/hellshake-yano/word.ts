@@ -75,7 +75,7 @@ export async function detectWords(arg1: Denops | string, arg2?: number, arg3?: b
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
       const lineNumber = startLine + i;
-      const lineWords = extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
+      const lineWords = extractWordsFromLineLegacy(lineText, lineNumber, excludeJapanese);
       words.push(...lineWords);
     }
     return words;
@@ -227,7 +227,7 @@ async function detectWordsStandard(
   // 各行から単語を検出
   for (let line = topLine; line <= bottomLine; line++) {
     const lineText = await denops.call("getline", line) as string;
-    const lineWords = extractWordsFromLineLegacy(lineText, line);
+    const lineWords = extractWordsFromLineLegacy(lineText, line, false);
     words.push(...lineWords);
   }
 
@@ -262,7 +262,7 @@ async function detectWordsOptimizedForLargeFiles(
       // 各行から単語を抽出
       lines.forEach((lineText, index) => {
         const actualLine = startLine + index;
-        const lineWords = extractWordsFromLineLegacy(lineText, actualLine);
+        const lineWords = extractWordsFromLineLegacy(lineText, actualLine, false);
         words.push(...lineWords);
       });
 
@@ -371,7 +371,7 @@ export function extractWordsFromLine(
 ): Word[] {
   // 既存テストとの互換性を保つためデフォルトはレガシー版を使用
   if (!useImprovedDetection) {
-    return extractWordsFromLineLegacy(lineText, lineNumber);
+    return extractWordsFromLineLegacy(lineText, lineNumber, false);
   }
   const words: Word[] = [];
 
@@ -455,7 +455,8 @@ export function extractWordsFromLine(
       existing.index + existing.text.length >= numberMatch!.index + numberMatch![0].length
     );
 
-    if (!isAlreadyMatched && numberMatch[0].length >= 1) {
+    // 数字のみ除外ポリシー: 2文字未満、数字のみは除外
+    if (!isAlreadyMatched && numberMatch[0].length >= 2) {
       splitMatches.push({ text: numberMatch[0], index: numberMatch.index });
     }
   }
@@ -475,20 +476,7 @@ export function extractWordsFromLine(
     }
   }
 
-  // 5. 1文字の数字を別途検出（"1", "2", "8"など）
-  const singleDigitRegex = /\b\d\b/g;
-  let digitMatch: RegExpExecArray | null;
-  while ((digitMatch = singleDigitRegex.exec(lineText)) !== null) {
-    // 既存のマッチと重複していないかチェック
-    const isAlreadyMatched = splitMatches.some((existing) =>
-      existing.index <= digitMatch!.index &&
-      existing.index + existing.text.length >= digitMatch!.index + digitMatch![0].length
-    );
-
-    if (!isAlreadyMatched) {
-      splitMatches.push({ text: digitMatch[0], index: digitMatch.index });
-    }
-  }
+  // 5. 1文字の数字を別途検出は除外（数字のみ除外ポリシーに従い、2文字未満は除外）
 
   // 6. インデックスでソートして重複除去
   const uniqueMatches = splitMatches
@@ -500,8 +488,8 @@ export function extractWordsFromLine(
       return !(prev.index === match.index && prev.text === match.text);
     });
 
-  // 7. パフォーマンス保護：1行あたり200個まで
-  const finalMatches = uniqueMatches.slice(0, 200);
+  // 7. パフォーマンス保護：1行あたり100個まで
+  const finalMatches = uniqueMatches.slice(0, 100);
 
   // 8. Wordオブジェクトに変換
   for (const match of finalMatches) {
@@ -579,7 +567,7 @@ export async function detectWordsInRange(
       }
 
       const lineText = await denops.call("getline", line) as string;
-      const lineWords = extractWordsFromLineLegacy(lineText, line);
+      const lineWords = extractWordsFromLineLegacy(lineText, line, false);
 
       // 単語数制限を適用
       const remainingSlots = effectiveMaxWords - words.length;
@@ -740,6 +728,7 @@ export function extractWordsFromLineWithEnhancedConfig(
 export function extractWordsFromLineLegacy(
   lineText: string,
   lineNumber: number,
+  excludeJapanese = false,
 ): Word[] {
   // TDD Process5: extractWordsFromLineOriginal統合実装
   // 元のextractWordsFromLineOriginalのロジックを直接統合
@@ -750,8 +739,10 @@ export function extractWordsFromLineLegacy(
     return words;
   }
 
-  // 最適化された正規表現（ユニコード対応）
-  const wordRegex = /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g;
+  // 最適化された正規表現（ユニコード対応）- excludeJapanese設定に基づいて選択
+  const wordRegex = excludeJapanese
+    ? /[a-zA-Z0-9_]+/g // 日本語を除外（英数字とアンダースコアのみ）
+    : /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g; // 日本語を含む
   let match: RegExpExecArray | null;
 
   // パフォーマンスを向上させるためにマッチをバッチ処理
