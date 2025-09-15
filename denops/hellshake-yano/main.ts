@@ -134,9 +134,22 @@ let hintsVisible = false;
 let extmarkNamespace: number | undefined;
 let fallbackMatchIds: number[] = []; // matchadd()のフォールバック用ID
 
-// パフォーマンス最適化用の状態管理
+/**
+ * デバウンス用のタイムアウトID
+ * @type {number | undefined}
+ */
 let debounceTimeoutId: number | undefined;
+
+/**
+ * 最後にヒントを表示した時刻（ミリ秒）
+ * @type {number}
+ */
 let lastShowHintsTime = 0;
+
+/**
+ * 単語検出結果のキャッシュ
+ * @type {{ bufnr: number; topLine: number; bottomLine: number; content: string; words: any[] } | null}
+ */
 let wordsCache: {
   bufnr: number;
   topLine: number;
@@ -144,6 +157,11 @@ let wordsCache: {
   content: string;
   words: any[];
 } | null = null;
+
+/**
+ * ヒント生成結果のキャッシュ
+ * @type {{ wordCount: number; hints: string[] } | null}
+ */
 let hintsCache: { wordCount: number; hints: string[] } | null = null;
 
 /**
@@ -235,7 +253,7 @@ function collectDebugInfo(): DebugInfo {
 }
 
 /**
- * Process 50 Sub2: デバッグ情報のクリア
+ * デバッグ情報のクリア
  */
 function clearDebugInfo(): void {
   performanceMetrics = {
@@ -1010,21 +1028,21 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * Process 50 Sub2: デバッグ情報を取得
+     * デバッグ情報を取得
      */
     getDebugInfo(): DebugInfo {
       return collectDebugInfo();
     },
 
     /**
-     * Process 50 Sub2: パフォーマンス情報をクリア
+     * パフォーマンス情報をクリア
      */
     clearPerformanceLog(): void {
       clearDebugInfo();
     },
 
     /**
-     * Process 50 Sub2: デバッグモードのトグル
+     * デバッグモードのトグル
      */
     toggleDebugMode(): boolean {
       config.debug_mode = !config.debug_mode;
@@ -1032,7 +1050,7 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * Process 50 Sub2: パフォーマンスログのトグル
+     * パフォーマンスログのトグル
      */
     togglePerformanceLog(): boolean {
       config.performance_log = !config.performance_log;
@@ -1046,6 +1064,9 @@ export async function main(denops: Denops): Promise<void> {
 
 /**
  * キャッシュを使用した最適化済み単語検出
+ * @param denops - Denopsインスタンス
+ * @param bufnr - バッファ番号
+ * @returns 検出された単語の配列
  */
 async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[]> {
   try {
@@ -1083,6 +1104,9 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
 
 /**
  * キャッシュを使用した最適化済みヒント生成
+ * @param wordCount - 単語の数
+ * @param markers - ヒントマーカーの文字配列
+ * @returns 生成されたヒント文字列の配列
  */
 function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
   if (config.use_hint_groups && (config.single_char_keys || config.multi_char_keys)) {

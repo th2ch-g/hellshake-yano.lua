@@ -6,10 +6,15 @@
 let s:save_cpo = &cpo
 set cpo&vim
 
+"=============================================================================
+" ユーティリティ関数群
+" エラー処理、検証、共通処理を担当
+"=============================================================================
+
 " エラーメッセージを統一形式で表示する関数
 " @param message エラーメッセージ (string)
 " または context, exception (2つの引数の場合は自動でフォーマット)
-function! s:show_error(...) abort
+function! hellshake_yano#show_error(...) abort
   if a:0 == 1
     let message = a:1
   elseif a:0 == 2
@@ -22,6 +27,11 @@ function! s:show_error(...) abort
   echomsg message
   echohl None
 endfunction
+
+"=============================================================================
+" 状態管理関数群
+" バッファ状態、カウント管理、タイマー管理を担当
+"=============================================================================
 
 " スクリプトローカル変数
 let s:motion_count = {}  " バッファごとの移動カウント
@@ -73,13 +83,13 @@ endfunction
 
 " ヒント表示の必要性を判定
 function! s:should_trigger_hints(bufnr) abort
-  return !get(s:is_key_repeating, a:bufnr, v:false) && s:motion_count[a:bufnr] >= g:hellshake_yano.motion_count
+  return !get(s:is_key_repeating, a:bufnr, v:false) && s:motion_count[a:bufnr] >= get(g:hellshake_yano, 'motion_count', 3)
 endfunction
 
 " モーションタイムアウトタイマーを設定
 function! s:set_motion_timeout(bufnr) abort
   let s:timer_id[a:bufnr] = timer_start(
-        \ g:hellshake_yano.motion_timeout,
+        \ get(g:hellshake_yano, 'motion_timeout', 2000),
         \ {-> s:reset_count(a:bufnr)})
 endfunction
 
@@ -119,7 +129,7 @@ function! hellshake_yano#motion(key) abort
     call s:reset_count(bufnr)
     call s:trigger_hints()
     call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': g:hellshake_yano.motion_count })
+          \ 'key': a:key, 'count': get(g:hellshake_yano, 'motion_count', 3) })
   else
     call s:set_motion_timeout(bufnr)
     call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
@@ -182,7 +192,7 @@ function! s:notify_denops_config() abort
     try
       call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
     catch
-      call s:show_error('[hellshake-yano] Error: Failed to update denops config: ' . v:exception)
+      call hellshake_yano#show_error('[hellshake-yano] Error: Failed to update denops config: ' . v:exception)
     endtry
   endif
 endfunction
@@ -197,7 +207,7 @@ function! s:call_denops_function(function_name, args, context) abort
     call denops#notify('hellshake-yano', a:function_name, a:args)
     return v:true
   catch
-    call s:show_error(printf('[hellshake-yano] Error: %s failed: %s', a:context, v:exception))
+    call hellshake_yano#show_error(printf('[hellshake-yano] Error: %s failed: %s', a:context, v:exception))
     return v:false
   endtry
 endfunction
@@ -238,6 +248,11 @@ function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
   return v:false
 endfunction
 
+"=============================================================================
+" UI関数群
+" ハイライト、表示、ヒント表示を担当
+"=============================================================================
+
 " 全バッファのカウントをリセット
 function! hellshake_yano#reset_count() abort
   for bufnr in keys(s:motion_count)
@@ -245,11 +260,16 @@ function! hellshake_yano#reset_count() abort
   endfor
 endfunction
 
+"=============================================================================
+" 設定関数群
+" 初期化、更新、設定変更を担当
+"=============================================================================
+
 " マッピング対象キーを取得
 function! s:get_motion_keys() abort
   if has_key(g:hellshake_yano, 'counted_motions') && !empty(g:hellshake_yano.counted_motions)
     return g:hellshake_yano.counted_motions
-  elseif g:hellshake_yano.trigger_on_hjkl
+  elseif get(g:hellshake_yano, 'trigger_on_hjkl', v:true)
     return ['h', 'j', 'k', 'l']
   else
     return []
@@ -257,14 +277,14 @@ function! s:get_motion_keys() abort
 endfunction
 
 " モーションキーマッピングを設定
-function! s:setup_motion_mappings() abort
+function! hellshake_yano#setup_motion_mappings() abort
   let keys = s:get_motion_keys()
   for key in keys
     " キーが有効かチェック（1文字の英数字記号のみ）
     if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
       execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
     else
-      call s:show_error('[hellshake-yano] Error: Invalid key in motion keys: ' . string(key))
+      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid key in motion keys: ' . string(key))
     endif
   endfor
 endfunction
@@ -301,7 +321,7 @@ function! hellshake_yano#enable() abort
   let g:hellshake_yano.enabled = v:true
 
   " マッピングを再設定
-  call s:setup_motion_mappings()
+  call hellshake_yano#setup_motion_mappings()
 
   echo '[hellshake-yano] Enabled'
 endfunction
@@ -344,7 +364,7 @@ function! hellshake_yano#set_count(count) abort
 
     echo printf('[hellshake-yano] Motion count set to %d', a:count)
   else
-    call s:show_error('[hellshake-yano] Error: Count must be greater than 0')
+    call hellshake_yano#show_error('[hellshake-yano] Error: Count must be greater than 0')
   endif
 endfunction
 
@@ -359,7 +379,7 @@ function! hellshake_yano#set_timeout(timeout) abort
 
     echo printf('[hellshake-yano] Timeout set to %dms', a:timeout)
   else
-    call s:show_error('[hellshake-yano] Error: Timeout must be greater than 0')
+    call hellshake_yano#show_error('[hellshake-yano] Error: Timeout must be greater than 0')
   endif
 endfunction
 
@@ -401,9 +421,14 @@ function! hellshake_yano#update_highlight(marker_group, current_group) abort
 
     echo printf('[hellshake-yano] Highlight updated: marker=%s, current=%s', a:marker_group, a:current_group)
   catch
-    call s:show_error('[hellshake-yano] Error: Failed to update highlight: ' . v:exception)
+    call hellshake_yano#show_error('[hellshake-yano] Error: Failed to update highlight: ' . v:exception)
   endtry
 endfunction
+
+"=============================================================================
+" テスト・デバッグ関数群
+" デバッグ表示、パフォーマンス計測を担当
+"=============================================================================
 
 " デバッグ情報を取得（詳細版）
 function! s:get_debug_info() abort
@@ -544,18 +569,18 @@ endfunction
 function! hellshake_yano#set_counted_motions(keys) abort
   " 引数の検証
   if type(a:keys) != v:t_list
-    call s:show_error('[hellshake-yano] Error: counted_motions must be a list')
+    call hellshake_yano#show_error('[hellshake-yano] Error: counted_motions must be a list')
     return
   endif
 
   " 各キーの検証
   for key in a:keys
     if type(key) != v:t_string || len(key) != 1
-      call s:show_error('[hellshake-yano] Error: Each motion key must be a single character string: ' . string(key))
+      call hellshake_yano#show_error('[hellshake-yano] Error: Each motion key must be a single character string: ' . string(key))
       return
     endif
     if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') == -1
-      call s:show_error('[hellshake-yano] Error: Potentially invalid key: ' . string(key))
+      call hellshake_yano#show_error('[hellshake-yano] Error: Potentially invalid key: ' . string(key))
     endif
   endfor
 
@@ -569,7 +594,7 @@ function! hellshake_yano#set_counted_motions(keys) abort
 
   " 新しいマッピングを設定
   if g:hellshake_yano.enabled
-    call s:setup_motion_mappings()
+    call hellshake_yano#setup_motion_mappings()
   endif
 
   " denops側に設定を通知
@@ -578,8 +603,8 @@ function! hellshake_yano#set_counted_motions(keys) abort
   echo printf('[hellshake-yano] Counted motions set to: %s', string(a:keys))
 endfunction
 
-" テスト用の公開関数（デバッグ目的）
-function! hellshake_yano#test_validate_highlight_group_name(name) abort
+" ハイライトグループ名の検証関数（公開関数）
+function! hellshake_yano#validate_highlight_group_name(name) abort
   " plugin/hellshake-yano.vimの関数を直接呼び出せないので、ここで再実装
   " 空チェック
   if empty(a:name)
@@ -609,7 +634,8 @@ function! hellshake_yano#test_validate_highlight_group_name(name) abort
   return v:true
 endfunction
 
-function! hellshake_yano#test_validate_color_value(color) abort
+" 色値の検証関数（公開関数）
+function! hellshake_yano#validate_color_value(color) abort
   " 空またはundefinedの場合は有効（オプション値）
   if empty(a:color)
     return v:true
@@ -639,12 +665,22 @@ function! hellshake_yano#test_validate_color_value(color) abort
         \ ]
 
   " 大文字小文字を無視して正規化した色名でチェック
-  let normalized_color = substitute(a:color, '^\(.\)\(.*\)', '\u\1\L\2', '')
+  let normalized_color = hellshake_yano#normalize_color_name(a:color)
   if index(valid_colors, normalized_color) == -1
     throw '[hellshake-yano] Error: Invalid color name: ' . a:color
   endif
 
   return v:true
+endfunction
+
+" 色名を正規化する関数（公開関数）
+function! hellshake_yano#normalize_color_name(color) abort
+  if empty(a:color) || a:color =~# '^#'
+    return a:color
+  endif
+
+  " 最初の文字を大文字、残りを小文字にする
+  return substitute(a:color, '^\(.\)\(.*\)', '\u\1\L\2', '')
 endfunction
 
 " 保存と復元
