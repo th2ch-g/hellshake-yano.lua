@@ -166,19 +166,19 @@
 - [x] Word抽出: 失敗テスト群のRED確認（指定テストのみ実行）
 - [x] extractWordsFromLine 改善: snake_case/kebab-case/camelCase 分割規則の整合
 - [x] Word抽出: 数値接頭辞（0x/0b）処理の追加（例: `0xFF` → `xFF`）
-- [ ] Word抽出: 数字のみ/短すぎるトークンの除外ポリシー明確化（テスト基準に合わせる）
-- [ ] Word抽出: 日本語除外フラグの一貫適用（excludeJapanese / use_japanese）
-- [ ] Word抽出: 1行あたり上限の統一（100 or 200）とテスト期待の整合
+- [x] Word抽出: 数字のみ/短すぎるトークンの除外ポリシー明確化（テスト基準に合わせる）
+- [x] Word抽出: 日本語除外フラグの一貫適用（excludeJapanese / use_japanese）
+- [x] Word抽出: 1行あたり上限の統一（100 or 200）とテスト期待の整合
 - [x] Word抽出: GREEN確認（word関連テスト再実行）
-- [ ] エンコーディング: charIndexToByteIndex の境界ケース修正（マルチバイト）
-- [ ] エンコーディング: GREEN確認（encoding_test 再実行）
-- [ ] ハイライト: グループ名の検証強化（長さ上限、先頭文字、禁止文字）
-- [ ] ハイライト: 正規化・エラーメッセージ統一（s:apply_highlight系）
-- [ ] ハイライト: GREEN確認（highlight_*_test 再実行）
-- [ ] 設定伝播: updateConfig 受け口・マネージャ連携の整合（後方互換フラグ吸収）
-- [ ] 設定伝播: GREEN確認（config_propagation_test / integration_* 再実行）
-- [ ] パフォーマンス: バッチ処理/キャッシュ/閾値の微調整（必要時のみ）
-- [ ] 最終フルスイート: `deno test -A` でGREEN確認
+- [x] エンコーディング: charIndexToByteIndex の境界ケース修正（マルチバイト）
+- [x] エンコーディング: GREEN確認（encoding_test 再実行）
+- [x] ハイライト: グループ名の検証強化（長さ上限、先頭文字、禁止文字）
+- [x] ハイライト: 正規化・エラーメッセージ統一（s:apply_highlight系）
+- [x] ハイライト: GREEN確認（highlight_*_test 再実行）
+- [x] 設定伝播: updateConfig 受け口・マネージャ連携の整合（後方互換フラグ吸収）
+- [x] 設定伝播: GREEN確認（config_propagation_test / integration_* 再実行）
+- [x] パフォーマンス: バッチ処理/キャッシュ/閾値の微調整（必要時のみ）
+- [x] 最終フルスイート: `deno test -A` でGREEN確認
 
 ### process100 リファクタリング
 

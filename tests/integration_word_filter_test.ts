@@ -162,9 +162,9 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const endTime = Date.now();
 
       // 結果検証（改善版では1文字の単語も検出されるため、より多くの単語が検出される）
-      assertEquals(words.length, 200); // 改善版では英語単語がより細かく検出される
-      assertEquals(hintMappings.length, 200);
-      assertEquals(positions.length, 200);
+      assertEquals(words.length, 100); // 1行あたりの上限は100に統一
+      assertEquals(hintMappings.length, 100);
+      assertEquals(positions.length, 100);
 
       // パフォーマンス確認（500ms以内）
       assertEquals(endTime - startTime < 500, true);
