@@ -260,6 +260,14 @@ function! hellshake_yano#reset_count() abort
   endfor
 endfunction
 
+" ビジュアルモード用のモーション処理
+function! hellshake_yano#visual_motion(key) abort
+  " 通常のモーション処理を実行
+  let result = hellshake_yano#motion(a:key)
+  " ビジュアル選択を復元するためgvを追加
+  return result . 'gv'
+endfunction
+
 "=============================================================================
 " 設定関数群
 " 初期化、更新、設定変更を担当
@@ -283,6 +291,8 @@ function! hellshake_yano#setup_motion_mappings() abort
     " キーが有効かチェック（1文字の英数字記号のみ）
     if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
       execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
+      " ビジュアルモード用のマッピングを追加（xnoremapでセレクトモードを除外）
+      execute 'xnoremap <silent> <expr> ' . key . ' hellshake_yano#visual_motion(' . string(key) . ')'
     else
       call hellshake_yano#show_error('[hellshake-yano] Error: Invalid key in motion keys: ' . string(key))
     endif
@@ -294,6 +304,8 @@ function! s:clear_motion_mappings() abort
   let keys = s:get_motion_keys()
   for key in keys
     execute 'silent! nunmap ' . key
+    " ビジュアルモードのマッピングも解除
+    execute 'silent! xunmap ' . key
   endfor
 endfunction
 
