@@ -263,9 +263,8 @@ endfunction
 " ビジュアルモード用のモーション処理
 function! hellshake_yano#visual_motion(key) abort
   " 通常のモーション処理を実行
-  let result = hellshake_yano#motion(a:key)
-  " ビジュアル選択を復元するためgvを追加
-  return result . 'gv'
+  " ビジュアルモードでは選択範囲を自然に拡張/縮小させるため、gvは不要
+  return hellshake_yano#motion(a:key)
 endfunction
 
 "=============================================================================
