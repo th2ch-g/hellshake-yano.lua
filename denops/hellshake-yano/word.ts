@@ -368,10 +368,42 @@ function splitJapaneseTextImproved(
  */
 function isWideCharacter(char: string): boolean {
   const code = char.charCodeAt(0);
-  // CJK統合漢字、ひらがな、カタカナ、CJK記号など
-  return (code >= 0x3000 && code <= 0x9FFF) ||
-         (code >= 0xFF00 && code <= 0xFFEF) ||
-         (code >= 0x2E80 && code <= 0x2FFF);
+
+  // 基本的なCJK文字範囲
+  if (
+    (code >= 0x3000 && code <= 0x9FFF) ||  // CJK統合漢字、ひらがな、カタカナ、CJK記号
+    (code >= 0xFF00 && code <= 0xFFEF) ||  // 全角ASCII、半角カナ
+    (code >= 0x2E80 && code <= 0x2FFF)     // CJK部首補助、康熙部首
+  ) {
+    return true;
+  }
+
+  // 追加の全角記号範囲
+  // 全角括弧（）は U+FF08, U+FF09
+  // 全角鉤括弧「」は U+300C, U+300D
+  // 全角二重鉤括弧『』は U+300E, U+300F
+  // 全角角括弧【】は U+3010, U+3011
+  if (
+    (code >= 0x300C && code <= 0x300F) ||  // 鉤括弧「」『』
+    (code >= 0x3010 && code <= 0x3011) ||  // 角括弧【】
+    (code >= 0x3014 && code <= 0x301F) ||  // その他の全角括弧類
+    (code >= 0xFE30 && code <= 0xFE6F) ||  // CJK互換形
+    (code >= 0x20000 && code <= 0x2FFFF)   // CJK拡張B-F、CJK互換漢字補助
+  ) {
+    return true;
+  }
+
+  // サロゲートペアの判定（絵文字など）
+  if (code >= 0xD800 && code <= 0xDBFF && char.length >= 2) {
+    // High surrogate
+    const low = char.charCodeAt(1);
+    if (low >= 0xDC00 && low <= 0xDFFF) {
+      // 絵文字などのサロゲートペア文字は基本的に2列幅
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**

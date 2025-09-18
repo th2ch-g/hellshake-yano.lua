@@ -592,11 +592,11 @@ export function calculateHintPositionWithCoordinateSystem(
       break;
   }
 
-  // 座標系変換 - バイト位置を優先的に使用
+  // 座標系変換 - Vimは表示列、Neovimはバイト位置を使用
   const vim_line = word.line; // Vim: 1ベース行番号
   const nvim_line = word.line - 1; // Neovim: 0ベース行番号
-  const vim_col = byteCol; // Vim: 1ベースバイト列番号（UTF-8対応）
-  const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号（負の値を防ぐ）
+  const vim_col = col; // Vim: 1ベース表示列番号（matchadd用、タブと全角文字考慮済み）
+  const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号（extmark用）
 
   if (enableDebug) {
   }
