@@ -50,8 +50,6 @@ endif
 if !has_key(g:hellshake_yano, 'per_key_min_length')
   " デフォルト設定例：近距離精密移動は1文字から、頻繁なキーは2文字から
   let g:hellshake_yano.per_key_min_length = {
-        \ 'v': 1,
-        \ 'V': 1,
         \ 'w': 1,
         \ 'b': 1,
         \ }
@@ -64,8 +62,6 @@ endif
 if !has_key(g:hellshake_yano, 'per_key_motion_count')
   " デフォルト設定例：精密操作は即座に、頻繁なキーは3回で表示
   let g:hellshake_yano.per_key_motion_count = {
-        \ 'v': 1,
-        \ 'V': 1,
         \ 'w': 1,
         \ 'b': 1,
         \ 'h': 3,
