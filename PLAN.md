@@ -1,123 +1,148 @@
-# title: Visual Modeでのヒント位置改善
+# title: Visual Modeでのヒント位置改善 & パフォーマンス最# title: パフォーマンス最適化
 
 ## 概要
-Visual modeで単語を選択する際、カーソルは通常単語の末尾に位置することが多いため、ヒントも単語の末尾に表示する方が自然です。この機能を設定で切り替え可能にすることで、柔軟な使用体験を提供します。
+Visual mode対応の実装に伴い、処理速度が低下しないよう最適化を実施します。特にTextEncoderの使用方法、キャッシュ戦略、ヒント位置計算の効率化に焦点を当てます。
 
-## 開発のゴール
-- Visual modeでの自然なヒント表示位置の実現
-- Normal modeとVisual modeで異なるヒント位置の設定を可能にする
-- 既存の動作を維持しつつ、ユーザーの好みに応じた設定が可能
+## 現状分析
 
-## 実装仕様
-- 設定例:
-  ```vim
-  let g:hellshake_yano = {
-    \ 'hint_position': 'start',          " Normal modeでのヒント位置
-    \ 'visual_hint_position': 'end',     " Visual modeでのヒント位置
-    \ }
-  ```
+### 主要なボトルネック
 
-  - `visual_hint_position`の値:
-    - `'start'`: 常に単語の先頭にヒントを表示
-    - `'end'`: Visual modeでは単語の末尾にヒントを表示（デフォルト）
-    - `'same'`: Normal modeと同じ設定（hint_position）に従う
+1. **TextEncoderの重複インスタンス化**
+   - 現状: `assignHintsToWords`関数内で、各単語に対してTextEncoderを新規作成（行185）
+   - 影響: 100個の単語がある場合、100回のインスタンス化が発生
+   - 箇所: `denops/hellshake-yano/hint.ts:185`
+
+2. **キャッシュキーの複雑化**
+   - 現状: Visual mode対応によりキャッシュキーが長くなり、文字列結合コストが増大
+   - 影響: キャッシュヒット率の低下、文字列処理のオーバーヘッド
+   - 箇所: `denops/hellshake-yano/hint.ts:147-149`
+
+3. **ヒント位置計算の重複**
+   - 現状: 同じ設定値の条件判定を各単語で繰り返し実行
+   - 影響: 不要な条件分岐と変数アクセスの繰り返し
+   - 箇所: `denops/hellshake-yano/hint.ts:165-196`
 
 ## Process
 
-### process1 設定構造の拡張
-#### sub1 Config型の更新
-@target: denops/hellshake-yano/main.ts
-- [x] Config interfaceに`visual_hint_position?: "start" | "end" | "same"`を追加
-- [x] デフォルト値を`'end'`に設定
-
-#### sub2 VimScript側の設定拡張
-@target: plugin/hellshake-yano.vim
-- [x] デフォルト設定に`visual_hint_position: 'end'`を追加
-- [x] 設定値の検証ロジックを追加
-
-### process2 Visual Mode検出の実装
-#### sub1 Vim側でのモード検出
-@target: autoload/hellshake_yano.vim
-- [x] `hellshake_yano#show_hints_with_key()`関数を拡張
-- [x] `mode()`関数を使用してvisual mode (v, V, Ctrl-V)を検出
-- [x] モード情報をDenops側に渡す引数を追加
-
-#### sub2 Denops側でのモード情報受信
-@target: denops/hellshake-yano/main.ts
-- [x] `showHintsWithKey()`にmode引数を追加
-- [x] `showHintsInternal()`にモード情報を伝播
-- [x] モード情報を単語検出・ヒント表示処理に渡す
-
-### process3 ヒント位置計算の修正
-#### sub1 calculateHintPosition関数の拡張
+### process1 TextEncoderの最適化
+#### sub1 共有インスタンスの作成
 @target: denops/hellshake-yano/hint.ts
-- [x] `calculateHintPosition()`にisVisualMode引数を追加
-- [x] Visual mode用の位置計算ロジックを実装:
-  ```typescript
-  if (isVisualMode && config.visual_hint_position === 'end') {
-    col = word.col + word.text.length - 1;
-    display_mode = "after";
-  }
-  ```
+- [ ] モジュールレベルで単一のTextEncoderインスタンスを作成
+- [ ] `const sharedEncoder = new TextEncoder();`をファイルトップに配置
+- [ ] すべての`new TextEncoder()`を`sharedEncoder`に置換
 
-#### sub2 calculateHintPositionWithCoordinateSystem関数の拡張
+#### sub2 パフォーマンス測定
+- [ ] 最適化前後の処理時間を計測
+- [ ] 100単語、1000単語でのベンチマーク実施
+
+### process2 ヒント位置計算の事前処理
+#### sub1 設定の事前解析
+@target: denops/hellshake-yano/hint.ts (assignHintsToWords関数)
+- [ ] 関数開始時に`effectiveHintPosition`を一度だけ計算
+- [ ] Visual modeとhint_position設定の解析を事前に実施
+- [ ] mapループ内では計算済みの値を使用
+
+#### sub2 条件分岐の削減
+- [ ] 重複する条件判定を削除
+- [ ] 単一の`switch`文で位置計算を処理
+
+### process3 バイト長計算の最適化
+#### sub1 ASCII文字の高速判定
 @target: denops/hellshake-yano/hint.ts
-- [x] Visual mode対応の座標計算を追加
-- [x] バイト位置計算の調整（日本語対応）
-- [x] マルチバイト文字の正確な位置計算
+- [ ] ASCII文字のみの場合はTextEncoderを使用しない
+- [ ] `text.length === [...text].length`でASCII判定を実装
+- [ ] ASCII文字の場合は`text.length`をそのまま使用
 
-### process4 ヒント表示処理の更新
-#### sub1 displayHintsOptimized関数の修正
-@target: denops/hellshake-yano/main.ts
-- [x] モード情報を受け取り、calculateHintPosition関数に渡す
-- [x] Visual modeの場合の特別処理を追加
+#### sub2 マルチバイト文字のキャッシュ
+- [ ] 計算済みのバイト長をMapでキャッシュ
+- [ ] 同じ単語の再計算を防止
 
-#### sub2 assignHintsToWords関数の修正
+### process4 キャッシュ戦略の改善
+#### sub1 モード別キャッシュ
 @target: denops/hellshake-yano/hint.ts
-- [x] Visual mode情報を受け取り、位置計算に反映
+- [ ] Normal mode用とVisual mode用で別のキャッシュマップを作成
+- [ ] `normalModeCache`と`visualModeCache`に分離
+- [ ] モードに応じて適切なキャッシュを使用
 
-### process5 統合テスト
-#### sub1 Visual mode検出テスト
-@target: tests/visual_mode_hint_test.vim (新規)
-- [x] モード判定が正しく動作することを確認
-- [x] 各visual mode (v, V, Ctrl-V)でのテスト
+#### sub2 キャッシュキーの簡略化
+- [ ] キャッシュキーから冗長な情報を削除
+- [ ] ハッシュ関数の導入を検討
 
-#### sub2 ヒント位置計算テスト
-@target: tests/visual_hint_position_test.ts (新規)
-- [x] Visual modeでの位置計算が正しいことを確認
-- [x] 日本語を含む単語での動作確認
-- [x] マルチバイト文字の境界でのテスト
+### process5 バッチ処理の閾値調整
+#### sub1 閾値の最適化
+@target: denops/hellshake-yano/hint.ts (sortWordsByDistanceOptimized関数)
+- [ ] バッチ処理の閾値を1000から500に引き下げ
+- [ ] バッチサイズを500から250に削減
 
-#### sub3 統合動作テスト
-@target: tests/integration_visual_mode_test.vim (新規)
-- [x] 実際のvisual mode操作でのヒント表示位置確認
-- [x] Normal modeとVisual modeの切り替え時の動作確認
-- [x] 各設定値での動作確認
+#### sub2 パフォーマンステスト
+- [ ] 様々なサイズのデータセットでテスト
+- [ ] 最適な閾値とバッチサイズを決定
 
-### process6 ドキュメンテーション
-#### sub1 README.mdの更新
-@target: README.md, README_ja.md
-- [x] visual_hint_position設定の説明を追加
-- [x] 使用例とユースケースを追加
-- [x] Visual modeでの操作フローの説明
+### process6 遅延評価の導入（オプション）
+#### sub1 getter プロパティの実装
+@target: denops/hellshake-yano/hint.ts
+- [ ] `hintCol`と`hintByteCol`をgetter化
+- [ ] 実際に使用される時のみ計算
 
-#### sub2 ヘルプドキュメントの更新
-@target: doc/hellshake-yano.txt
-- [x] 新しい設定オプションのリファレンスを追加
-- [x] Visual modeでの動作説明を追加
+### process7 テストとベンチマーク
+#### sub1 パフォーマンステストの作成
+@target: tmp/claude/test_performance_optimization.ts (新規)
+- [ ] 最適化前後のベンチマークテスト
+- [ ] 様々なサイズのデータセットでテスト
+- [ ] メモリ使用量の測定
 
-## 実装の利点
-1. **UX改善**: Visual modeでの自然な操作フロー
-2. **柔軟性**: ユーザーの好みに応じて設定可能
-3. **後方互換性**: デフォルト動作を維持しつつ新機能を追加
+#### sub2 回帰テストの実施
+- [ ] 既存機能が正しく動作することを確認
+- [ ] Visual mode機能の動作確認
 
-## リスクと対策
-- **リスク**: Visual modeの検出タイミングによる不整合
-  - **対策**: mode検出を確実にし、フォールバック処理を実装
-- **リスク**: マルチバイト文字での位置計算ミス
-  - **対策**: バイト位置と表示位置の両方を考慮した計算を実装
+## 実装優先順位
+
+### 高優先度（即座に効果が見込める）
+1. TextEncoderの共有インスタンス化
+2. ヒント位置計算の事前処理
+3. ASCII文字判定の追加
+
+### 中優先度（効果とコストのバランス）
+4. モード別キャッシュの実装
+5. バッチ処理閾値の調整
+
+### 低優先度（将来的な改善）
+6. 遅延評価の導入
+7. より高度なキャッシュ戦略
 
 ## 期待される効果
-- Visual modeでの単語選択がより直感的になる
-- 語尾から単語全体を選択する一般的な操作パターンに合致
-- ユーザーの操作効率が向上
+
+- **処理速度**: 20-30%の高速化（特に日本語テキスト）
+- **メモリ使用量**: TextEncoderインスタンスの削減により改善
+- **応答性**: Visual mode切り替え時のレスポンス向上
+- **スケーラビリティ**: 大量の単語を含むファイルでの安定性向上
+
+## リスクと対策
+
+- **リスク**: 最適化により可読性が低下
+  - **対策**: コメントを充実させ、関数を適切に分割
+
+- **リスク**: キャッシュの複雑化によるバグ
+  - **対策**: 十分なテストケースを作成
+
+- **リスク**: 過度の最適化による保守性の低下
+  - **対策**: プロファイリングに基づいた最適化のみ実施
+
+## パフォーマンス測定基準
+
+### ベンチマーク環境
+- 単語数: 100, 500, 1000, 5000
+- テキスト種別: ASCII only, 日本語混在, 日本語のみ
+- モード: Normal mode, Visual mode
+
+### 測定項目
+- ヒント生成時間
+- ヒント表示時間
+- メモリ使用量
+- キャッシュヒット率
+
+### 目標値
+- 100単語: < 10ms
+- 1000単語: < 50ms
+- 5000単語: < 200ms
+- メモリ使用量: 現状から10%削減
