@@ -84,16 +84,27 @@
 - [x] s:process_motion_count_for_key(bufnr, key)関数を追加
 
 ### process3 モーション処理の更新
+
+#### 調査結果（実施済み）
+- hellshake_yano#motion関数の分析完了
+- L203: `s:process_motion_count_for_key(bufnr, a:key)` - ✅process2で実装済み、既に呼び出し済み
+- L206: `s:should_trigger_hints_for_key(bufnr, a:key)` - ✅process2で実装済み、既に呼び出し済み
+- L207: `s:reset_key_count(bufnr, a:key)` - ✅process2で実装済み、既に呼び出し済み
+- L212: `s:set_motion_timeout(bufnr)` - キー別対応が必要
+
 #### sub1 hellshake_yano#motion関数の改修
 @target: autoload/hellshake_yano.vim
-- [ ] キー別のカウント処理を実装
-- [ ] s:process_motion_count(bufnr)をs:process_motion_count_for_key(bufnr, a:key)に変更
-- [ ] s:should_trigger_hints(bufnr)をs:should_trigger_hints_for_key(bufnr, a:key)に変更
+- [x] キー別のカウント処理を実装（process2で実装済み、L203で呼び出し済み）
+- [x] s:process_motion_count(bufnr)をs:process_motion_count_for_key(bufnr, a:key)に変更（L203で実装済み）
+- [x] s:should_trigger_hints(bufnr)をs:should_trigger_hints_for_key(bufnr, a:key)に変更（L206で実装済み）
 
 #### sub2 タイムアウト処理の更新
 @target: autoload/hellshake_yano.vim
-- [ ] キー別のタイムアウト管理を実装
-- [ ] s:timer_idをキー別に管理する辞書に変更
+**実装内容**:
+- [ ] s:timer_idを`{bufnr: timer_id}`から`{bufnr: {key: timer_id}}`構造に変更
+- [ ] s:set_motion_timeout(bufnr)をs:set_motion_timeout(bufnr, key)に変更（キー引数追加）
+- [ ] s:stop_and_clear_timer関数をキー別対応に拡張
+- [ ] s:reset_count(bufnr)をs:reset_count_for_key(bufnr, key)に変更
 - [ ] タイムアウト時のキー別リセット処理を実装
 
 ### process4 設定の伝播
