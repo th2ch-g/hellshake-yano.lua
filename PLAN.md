@@ -1,53 +1,152 @@
-# title: hjklキーリピート時のヒント表示抑制機能
+# title: キー別の最小文字数設定機能
 
 ## 概要
-
-- hjklキーをリピート（押しっぱなし）している時は、ヒントの表示を抑制し、スムーズなスクロールを実現する
+- 各キーごとに異なる最小文字数（min_word_length）を設定可能にし、キーの特性に応じた柔軟なヒント表示を実現する
 
 ### goal
-
-- hjklキーを押しっぱなしでスクロールする際に、不要なヒント表示を防ぎ、快適な操作体験を提供する
+- `v`のような近距離移動キーでは1文字からヒントを表示し、精密な移動を可能にする
+- `hjkl`のような頻繁に使うキーでは2文字以上でノイズを削減する
+- キー切り替え時は即座にヒントを再計算し、スムーズな操作感を提供する
 
 ## 必須のルール
-
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 各段階でテストを実行し、回帰がないことを確認すること
-- 既存の動作に影響を与えないよう、機能は設定で有効/無効を切り替え可能にすること
+- 既存の`min_word_length`設定との後方互換性を維持すること
+- Vimの「押したキーが即座に反映される」原則を守ること
 
 ## 開発のゴール
-
-- キーリピート（連続入力）を検出する仕組みの実装
-- リピート中はヒント表示を抑制する機能の追加
-- 通常のhjkl操作には影響を与えない
-- パフォーマンスへの影響を最小限に抑える
+- キーごとに異なる最小文字数を設定できる柔軟な設定システムの実装
+- 異なる閾値のキー間で切り替えた際の即座のヒント再計算
+- パフォーマンスを維持しながら、より細かい制御を可能にする
 
 ## 実装仕様
-
-### キーリピート検出の仕組み
-
-- **検出方法:** 連続するキー入力の時間間隔を測定
-- **リピート判定基準:** 50ms以下の間隔で連続入力があればリピートと判定
-- **状態管理:**
-  - `is_key_repeating` フラグでリピート状態を管理
-  - リピート終了後、300ms経過でフラグをリセット
-
-### 現在の実装の分析
-
-- **Vimスクリプト側 (autoload/hellshake_yano.vim):**
-  - `hellshake_yano#motion()` 関数がhjklキーの押下を検知
-  - `motion_count` が指定回数（デフォルト3回）に達したらヒント表示
-  - タイマーによるカウントリセット機能あり（デフォルト2000ms）
-
-- **TypeScript側 (denops/hellshake-yano/main.ts):**
-  - `showHints()` メソッドでデバウンス処理を実装済み
-  - `debounceDelay` による連続呼び出しの制御
+- 設定例:
+  ```vim
+  let g:hellshake_yano = {
+    \ 'per_key_min_length': {
+    \   'v': 1,   " 近距離精密移動
+    \   'V': 1,   " ビジュアルライン選択
+    \   'w': 1,   " 次の単語頭
+    \   'b': 1,   " 前の単語頭
+    \   'h': 2,   " 左移動（ノイズ削減）
+    \   'j': 2,   " 下移動
+    \   'k': 2,   " 上移動
+    \   'l': 2,   " 右移動
+    \ },
+    \ 'default_min_word_length': 2,
+    \ }
+  ```
 
 ## 生成AIの学習用コンテキスト
+### 現在の実装
+- denops/hellshake-yano/main.ts
+  - Config型の定義（現在はグローバルなmin_word_length設定のみ）
+  - showHints関数の実装
+- denops/hellshake-yano/word/detector.ts
+  - applyFiltersメソッドでの文字数フィルタリング
+  - 現在は全キー共通のmin_word_lengthを使用
+- autoload/hellshake_yano.vim
+  - hellshake_yano#motion関数でのキー処理
+  - s:get_motion_keys関数でのキー設定管理
 
-### Vimスクリプト実装ファイル
+## Process
+### process1 設定構造の拡張
+#### sub1 Config型の更新
+@target: denops/hellshake-yano/main.ts
+@ref: denops/hellshake-yano/word/detector.ts
+- [ ] Config interfaceに`per_key_min_length?: Record<string, number>`を追加
+- [ ] `default_min_word_length?: number`を追加
+- [ ] `current_key_context?: string`を内部使用として追加
 
-- [autoload/hellshake_yano.vim](~/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano.vim)
-  - hellshake_yano#motion() 関数の定義（29-61行）
+#### sub2 VimScript側の設定拡張
+@target: plugin/hellshake-yano.vim
+@ref: autoload/hellshake_yano.vim
+- [ ] デフォルト設定に`per_key_min_length`と`default_min_word_length`を追加
+- [ ] 設定の検証ロジックを追加
+
+### process2 ヒント管理システムの実装
+#### sub1 HintManagerクラスの新規作成
+@target: denops/hellshake-yano/hint/manager.ts (新規)
+@ref: denops/hellshake-yano/main.ts
+- [ ] HintManagerクラスを作成
+- [ ] onKeyPressメソッドで既存ヒントのクリアと再生成を実装
+- [ ] getMinLengthForKeyメソッドでキー別の闾値取得ロジックを実装
+- [ ] clearCurrentHintsメソッドで即座のヒントクリアを実装
+
+### process3 コンテキスト情報の伝播
+#### sub1 WordDetectorの拡張
+@target: denops/hellshake-yano/word/detector.ts
+@ref: denops/hellshake-yano/word/manager.ts
+- [ ] DetectionContextインターフェースを追加
+- [ ] detectWordsメソッドにcontext引数を追加
+- [ ] applyFiltersメソッドをキー別フィルタリングに対応
+
+#### sub2 WordManagerの更新
+@target: denops/hellshake-yano/word/manager.ts
+- [ ] detectWordsメソッドにキー情報を伝播
+- [ ] キー情報をセッションで管理する機能を追加
+
+### process4 モーション処理との統合
+#### sub1 VimScript側のキー情報伝達
+@target: autoload/hellshake_yano.vim
+@ref: denops/hellshake-yano/main.ts
+- [ ] hellshake_yano#motion関数でキー情報をDenopsに伝達
+- [ ] hellshake_yano#denops#show_hints_with_key関数を新規追加
+- [ ] ビジュアルモード用の処理も更新
+
+#### sub2 Denops側のキー情報受信
+@target: denops/hellshake-yano/main.ts
+- [ ] showHintsWithKeyメソッドを実装
+- [ ] dispatcherにshowHintsWithKeyを登録
+- [ ] HintManagerとの連携を実装
+
+### process5 キー切り替え時の即座再計算
+#### sub1 ヒントクリアロジックの実装
+@target: denops/hellshake-yano/main.ts
+@ref: denops/hellshake-yano/hint/manager.ts
+- [ ] 既存ヒントの即座クリア機能を実装
+- [ ] 非同期処理の適切な管理
+- [ ] デバウンス処理の見直し
+
+#### sub2 再生成の最適化
+@target: denops/hellshake-yano/word/detector.ts
+- [ ] キー別の単語キャッシュ機構を実装
+- [ ] 不要な再計算を避ける最適化
+
+### process10 ユニットテスト
+@target: tests/per_key_min_length_test.ts (新規)
+- [ ] キー別設定の動作テスト
+- [ ] デフォルト値へのフォールバックテスト
+- [ ] キー切り替え時の再計算テスト
+- [ ] パフォーマンステスト（大量単語での切り替え）
+- [ ] 後方互換性テスト
+
+### process20 統合テスト
+@target: tests/integration_test.ts
+- [ ] 実際の編集シナリオでの動作確認
+- [ ] 異なる闾値間の頻繁な切り替えテスト
+- [ ] ビジュアルモードでの動作確認
+
+### process50 フォローアップ
+#### sub1 プリセット機能の追加（将来的な拡張）
+- [ ] 近距離精密移動プリセット
+- [ ] 中距離移動プリセット
+- [ ] カスタムプリセットの定義機能
+
+#### sub2 学習機能の検討（将来的な拡張）
+- [ ] ユーザーの選択パターンを記録
+- [ ] よく選ばれる単語長の自動調整
+
+### process100 リファクタリング
+- [ ] 既存のmin_word_length処理を新システムに統一
+- [ ] 重複コードの削除
+- [ ] パフォーマンスボトルネックの改善
+
+### process200 ドキュメンテーション
+- [ ] README.mdにキー別設定の説明を追加
+- [ ] README_ja.mdにも同様の説明を追加
+- [ ] 設定例とユースケースを追加
+- [ ] 移行ガイドの作成（既存設定からの移行方法）
+- [ ] パフォーマンスへの影響に関する注意事項を追加
   - s:trigger_hints() 関数の定義（106-131行）
 
 ### TypeScript実装ファイル
