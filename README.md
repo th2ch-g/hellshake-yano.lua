@@ -56,6 +56,8 @@ let g:hellshake_yano = {
   \ 'use_hint_groups': v:true,
   \ 'use_numbers': v:true,
   \ 'use_japanese': v:true,
+  \ 'per_key_min_length': {},
+  \ 'default_min_word_length': 2,
   \ 'highlight_hint_marker': 'DiffAdd',
   \ 'highlight_hint_marker_current': 'DiffText'
   \ }
@@ -83,8 +85,121 @@ let g:hellshake_yano = {
 | `suppress_on_key_repeat`        | boolean     | v:true          | Suppress hints during rapid key repeat                  |
 | `key_repeat_threshold`          | number      | 50              | Key repeat detection threshold (ms)                     |
 | `key_repeat_reset_delay`        | number      | 300             | Delay before reset after key repeat (ms)                |
+| `per_key_min_length`            | dict        | {}              | Set minimum word length per key                         |
+| `default_min_word_length`       | number      | 2               | Default minimum word length for hints                   |
 | `debug_mode`                    | boolean     | v:false         | Enable debug mode                                       |
 | `performance_log`               | boolean     | v:false         | Enable performance logging                              |
+
+### Per-Key Minimum Word Length Configuration
+
+**Enhanced Feature**: Configure different minimum word lengths for different keys to optimize hint display based on movement type and context. Keys defined in `per_key_min_length` are **automatically mapped** - no need to manually configure `counted_motions`.
+
+This feature allows fine-grained control over when hints appear for specific keys, enabling:
+- **Precise movement** with visual mode keys (1 character hints)
+- **Noise reduction** for hjkl navigation (2+ character hints)
+- **Customized thresholds** for different motion types
+- **Automatic key mapping** for all configured keys
+
+#### Basic Configuration
+
+```vim
+let g:hellshake_yano = {
+  \ 'per_key_min_length': {
+  \   'v': 1,   " Visual mode - precise movement
+  \   'V': 1,   " Visual line mode
+  \   'w': 1,   " Word forward
+  \   'b': 1,   " Word backward
+  \   'h': 2,   " Left (reduce noise)
+  \   'j': 2,   " Down
+  \   'k': 2,   " Up
+  \   'l': 2,   " Right
+  \   'f': 3,   " Find character
+  \   'F': 3,   " Find character backward
+  \ },
+  \ 'default_min_word_length': 2,
+  \ 'motion_count': 3,   " Trigger hints after 3 motions
+  \ }
+" Note: Keys in per_key_min_length are automatically mapped!
+" No need to configure counted_motions separately.
+```
+
+#### Use Cases
+
+**Precise Movement (1 character hints)**
+- Visual mode selections require precise cursor placement
+- Word motions (w, b, e) benefit from showing all possible targets
+- Single character hints appear immediately for maximum precision
+
+**Noise Reduction (2+ character hints)**
+- hjkl navigation in large files can be overwhelming with too many hints
+- Higher thresholds reduce visual noise during scrolling through noise reduction
+- Maintains smooth navigation experience
+
+**Motion-Specific Optimization**
+- Find operations (f, F, t, T) often target longer words
+- Search motions (/, ?) work better with longer minimum lengths
+- Different motion types have different precision requirements for motion types
+
+#### Migration from Legacy Configuration
+
+**Before (Legacy)**:
+```vim
+let g:hellshake_yano = {
+  \ 'min_word_length': 2
+  \ }
+```
+
+**After (Per-Key)**:
+```vim
+let g:hellshake_yano = {
+  \ 'default_min_word_length': 2,
+  \ 'per_key_min_length': {
+  \   'v': 1,  " Override for visual mode
+  \   'h': 3,  " Override for left movement
+  \ }
+  \ }
+```
+
+**Gradual Migration Strategy**:
+1. Start with `default_min_word_length` matching your old legacy `min_word_length`
+2. Add specific overrides for keys where you want different behavior
+3. Test each change incrementally
+4. Remove the old `min_word_length` setting once migration is complete
+
+**Key Features**:
+- **Automatic Mapping**: Keys in `per_key_min_length` are automatically added to motion mappings
+- **No Manual Configuration**: No need to set `counted_motions` for per-key configured keys
+- **Full Backward Compatibility**: Existing configurations continue to work unchanged
+- **Dynamic Context**: Each key press updates the context for accurate filtering
+
+**Combining with `counted_motions`**:
+```vim
+let g:hellshake_yano = {
+  \ 'per_key_min_length': {
+  \   'v': 1,  " Automatically mapped with 1-char minimum
+  \   'h': 2,  " Automatically mapped with 2-char minimum
+  \ },
+  \ 'counted_motions': ['g', 'd'],  " Additional keys using default_min_word_length
+  \ 'default_min_word_length': 3,
+  \ }
+" Result: v(1), h(2), g(3), d(3) are all tracked
+```
+
+#### Performance Considerations
+
+- **Cache Optimization**: Per-key settings enable intelligent cache based on key context
+- **Memory Usage**: Minimal memory overhead - only stores overrides for specified keys
+- **Recommended Settings for Large Files**:
+  ```vim
+  let g:hellshake_yano = {
+    \ 'default_min_word_length': 3,
+    \ 'per_key_min_length': {
+    \   'v': 1,  " Keep visual mode precise
+    \   'w': 2,  " Word motions more responsive
+    \   'h': 4, 'j': 4, 'k': 4, 'l': 4  " Reduce hjkl noise significantly
+    \ }
+    \ }
+  ```
 
 ### Key Repeat Suppression
 
@@ -257,8 +372,10 @@ The plugin intelligently detects word boundaries in Japanese text using:
 #### Hints not appearing
 1. Check if the plugin is enabled: `:echo g:hellshake_yano.enabled`
 2. Verify motion count setting: `:echo g:hellshake_yano.motion_count`
-3. Ensure denops is properly installed and running
-4. Use `:HellshakeDebug` to check current state
+3. Check per-key minimum length configuration: `:echo g:hellshake_yano.per_key_min_length`
+4. Verify default minimum word length: `:echo g:hellshake_yano.default_min_word_length`
+5. Ensure denops is properly installed and running
+6. Use `:HellshakeDebug` to check current state
 
 #### Hints appear during scrolling
 - Adjust key repeat suppression settings:
@@ -277,6 +394,15 @@ The plugin intelligently detects word boundaries in Japanese text using:
 4. Disable Japanese word detection if not needed:
    ```vim
    let g:hellshake_yano.use_japanese = v:false
+   ```
+
+#### Per-key configuration not working
+1. Verify configuration syntax is correct: `:echo g:hellshake_yano.per_key_min_length`
+2. Check that the key exists in your per_key_min_length dictionary
+3. Confirm default_min_word_length is set appropriately
+4. Test with a simple configuration first:
+   ```vim
+   let g:hellshake_yano.per_key_min_length = {'v': 1}
    ```
 
 #### Incorrect word detection in Japanese text

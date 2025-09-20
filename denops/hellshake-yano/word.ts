@@ -1,6 +1,6 @@
 import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
-import type { WordDetectionResult } from "./word/detector.ts";
+import type { WordDetectionResult, DetectionContext } from "./word/detector.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
 
 /**
@@ -155,10 +155,11 @@ export async function detectWords(
 export async function detectWordsWithManager(
   denops: Denops,
   config: EnhancedWordConfig = {},
+  context?: DetectionContext,
 ): Promise<WordDetectionResult> {
   try {
     const manager = getWordDetectionManager(config);
-    return await manager.detectWordsFromBuffer(denops);
+    return await manager.detectWordsFromBuffer(denops, context);
   } catch (error) {
     // console.error("[detectWordsWithManager] Error:", error);
 

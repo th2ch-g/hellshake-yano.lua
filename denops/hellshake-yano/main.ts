@@ -60,6 +60,15 @@ export interface Config {
   highlight_hint_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
   suppress_on_key_repeat?: boolean; // キーリピート時のヒント表示抑制（デフォルト: true）
   key_repeat_threshold?: number; // リピート判定の閾値（ミリ秒、デフォルト: 50）
+
+  // キー別最小文字数設定（process1追加）
+  per_key_min_length?: Record<string, number>; // キー別の最小文字数設定
+  default_min_word_length?: number; // per_key_min_lengthに存在しないキーのデフォルト値
+  current_key_context?: string; // 内部使用：現在のキーコンテキスト
+
+  // 後方互換性のため残す
+  min_word_length?: number; // 旧形式の最小文字数設定
+  enable?: boolean; // enabled のエイリアス（後方互換性）
   key_repeat_reset_delay?: number; // リピート終了判定の遅延（ミリ秒、デフォルト: 300）
   debug_mode?: boolean; // デバッグモードの有効/無効（デフォルト: false）
   performance_log?: boolean; // パフォーマンスログの有効/無効（デフォルト: false）
@@ -238,6 +247,28 @@ function recordPerformance(
 }
 
 /**
+ * 指定されたキーに対する最小文字数を取得する（process1追加）
+ *
+ * @param config - 設定オブジェクト
+ * @param key - 対象のキー文字
+ * @returns キーに対応する最小文字数
+ */
+export function getMinLengthForKey(config: Config, key: string): number {
+  // キー別設定が存在し、そのキーの設定があれば使用
+  if (config.per_key_min_length && config.per_key_min_length[key] !== undefined) {
+    return config.per_key_min_length[key];
+  }
+
+  // default_min_word_length が設定されていれば使用
+  if (config.default_min_word_length !== undefined) {
+    return config.default_min_word_length;
+  }
+
+  // 後方互換性：旧形式のmin_word_lengthを使用（デフォルト: 2）
+  return config.min_word_length ?? 2;
+}
+
+/**
  * 現在のデバッグ情報を収集する
  *
  * @returns 現在の設定、ヒント状態、パフォーマンス指標を含むデバッグ情報
@@ -328,8 +359,8 @@ function syncManagerConfig(config: Config): void {
     // マネージャー用設定に変換
     const managerConfig = convertConfigForManager(config);
 
-    // マネージャーを取得または作成し、設定を更新
-    const manager = getWordDetectionManager(managerConfig);
+    // マネージャーを取得または作成し、設定を更新（globalConfigも渡す）
+    const manager = getWordDetectionManager(managerConfig, config);
 
     // 既存のマネージャーがある場合は設定を更新
     if (manager) {
@@ -737,6 +768,26 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
+     * キー情報付きヒント表示（Process4 sub2実装）
+     * @param key - 押下されたキー文字
+     */
+    async showHintsWithKey(key: unknown): Promise<void> {
+      try {
+        const keyString = String(key);
+
+        // グローバル設定のcurrent_key_contextを更新
+        config.current_key_context = keyString;
+
+        // 既存のshowHintsInternal処理を呼び出し
+        await this.showHintsInternal();
+      } catch (error) {
+        // console.error("[hellshake-yano] Error in showHintsWithKey:", error);
+        // フォールバック: 通常のshowHintsを呼び出し
+        await this.showHints();
+      }
+    },
+
+    /**
      * ヒントを非表示
      */
     async hideHints(): Promise<void> {
@@ -1091,7 +1142,12 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
       auto_detect_language: true,
     };
 
-    const result = await detectWordsWithManager(denops, enhancedConfig);
+    // current_key_contextからコンテキストを作成
+    const context = config.current_key_context ? {
+      minWordLength: getMinLengthForKey(config, config.current_key_context)
+    } : undefined;
+
+    const result = await detectWordsWithManager(denops, enhancedConfig, context);
 
     if (result.success) {
       return result.words;

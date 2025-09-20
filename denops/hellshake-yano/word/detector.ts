@@ -10,6 +10,7 @@ import type { Denops } from "@denops/std";
 import type { Word } from "../word.ts";
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
+import { getMinLengthForKey, type Config } from "../main.ts";
 
 /**
  * Position-aware segment interface for tracking original positions
@@ -103,13 +104,38 @@ export interface WordDetectionConfig {
   japanese_min_word_length?: number;
 }
 
+/**
+ * Detection context interface for process3 - コンテキスト情報の伝播
+ *
+ * @description 単語検出処理に渡されるコンテキスト情報
+ * キー別の最小文字数設定や現在のモーションキー情報を含む
+ *
+ * @example
+ * ```typescript
+ * const context: DetectionContext = {
+ *   currentKey: "f",           // 現在のモーションキー
+ *   minWordLength: 3,          // このキーに対する最小単語長
+ * };
+ *
+ * const words = await detector.detectWords(text, 1, context);
+ * ```
+ */
+export interface DetectionContext {
+  /** 現在実行中のモーションキー (f, t, w, b, etc.) */
+  currentKey?: string;
+  /** このコンテキストでの最小単語長（設定より優先される） */
+  minWordLength?: number;
+  /** 追加のコンテキスト情報（将来の拡張用） */
+  metadata?: Record<string, unknown>;
+}
+
 // Base interface for all word detectors
 export interface WordDetector {
   readonly name: string;
   readonly priority: number; // Higher priority = preferred detector
   readonly supportedLanguages: string[]; // e.g., ['ja', 'en', 'any']
 
-  detectWords(text: string, startLine: number): Promise<Word[]>;
+  detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]>;
   canHandle(text: string): boolean;
   isAvailable(): Promise<boolean>;
 }
@@ -173,11 +199,13 @@ export class RegexWordDetector implements WordDetector {
   readonly supportedLanguages = ["en", "ja", "any"];
 
   private config: WordDetectionConfig;
+  private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
 
   /**
    * RegexWordDetectorのコンストラクタ
    * @description 正規表現ベースの単語ディテクターを初期化
    * @param config - ディテクター設定（省略時はデフォルト設定）
+   * @param globalConfig - グローバル設定（統一的なmin_length処理のため）
    *
    * @example
    * ```typescript
@@ -202,11 +230,34 @@ export class RegexWordDetector implements WordDetector {
    *
    * @since 1.0.0
    */
-  constructor(config: WordDetectionConfig = {}) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config) {
     this.config = this.mergeWithDefaults(config);
+    this.globalConfig = globalConfig;
   }
 
-  async detectWords(text: string, startLine: number): Promise<Word[]> {
+  /**
+   * 統一的なmin_length取得
+   * @description Context → GlobalConfig → LocalConfig の優先順位でmin_lengthを取得
+   * @param context - 検出コンテキスト
+   * @param key - モーションキー（グローバル設定のper_key_min_lengthで使用）
+   * @returns 使用すべき最小単語長
+   */
+  private getEffectiveMinLength(context?: DetectionContext, key?: string): number {
+    // 1. Context優先
+    if (context?.minWordLength !== undefined) {
+      return context.minWordLength;
+    }
+
+    // 2. グローバル設定のper_key_min_length
+    if (this.globalConfig && key) {
+      return getMinLengthForKey(this.globalConfig, key);
+    }
+
+    // 3. ローカル設定のmin_word_length
+    return this.config.min_word_length || 1;
+  }
+
+  async detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]> {
     const words: Word[] = [];
     const lines = text.split("\n");
 
@@ -215,12 +266,12 @@ export class RegexWordDetector implements WordDetector {
       const lineNumber = startLine + i;
 
       // 常に改善版検出を使用（統合済み）
-      const lineWords = this.extractWordsImproved(lineText, lineNumber);
+      const lineWords = this.extractWordsImproved(lineText, lineNumber, context);
 
       words.push(...lineWords);
     }
 
-    return this.applyFilters(words);
+    return this.applyFilters(words, context);
   }
 
   canHandle(text: string): boolean {
@@ -234,7 +285,7 @@ export class RegexWordDetector implements WordDetector {
   /**
    * Improved word extraction (from word.ts extractWordsFromLine)
    */
-  private extractWordsImproved(lineText: string, lineNumber: number): Word[] {
+  private extractWordsImproved(lineText: string, lineNumber: number, context?: DetectionContext): Word[] {
     const words: Word[] = [];
 
     if (!lineText || lineText.trim().length < 1) {
@@ -249,8 +300,10 @@ export class RegexWordDetector implements WordDetector {
     let match: RegExpExecArray | null;
     const allMatches: { text: string; index: number }[] = [];
 
+    const minLength = this.getEffectiveMinLength(context, context?.currentKey);
+
     while ((match = basicWordRegex.exec(lineText)) !== null) {
-      if (match[0].length >= (this.config.min_word_length || 1)) {
+      if (match[0].length >= minLength) {
         allMatches.push({ text: match[0], index: match.index });
       }
     }
@@ -420,13 +473,13 @@ export class RegexWordDetector implements WordDetector {
     return words;
   }
 
-  private applyFilters(words: Word[]): Word[] {
+  private applyFilters(words: Word[], context?: DetectionContext): Word[] {
     let filtered = words;
 
-    // Length filters
-    if (this.config.min_word_length !== undefined) {
-      filtered = filtered.filter((w) => w.text.length >= this.config.min_word_length!);
-    }
+    // Length filters - unified min_length processing
+    const effectiveMinLength = this.getEffectiveMinLength(context, context?.currentKey);
+    filtered = filtered.filter((w) => w.text.length >= effectiveMinLength);
+
     if (this.config.max_word_length !== undefined) {
       filtered = filtered.filter((w) => w.text.length <= this.config.max_word_length!);
     }
@@ -506,6 +559,7 @@ export class TinySegmenterWordDetector implements WordDetector {
 
   private segmenter: TinySegmenter;
   private config: WordDetectionConfig;
+  private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
 
   /**
    * TinySegmenterWordDetectorのコンストラクタ
@@ -534,12 +588,35 @@ export class TinySegmenterWordDetector implements WordDetector {
    *
    * @since 1.0.0
    */
-  constructor(config: WordDetectionConfig = {}) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config) {
     this.config = this.mergeWithDefaults(config);
+    this.globalConfig = globalConfig;
     this.segmenter = TinySegmenter.getInstance();
   }
 
-  async detectWords(text: string, startLine: number): Promise<Word[]> {
+  /**
+   * 統一的なmin_length取得
+   * @description Context → GlobalConfig → LocalConfig の優先順位でmin_lengthを取得
+   * @param context - 検出コンテキスト
+   * @param key - モーションキー（グローバル設定のper_key_min_lengthで使用）
+   * @returns 使用すべき最小単語長
+   */
+  private getEffectiveMinLength(context?: DetectionContext, key?: string): number {
+    // 1. Context優先
+    if (context?.minWordLength !== undefined) {
+      return context.minWordLength;
+    }
+
+    // 2. グローバル設定のper_key_min_length
+    if (this.globalConfig && key) {
+      return getMinLengthForKey(this.globalConfig, key);
+    }
+
+    // 3. ローカル設定のmin_word_length
+    return this.config.min_word_length || 1;
+  }
+
+  async detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]> {
     const words: Word[] = [];
     const lines = text.split("\n");
 
@@ -549,7 +626,7 @@ export class TinySegmenterWordDetector implements WordDetector {
 
       if (!this.shouldSegmentLine(lineText)) {
         // Fall back to basic regex for non-Japanese content
-        const fallbackWords = await this.fallbackDetection(lineText, lineNumber);
+        const fallbackWords = await this.fallbackDetection(lineText, lineNumber, context);
         words.push(...fallbackWords);
         continue;
       }
@@ -561,17 +638,17 @@ export class TinySegmenterWordDetector implements WordDetector {
           words.push(...lineWords);
         } else {
           // Fallback on segmentation failure
-          const fallbackWords = await this.fallbackDetection(lineText, lineNumber);
+          const fallbackWords = await this.fallbackDetection(lineText, lineNumber, context);
           words.push(...fallbackWords);
         }
       } catch (error) {
         // console.warn(`TinySegmenter failed for line ${lineNumber}:`, error);
-        const fallbackWords = await this.fallbackDetection(lineText, lineNumber);
+        const fallbackWords = await this.fallbackDetection(lineText, lineNumber, context);
         words.push(...fallbackWords);
       }
     }
 
-    return this.applyFilters(words);
+    return this.applyFilters(words, context);
   }
 
   /**
@@ -681,11 +758,11 @@ export class TinySegmenterWordDetector implements WordDetector {
     return words;
   }
 
-  private async fallbackDetection(lineText: string, lineNumber: number): Promise<Word[]> {
+  private async fallbackDetection(lineText: string, lineNumber: number, context?: DetectionContext): Promise<Word[]> {
     // Use simplified regex detection as fallback
     const regexDetector = new RegexWordDetector(this.config);
     const singleLineText = lineText + "\n";
-    return regexDetector.detectWords(singleLineText, lineNumber);
+    return regexDetector.detectWords(singleLineText, lineNumber, context);
   }
 
   /**
@@ -924,13 +1001,13 @@ export class TinySegmenterWordDetector implements WordDetector {
     return result;
   }
 
-  private applyFilters(words: Word[]): Word[] {
+  private applyFilters(words: Word[], context?: DetectionContext): Word[] {
     let filtered = words;
 
-    // Length filters
-    if (this.config.min_word_length !== undefined) {
-      filtered = filtered.filter((w) => w.text.length >= this.config.min_word_length!);
-    }
+    // Length filters - unified min_length processing
+    const effectiveMinLength = this.getEffectiveMinLength(context, context?.currentKey);
+    filtered = filtered.filter((w) => w.text.length >= effectiveMinLength);
+
     if (this.config.max_word_length !== undefined) {
       filtered = filtered.filter((w) => w.text.length <= this.config.max_word_length!);
     }
@@ -1000,6 +1077,7 @@ export class HybridWordDetector implements WordDetector {
   private regexDetector: RegexWordDetector;
   private segmenterDetector: TinySegmenterWordDetector;
   private config: WordDetectionConfig;
+  private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
 
   /**
    * HybridWordDetectorのコンストラクタ
@@ -1031,14 +1109,37 @@ export class HybridWordDetector implements WordDetector {
    *
    * @since 1.0.0
    */
-  constructor(config: WordDetectionConfig = {}) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config) {
     this.config = this.mergeWithDefaults(config);
-    // 子Detectorにも同じマージされた設定を渡す
-    this.regexDetector = new RegexWordDetector(this.config);
-    this.segmenterDetector = new TinySegmenterWordDetector(this.config);
+    this.globalConfig = globalConfig;
+    // 子Detectorにも同じマージされた設定とグローバル設定を渡す
+    this.regexDetector = new RegexWordDetector(this.config, globalConfig);
+    this.segmenterDetector = new TinySegmenterWordDetector(this.config, globalConfig);
   }
 
-  async detectWords(text: string, startLine: number): Promise<Word[]> {
+  /**
+   * 統一的なmin_length取得
+   * @description Context → GlobalConfig → LocalConfig の優先順位でmin_lengthを取得
+   * @param context - 検出コンテキスト
+   * @param key - モーションキー（グローバル設定のper_key_min_lengthで使用）
+   * @returns 使用すべき最小単語長
+   */
+  private getEffectiveMinLength(context?: DetectionContext, key?: string): number {
+    // 1. Context優先
+    if (context?.minWordLength !== undefined) {
+      return context.minWordLength;
+    }
+
+    // 2. グローバル設定のper_key_min_length
+    if (this.globalConfig && key) {
+      return getMinLengthForKey(this.globalConfig, key);
+    }
+
+    // 3. ローカル設定のmin_word_length
+    return this.config.min_word_length || 1;
+  }
+
+  async detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]> {
     const lines = text.split("\n");
     const allWords: Word[] = [];
 
@@ -1059,20 +1160,26 @@ export class HybridWordDetector implements WordDetector {
         const hasJapanese = this.segmenterDetector.canHandle(lineText);
 
         if (this.config.enable_tinysegmenter && isSegmenterAvailable && hasJapanese) {
-          const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber);
+          const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber, context);
           // 英数字も検出するためRegexDetectorも併用
-          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
+          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, context);
           const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
           allWords.push(...mergedWords);
         } else {
           // TinySegmenter無効または日本語なし：extractWordsFromLineWithConfigを使用
           const { extractWordsFromLineWithConfig } = await import("../word.ts");
-          const words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
+          let words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
+
+          // Apply context-based filtering if context is provided
+          if (context?.minWordLength !== undefined) {
+            words = words.filter(w => w.text.length >= context.minWordLength!);
+          }
+
           allWords.push(...words);
         }
       } else {
         // 日本語除外モード：RegexDetectorを使用（日本語は除外される）
-        const regexWords = await this.regexDetector.detectWords(lineText, lineNumber);
+        const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, context);
         allWords.push(...regexWords);
       }
     }
@@ -1168,3 +1275,72 @@ export class HybridWordDetector implements WordDetector {
     };
   }
 }
+
+/**
+ * Process5 sub2: キー別単語キャッシュ機構（最適化実装）
+ *
+ * キー別の単語検出結果をキャッシュし、同じキーでの再計算を回避する
+ * パフォーマンス向上とUIちらつき軽減のための最適化機能
+ */
+export class KeyBasedWordCache {
+  private cache: Map<string, Word[]> = new Map();
+  private maxSize: number = 100; // キャッシュサイズ上限
+
+  /**
+   * キーに基づいて単語リストをキャッシュに保存
+   * @param key - キャッシュキー（通常は押下されたキー + バッファ情報）
+   * @param words - キャッシュする単語リスト
+   */
+  set(key: string, words: Word[]): void {
+    // キャッシュサイズ制限のチェック
+    if (this.cache.size >= this.maxSize) {
+      // 最も古いエントリを削除（LRU的な動作）
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) {
+        this.cache.delete(firstKey);
+      }
+    }
+
+    this.cache.set(key, [...words]); // 浅いコピーで保存
+  }
+
+  /**
+   * キーに基づいてキャッシュから単語リストを取得
+   * @param key - キャッシュキー
+   * @returns キャッシュされた単語リスト、または undefined
+   */
+  get(key: string): Word[] | undefined {
+    const cached = this.cache.get(key);
+    if (cached) {
+      // キャッシュヒット: 新しい配列として返す（参照汚染防止）
+      return [...cached];
+    }
+    return undefined;
+  }
+
+  /**
+   * 特定のキーのキャッシュをクリア
+   * @param key - クリアするキャッシュキー
+   */
+  clear(key?: string): void {
+    if (key) {
+      this.cache.delete(key);
+    } else {
+      this.cache.clear();
+    }
+  }
+
+  /**
+   * キャッシュ統計情報を取得
+   * @returns キャッシュサイズとヒット可能なキー一覧
+   */
+  getStats(): { size: number; keys: string[] } {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys()),
+    };
+  }
+}
+
+// グローバルキャッシュインスタンス（Process5 sub2実装）
+export const globalWordCache = new KeyBasedWordCache();

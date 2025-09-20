@@ -14,7 +14,9 @@ import {
   type WordDetectionConfig,
   type WordDetectionResult,
   type WordDetector,
+  type DetectionContext,
 } from "./detector.ts";
+import type { Config } from "../main.ts";
 
 /**
  * 単語検出マネージャー設定インターフェース
@@ -106,15 +108,19 @@ export class WordDetectionManager {
   private cache: Map<string, CacheEntry> = new Map();
   private stats: DetectionStats;
   private initialized = false;
+  private sessionContext: DetectionContext | null = null;
+  private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
 
   /**
    * WordDetectionManagerのコンストラクタ
    * @description マネージャーを初期化し、設定と統計情報をセットアップ
    * @param config - マネージャー設定（省略時はデフォルト設定）
+   * @param globalConfig - グローバル設定（統一的なmin_length処理のため）
    * @since 1.0.0
    */
-  constructor(config: WordDetectionManagerConfig = {}) {
+  constructor(config: WordDetectionManagerConfig = {}, globalConfig?: Config) {
     this.config = this.mergeWithDefaults(config);
+    this.globalConfig = globalConfig;
     this.stats = this.initializeStats();
   }
 
@@ -134,10 +140,10 @@ export class WordDetectionManager {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Register default detectors
-    const regexDetector = new RegexWordDetector(this.config);
-    const segmenterDetector = new TinySegmenterWordDetector(this.config);
-    const hybridDetector = new HybridWordDetector(this.config);
+    // Register default detectors with globalConfig
+    const regexDetector = new RegexWordDetector(this.config, this.globalConfig);
+    const segmenterDetector = new TinySegmenterWordDetector(this.config, this.globalConfig);
+    const hybridDetector = new HybridWordDetector(this.config, this.globalConfig);
 
     this.registerDetector(regexDetector);
     this.registerDetector(segmenterDetector);
@@ -188,6 +194,7 @@ export class WordDetectionManager {
     text: string,
     startLine: number = 1,
     denops?: Denops,
+    context?: DetectionContext,
   ): Promise<WordDetectionResult> {
     if (!this.initialized) {
       await this.initialize();
@@ -195,6 +202,9 @@ export class WordDetectionManager {
 
     const startTime = Date.now();
     this.stats.total_calls++;
+
+    // Use provided context or stored session context
+    const effectiveContext = context || this.sessionContext || undefined;
 
     try {
       // Check cache first
@@ -223,7 +233,7 @@ export class WordDetectionManager {
       }
 
       // Perform detection with timeout
-      const words = await this.detectWithTimeout(detector, text, startLine);
+      const words = await this.detectWithTimeout(detector, text, startLine, effectiveContext);
 
       // Cache the result
       if (this.config.cache_enabled) {
@@ -255,7 +265,7 @@ export class WordDetectionManager {
         try {
           const fallbackDetector = this.getFallbackDetector();
           if (fallbackDetector) {
-            const words = await fallbackDetector.detectWords(text, startLine);
+            const words = await fallbackDetector.detectWords(text, startLine, effectiveContext);
             return {
               words,
               detector: `${fallbackDetector.name} (fallback)`,
@@ -300,7 +310,7 @@ export class WordDetectionManager {
    * console.log(`Found ${result.words.length} words in current buffer`);
    * ```
    */
-  async detectWordsFromBuffer(denops: Denops): Promise<WordDetectionResult> {
+  async detectWordsFromBuffer(denops: Denops, context?: DetectionContext): Promise<WordDetectionResult> {
     try {
       // Get visible range
       const topLine = await denops.call("line", "w0") as number;
@@ -310,7 +320,7 @@ export class WordDetectionManager {
       const lines = await denops.call("getbufline", "%", topLine, bottomLine) as string[];
       const text = lines.join("\n");
 
-      return this.detectWords(text, topLine, denops);
+      return this.detectWords(text, topLine, denops, context);
     } catch (error) {
       // console.error("[WordDetectionManager] Failed to detect words from buffer:", error);
       return {
@@ -415,9 +425,10 @@ export class WordDetectionManager {
     detector: WordDetector,
     text: string,
     startLine: number,
+    context?: DetectionContext,
   ): Promise<Word[]> {
     if (!this.config.timeout_ms) {
-      return detector.detectWords(text, startLine);
+      return detector.detectWords(text, startLine, context);
     }
 
     return new Promise((resolve, reject) => {
@@ -425,7 +436,7 @@ export class WordDetectionManager {
         reject(new Error(`Detection timeout (${this.config.timeout_ms}ms)`));
       }, this.config.timeout_ms);
 
-      detector.detectWords(text, startLine)
+      detector.detectWords(text, startLine, context)
         .then((result) => {
           clearTimeout(timeoutId);
           resolve(result);
@@ -703,6 +714,35 @@ export class WordDetectionManager {
   }
 
   /**
+   * セッションコンテキストを設定
+   * @description キー別設定や現在のモーションキー情報を保存
+   * @param context - 設定するコンテキスト
+   * @returns void
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * manager.setSessionContext({ currentKey: "f", minWordLength: 3 });
+   * ```
+   */
+  setSessionContext(context: DetectionContext | null): void {
+    this.sessionContext = context;
+  }
+
+  /**
+   * セッションコンテキストを取得
+   * @description 現在保存されているコンテキスト情報を取得
+   * @returns DetectionContext | null - 現在のコンテキスト
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const context = manager.getSessionContext();
+   * ```
+   */
+  getSessionContext(): DetectionContext | null {
+    return this.sessionContext;
+  }
+
+  /**
    * すべてのディテクターをテスト
    * @description 登録されているすべてのディテクターの利用可能性をテスト
    * @returns Promise<Record<string, boolean>> ディテクター名と利用可能性のマッピング
@@ -816,12 +856,12 @@ let globalManager: WordDetectionManager | null = null;
  * await manager.initialize();
  * ```
  */
-export function getWordDetectionManager(config?: WordDetectionManagerConfig): WordDetectionManager {
+export function getWordDetectionManager(config?: WordDetectionManagerConfig, globalConfig?: Config): WordDetectionManager {
   if (!globalManager) {
-    globalManager = new WordDetectionManager(config);
+    globalManager = new WordDetectionManager(config, globalConfig);
   } else if (config) {
     // 既存のマネージャーがある場合でも、新しい設定で更新
-    globalManager = new WordDetectionManager(config);
+    globalManager = new WordDetectionManager(config, globalConfig);
   }
   return globalManager;
 }

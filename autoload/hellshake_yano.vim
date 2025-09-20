@@ -127,7 +127,7 @@ function! hellshake_yano#motion(key) abort
   " ヒント表示かタイムアウト設定を判定・実行
   if s:should_trigger_hints(bufnr)
     call s:reset_count(bufnr)
-    call s:trigger_hints()
+    call hellshake_yano#show_hints_with_key(a:key)
     call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': get(g:hellshake_yano, 'motion_count', 3) })
   else
@@ -274,13 +274,25 @@ endfunction
 
 " マッピング対象キーを取得
 function! s:get_motion_keys() abort
+  let keys = []
+
+  " counted_motionsから取得
   if has_key(g:hellshake_yano, 'counted_motions') && !empty(g:hellshake_yano.counted_motions)
-    return g:hellshake_yano.counted_motions
+    let keys = copy(g:hellshake_yano.counted_motions)
   elseif get(g:hellshake_yano, 'trigger_on_hjkl', v:true)
-    return ['h', 'j', 'k', 'l']
-  else
-    return []
+    let keys = ['h', 'j', 'k', 'l']
   endif
+
+  " per_key_min_lengthで定義されたキーを自動的に追加
+  if has_key(g:hellshake_yano, 'per_key_min_length') && type(g:hellshake_yano.per_key_min_length) == v:t_dict
+    for key in keys(g:hellshake_yano.per_key_min_length)
+      if index(keys, key) == -1
+        call add(keys, key)
+      endif
+    endfor
+  endif
+
+  return keys
 endfunction
 
 " モーションキーマッピングを設定
@@ -692,6 +704,67 @@ function! hellshake_yano#normalize_color_name(color) abort
 
   " 最初の文字を大文字、残りを小文字にする
   return substitute(a:color, '^\(.\)\(.*\)', '\u\1\L\2', '')
+endfunction
+
+"=============================================================================
+" Process4: Denops連携関数群
+" キー情報をDenopsに伝達する関数群
+"=============================================================================
+
+" キー情報付きヒント表示関数（Process4 sub1）
+" @param key - 押下されたキー文字
+function! hellshake_yano#show_hints_with_key(key) abort
+  try
+    if !s:is_denops_ready()
+      return
+    endif
+
+    " Denops側のshowHintsWithKeyメソッドを呼び出し
+    call denops#notify('hellshake-yano', 'showHintsWithKey', [a:key])
+  catch
+    call hellshake_yano#show_error('show_hints_with_key', v:exception)
+  endtry
+endfunction
+
+" hellshake_yano#motion関数を更新してキー情報を伝達（Process4 sub1拡張）
+function! hellshake_yano#motion_with_key_context(key) abort
+  let start_time = s:get_elapsed_time()
+
+  " プラグインが無効な場合は通常の動作
+  if !get(g:hellshake_yano, 'enabled', v:true)
+    return a:key
+  endif
+
+  let bufnr = s:bufnr()
+  call s:init_buffer_state(bufnr)
+
+  " キーリピート検出処理
+  let current_time = s:get_elapsed_time()
+  let config = s:get_key_repeat_config()
+
+  if s:handle_key_repeat_detection(bufnr, current_time, config)
+    call s:handle_debug_display()
+    return a:key
+  endif
+
+  " モーションカウントを処理
+  call s:process_motion_count(bufnr)
+
+  " ヒント表示かタイムアウト設定を判定・実行（キー情報付き）
+  if s:should_trigger_hints(bufnr)
+    call s:reset_count(bufnr)
+    " キー情報付きでヒント表示を呼び出し
+    call hellshake_yano#show_hints_with_key(a:key)
+    call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
+          \ 'key': a:key, 'count': get(g:hellshake_yano, 'motion_count', 3) })
+  else
+    call s:set_motion_timeout(bufnr)
+    call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
+          \ 'key': a:key, 'count': s:motion_count[bufnr] })
+  endif
+
+  call s:handle_debug_display()
+  return a:key
 endfunction
 
 " 保存と復元

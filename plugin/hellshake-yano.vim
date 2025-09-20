@@ -46,6 +46,20 @@ if !has_key(g:hellshake_yano, 'motion_timeout')
   let g:hellshake_yano.motion_timeout = 2000
 endif
 
+" キー別最小文字数設定（process1追加）
+if !has_key(g:hellshake_yano, 'per_key_min_length')
+  " デフォルト設定例：近距離精密移動は1文字から、頻繁なキーは2文字から
+  let g:hellshake_yano.per_key_min_length = {
+        \ 'v': 1,
+        \ 'V': 1,
+        \ 'w': 1,
+        \ 'b': 1,
+        \ }
+endif
+if !has_key(g:hellshake_yano, 'default_min_word_length')
+  let g:hellshake_yano.default_min_word_length = 2
+endif
+
 " 設定値の基本検証（TypeScript側でより詳細な検証を実施）
 function! s:validate_config() abort
   " key_repeat_threshold が設定されている場合のみ検証
@@ -62,6 +76,36 @@ function! s:validate_config() abort
     echom '[hellshake-yano] Warning: key_repeat_reset_delay must be positive'
     echohl None
     unlet g:hellshake_yano.key_repeat_reset_delay
+  endif
+
+  " per_key_min_length の検証（process1追加）
+  if has_key(g:hellshake_yano, 'per_key_min_length')
+    if type(g:hellshake_yano.per_key_min_length) != v:t_dict
+      echohl WarningMsg
+      echom '[hellshake-yano] Warning: per_key_min_length must be a dictionary'
+      echohl None
+      unlet g:hellshake_yano.per_key_min_length
+    else
+      " 各エントリの値が正の数値であることを確認
+      for [key, value] in items(g:hellshake_yano.per_key_min_length)
+        if type(value) != v:t_number || value <= 0
+          echohl WarningMsg
+          echom '[hellshake-yano] Warning: per_key_min_length values must be positive numbers'
+          echohl None
+          unlet g:hellshake_yano.per_key_min_length[key]
+        endif
+      endfor
+    endif
+  endif
+
+  " default_min_word_length の検証（process1追加）
+  if has_key(g:hellshake_yano, 'default_min_word_length')
+    if type(g:hellshake_yano.default_min_word_length) != v:t_number || g:hellshake_yano.default_min_word_length <= 0
+      echohl WarningMsg
+      echom '[hellshake-yano] Warning: default_min_word_length must be a positive number'
+      echohl None
+      unlet g:hellshake_yano.default_min_word_length
+    endif
   endif
 endfunction
 

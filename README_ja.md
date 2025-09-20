@@ -54,6 +54,8 @@ let g:hellshake_yano = {
   \ 'use_hint_groups': v:true,
   \ 'use_numbers': v:true,
   \ 'use_japanese': v:true,
+  \ 'per_key_min_length': {},
+  \ 'default_min_word_length': 2,
   \ 'highlight_hint_marker': 'DiffAdd',
   \ 'highlight_hint_marker_current': 'DiffText'
   \ }
@@ -81,8 +83,121 @@ let g:hellshake_yano = {
 | `suppress_on_key_repeat`        | 真偽値      | v:true          | 高速キーリピート時のヒント抑制                    |
 | `key_repeat_threshold`          | 数値        | 50              | キーリピート検出閾値（ミリ秒）                    |
 | `key_repeat_reset_delay`        | 数値        | 300             | キーリピート後のリセット遅延（ミリ秒）            |
+| `per_key_min_length`            | 辞書        | {}              | キー別最小文字数設定                              |
+| `default_min_word_length`       | 数値        | 2               | デフォルト最小文字数                              |
 | `debug_mode`                    | 真偽値      | v:false         | デバッグモードを有効化                            |
 | `performance_log`               | 真偽値      | v:false         | パフォーマンスログを有効化                        |
+
+### キー別最小文字数設定
+
+**強化機能**: キーごとに異なる最小文字数を設定し、移動タイプとコンテキストに基づいてヒント表示を最適化できます。`per_key_min_length`で定義されたキーは**自動的にマッピング**されます - `counted_motions`を手動で設定する必要はありません。
+
+この機能により、特定のキーに対するヒント表示の細かい制御が可能になり、以下が実現できます：
+- ビジュアルモードキーでの**精密な移動**（1文字ヒント）
+- hjklナビゲーションでの**ノイズ軽減**（2文字以上ヒント）
+- 移動タイプごとの**カスタマイズされた閾値**
+- 設定されたキーの**自動マッピング**
+
+#### 基本設定
+
+```vim
+let g:hellshake_yano = {
+  \ 'per_key_min_length': {
+  \   'v': 1,   " ビジュアルモード - 精密な移動
+  \   'V': 1,   " ビジュアル行モード
+  \   'w': 1,   " 単語前進
+  \   'b': 1,   " 単語後退
+  \   'h': 2,   " 左（ノイズ軽減）
+  \   'j': 2,   " 下
+  \   'k': 2,   " 上
+  \   'l': 2,   " 右
+  \   'f': 3,   " 文字検索
+  \   'F': 3,   " 文字後方検索
+  \ },
+  \ 'default_min_word_length': 2,
+  \ 'motion_count': 3,   " 3回の動きの後にヒントをトリガー
+  \ }
+" 注意: per_key_min_lengthのキーは自動的にマッピングされます！
+" counted_motionsを別途設定する必要はありません。
+```
+
+#### ユースケース
+
+**精密な移動（1文字ヒント）**
+- ビジュアルモード選択では精密なカーソル配置が必要
+- 単語モーション（w, b, e）は全ての可能なターゲットを表示することで恩恵を受ける
+- 1文字ヒントは最大の精度のために即座に表示される
+
+**ノイズ軽減（2文字以上ヒント）**
+- 大きなファイルでのhjklナビゲーションは、多すぎるヒントで圧倒される可能性がある
+- より高い閾値により、スクロール中の視覚的ノイズを軽減
+- スムーズなナビゲーション体験を維持
+
+**モーション固有の最適化**
+- 検索操作（f, F, t, T）はしばしば長い単語をターゲットにする
+- 検索モーション（/, ?）はより長い最小長で良く動作する
+- 異なるモーションタイプは異なる精度要求を持つ
+
+#### レガシー設定からの移行
+
+**移行前（レガシー）**:
+```vim
+let g:hellshake_yano = {
+  \ 'min_word_length': 2
+  \ }
+```
+
+**移行後（キー別）**:
+```vim
+let g:hellshake_yano = {
+  \ 'default_min_word_length': 2,
+  \ 'per_key_min_length': {
+  \   'v': 1,  " ビジュアルモードの上書き
+  \   'h': 3,  " 左移動の上書き
+  \ }
+  \ }
+```
+
+**段階的移行戦略**:
+1. `default_min_word_length`を古い`min_word_length`に合わせて設定
+2. 異なる動作が欲しいキーに固有の上書きを追加
+3. 各変更を段階的にテスト
+4. 移行完了後に古い`min_word_length`設定を削除
+
+**主な機能**:
+- **自動マッピング**: `per_key_min_length`のキーは自動的にモーションマッピングに追加されます
+- **手動設定不要**: per-key設定されたキーには`counted_motions`の設定が不要です
+- **完全な後方互換性**: 既存の設定は変更なしで動作し続けます
+- **動的コンテキスト**: 各キー押下でコンテキストが更新され、正確なフィルタリングが行われます
+
+**`counted_motions`との組み合わせ**:
+```vim
+let g:hellshake_yano = {
+  \ 'per_key_min_length': {
+  \   'v': 1,  " 1文字最小で自動マッピング
+  \   'h': 2,  " 2文字最小で自動マッピング
+  \ },
+  \ 'counted_motions': ['g', 'd'],  " default_min_word_lengthを使用する追加キー
+  \ 'default_min_word_length': 3,
+  \ }
+" 結果: v(1), h(2), g(3), d(3) すべてが追跡されます
+```
+
+#### パフォーマンスに関する考慮事項
+
+- **キャッシュ最適化**: キー別設定により、キーコンテキストに基づくインテリジェントなキャッシングが可能
+- **メモリ使用量**: 最小限のオーバーヘッド - 指定されたキーの上書きのみを保存
+- **大きなファイルに推奨される設定**:
+  ```vim
+  let g:hellshake_yano = {
+    \ 'default_min_word_length': 3,
+    \ 'per_key_min_length': {
+    \   'v': 1,  " ビジュアルモードは精密に保つ
+    \   'w': 2,  " 単語モーションをより反応よく
+    \   'h': 4, 'j': 4, 'k': 4, 'l': 4  " hjklノイズを大幅に軽減
+    \ }
+    \ }
+  ```
 
 ### キーリピート抑制
 
@@ -247,8 +362,10 @@ let g:hellshake_yano = {
 #### ヒントが表示されない
 1. プラグインが有効か確認: `:echo g:hellshake_yano.enabled`
 2. モーションカウント設定を確認: `:echo g:hellshake_yano.motion_count`
-3. denopsが正しくインストール・動作しているか確認
-4. `:HellshakeDebug`で現在の状態を確認
+3. キー別最小文字数設定を確認: `:echo g:hellshake_yano.per_key_min_length`
+4. デフォルト最小文字数を確認: `:echo g:hellshake_yano.default_min_word_length`
+5. denopsが正しくインストール・動作しているか確認
+6. `:HellshakeDebug`で現在の状態を確認
 
 #### スクロール中にヒントが表示される
 - キーリピート抑制設定を調整:
@@ -267,6 +384,15 @@ let g:hellshake_yano = {
 4. 必要なければ日本語単語検出を無効化:
    ```vim
    let g:hellshake_yano.use_japanese = v:false
+   ```
+
+#### キー別設定が動作しない
+1. 設定構文が正しいか確認: `:echo g:hellshake_yano.per_key_min_length`
+2. per_key_min_length辞書にキーが存在するか確認
+3. default_min_word_lengthが適切に設定されているか確認
+4. まずシンプルな設定でテスト:
+   ```vim
+   let g:hellshake_yano.per_key_min_length = {'v': 1}
    ```
 
 #### 日本語テキストで単語検出が正しくない
