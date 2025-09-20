@@ -15,6 +15,7 @@ import {
   assignHintsToWords,
   calculateHintPosition,
   calculateHintPositionWithCoordinateSystem,
+  clearHintCache,
   generateHints,
   generateHintsWithGroups,
   type HintKeyConfig,
@@ -613,6 +614,9 @@ export async function main(denops: Denops): Promise<void> {
         clearTimeout(debounceTimeoutId);
         debounceTimeoutId = undefined;
       }
+
+      // 日本語テキスト対応: 毎回キャッシュをクリアして正確な位置を計算
+      clearHintCache();
 
       const maxRetries = 2;
       let retryCount = 0;
@@ -1692,7 +1696,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     const inputTimeout = config.motion_timeout || 2000;
 
     // プロンプトを表示
-    await denops.cmd("echo 'Select hint: '");
+    // await denops.cmd("echo 'Select hint: '");
 
     // タイムアウト付きでユーザー入力を取得
     const inputPromise = denops.call("getchar") as Promise<number>;
@@ -1829,7 +1833,20 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
       if (singleOnlyKeys.includes(inputChar) && singleCharTarget) {
         try {
-          await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
+          // 日本語文字対応: byteColを優先的に使用
+          const jumpCol = singleCharTarget.word.byteCol || singleCharTarget.word.col;
+
+          // デバッグログ: ジャンプ位置の詳細
+          if (config.debug_mode) {
+            console.log(`[hellshake-yano:DEBUG] Jump to single char hint:`);
+            console.log(`  - text: "${singleCharTarget.word.text}"`);
+            console.log(`  - line: ${singleCharTarget.word.line}`);
+            console.log(`  - col: ${singleCharTarget.word.col} (display)`);
+            console.log(`  - byteCol: ${singleCharTarget.word.byteCol} (byte)`);
+            console.log(`  - jumpCol (used): ${jumpCol}`);
+          }
+
+          await denops.call("cursor", singleCharTarget.word.line, jumpCol);
           // await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
         } catch (jumpError) {
           // console.error("[hellshake-yano] Failed to jump to target:", jumpError);
@@ -1851,8 +1868,21 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       if (matchingHints.length === 1 && singleCharTarget) {
         // マッチするヒントが1つだけで、それが単一文字の場合のみ即座にジャンプ
         try {
-          await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
-          await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
+          // 日本語文字対応: byteColを優先的に使用
+          const jumpCol = singleCharTarget.word.byteCol || singleCharTarget.word.col;
+
+          // デバッグログ: ジャンプ位置の詳細
+          if (config.debug_mode) {
+            console.log(`[hellshake-yano:DEBUG] Jump to single matching hint:`);
+            console.log(`  - text: "${singleCharTarget.word.text}"`);
+            console.log(`  - line: ${singleCharTarget.word.line}`);
+            console.log(`  - col: ${singleCharTarget.word.col} (display)`);
+            console.log(`  - byteCol: ${singleCharTarget.word.byteCol} (byte)`);
+            console.log(`  - jumpCol (used): ${jumpCol}`);
+          }
+
+          await denops.call("cursor", singleCharTarget.word.line, jumpCol);
+          // await denops.cmd(`echo 'Jumped to "${singleCharTarget.word.text}"' | redraw`);
         } catch (jumpError) {
           // console.error("[hellshake-yano] Failed to jump to target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
@@ -1868,7 +1898,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     }
 
     // 第2文字の入力を待機
-    await denops.cmd(`echo 'Select hint: ${inputChar}' | redraw`);
+    // await denops.cmd(`echo 'Select hint: ${inputChar}' | redraw`);
 
     let secondChar: number;
 
@@ -1914,8 +1944,21 @@ async function waitForUserInput(denops: Denops): Promise<void> {
         // 候補が1つの場合は自動選択
         const target = matchingHints[0];
         try {
-          await denops.call("cursor", target.word.line, target.word.col);
-          await denops.cmd(`echo 'Auto-selected "${target.word.text}"'`);
+          // 日本語文字対応: byteColを優先的に使用
+          const jumpCol = target.word.byteCol || target.word.col;
+
+          // デバッグログ: ジャンプ位置の詳細
+          if (config.debug_mode) {
+            console.log(`[hellshake-yano:DEBUG] Auto-select single candidate:`);
+            console.log(`  - text: "${target.word.text}"`);
+            console.log(`  - line: ${target.word.line}`);
+            console.log(`  - col: ${target.word.col} (display)`);
+            console.log(`  - byteCol: ${target.word.byteCol} (byte)`);
+            console.log(`  - jumpCol (used): ${jumpCol}`);
+          }
+
+          await denops.call("cursor", target.word.line, jumpCol);
+          // await denops.cmd(`echo 'Auto-selected "${target.word.text}"'`);
         } catch (jumpError) {
           // console.error("[hellshake-yano] Failed to jump to auto-selected target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
@@ -1923,8 +1966,21 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       } else if (singleCharTarget) {
         // タイムアウトで単一文字ヒントがある場合はそれを選択
         try {
-          await denops.call("cursor", singleCharTarget.word.line, singleCharTarget.word.col);
-          await denops.cmd(`echo 'Selected "${singleCharTarget.word.text}" (timeout)' | redraw`);
+          // 日本語文字対応: byteColを優先的に使用
+          const jumpCol = singleCharTarget.word.byteCol || singleCharTarget.word.col;
+
+          // デバッグログ: ジャンプ位置の詳細
+          if (config.debug_mode) {
+            console.log(`[hellshake-yano:DEBUG] Timeout select single char hint:`);
+            console.log(`  - text: "${singleCharTarget.word.text}"`);
+            console.log(`  - line: ${singleCharTarget.word.line}`);
+            console.log(`  - col: ${singleCharTarget.word.col} (display)`);
+            console.log(`  - byteCol: ${singleCharTarget.word.byteCol} (byte)`);
+            console.log(`  - jumpCol (used): ${jumpCol}`);
+          }
+
+          await denops.call("cursor", singleCharTarget.word.line, jumpCol);
+          // await denops.cmd(`echo 'Selected "${singleCharTarget.word.text}" (timeout)' | redraw`);
         } catch (jumpError) {
           // console.error("[hellshake-yano] Failed to jump to single char target:", jumpError);
           await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
@@ -1978,8 +2034,19 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       // カーソルを移動（byteColが利用可能な場合は使用）
       try {
         const jumpCol = target.word.byteCol || target.word.col;
+
+        // デバッグログ: ジャンプ位置の詳細
+        if (config.debug_mode) {
+          console.log(`[hellshake-yano:DEBUG] Jump to hint "${fullHint}":`);
+          console.log(`  - text: "${target.word.text}"`);
+          console.log(`  - line: ${target.word.line}`);
+          console.log(`  - col: ${target.word.col} (display)`);
+          console.log(`  - byteCol: ${target.word.byteCol} (byte)`);
+          console.log(`  - jumpCol (used): ${jumpCol}`);
+        }
+
         await denops.call("cursor", target.word.line, jumpCol);
-        await denops.cmd(`echo 'Jumped to "${target.word.text}"'`);
+        // await denops.cmd(`echo 'Jumped to "${target.word.text}"'`);
       } catch (jumpError) {
         // console.error("[hellshake-yano] Failed to jump to target:", jumpError);
         await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
