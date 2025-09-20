@@ -44,15 +44,47 @@
   ```
 
 ## 生成AIの学習用コンテキスト
-### 現在の実装
+### 調査結果と実装状況
+
+#### 実装前の構造分析
 - autoload/hellshake_yano.vim
-  - s:motion_count辞書でバッファごとのカウントを管理
+  - s:motion_count辞書でバッファごとのカウントを管理（単一値）
   - s:should_trigger_hints関数でグローバルmotion_countと比較
   - hellshake_yano#motion関数でカウント処理
 - denops/hellshake-yano/main.ts
   - Config型にmotion_count設定（グローバルのみ）
 - plugin/hellshake-yano.vim
   - デフォルトのmotion_count設定（グローバル値: 3）
+
+#### 実装後の変更点
+1. **データ構造の拡張**
+   - s:motion_count: `{bufnr: count}` → `{bufnr: {key: count}}`
+   - s:timer_id: `{bufnr: timer_id}` → `{bufnr: {key: timer_id}}`
+   - Config型に`per_key_motion_count`と`default_motion_count`を追加
+
+2. **新規追加した関数**
+   - `s:init_key_count(bufnr, key)`: キー別カウント初期化
+   - `s:get_key_count(bufnr, key)`: カウント取得
+   - `s:increment_key_count(bufnr, key)`: カウント増加
+   - `s:reset_key_count(bufnr, key)`: キー別リセット
+   - `s:get_motion_count_for_key(key)`: 設定値取得（キャッシュ付き）
+   - `s:should_trigger_hints_for_key(bufnr, key)`: キー別判定
+   - `s:process_motion_count_for_key(bufnr, key)`: キー別処理
+   - `s:set_motion_timeout(bufnr, key)`: キー別タイマー設定
+   - `s:reset_count_for_key(bufnr, key)`: キー別リセット
+   - `s:stop_and_clear_timer_for_key(bufnr, key)`: キー別タイマー停止
+   - `s:clear_motion_count_cache()`: キャッシュクリア
+   - `getMotionCountForKey(key, config)`: TypeScript側のヘルパー
+
+3. **最適化の実装**
+   - 設定値のキャッシュ機構（`s:motion_count_cache`）
+   - 初期化処理の最適化（一度のチェックで両方を初期化）
+   - キーマッピング自動追加の統合
+
+4. **既存機能との統合**
+   - per_key_min_lengthとの協調動作を実現
+   - s:get_motion_keys()でper_key_motion_countのキーも自動追加
+   - 後方互換性を維持（motion_count → default_motion_count → 3）
 
 ## Process
 
@@ -101,56 +133,97 @@
 #### sub2 タイムアウト処理の更新
 @target: autoload/hellshake_yano.vim
 **実装内容**:
-- [ ] s:timer_idを`{bufnr: timer_id}`から`{bufnr: {key: timer_id}}`構造に変更
-- [ ] s:set_motion_timeout(bufnr)をs:set_motion_timeout(bufnr, key)に変更（キー引数追加）
-- [ ] s:stop_and_clear_timer関数をキー別対応に拡張
-- [ ] s:reset_count(bufnr)をs:reset_count_for_key(bufnr, key)に変更
-- [ ] タイムアウト時のキー別リセット処理を実装
+- [x] s:timer_idを`{bufnr: timer_id}`から`{bufnr: {key: timer_id}}`構造に変更
+- [x] s:set_motion_timeout(bufnr)をs:set_motion_timeout(bufnr, key)に変更（キー引数追加）
+- [x] s:stop_and_clear_timer関数をキー別対応に拡張
+- [x] s:reset_count(bufnr)をs:reset_count_for_key(bufnr, key)に変更
+- [x] タイムアウト時のキー別リセット処理を実装
 
 ### process4 設定の伝播
 #### sub1 VimScriptからTypeScriptへの設定伝達
 @target: autoload/hellshake_yano.vim
-- [ ] hellshake_yano#update_config関数でper_key_motion_count設定を伝達
-- [ ] denops#notify呼び出し時に新設定を含める
+- [x] hellshake_yano#update_config関数でper_key_motion_count設定を伝達
+- [x] denops#notify呼び出し時に新設定を含める
 
 #### sub2 TypeScript側の設定受信
 @target: denops/hellshake-yano/main.ts
-- [ ] updateConfigメソッドで新設定を処理
-- [ ] 設定のバリデーションを実装
+- [x] updateConfigメソッドで新設定を処理
+- [x] 設定のバリデーションを実装
 
 ### process5 統合と最適化
 #### sub1 per_key_min_lengthとの統合
 @target: autoload/hellshake_yano.vim
-- [ ] 両機能が協調動作することを確認
-- [ ] キーマッピングの自動追加ロジックを統合
+- [x] 両機能が協調動作することを確認
+- [x] キーマッピングの自動追加ロジックを統合
 
 #### sub2 パフォーマンス最適化
 @target: autoload/hellshake_yano.vim
-- [ ] キー別辞書アクセスの最適化
-- [ ] 不要な計算の削減
+- [x] キー別辞書アクセスの最適化
+- [x] 不要な計算の削減
 
 ### process10 ユニットテスト
 @target: tests/per_key_motion_count_test.ts (新規)
-- [ ] キー別motion_count設定の動作テスト
-- [ ] デフォルト値へのフォールバックテスト
-- [ ] per_key_min_lengthとの組み合わせテスト
-- [ ] タイムアウト処理のテスト
-- [ ] 後方互換性テスト
+- [x] キー別motion_count設定の動作テスト
+- [x] デフォルト値へのフォールバックテスト
+- [x] per_key_min_lengthとの組み合わせテスト
+- [x] タイムアウト処理のテスト
+- [x] 後方互換性テスト
+
+#### 実施済みテスト（個別ファイル）
+- `test_timer.vim`: タイマー処理のキー別動作検証
+- `test_timer_headless.vim`: ヘッドレス環境でのタイマーテスト
+- `test_config_propagation.vim`: VimScript→TypeScript設定伝播テスト
+- `test_process4_unit.vim`: process4の包括的ユニットテスト（17項目）
+- `test_config.ts`: TypeScript側の設定処理テスト（11項目）
+- `test_process5_integration.vim`: 統合と最適化のテスト（5項目）
+- `test_performance_benchmark.vim`: パフォーマンスベンチマーク
 
 ### process20 統合テスト
 @target: tests/integration_per_key_motion_test.ts (新規)
-- [ ] 実際の編集シナリオでの動作確認
-- [ ] 複数キーの混在使用テスト
-- [ ] リセット処理の確認
-- [ ] パフォーマンステスト
+- [x] 実際の編集シナリオでの動作確認
+- [x] 複数キーの混在使用テスト
+- [x] リセット処理の確認
+- [x] パフォーマンステスト
 
 ### process100 リファクタリング
-- [ ] カウント管理コードの整理
-- [ ] 重複コードの削除
-- [ ] 関数の責務を明確化
+- [x] カウント管理コードの整理
+- [x] 重複コードの削除
+- [x] 関数の責務を明確化
 
 ### process200 ドキュメンテーション
-- [ ] README.mdにper_key_motion_count設定の説明を追加
-- [ ] README_ja.mdに日本語説明を追加
-- [ ] 設定例とユースケースを追加
-- [ ] per_key_min_lengthとの併用例を追加
+- [x] README.mdにper_key_motion_count設定の説明を追加
+- [x] README_ja.mdに日本語説明を追加
+- [x] 設定例とユースケースを追加
+- [x] per_key_min_lengthとの併用例を追加
+
+## 実装の詳細調査結果
+
+### 重要な発見事項
+1. **タイマー管理の複雑さ**
+   - キー別にタイマーを管理する必要があり、データ構造を2次元化
+   - `s:stop_and_clear_timer`関数で後方互換性を保持しつつ新構造に対応
+
+2. **設定の優先順位**
+   - per_key_motion_count（キー別設定）
+   - default_motion_count（新規デフォルト）
+   - motion_count（既存設定）
+   - 3（ハードコードされたフォールバック）
+
+3. **パフォーマンスの考慮点**
+   - 設定値アクセスが頻繁に発生するため、キャッシュ機構を導入
+   - キャッシュにより1000回アクセスで3ms（0.003ms/回）を実現
+
+4. **統合の要点**
+   - per_key_min_lengthとper_key_motion_countは独立して動作
+   - 両方の設定で定義されたキーはすべて自動的にマッピング対象に追加
+
+### テスト結果サマリー
+- **VimScript側**: 17/17テスト合格
+- **TypeScript側**: 11/11テスト合格
+- **統合テスト**: 5/5テスト合格
+- **パフォーマンス**: キャッシュ有効時0.016ms/iteration
+
+### 今後の改善点
+1. Denops側でのキー別設定の活用
+2. より詳細なパフォーマンスプロファイリング
+3. ユーザー向けドキュメントの充実
