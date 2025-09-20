@@ -68,7 +68,9 @@ let g:hellshake_yano = {
 | Option                          | Type        | Default         | Description                                             |
 | ------------------------------- | ----------- | --------------- | ------------------------------------------------------- |
 | `markers`                       | array       | A-Z split       | Characters used as hint markers                         |
-| `motion_count`                  | number      | 3               | Number of motions before hints appear                   |
+| `motion_count`                  | number      | 3               | Number of motions before hints appear (legacy)          |
+| `default_motion_count`          | number      | undefined       | Default motion count for unspecified keys               |
+| `per_key_motion_count`          | dict        | {}              | Per-key motion count settings                           |
 | `motion_timeout`                | number      | 2000            | Timeout for motion count in milliseconds                |
 | `hint_position`                 | string      | 'start'         | Where to display hints ('start' or 'end')               |
 | `trigger_on_hjkl`               | boolean     | v:true          | Enable triggering on hjkl movements                     |
@@ -200,6 +202,73 @@ let g:hellshake_yano = {
     \ }
     \ }
   ```
+
+### Per-Key Motion Count Configuration
+
+The plugin supports **per-key motion count** settings, allowing different keys to trigger hints after different numbers of presses. This enables optimal user experience for different motion types.
+
+#### Basic Configuration
+
+```vim
+let g:hellshake_yano = {
+  \ 'per_key_motion_count': {
+  \   'v': 1,   " Visual mode - show hints immediately (1 press)
+  \   'V': 1,   " Visual line mode - immediate hints
+  \   'w': 1,   " Word forward - immediate hints
+  \   'b': 1,   " Word backward - immediate hints
+  \   'h': 3,   " Left - show hints after 3 presses
+  \   'j': 3,   " Down - show hints after 3 presses
+  \   'k': 3,   " Up - show hints after 3 presses
+  \   'l': 3,   " Right - show hints after 3 presses
+  \ },
+  \ 'default_motion_count': 2,  " Default for unspecified keys
+  \ 'motion_count': 3,          " Legacy fallback
+  \ }
+```
+
+#### Use Cases
+
+**Immediate Hints (count = 1)**
+- Visual mode selections require precise cursor placement
+- Word motions (w, b, e) benefit from showing hints immediately
+- Useful for operations that need accuracy over speed
+
+**Delayed Hints (count = 3+)**
+- hjkl navigation in normal mode can be less precise
+- Reduces visual noise during rapid scrolling
+- Maintains smooth navigation experience
+
+#### Configuration Priority
+
+The plugin uses the following priority order for motion count settings:
+1. `per_key_motion_count[key]` - Key-specific setting
+2. `default_motion_count` - New default value
+3. `motion_count` - Legacy configuration (backward compatibility)
+4. `3` - Hard-coded fallback
+
+#### Combined with Per-Key Minimum Length
+
+You can combine per-key motion count with per-key minimum length for maximum control:
+
+```vim
+let g:hellshake_yano = {
+  \ 'per_key_motion_count': {
+  \   'v': 1,   " Show hints after 1 press
+  \   'h': 3,   " Show hints after 3 presses
+  \ },
+  \ 'per_key_min_length': {
+  \   'v': 1,   " Show 1-character words
+  \   'h': 2,   " Show 2+ character words
+  \ },
+  \ 'default_motion_count': 2,
+  \ 'default_min_word_length': 2,
+  \ }
+```
+
+This configuration means:
+- `v` key: Shows hints for all words (including 1 char) after 1 press
+- `h` key: Shows hints for 2+ char words after 3 presses
+- Other keys: Show hints for 2+ char words after 2 presses
 
 ### Key Repeat Suppression
 
