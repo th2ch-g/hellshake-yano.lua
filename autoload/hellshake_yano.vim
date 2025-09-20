@@ -930,11 +930,41 @@ function! hellshake_yano#show_hints_with_key(key) abort
       return
     endif
 
-    " Denops側のshowHintsWithKeyメソッドを呼び出し
-    call denops#notify('hellshake-yano', 'showHintsWithKey', [a:key])
+    " 現在のモードを検出
+    let current_mode = hellshake_yano#detect_current_mode()
+    " Denops側のshowHintsWithKeyメソッドを呼び出し（モード情報付き）
+    call denops#notify('hellshake-yano', 'showHintsWithKey', [a:key, current_mode])
   catch
     call hellshake_yano#show_error('show_hints_with_key', v:exception)
   endtry
+endfunction
+
+" 現在のモードを検出する関数（process2 追加）
+function! hellshake_yano#detect_current_mode() abort
+  let vim_mode = mode()
+  return hellshake_yano#detect_current_mode_from_string(vim_mode)
+endfunction
+
+" mode()文字列からモード種別を判定する関数（process2 追加）
+function! hellshake_yano#detect_current_mode_from_string(mode_string) abort
+  " Visual modes: v (character-wise), V (line-wise), ^V (block-wise)
+  if a:mode_string =~# '^[vV\<C-V>]'
+    return 'visual'
+  endif
+  " Insert modes
+  if a:mode_string =~# '^[iI]'
+    return 'insert'
+  endif
+  " Command-line modes
+  if a:mode_string =~# '^[c:]'
+    return 'command'
+  endif
+  " Replace modes
+  if a:mode_string =~# '^[rR]'
+    return 'replace'
+  endif
+  " Default: normal mode
+  return 'normal'
 endfunction
 
 " hellshake_yano#motion関数を更新してキー情報を伝達（Process4 sub1拡張）

@@ -51,6 +51,10 @@ export interface HintMapping {
   word: Word;
   /** 割り当てられたヒント文字列 */
   hint: string;
+  /** ヒントの表示位置（ジャンプ先の列番号、1ベース） */
+  hintCol?: number;
+  /** ヒントの表示位置（ジャンプ先のバイト列番号、1ベース） */
+  hintByteCol?: number;
 }
 
 /**
@@ -132,13 +136,15 @@ export function assignHintsToWords(
   hints: string[],
   cursorLine: number,
   cursorCol: number,
+  mode: string = "normal",
+  config?: { hint_position?: string; visual_hint_position?: string },
 ): HintMapping[] {
   if (words.length === 0 || hints.length === 0) {
     return [];
   }
 
-  // キャッシュキーを生成（単語の位置とカーソル位置を考慮）
-  const cacheKey = `${words.length}-${cursorLine}-${cursorCol}-${
+  // キャッシュキーを生成（単語の位置とカーソル位置、モード情報を考慮）
+  const cacheKey = `${words.length}-${cursorLine}-${cursorCol}-${mode}-${config?.hint_position || "start"}-${config?.visual_hint_position || "end"}-${
     words.map((w) => `${w.line},${w.col}`).join(";")
   }`;
 
@@ -155,11 +161,47 @@ export function assignHintsToWords(
   // カーソル位置からの距離で最適化されたソート
   const sortedWords = sortWordsByDistanceOptimized(words, cursorLine, cursorCol);
 
-  // ヒントを割り当て
-  const mappings = sortedWords.map((word, index) => ({
-    word,
-    hint: hints[index] || "",
-  }));
+  // ヒントを割り当て（ヒント位置情報を含める）
+  const mappings = sortedWords.map((word, index) => {
+    // Visual modeとhint_position設定に基づいてヒント位置を計算
+    const isVisualMode = mode === "visual";
+    const visualHintPosition = config?.visual_hint_position || "end";
+    const hintPosition = config?.hint_position || "start";
+
+    let hintCol = word.col;
+    let hintByteCol = word.byteCol || word.col;
+
+    // Visual Mode専用処理
+    let effectiveHintPosition = hintPosition;
+    if (isVisualMode && visualHintPosition !== "same") {
+      effectiveHintPosition = visualHintPosition;
+    }
+
+    // ヒント位置の計算
+    if (effectiveHintPosition === "end") {
+      hintCol = word.col + word.text.length - 1;
+      // バイト位置の計算
+      if (word.byteCol) {
+        const encoder = new TextEncoder();
+        const textByteLength = encoder.encode(word.text).length;
+        hintByteCol = word.byteCol + textByteLength - 1;
+      } else {
+        hintByteCol = hintCol;
+      }
+    } else if (effectiveHintPosition === "overlay") {
+      // overlayの場合も開始位置を使用
+      hintCol = word.col;
+      hintByteCol = word.byteCol || word.col;
+    }
+    // "start"の場合は初期値のまま
+
+    return {
+      word,
+      hint: hints[index] || "",
+      hintCol,
+      hintByteCol,
+    };
+  });
 
   // キャッシュに保存（サイズ制限付き）
   if (assignmentCache.size >= CACHE_MAX_SIZE) {
@@ -500,13 +542,36 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
 export function calculateHintPosition(
   word: Word,
   hintPosition: string,
+  isVisualMode: boolean = false,
+  visualHintPosition?: string,
 ): HintPosition {
   let col: number;
   let display_mode: "before" | "after" | "overlay";
 
+  // Visual Mode専用処理（process3追加）
+  let effectiveHintPosition = hintPosition;
+  if (isVisualMode && visualHintPosition) {
+    switch (visualHintPosition) {
+      case "start":
+        effectiveHintPosition = "start";
+        break;
+      case "end":
+        effectiveHintPosition = "end";
+        break;
+      case "same":
+        // 通常のhint_positionに従う
+        effectiveHintPosition = hintPosition;
+        break;
+      default:
+        // デフォルトはendを使用
+        effectiveHintPosition = "end";
+        break;
+    }
+  }
+
   // デバッグログ追加（パフォーマンスのためコメントアウト）
 
-  switch (hintPosition) {
+  switch (effectiveHintPosition) {
     case "start":
       col = word.col;
       display_mode = "before";
@@ -552,16 +617,37 @@ export function calculateHintPositionWithCoordinateSystem(
   word: Word,
   hintPosition: string,
   enableDebug: boolean = false,
+  isVisualMode: boolean = false,
+  visualHintPosition?: string,
 ): HintPositionWithCoordinateSystem {
   let col: number;
   let byteCol: number;
   let display_mode: "before" | "after" | "overlay";
 
+  // Visual Mode専用処理（process3追加）
+  let effectiveHintPosition = hintPosition;
+  if (isVisualMode && visualHintPosition) {
+    switch (visualHintPosition) {
+      case "start":
+        effectiveHintPosition = "start";
+        break;
+      case "end":
+        effectiveHintPosition = "end";
+        break;
+      case "same":
+        effectiveHintPosition = hintPosition;
+        break;
+      default:
+        effectiveHintPosition = "end";
+        break;
+    }
+  }
+
   // デバッグログ追加
   if (enableDebug) {
   }
 
-  switch (hintPosition) {
+  switch (effectiveHintPosition) {
     case "start":
       col = word.col; // 1ベース
       byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
