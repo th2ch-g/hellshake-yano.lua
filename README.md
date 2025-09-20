@@ -17,7 +17,8 @@ smooth as in English.
 - **Full UTF-8 Support**: Correctly calculates byte positions for multi-byte Japanese characters
 - **Customizable Precision**: Adjustable word detection algorithms for different use cases
 - **Key Repeat Suppression**: Suppresses hint display during rapid hjkl repeats for smooth scrolling
-- **Visual Mode Optimization**: Intelligent hint positioning for natural word selection in Visual mode
+- **Visual Mode Optimization**: Intelligent hint positioning for natural word selection in Visual
+  mode
 
 ## Installation
 
@@ -97,7 +98,8 @@ let g:hellshake_yano = {
 
 ### Visual Mode Hint Position
 
-The `visual_hint_position` option allows you to customize hint placement specifically for Visual mode operations, providing a more natural word selection experience.
+The `visual_hint_position` option allows you to customize hint placement specifically for Visual
+mode operations, providing a more natural word selection experience.
 
 #### Available Options
 
@@ -129,16 +131,21 @@ let g:hellshake_yano = {
 #### Why This Matters
 
 In Visual mode, you typically:
+
 1. Position cursor at the end of a selection target
 2. Expand selection to include the entire word
 
-With `visual_hint_position: 'end'`, hints appear where your cursor will land, making word selection more intuitive and reducing cognitive load.
+With `visual_hint_position: 'end'`, hints appear where your cursor will land, making word selection
+more intuitive and reducing cognitive load.
 
 ### Per-Key Minimum Word Length Configuration
 
-**Enhanced Feature**: Configure different minimum word lengths for different keys to optimize hint display based on movement type and context. Keys defined in `per_key_min_length` are **automatically mapped** - no need to manually configure `counted_motions`.
+**Enhanced Feature**: Configure different minimum word lengths for different keys to optimize hint
+display based on movement type and context. Keys defined in `per_key_min_length` are **automatically
+mapped** - no need to manually configure `counted_motions`.
 
 This feature allows fine-grained control over when hints appear for specific keys, enabling:
+
 - **Precise movement** with visual mode keys (1 character hints)
 - **Noise reduction** for hjkl navigation (2+ character hints)
 - **Customized thresholds** for different motion types
@@ -170,16 +177,19 @@ let g:hellshake_yano = {
 #### Use Cases
 
 **Precise Movement (1 character hints)**
+
 - Visual mode selections require precise cursor placement
 - Word motions (w, b, e) benefit from showing all possible targets
 - Single character hints appear immediately for maximum precision
 
 **Noise Reduction (2+ character hints)**
+
 - hjkl navigation in large files can be overwhelming with too many hints
 - Higher thresholds reduce visual noise during scrolling through noise reduction
 - Maintains smooth navigation experience
 
 **Motion-Specific Optimization**
+
 - Find operations (f, F, t, T) often target longer words
 - Search motions (/, ?) work better with longer minimum lengths
 - Different motion types have different precision requirements for motion types
@@ -187,6 +197,7 @@ let g:hellshake_yano = {
 #### Migration from Legacy Configuration
 
 **Before (Legacy)**:
+
 ```vim
 let g:hellshake_yano = {
   \ 'min_word_length': 2
@@ -194,6 +205,7 @@ let g:hellshake_yano = {
 ```
 
 **After (Per-Key)**:
+
 ```vim
 let g:hellshake_yano = {
   \ 'default_min_word_length': 2,
@@ -205,18 +217,21 @@ let g:hellshake_yano = {
 ```
 
 **Gradual Migration Strategy**:
+
 1. Start with `default_min_word_length` matching your old legacy `min_word_length`
 2. Add specific overrides for keys where you want different behavior
 3. Test each change incrementally
 4. Remove the old `min_word_length` setting once migration is complete
 
 **Key Features**:
+
 - **Automatic Mapping**: Keys in `per_key_min_length` are automatically added to motion mappings
 - **No Manual Configuration**: No need to set `counted_motions` for per-key configured keys
 - **Full Backward Compatibility**: Existing configurations continue to work unchanged
 - **Dynamic Context**: Each key press updates the context for accurate filtering
 
 **Combining with `counted_motions`**:
+
 ```vim
 let g:hellshake_yano = {
   \ 'per_key_min_length': {
@@ -247,7 +262,8 @@ let g:hellshake_yano = {
 
 ### Per-Key Motion Count Configuration
 
-The plugin supports **per-key motion count** settings, allowing different keys to trigger hints after different numbers of presses. This enables optimal user experience for different motion types.
+The plugin supports **per-key motion count** settings, allowing different keys to trigger hints
+after different numbers of presses. This enables optimal user experience for different motion types.
 
 #### Basic Configuration
 
@@ -271,11 +287,13 @@ let g:hellshake_yano = {
 #### Use Cases
 
 **Immediate Hints (count = 1)**
+
 - Visual mode selections require precise cursor placement
 - Word motions (w, b, e) benefit from showing hints immediately
 - Useful for operations that need accuracy over speed
 
 **Delayed Hints (count = 3+)**
+
 - hjkl navigation in normal mode can be less precise
 - Reduces visual noise during rapid scrolling
 - Maintains smooth navigation experience
@@ -283,6 +301,7 @@ let g:hellshake_yano = {
 #### Configuration Priority
 
 The plugin uses the following priority order for motion count settings:
+
 1. `per_key_motion_count[key]` - Key-specific setting
 2. `default_motion_count` - New default value
 3. `motion_count` - Legacy configuration (backward compatibility)
@@ -308,13 +327,15 @@ let g:hellshake_yano = {
 ```
 
 This configuration means:
+
 - `v` key: Shows hints for all words (including 1 char) after 1 press
 - `h` key: Shows hints for 2+ char words after 3 presses
 - Other keys: Show hints for 2+ char words after 2 presses
 
 ### Key Repeat Suppression
 
-During rapid hjkl key repetition, hint display is temporarily suppressed to keep scrolling smooth. Timing is configurable and the feature can be disabled.
+During rapid hjkl key repetition, hint display is temporarily suppressed to keep scrolling smooth.
+Timing is configurable and the feature can be disabled.
 
 - Enable/disable: `g:hellshake_yano.suppress_on_key_repeat` (default: `v:true`)
 - Repeat threshold: `g:hellshake_yano.key_repeat_threshold` in ms (default: `50`)
@@ -330,6 +351,7 @@ The plugin includes a comprehensive debug mode for troubleshooting and performan
 - Show debug info: `:HellshakeDebug` or `:HellshakeShowDebug`
 
 Debug mode displays:
+
 - Current plugin configuration
 - Motion count and timing information
 - Key repeat detection state
@@ -439,6 +461,7 @@ in Japanese text just as you would in English.
 ### Commands
 
 #### Basic Commands
+
 - `:HellshakeEnable` - Enable the plugin
 - `:HellshakeDisable` - Disable the plugin
 - `:HellshakeToggle` - Toggle plugin on/off
@@ -446,11 +469,13 @@ in Japanese text just as you would in English.
 - `:HellshakeHide` - Hide visible hints
 
 #### Configuration Commands
+
 - `:HellshakeSetCount <number>` - Set motion count threshold
 - `:HellshakeSetTimeout <ms>` - Set motion timeout in milliseconds
 - `:HellshakeSetCountedMotions <keys>` - Set custom motion keys to track
 
 #### Debug Commands
+
 - `:HellshakeDebug` - Show comprehensive debug information
 - `:HellshakeShowDebug` - Alias for `:HellshakeDebug`
 
@@ -481,6 +506,7 @@ The plugin intelligently detects word boundaries in Japanese text using:
 ### Common Issues and Solutions
 
 #### Hints not appearing
+
 1. Check if the plugin is enabled: `:echo g:hellshake_yano.enabled`
 2. Verify motion count setting: `:echo g:hellshake_yano.motion_count`
 3. Check per-key minimum length configuration: `:echo g:hellshake_yano.per_key_min_length`
@@ -489,6 +515,7 @@ The plugin intelligently detects word boundaries in Japanese text using:
 6. Use `:HellshakeDebug` to check current state
 
 #### Hints appear during scrolling
+
 - Adjust key repeat suppression settings:
   ```vim
   let g:hellshake_yano.suppress_on_key_repeat = v:true
@@ -496,6 +523,7 @@ The plugin intelligently detects word boundaries in Japanese text using:
   ```
 
 #### Performance issues
+
 1. Enable performance logging to identify bottlenecks:
    ```vim
    let g:hellshake_yano.performance_log = v:true
@@ -508,6 +536,7 @@ The plugin intelligently detects word boundaries in Japanese text using:
    ```
 
 #### Per-key configuration not working
+
 1. Verify configuration syntax is correct: `:echo g:hellshake_yano.per_key_min_length`
 2. Check that the key exists in your per_key_min_length dictionary
 3. Confirm default_min_word_length is set appropriately
@@ -517,11 +546,13 @@ The plugin intelligently detects word boundaries in Japanese text using:
    ```
 
 #### Incorrect word detection in Japanese text
+
 1. Ensure UTF-8 encoding: `:set encoding?` should show `utf-8`
 2. Check file encoding: `:set fileencoding?`
 3. Verify Japanese detection is enabled: `:echo g:hellshake_yano.use_japanese`
 
 #### Highlight not visible
+
 1. Check your colorscheme compatibility
 2. Try using different highlight groups:
    ```vim
@@ -536,6 +567,7 @@ The plugin intelligently detects word boundaries in Japanese text using:
 ### Debug Information
 
 When reporting issues, please include the output of:
+
 1. `:HellshakeDebug` - Full debug information
 2. `:echo g:hellshake_yano` - Current configuration
 3. `:version` - Neovim version

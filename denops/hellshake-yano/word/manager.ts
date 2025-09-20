@@ -8,13 +8,13 @@
 import type { Denops } from "@denops/std";
 import type { Word } from "../word.ts";
 import {
+  type DetectionContext,
   HybridWordDetector,
   RegexWordDetector,
   TinySegmenterWordDetector,
   type WordDetectionConfig,
   type WordDetectionResult,
   type WordDetector,
-  type DetectionContext,
 } from "./detector.ts";
 import type { Config } from "../main.ts";
 
@@ -310,7 +310,10 @@ export class WordDetectionManager {
    * console.log(`Found ${result.words.length} words in current buffer`);
    * ```
    */
-  async detectWordsFromBuffer(denops: Denops, context?: DetectionContext): Promise<WordDetectionResult> {
+  async detectWordsFromBuffer(
+    denops: Denops,
+    context?: DetectionContext,
+  ): Promise<WordDetectionResult> {
     try {
       // Get visible range
       const topLine = await denops.call("line", "w0") as number;
@@ -645,16 +648,16 @@ export class WordDetectionManager {
    */
   private affectsDetection(newConfig: Partial<WordDetectionManagerConfig>): boolean {
     const affectingKeys = [
-      'strategy',
-      'word_detection_strategy',
-      'use_japanese',
-      'enable_tinysegmenter',
-      'segmenter_threshold',
-      'min_word_length',
-      'max_word_length'
+      "strategy",
+      "word_detection_strategy",
+      "use_japanese",
+      "enable_tinysegmenter",
+      "segmenter_threshold",
+      "min_word_length",
+      "max_word_length",
     ];
 
-    return affectingKeys.some(key => key in newConfig);
+    return affectingKeys.some((key) => key in newConfig);
   }
 
   /**
@@ -664,13 +667,13 @@ export class WordDetectionManager {
    */
   private shouldReinitializeDetectors(newConfig: Partial<WordDetectionManagerConfig>): boolean {
     const reinitKeys = [
-      'strategy',
-      'word_detection_strategy',
-      'enable_tinysegmenter',
-      'use_japanese'
+      "strategy",
+      "word_detection_strategy",
+      "enable_tinysegmenter",
+      "use_japanese",
     ];
 
-    return reinitKeys.some(key => key in newConfig);
+    return reinitKeys.some((key) => key in newConfig);
   }
 
   /**
@@ -856,7 +859,10 @@ let globalManager: WordDetectionManager | null = null;
  * await manager.initialize();
  * ```
  */
-export function getWordDetectionManager(config?: WordDetectionManagerConfig, globalConfig?: Config): WordDetectionManager {
+export function getWordDetectionManager(
+  config?: WordDetectionManagerConfig,
+  globalConfig?: Config,
+): WordDetectionManager {
   if (!globalManager) {
     globalManager = new WordDetectionManager(config, globalConfig);
   } else if (config) {

@@ -219,3 +219,44 @@ test("垂直方向の距離の重み付け", async (denops) => {
   const sameLineMapping = mappings.find((m) => m.word.text === "same_line_far");
   assertEquals(sameLineMapping?.hint, "A");
 });
+
+test("assignHintsToWords はヒント設定を一度だけ評価する", async (denops) => {
+  const words: Word[] = [
+    { text: "alpha", line: 1, col: 1 },
+    { text: "beta", line: 1, col: 6 },
+  ];
+
+  const hints = ["A", "B"];
+
+  const config: { hint_position?: string; visual_hint_position?: string } = {};
+
+  let hintPositionAccess = 0;
+  Object.defineProperty(config, "hint_position", {
+    configurable: true,
+    get() {
+      hintPositionAccess++;
+      if (hintPositionAccess > 1) {
+        throw new Error("hint_position getter called multiple times");
+      }
+      return "end";
+    },
+  });
+
+  let visualHintPositionAccess = 0;
+  Object.defineProperty(config, "visual_hint_position", {
+    configurable: true,
+    get() {
+      visualHintPositionAccess++;
+      if (visualHintPositionAccess > 1) {
+        throw new Error("visual_hint_position getter called multiple times");
+      }
+      return "start";
+    },
+  });
+
+  const mappings = assignHintsToWords(words, hints, 1, 1, "visual", config);
+
+  assertEquals(mappings.length, 2);
+  assertEquals(hintPositionAccess, 1);
+  assertEquals(visualHintPositionAccess, 1);
+});

@@ -1,6 +1,6 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { describe, it, beforeEach, afterEach } from "https://deno.land/std@0.224.0/testing/bdd.ts";
-import { getMotionCountForKey, Config } from "../denops/hellshake-yano/main.ts";
+import { afterEach, beforeEach, describe, it } from "https://deno.land/std@0.224.0/testing/bdd.ts";
+import { Config, getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 
 /**
  * Integration tests for per-key motion count feature
@@ -25,21 +25,21 @@ function createFullConfig(overrides: Partial<Config> = {}): Config {
     highlight_selected: false,
     debug_coordinates: false,
     per_key_motion_count: {
-      'v': 1,  // Visual mode - immediate hints
-      'V': 1,  // Visual line mode - immediate hints
-      'w': 1,  // Word forward - immediate hints
-      'b': 1,  // Word backward - immediate hints
-      'e': 1,  // End of word - immediate hints
-      'h': 3,  // Left - 3 presses
-      'j': 3,  // Down - 3 presses
-      'k': 3,  // Up - 3 presses
-      'l': 3,  // Right - 3 presses
+      "v": 1, // Visual mode - immediate hints
+      "V": 1, // Visual line mode - immediate hints
+      "w": 1, // Word forward - immediate hints
+      "b": 1, // Word backward - immediate hints
+      "e": 1, // End of word - immediate hints
+      "h": 3, // Left - 3 presses
+      "j": 3, // Down - 3 presses
+      "k": 3, // Up - 3 presses
+      "l": 3, // Right - 3 presses
     },
     default_motion_count: 2,
     per_key_min_length: {
-      'v': 1,
-      'w': 1,
-      'b': 1,
+      "v": 1,
+      "w": 1,
+      "b": 1,
     },
     default_min_word_length: 2,
     ...overrides,
@@ -111,11 +111,11 @@ describe("Integration: 実際の編集シナリオでの動作確認", () => {
     tracker = new MotionCountTracker(config);
 
     // 'v'キーを1回押す
-    const shouldTrigger = tracker.processKey('v');
+    const shouldTrigger = tracker.processKey("v");
 
     // motion_countが1なので、1回で即座にトリガー
     assertEquals(shouldTrigger, true);
-    assertEquals(tracker.getCount('v'), 1);
+    assertEquals(tracker.getCount("v"), 1);
   });
 
   it("通常のナビゲーションキーは3回押してからヒント表示", () => {
@@ -123,14 +123,14 @@ describe("Integration: 実際の編集シナリオでの動作確認", () => {
     tracker = new MotionCountTracker(config);
 
     // 'h'キーを押す
-    assertEquals(tracker.processKey('h'), false); // 1回目
-    assertEquals(tracker.getCount('h'), 1);
+    assertEquals(tracker.processKey("h"), false); // 1回目
+    assertEquals(tracker.getCount("h"), 1);
 
-    assertEquals(tracker.processKey('h'), false); // 2回目
-    assertEquals(tracker.getCount('h'), 2);
+    assertEquals(tracker.processKey("h"), false); // 2回目
+    assertEquals(tracker.getCount("h"), 2);
 
-    assertEquals(tracker.processKey('h'), true);  // 3回目でトリガー
-    assertEquals(tracker.getCount('h'), 3);
+    assertEquals(tracker.processKey("h"), true); // 3回目でトリガー
+    assertEquals(tracker.getCount("h"), 3);
   });
 
   it("単語移動系は即座にヒントが表示される", () => {
@@ -138,13 +138,13 @@ describe("Integration: 実際の編集シナリオでの動作確認", () => {
     tracker = new MotionCountTracker(config);
 
     // 'w', 'b', 'e' は全て即座にトリガー
-    assertEquals(tracker.processKey('w'), true);
-    tracker.resetKey('w');
+    assertEquals(tracker.processKey("w"), true);
+    tracker.resetKey("w");
 
-    assertEquals(tracker.processKey('b'), true);
-    tracker.resetKey('b');
+    assertEquals(tracker.processKey("b"), true);
+    tracker.resetKey("b");
 
-    assertEquals(tracker.processKey('e'), true);
+    assertEquals(tracker.processKey("e"), true);
   });
 });
 
@@ -161,20 +161,20 @@ describe("Integration: 複数キーの混在使用テスト", () => {
     tracker = new MotionCountTracker(config);
 
     // 'h'を2回
-    tracker.processKey('h');
-    tracker.processKey('h');
-    assertEquals(tracker.getCount('h'), 2);
+    tracker.processKey("h");
+    tracker.processKey("h");
+    assertEquals(tracker.getCount("h"), 2);
 
     // 'v'を1回（即座にトリガー）
-    assertEquals(tracker.processKey('v'), true);
-    assertEquals(tracker.getCount('v'), 1);
+    assertEquals(tracker.processKey("v"), true);
+    assertEquals(tracker.getCount("v"), 1);
 
     // 'h'のカウントは影響を受けない
-    assertEquals(tracker.getCount('h'), 2);
+    assertEquals(tracker.getCount("h"), 2);
 
     // 'h'をもう1回押してトリガー
-    assertEquals(tracker.processKey('h'), true);
-    assertEquals(tracker.getCount('h'), 3);
+    assertEquals(tracker.processKey("h"), true);
+    assertEquals(tracker.getCount("h"), 3);
   });
 
   it("高速な切り替えでも正しく動作する", () => {
@@ -182,16 +182,16 @@ describe("Integration: 複数キーの混在使用テスト", () => {
     tracker = new MotionCountTracker(config);
 
     // 素早く異なるキーを押す
-    tracker.processKey('h');     // h: 1
-    tracker.processKey('j');     // j: 1
-    tracker.processKey('v');     // v: 1 (triggers)
-    tracker.processKey('h');     // h: 2
-    tracker.processKey('k');     // k: 1
+    tracker.processKey("h"); // h: 1
+    tracker.processKey("j"); // j: 1
+    tracker.processKey("v"); // v: 1 (triggers)
+    tracker.processKey("h"); // h: 2
+    tracker.processKey("k"); // k: 1
 
-    assertEquals(tracker.getCount('h'), 2);
-    assertEquals(tracker.getCount('j'), 1);
-    assertEquals(tracker.getCount('v'), 1);
-    assertEquals(tracker.getCount('k'), 1);
+    assertEquals(tracker.getCount("h"), 2);
+    assertEquals(tracker.getCount("j"), 1);
+    assertEquals(tracker.getCount("v"), 1);
+    assertEquals(tracker.getCount("k"), 1);
   });
 
   it("同時に複数のキーがトリガー条件を満たす", () => {
@@ -199,14 +199,14 @@ describe("Integration: 複数キーの混在使用テスト", () => {
     tracker = new MotionCountTracker(config);
 
     // 'h'と'j'を2回ずつ
-    tracker.processKey('h');
-    tracker.processKey('h');
-    tracker.processKey('j');
-    tracker.processKey('j');
+    tracker.processKey("h");
+    tracker.processKey("h");
+    tracker.processKey("j");
+    tracker.processKey("j");
 
     // 両方とも3回目でトリガー
-    const hTrigger = tracker.processKey('h');
-    const jTrigger = tracker.processKey('j');
+    const hTrigger = tracker.processKey("h");
+    const jTrigger = tracker.processKey("j");
 
     assertEquals(hTrigger, true);
     assertEquals(jTrigger, true);
@@ -226,15 +226,15 @@ describe("Integration: リセット処理の確認", () => {
     tracker = new MotionCountTracker(config);
 
     // 'v'でトリガー
-    assertEquals(tracker.processKey('v'), true);
+    assertEquals(tracker.processKey("v"), true);
 
     // リセット
-    tracker.resetKey('v');
-    assertEquals(tracker.getCount('v'), 0);
+    tracker.resetKey("v");
+    assertEquals(tracker.getCount("v"), 0);
 
     // 再度押すと新規カウント
-    assertEquals(tracker.processKey('v'), true);
-    assertEquals(tracker.getCount('v'), 1);
+    assertEquals(tracker.processKey("v"), true);
+    assertEquals(tracker.getCount("v"), 1);
   });
 
   it("タイムアウトで自動リセットされる（シミュレーション）", async () => {
@@ -244,15 +244,15 @@ describe("Integration: リセット処理の確認", () => {
     tracker = new MotionCountTracker(config);
 
     // 'h'を2回押す（3回必要）
-    tracker.processKey('h');
-    tracker.processKey('h');
-    assertEquals(tracker.getCount('h'), 2);
+    tracker.processKey("h");
+    tracker.processKey("h");
+    assertEquals(tracker.getCount("h"), 2);
 
     // タイムアウトを待つ
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     // タイムアウト後はリセットされている
-    assertEquals(tracker.getCount('h'), 0);
+    assertEquals(tracker.getCount("h"), 0);
   });
 
   it("全キーのリセットが正しく動作する", () => {
@@ -260,18 +260,18 @@ describe("Integration: リセット処理の確認", () => {
     tracker = new MotionCountTracker(config);
 
     // 複数のキーをカウント
-    tracker.processKey('h');
-    tracker.processKey('j');
-    tracker.processKey('v');
-    tracker.processKey('w');
+    tracker.processKey("h");
+    tracker.processKey("j");
+    tracker.processKey("v");
+    tracker.processKey("w");
 
     // 全リセット
     tracker.resetAll();
 
-    assertEquals(tracker.getCount('h'), 0);
-    assertEquals(tracker.getCount('j'), 0);
-    assertEquals(tracker.getCount('v'), 0);
-    assertEquals(tracker.getCount('w'), 0);
+    assertEquals(tracker.getCount("h"), 0);
+    assertEquals(tracker.getCount("j"), 0);
+    assertEquals(tracker.getCount("v"), 0);
+    assertEquals(tracker.getCount("w"), 0);
   });
 });
 
@@ -291,7 +291,7 @@ describe("Integration: パフォーマンステスト", () => {
     const iterations = 1000;
 
     for (let i = 0; i < iterations; i++) {
-      const key = ['h', 'j', 'k', 'l', 'v', 'w', 'b'][i % 7];
+      const key = ["h", "j", "k", "l", "v", "w", "b"][i % 7];
       tracker.processKey(key);
     }
 
@@ -314,7 +314,7 @@ describe("Integration: パフォーマンステスト", () => {
     const iterations = 10000;
 
     for (let i = 0; i < iterations; i++) {
-      const key = ['h', 'j', 'k', 'l', 'v', 'w', 'b'][i % 7];
+      const key = ["h", "j", "k", "l", "v", "w", "b"][i % 7];
       getMotionCountForKey(key, config);
     }
 
@@ -336,7 +336,7 @@ describe("Integration: パフォーマンステスト", () => {
     // 大量のキー入力とリセットを繰り返す
     for (let i = 0; i < 100; i++) {
       // 各キーを複数回押す
-      for (const key of ['h', 'j', 'k', 'l', 'v', 'w', 'b']) {
+      for (const key of ["h", "j", "k", "l", "v", "w", "b"]) {
         for (let j = 0; j < 5; j++) {
           tracker.processKey(key);
         }
@@ -347,8 +347,8 @@ describe("Integration: パフォーマンステスト", () => {
     }
 
     // トラッカーの内部マップが空であることを確認
-    assertEquals(tracker.getCount('h'), 0);
-    assertEquals(tracker.getCount('v'), 0);
+    assertEquals(tracker.getCount("h"), 0);
+    assertEquals(tracker.getCount("v"), 0);
   });
 });
 
@@ -369,22 +369,22 @@ describe("Integration: エッジケースと実際の使用パターン", () => 
     tracker = new MotionCountTracker(config);
 
     // 初期設定で'v'は1回でトリガー
-    assertEquals(tracker.processKey('v'), true);
-    tracker.resetKey('v');
+    assertEquals(tracker.processKey("v"), true);
+    tracker.resetKey("v");
 
     // 設定を変更（実際にはconfigオブジェクトを作り直す）
     config = createFullConfig({
       per_key_motion_count: {
-        'v': 3,  // 3回に変更
+        "v": 3, // 3回に変更
       },
       default_motion_count: 2,
     });
     newTracker = new MotionCountTracker(config);
 
     // 新しい設定では3回必要
-    assertEquals(newTracker.processKey('v'), false);
-    assertEquals(newTracker.processKey('v'), false);
-    assertEquals(newTracker.processKey('v'), true);
+    assertEquals(newTracker.processKey("v"), false);
+    assertEquals(newTracker.processKey("v"), false);
+    assertEquals(newTracker.processKey("v"), true);
   });
 
   it("未定義のキーはデフォルト値を使用", () => {
@@ -392,8 +392,8 @@ describe("Integration: エッジケースと実際の使用パターン", () => 
     tracker = new MotionCountTracker(config);
 
     // 'x'は未定義なのでdefault_motion_count (2)を使用
-    assertEquals(tracker.processKey('x'), false);
-    assertEquals(tracker.processKey('x'), true);
+    assertEquals(tracker.processKey("x"), false);
+    assertEquals(tracker.processKey("x"), true);
   });
 
   it("実際の編集フロー：ビジュアル選択からの移動", () => {
@@ -401,23 +401,23 @@ describe("Integration: エッジケースと実際の使用パターン", () => 
     tracker = new MotionCountTracker(config);
 
     // ビジュアルモードに入る
-    assertEquals(tracker.processKey('v'), true);
+    assertEquals(tracker.processKey("v"), true);
     console.log("Visual mode hints shown immediately");
-    tracker.resetKey('v');
+    tracker.resetKey("v");
 
     // 単語単位で移動
-    assertEquals(tracker.processKey('w'), true);
+    assertEquals(tracker.processKey("w"), true);
     console.log("Word forward hints shown immediately");
-    tracker.resetKey('w');
+    tracker.resetKey("w");
 
-    assertEquals(tracker.processKey('b'), true);
+    assertEquals(tracker.processKey("b"), true);
     console.log("Word backward hints shown immediately");
-    tracker.resetKey('b');
+    tracker.resetKey("b");
 
     // 通常の移動は3回必要
-    assertEquals(tracker.processKey('j'), false);
-    assertEquals(tracker.processKey('j'), false);
-    assertEquals(tracker.processKey('j'), true);
+    assertEquals(tracker.processKey("j"), false);
+    assertEquals(tracker.processKey("j"), false);
+    assertEquals(tracker.processKey("j"), true);
     console.log("Down movement hints shown after 3 presses");
   });
 });

@@ -6,7 +6,10 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
 import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
 import { getMinLengthForKey } from "../denops/hellshake-yano/main.ts";
-import { WordDetectionManager, type WordDetectionManagerConfig } from "../denops/hellshake-yano/word/manager.ts";
+import {
+  WordDetectionManager,
+  type WordDetectionManagerConfig,
+} from "../denops/hellshake-yano/word/manager.ts";
 import type { Config } from "../denops/hellshake-yano/main.ts";
 import type { DetectionContext } from "../denops/hellshake-yano/word/detector.ts";
 
@@ -22,7 +25,11 @@ Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
 
   assertEquals(getMinLengthForKey(config1 as Config, "f"), 1, "per_key_min_lengthが最優先");
   assertEquals(getMinLengthForKey(config1 as Config, "t"), 3, "per_key_min_lengthが最優先");
-  assertEquals(getMinLengthForKey(config1 as Config, "x"), 2, "default_min_word_lengthが使用される");
+  assertEquals(
+    getMinLengthForKey(config1 as Config, "x"),
+    2,
+    "default_min_word_lengthが使用される",
+  );
 
   // パターン2: default_min_word_lengthフォールバック
   const config2: Partial<Config> = {
@@ -109,10 +116,16 @@ Deno.test("Process100: Baseline behavior - Detection context propagation", async
   const wordsWithContext = await manager.detectWords("test hello world", 0, undefined, context);
 
   // 実際の結果を記録（現在の動作をベースライン化）
-  console.log(`Context無し: ${wordsWithoutContext.words.length}語, Context有り: ${wordsWithContext.words.length}語`);
+  console.log(
+    `Context無し: ${wordsWithoutContext.words.length}語, Context有り: ${wordsWithContext.words.length}語`,
+  );
 
   // 現在の動作ではContextが効いていない可能性があるので、ベースラインとして記録
-  assertEquals(wordsWithoutContext.words.length, wordsWithContext.words.length, "現在はcontextが効いていない状態をベースライン化");
+  assertEquals(
+    wordsWithoutContext.words.length,
+    wordsWithContext.words.length,
+    "現在はcontextが効いていない状態をベースライン化",
+  );
 });
 
 Deno.test("Process100: Baseline behavior - Cache invalidation triggers", async () => {
@@ -139,7 +152,7 @@ Deno.test("Process100: Baseline behavior - Cache invalidation triggers", async (
 
   // 実際の結果を記録
   console.log(`設定変更前: ${result1.words.length}語, 設定変更後: ${result2.words.length}語`);
-  console.log(`検出された単語: ${result2.words.map(w => w.text).join(", ")}`);
+  console.log(`検出された単語: ${result2.words.map((w) => w.text).join(", ")}`);
 
   // 現在の動作を記録（期待値ではなく実際の動作をベースライン化）
   assertEquals(result2.words.length, 3, "現在の動作では3語が検出される（ベースライン）");

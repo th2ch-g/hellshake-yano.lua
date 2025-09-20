@@ -7,12 +7,12 @@ Deno.test("タブ文字を含む行の単語位置計算", () => {
   const words = extractWordsFromLine(lineText, 1, true, false);
 
   // 単語が検出されることを確認
-  const foundWords = words.map(w => ({ text: w.text, col: w.col }));
+  const foundWords = words.map((w) => ({ text: w.text, col: w.col }));
   console.log("検出された単語:", foundWords);
 
   // タブ文字2つ = 16列分（各タブ8列）
   // "・案件番号の表示と検索実装をとりあえずやるところまで" は17列目から開始
-  const firstWord = words.find(w => w.text.includes("案件"));
+  const firstWord = words.find((w) => w.text.includes("案件"));
   if (firstWord) {
     // タブ2つ分（16列）+ 中点の後（1列）= 17列目
     console.log(`"${firstWord.text}" の列位置: ${firstWord.col}`);
@@ -20,7 +20,7 @@ Deno.test("タブ文字を含む行の単語位置計算", () => {
   }
 
   // "or" の位置確認
-  const orWord = words.find(w => w.text === "or");
+  const orWord = words.find((w) => w.text === "or");
   if (orWord) {
     console.log(`"or" の列位置: ${orWord.col}`);
     // タブ2つ（16列）+ 日本語文字列（約27文字）+ スペース = 約44列目
@@ -32,8 +32,8 @@ Deno.test("単一タブ文字の処理", () => {
   const lineText = "\thello\tworld";
   const words = extractWordsFromLine(lineText, 1, true, false);
 
-  const hello = words.find(w => w.text === "hello");
-  const world = words.find(w => w.text === "world");
+  const hello = words.find((w) => w.text === "hello");
+  const world = words.find((w) => w.text === "world");
 
   if (hello) {
     // 最初のタブ（8列）+ 1 = 9列目
@@ -50,8 +50,8 @@ Deno.test("タブなしテキストの後方互換性", () => {
   const lineText = "hello world";
   const words = extractWordsFromLine(lineText, 1, true, false);
 
-  const hello = words.find(w => w.text === "hello");
-  const world = words.find(w => w.text === "world");
+  const hello = words.find((w) => w.text === "hello");
+  const world = words.find((w) => w.text === "world");
 
   if (hello) {
     assertEquals(hello.col, 1, "タブなしの場合は通常の位置");
@@ -66,8 +66,8 @@ Deno.test("混在パターン: タブ、スペース、日本語", () => {
   const lineText = "\t  こんにちは\tworld";
   const words = extractWordsFromLine(lineText, 1, true, false);
 
-  const japanese = words.find(w => w.text.includes("こんにちは"));
-  const world = words.find(w => w.text === "world");
+  const japanese = words.find((w) => w.text.includes("こんにちは"));
+  const world = words.find((w) => w.text === "world");
 
   if (japanese) {
     // タブ（8列）+ スペース2つ（2列）+ 1 = 11列目

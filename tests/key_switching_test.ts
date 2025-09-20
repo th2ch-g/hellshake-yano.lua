@@ -63,13 +63,12 @@ test({
       await denops.dispatcher.showHintsWithKey("h");
       await denops.dispatcher.showHintsWithKey("j");
       await denops.dispatcher.showHintsWithKey("v");
-
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because async processing management is not implemented"
+        "Should fail because async processing management is not implemented",
       );
     }
   },
@@ -94,13 +93,12 @@ test({
 
       // Should not take excessive time due to proper debouncing
       assertEquals(elapsed < 500, true, "Should complete within reasonable time");
-
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because debounce processing is not implemented"
+        "Should fail because debounce processing is not implemented",
       );
     }
   },
@@ -133,14 +131,17 @@ test({
       const time3 = Date.now() - start3;
 
       // Different key should take similar time to first call
-      assertEquals(Math.abs(time3 - time1) < 100, true, "Different key should trigger fresh detection");
-
+      assertEquals(
+        Math.abs(time3 - time1) < 100,
+        true,
+        "Different key should trigger fresh detection",
+      );
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because cache optimization is not implemented"
+        "Should fail because cache optimization is not implemented",
       );
     }
   },
@@ -160,14 +161,13 @@ test({
       await denops.dispatcher.showHintsWithKey("j");
 
       // Different min_word_length should trigger recalculation
-      await denops.dispatcher.showHintsWithKey("v");  // Different min_length
-
+      await denops.dispatcher.showHintsWithKey("v"); // Different min_length
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because recalculation optimization is not implemented"
+        "Should fail because recalculation optimization is not implemented",
       );
     }
   },
@@ -190,13 +190,12 @@ test({
 
       // Should complete without excessive UI thrashing
       // (Actual UI testing would require integration with Vim/Neovim)
-
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because UI flicker minimization is not implemented"
+        "Should fail because UI flicker minimization is not implemented",
       );
     }
   },

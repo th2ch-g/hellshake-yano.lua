@@ -38,8 +38,77 @@ export interface HintPositionWithCoordinateSystem {
 
 // パフォーマンス最適化用のキャッシュ
 let hintCache = new Map<string, string[]>();
-let assignmentCache = new Map<string, HintMapping[]>();
+let assignmentCacheNormal = new Map<string, HintMapping[]>();
+let assignmentCacheVisual = new Map<string, HintMapping[]>();
+let assignmentCacheOther = new Map<string, HintMapping[]>();
 const CACHE_MAX_SIZE = 100; // キャッシュの最大サイズ
+
+// TextEncoderを共有してインスタンス生成コストを削減
+const sharedTextEncoder = new TextEncoder();
+
+// マルチバイト文字のバイト長キャッシュ
+const byteLengthCache = new Map<string, number>();
+
+function isAscii(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getByteLength(text: string): number {
+  if (text.length === 0) {
+    return 0;
+  }
+
+  if (isAscii(text)) {
+    return text.length;
+  }
+
+  const cached = byteLengthCache.get(text);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const length = sharedTextEncoder.encode(text).length;
+  byteLengthCache.set(text, length);
+  return length;
+}
+
+function getAssignmentCacheForMode(mode: string): Map<string, HintMapping[]> {
+  if (mode === "visual") {
+    return assignmentCacheVisual;
+  }
+  if (mode === "normal") {
+    return assignmentCacheNormal;
+  }
+  return assignmentCacheOther;
+}
+
+function createAssignmentCacheKey(
+  words: Word[],
+  cursorLine: number,
+  cursorCol: number,
+  hintPositionSetting: string,
+  visualHintPositionSetting: string,
+): string {
+  const positionSignature = hashString(
+    words.map((w) => `${w.line},${w.col}`).join(";"),
+  );
+  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${visualHintPositionSetting}-${positionSignature}`;
+}
+
+function hashString(value: string): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    const char = value.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32-bit integer
+  }
+  return hash.toString(36);
+}
 
 /**
  * ヒントと単語のマッピング
@@ -143,10 +212,20 @@ export function assignHintsToWords(
     return [];
   }
 
+  const isVisualMode = mode === "visual";
+  const hintPositionSetting = config?.hint_position ?? "start";
+  const visualHintPositionSetting = config?.visual_hint_position ?? "end";
+
+  const assignmentCache = getAssignmentCacheForMode(mode);
+
   // キャッシュキーを生成（単語の位置とカーソル位置、モード情報を考慮）
-  const cacheKey = `${words.length}-${cursorLine}-${cursorCol}-${mode}-${config?.hint_position || "start"}-${config?.visual_hint_position || "end"}-${
-    words.map((w) => `${w.line},${w.col}`).join(";")
-  }`;
+  const cacheKey = createAssignmentCacheKey(
+    words,
+    cursorLine,
+    cursorCol,
+    hintPositionSetting,
+    visualHintPositionSetting,
+  );
 
   // キャッシュヒットチェック
   if (assignmentCache.has(cacheKey)) {
@@ -162,38 +241,33 @@ export function assignHintsToWords(
   const sortedWords = sortWordsByDistanceOptimized(words, cursorLine, cursorCol);
 
   // ヒントを割り当て（ヒント位置情報を含める）
+  const effectiveHintPosition = isVisualMode && visualHintPositionSetting !== "same"
+    ? visualHintPositionSetting
+    : hintPositionSetting;
+
   const mappings = sortedWords.map((word, index) => {
-    // Visual modeとhint_position設定に基づいてヒント位置を計算
-    const isVisualMode = mode === "visual";
-    const visualHintPosition = config?.visual_hint_position || "end";
-    const hintPosition = config?.hint_position || "start";
-
     let hintCol = word.col;
-    let hintByteCol = word.byteCol || word.col;
+    let hintByteCol = word.byteCol ?? word.col;
 
-    // Visual Mode専用処理
-    let effectiveHintPosition = hintPosition;
-    if (isVisualMode && visualHintPosition !== "same") {
-      effectiveHintPosition = visualHintPosition;
+    switch (effectiveHintPosition) {
+      case "end":
+        hintCol = word.col + word.text.length - 1;
+        if (word.byteCol) {
+          const textByteLength = getByteLength(word.text);
+          hintByteCol = word.byteCol + textByteLength - 1;
+        } else {
+          hintByteCol = hintCol;
+        }
+        break;
+      case "overlay":
+        hintCol = word.col;
+        hintByteCol = word.byteCol ?? word.col;
+        break;
+      default:
+        hintCol = word.col;
+        hintByteCol = word.byteCol ?? word.col;
+        break;
     }
-
-    // ヒント位置の計算
-    if (effectiveHintPosition === "end") {
-      hintCol = word.col + word.text.length - 1;
-      // バイト位置の計算
-      if (word.byteCol) {
-        const encoder = new TextEncoder();
-        const textByteLength = encoder.encode(word.text).length;
-        hintByteCol = word.byteCol + textByteLength - 1;
-      } else {
-        hintByteCol = hintCol;
-      }
-    } else if (effectiveHintPosition === "overlay") {
-      // overlayの場合も開始位置を使用
-      hintCol = word.col;
-      hintByteCol = word.byteCol || word.col;
-    }
-    // "start"の場合は初期値のまま
 
     return {
       word,
@@ -504,7 +578,9 @@ function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: nu
  */
 export function clearHintCache(): void {
   hintCache.clear();
-  assignmentCache.clear();
+  assignmentCacheNormal.clear();
+  assignmentCacheVisual.clear();
+  assignmentCacheOther.clear();
 }
 
 /**
@@ -521,7 +597,8 @@ export function clearHintCache(): void {
 export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSize: number } {
   return {
     hintCacheSize: hintCache.size,
-    assignmentCacheSize: assignmentCache.size,
+    assignmentCacheSize: assignmentCacheNormal.size + assignmentCacheVisual.size +
+      assignmentCacheOther.size,
   };
 }
 
@@ -657,8 +734,7 @@ export function calculateHintPositionWithCoordinateSystem(
       col = word.col + word.text.length - 1; // 1ベース
       // If we have byteCol, calculate end position using byte length
       if (word.byteCol) {
-        const encoder = new TextEncoder();
-        const textByteLength = encoder.encode(word.text).length;
+        const textByteLength = getByteLength(word.text);
         byteCol = word.byteCol + textByteLength - 1;
       } else {
         byteCol = col;
@@ -830,7 +906,6 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
  * 1. **2文字組み合わせ**: keys × keys の直積（例: ['A','B'] → ['AA','AB','BA','BB']）
  * 2. **3文字エクステンション**: 2文字でも不足時にkeys³の3文字組み合わせ
  * 3. **順序最適化**: より短いヒントを優先的に生成
- *
  *
  * ## パフォーマンス特性とスケーラビリティ
  * - **2文字段階**: O(k²) - kはキー数

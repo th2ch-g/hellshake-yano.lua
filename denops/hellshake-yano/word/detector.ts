@@ -10,7 +10,7 @@ import type { Denops } from "@denops/std";
 import type { Word } from "../word.ts";
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
-import { getMinLengthForKey, type Config } from "../main.ts";
+import { type Config, getMinLengthForKey } from "../main.ts";
 
 /**
  * Position-aware segment interface for tracking original positions
@@ -285,7 +285,11 @@ export class RegexWordDetector implements WordDetector {
   /**
    * Improved word extraction (from word.ts extractWordsFromLine)
    */
-  private extractWordsImproved(lineText: string, lineNumber: number, context?: DetectionContext): Word[] {
+  private extractWordsImproved(
+    lineText: string,
+    lineNumber: number,
+    context?: DetectionContext,
+  ): Word[] {
     const words: Word[] = [];
 
     if (!lineText || lineText.trim().length < 1) {
@@ -758,7 +762,11 @@ export class TinySegmenterWordDetector implements WordDetector {
     return words;
   }
 
-  private async fallbackDetection(lineText: string, lineNumber: number, context?: DetectionContext): Promise<Word[]> {
+  private async fallbackDetection(
+    lineText: string,
+    lineNumber: number,
+    context?: DetectionContext,
+  ): Promise<Word[]> {
     // Use simplified regex detection as fallback
     const regexDetector = new RegexWordDetector(this.config);
     const singleLineText = lineText + "\n";
@@ -1160,7 +1168,11 @@ export class HybridWordDetector implements WordDetector {
         const hasJapanese = this.segmenterDetector.canHandle(lineText);
 
         if (this.config.enable_tinysegmenter && isSegmenterAvailable && hasJapanese) {
-          const segmenterWords = await this.segmenterDetector.detectWords(lineText, lineNumber, context);
+          const segmenterWords = await this.segmenterDetector.detectWords(
+            lineText,
+            lineNumber,
+            context,
+          );
           // 英数字も検出するためRegexDetectorも併用
           const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, context);
           const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
@@ -1172,7 +1184,7 @@ export class HybridWordDetector implements WordDetector {
 
           // Apply context-based filtering if context is provided
           if (context?.minWordLength !== undefined) {
-            words = words.filter(w => w.text.length >= context.minWordLength!);
+            words = words.filter((w) => w.text.length >= context.minWordLength!);
           }
 
           allWords.push(...words);

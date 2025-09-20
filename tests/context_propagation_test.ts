@@ -15,7 +15,11 @@
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import type { DetectionContext } from "../denops/hellshake-yano/word/detector.ts";
-import { RegexWordDetector, TinySegmenterWordDetector, HybridWordDetector } from "../denops/hellshake-yano/word/detector.ts";
+import {
+  HybridWordDetector,
+  RegexWordDetector,
+  TinySegmenterWordDetector,
+} from "../denops/hellshake-yano/word/detector.ts";
 import { WordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
 import type { Word } from "../denops/hellshake-yano/word.ts";
 
@@ -50,7 +54,7 @@ Deno.test("RegexWordDetector should accept optional context parameter", async ()
   assertExists(wordsWithContext);
 
   // Words with context should be filtered by minWordLength
-  const longWords = wordsWithContext.filter(w => w.text.length >= 5);
+  const longWords = wordsWithContext.filter((w) => w.text.length >= 5);
   assertEquals(wordsWithContext.length, longWords.length);
 });
 
@@ -73,7 +77,7 @@ Deno.test("TinySegmenterWordDetector should accept optional context parameter", 
   assertExists(wordsWithContext);
 
   // Verify context-based filtering
-  const filteredWords = wordsWithContext.filter(w => w.text.length >= 3);
+  const filteredWords = wordsWithContext.filter((w) => w.text.length >= 3);
   assertEquals(wordsWithContext.length, filteredWords.length);
 });
 
@@ -104,7 +108,7 @@ Deno.test("HybridWordDetector should accept optional context parameter", async (
 Deno.test("WordDetectionManager should propagate context to detectors", async () => {
   const manager = new WordDetectionManager({
     use_japanese: true,
-    default_strategy: "hybrid"
+    default_strategy: "hybrid",
   });
 
   await manager.initialize();
@@ -130,7 +134,7 @@ Deno.test("WordDetectionManager should propagate context to detectors", async ()
 Deno.test("Context should override config min_word_length", async () => {
   const detector = new RegexWordDetector({
     use_japanese: false,
-    min_word_length: 2  // Config default
+    min_word_length: 2, // Config default
   });
 
   const text = "a bb ccc dddd eeeee";
@@ -196,7 +200,7 @@ Deno.test("Per-key minimum word length should work correctly", async () => {
 Deno.test("Context propagation should maintain backward compatibility", async () => {
   const detector = new RegexWordDetector({
     use_japanese: false,
-    min_word_length: 2
+    min_word_length: 2,
   });
 
   const text = "hello world test";

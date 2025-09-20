@@ -3,9 +3,9 @@
  * VimScript側の関数群の動作をテストし、リファクタリング時の回帰を防ぐ
  */
 
-import { assertEquals, assertExists, assert, assertNotEquals } from "@std/assert";
+import { assert, assertEquals, assertExists, assertNotEquals } from "@std/assert";
 import { test } from "./testRunner.ts";
-import { MockDenops, MockTimer, mockBuffer } from "./helpers/mock.ts";
+import { mockBuffer, MockDenops, MockTimer } from "./helpers/mock.ts";
 import type { Denops } from "@denops/std";
 
 // テスト用のMockDenopsを拡張して、VimScript関数の呼び出しをシミュレート
@@ -23,19 +23,22 @@ class VimScriptMockDenops extends MockDenops {
 
   private setupDefaultVimFunctions() {
     // デフォルトのVim関数をセットアップ
-    this.vimFunctions.set('bufnr', () => 1);
-    this.vimFunctions.set('reltime', () => [1000, 500000]);
-    this.vimFunctions.set('reltimestr', () => '1.500000');
-    this.vimFunctions.set('localtime', () => Math.floor(Date.now() / 1000));
-    this.vimFunctions.set('has_key', (dict: any, key: string) => key in dict);
-    this.vimFunctions.set('timer_start', (delay: number, callback: any) => Math.floor(Math.random() * 1000));
-    this.vimFunctions.set('timer_stop', (id: number) => true);
-    this.vimFunctions.set('exists', (var_name: string) => this.vimVariables.has(var_name));
+    this.vimFunctions.set("bufnr", () => 1);
+    this.vimFunctions.set("reltime", () => [1000, 500000]);
+    this.vimFunctions.set("reltimestr", () => "1.500000");
+    this.vimFunctions.set("localtime", () => Math.floor(Date.now() / 1000));
+    this.vimFunctions.set("has_key", (dict: any, key: string) => key in dict);
+    this.vimFunctions.set(
+      "timer_start",
+      (delay: number, callback: any) => Math.floor(Math.random() * 1000),
+    );
+    this.vimFunctions.set("timer_stop", (id: number) => true);
+    this.vimFunctions.set("exists", (var_name: string) => this.vimVariables.has(var_name));
   }
 
   private setupDefaultVariables() {
     // デフォルトのグローバル変数をセットアップ
-    this.vimVariables.set('g:hellshake_yano', {
+    this.vimVariables.set("g:hellshake_yano", {
       enabled: true,
       motion_count: 3,
       motion_timeout: 2000,
@@ -44,12 +47,12 @@ class VimScriptMockDenops extends MockDenops {
       suppress_on_key_repeat: true,
       key_repeat_threshold: 50,
       key_repeat_reset_delay: 300,
-      markers: ['A', 'B', 'C', 'D', 'E'],
-      highlight_hint_marker: 'DiffAdd',
-      highlight_hint_marker_current: 'DiffText'
+      markers: ["A", "B", "C", "D", "E"],
+      highlight_hint_marker: "DiffAdd",
+      highlight_hint_marker_current: "DiffText",
     });
-    this.vimVariables.set('g:loaded_denops', 1);
-    this.vimVariables.set('g:hellshake_yano_ready', false);
+    this.vimVariables.set("g:loaded_denops", 1);
+    this.vimVariables.set("g:hellshake_yano_ready", false);
   }
 
   // VimScript変数の取得・設定
@@ -81,11 +84,11 @@ class VimScriptMockDenops extends MockDenops {
     // VimScript関数の呼び出しをシミュレート
     if (this.vimFunctions.has(fn)) {
       const func = this.vimFunctions.get(fn);
-      return typeof func === 'function' ? func(...args) : func;
+      return typeof func === "function" ? func(...args) : func;
     }
 
     // 変数の取得
-    if (fn === 'eval') {
+    if (fn === "eval") {
       const expr = args[0] as string;
       if (this.vimVariables.has(expr)) {
         return this.vimVariables.get(expr);
@@ -100,8 +103,8 @@ class VimScriptMockDenops extends MockDenops {
     this.commandHistory.push(command);
 
     // echoコマンドの処理
-    if (command.startsWith('echo')) {
-      const message = command.replace(/^echo\w*\s*/, '');
+    if (command.startsWith("echo")) {
+      const message = command.replace(/^echo\w*\s*/, "");
       this.echoHistory.push(message);
     }
 
@@ -115,26 +118,26 @@ test("s:show_error() - エラーメッセージ表示のテスト", async (denop
   const mockDenops = new VimScriptMockDenops();
 
   // エラーメッセージを表示
-  await mockDenops.cmd('echohl ErrorMsg');
+  await mockDenops.cmd("echohl ErrorMsg");
   await mockDenops.cmd('echomsg "Test error message"');
-  await mockDenops.cmd('echohl None');
+  await mockDenops.cmd("echohl None");
 
   const commands = mockDenops.getCommandHistory();
   assertEquals(commands.length, 3);
-  assertEquals(commands[0], 'echohl ErrorMsg');
+  assertEquals(commands[0], "echohl ErrorMsg");
   assertEquals(commands[1], 'echomsg "Test error message"');
-  assertEquals(commands[2], 'echohl None');
+  assertEquals(commands[2], "echohl None");
 });
 
 test("denops通知機能のテスト", async (denops) => {
   const mockDenops = new VimScriptMockDenops();
 
   // denopsの準備ができているかをテスト
-  const isReady = await mockDenops.call('exists', 'g:loaded_denops');
+  const isReady = await mockDenops.call("exists", "g:loaded_denops");
   assertEquals(isReady, true);
 
   // 設定の通知をシミュレート
-  const config = mockDenops.getVimVariable('g:hellshake_yano');
+  const config = mockDenops.getVimVariable("g:hellshake_yano");
   assertExists(config);
   assertEquals(config.enabled, true);
   assertEquals(config.motion_count, 3);
@@ -191,11 +194,11 @@ test("ヒントトリガー判定ロジックのテスト", async (denops) => {
     motionCount: number,
     requiredCount: number,
     isKeyRepeating: boolean,
-    pluginEnabled: boolean
+    pluginEnabled: boolean,
   ): boolean {
     return pluginEnabled &&
-           !isKeyRepeating &&
-           motionCount >= requiredCount;
+      !isKeyRepeating &&
+      motionCount >= requiredCount;
   }
 
   // 各条件のテスト
@@ -245,7 +248,7 @@ test("設定値の検証とサニタイズのテスト", async (denops) => {
   // 無効な設定値のテスト
   function validateKeyRepeatThreshold(value: number): number {
     if (value <= 0) {
-      console.warn('Warning: key_repeat_threshold must be positive, using default 50ms');
+      console.warn("Warning: key_repeat_threshold must be positive, using default 50ms");
       return 50;
     }
     return value;
@@ -253,7 +256,7 @@ test("設定値の検証とサニタイズのテスト", async (denops) => {
 
   function validateKeyRepeatResetDelay(value: number): number {
     if (value <= 0) {
-      console.warn('Warning: key_repeat_reset_delay must be positive, using default 300ms');
+      console.warn("Warning: key_repeat_reset_delay must be positive, using default 300ms");
       return 300;
     }
     return value;
@@ -283,20 +286,20 @@ test("ハイライトグループ名の検証テスト", async (denops) => {
   }
 
   // 有効な名前
-  assertEquals(validateHighlightGroupName('HellshakeYanoMarker'), true);
-  assertEquals(validateHighlightGroupName('Custom_Highlight'), true);
-  assertEquals(validateHighlightGroupName('_ValidName'), true);
+  assertEquals(validateHighlightGroupName("HellshakeYanoMarker"), true);
+  assertEquals(validateHighlightGroupName("Custom_Highlight"), true);
+  assertEquals(validateHighlightGroupName("_ValidName"), true);
 
   // 無効な名前のテスト
   try {
-    validateHighlightGroupName('123Invalid');
+    validateHighlightGroupName("123Invalid");
     assert(false, "数字で始まる名前は無効のはず");
   } catch (e) {
     assert(e instanceof Error);
   }
 
   try {
-    validateHighlightGroupName('Invalid-Name');
+    validateHighlightGroupName("Invalid-Name");
     assert(false, "ハイフンを含む名前は無効のはず");
   } catch (e) {
     assert(e instanceof Error);
@@ -310,17 +313,37 @@ test("色名の正規化と検証のテスト", async (denops) => {
 
   // 色名の正規化関数をシミュレート
   function normalizeColorName(color: string): string {
-    return color.toLowerCase().replace(/\s+/g, '');
+    return color.toLowerCase().replace(/\s+/g, "");
   }
 
   // 有効な色名のリスト
   const validColors = [
-    'black', 'darkred', 'darkgreen', 'darkyellow',
-    'darkblue', 'darkmagenta', 'darkcyan', 'lightgray',
-    'darkgray', 'red', 'green', 'yellow', 'blue',
-    'magenta', 'cyan', 'white', 'gray', 'grey',
-    'lightred', 'lightgreen', 'lightyellow', 'lightblue',
-    'lightmagenta', 'lightcyan', 'brown', 'orange'
+    "black",
+    "darkred",
+    "darkgreen",
+    "darkyellow",
+    "darkblue",
+    "darkmagenta",
+    "darkcyan",
+    "lightgray",
+    "darkgray",
+    "red",
+    "green",
+    "yellow",
+    "blue",
+    "magenta",
+    "cyan",
+    "white",
+    "gray",
+    "grey",
+    "lightred",
+    "lightgreen",
+    "lightyellow",
+    "lightblue",
+    "lightmagenta",
+    "lightcyan",
+    "brown",
+    "orange",
   ];
 
   // 色の検証関数をシミュレート
@@ -333,18 +356,18 @@ test("色名の正規化と検証のテスト", async (denops) => {
   }
 
   // 正規化のテスト
-  assertEquals(normalizeColorName('Dark Red'), 'darkred');
-  assertEquals(normalizeColorName('BLUE'), 'blue');
-  assertEquals(normalizeColorName(' Green '), 'green');
+  assertEquals(normalizeColorName("Dark Red"), "darkred");
+  assertEquals(normalizeColorName("BLUE"), "blue");
+  assertEquals(normalizeColorName(" Green "), "green");
 
   // 有効な色のテスト
-  assertEquals(validateColor('red'), true);
-  assertEquals(validateColor('DarkBlue'), true);
-  assertEquals(validateColor('Light Green'), true);
+  assertEquals(validateColor("red"), true);
+  assertEquals(validateColor("DarkBlue"), true);
+  assertEquals(validateColor("Light Green"), true);
 
   // 無効な色のテスト
   try {
-    validateColor('InvalidColor');
+    validateColor("InvalidColor");
     assert(false, "無効な色名は例外を投げるはず");
   } catch (e) {
     assert(e instanceof Error);
@@ -368,7 +391,7 @@ test("キーリピート検出ロジックのテスト", async (denops) => {
   function handleKeyRepeatDetection(
     state: KeyRepeatState,
     currentTime: number,
-    suppressOnRepeat: boolean
+    suppressOnRepeat: boolean,
   ): boolean {
     const timeDiff = currentTime - state.lastKeyTime;
 
@@ -392,7 +415,7 @@ test("キーリピート検出ロジックのテスト", async (denops) => {
     lastKeyTime: 0,
     isRepeating: false,
     threshold: 50,
-    resetDelay: 300
+    resetDelay: 300,
   };
 
   // 最初のキー入力
@@ -419,8 +442,8 @@ test("denopsの準備状態確認テスト", async (denops) => {
 
   // denopsの準備確認関数をシミュレート
   function isDenopsReady(): boolean {
-    const loaded = mockDenops.getVimVariable('g:loaded_denops');
-    const ready = mockDenops.getVimVariable('g:hellshake_yano_ready');
+    const loaded = mockDenops.getVimVariable("g:loaded_denops");
+    const ready = mockDenops.getVimVariable("g:hellshake_yano_ready");
     return Boolean(loaded && ready);
   }
 
@@ -428,11 +451,11 @@ test("denopsの準備状態確認テスト", async (denops) => {
   assertEquals(isDenopsReady(), false);
 
   // プラグインの準備完了をシミュレート
-  mockDenops.setVimVariable('g:hellshake_yano_ready', true);
+  mockDenops.setVimVariable("g:hellshake_yano_ready", true);
   assertEquals(isDenopsReady(), true);
 
   // denopsが読み込まれていない場合
-  mockDenops.setVimVariable('g:loaded_denops', false);
+  mockDenops.setVimVariable("g:loaded_denops", false);
   assertEquals(isDenopsReady(), false);
 });
 
@@ -440,38 +463,38 @@ test("denopsの準備状態確認テスト", async (denops) => {
 
 test("パフォーマンスログ機能のテスト", async (denops) => {
   const mockDenops = new VimScriptMockDenops();
-  const logHistory: Array<{operation: string, time: number, details: any}> = [];
+  const logHistory: Array<{ operation: string; time: number; details: any }> = [];
 
   // パフォーマンスログ関数をシミュレート
   function logPerformance(operation: string, elapsedTime: number, details: any = {}) {
-    const config = mockDenops.getVimVariable('g:hellshake_yano');
+    const config = mockDenops.getVimVariable("g:hellshake_yano");
     if (config?.performance_log) {
       logHistory.push({
         operation,
         time: elapsedTime,
-        details
+        details,
       });
     }
   }
 
   // パフォーマンスログが無効な場合
-  logPerformance('test_operation', 100, { key: 'h' });
+  logPerformance("test_operation", 100, { key: "h" });
   assertEquals(logHistory.length, 0);
 
   // パフォーマンスログを有効化
-  const config = mockDenops.getVimVariable('g:hellshake_yano');
+  const config = mockDenops.getVimVariable("g:hellshake_yano");
   config.performance_log = true;
-  mockDenops.setVimVariable('g:hellshake_yano', config);
+  mockDenops.setVimVariable("g:hellshake_yano", config);
 
   // ログの記録
-  logPerformance('motion_with_hints', 150, { key: 'j', count: 3 });
-  logPerformance('motion_normal', 50, { key: 'k', count: 2 });
+  logPerformance("motion_with_hints", 150, { key: "j", count: 3 });
+  logPerformance("motion_normal", 50, { key: "k", count: 2 });
 
   assertEquals(logHistory.length, 2);
-  assertEquals(logHistory[0].operation, 'motion_with_hints');
+  assertEquals(logHistory[0].operation, "motion_with_hints");
   assertEquals(logHistory[0].time, 150);
-  assertEquals(logHistory[0].details.key, 'j');
-  assertEquals(logHistory[1].operation, 'motion_normal');
+  assertEquals(logHistory[0].details.key, "j");
+  assertEquals(logHistory[1].operation, "motion_normal");
   assertEquals(logHistory[1].time, 50);
 });
 
@@ -488,7 +511,7 @@ test("全体統合テスト: モーション検出からヒント表示まで", 
 
   // メインのモーション処理関数をシミュレート
   function handleMotion(key: string): string {
-    const config = mockDenops.getVimVariable('g:hellshake_yano');
+    const config = mockDenops.getVimVariable("g:hellshake_yano");
 
     if (!config.enabled) {
       return key;
@@ -526,15 +549,15 @@ test("全体統合テスト: モーション検出からヒント表示まで", 
   }
 
   // テストシナリオ
-  assertEquals(handleMotion('h'), 'h');
+  assertEquals(handleMotion("h"), "h");
   assertEquals(motionCount, 1);
   assertEquals(hintsVisible, false);
 
-  assertEquals(handleMotion('j'), 'j');
+  assertEquals(handleMotion("j"), "j");
   assertEquals(motionCount, 2);
   assertEquals(hintsVisible, false);
 
-  assertEquals(handleMotion('k'), 'k');
+  assertEquals(handleMotion("k"), "k");
   assertEquals(motionCount, 0); // リセットされる
   assertEquals(hintsVisible, true); // ヒント表示
 
@@ -543,11 +566,11 @@ test("全体統合テスト: モーション検出からヒント表示まで", 
   motionCount = 0;
 
   // プラグインを無効化してテスト
-  const config = mockDenops.getVimVariable('g:hellshake_yano');
+  const config = mockDenops.getVimVariable("g:hellshake_yano");
   config.enabled = false;
-  mockDenops.setVimVariable('g:hellshake_yano', config);
+  mockDenops.setVimVariable("g:hellshake_yano", config);
 
-  assertEquals(handleMotion('l'), 'l');
+  assertEquals(handleMotion("l"), "l");
   assertEquals(motionCount, 0); // カウントされない
   assertEquals(hintsVisible, false); // ヒント表示されない
 });

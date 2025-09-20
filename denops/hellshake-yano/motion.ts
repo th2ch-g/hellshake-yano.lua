@@ -102,10 +102,10 @@ export class MotionCounter {
     onThresholdReached?: () => void,
   ) {
     if (threshold <= 0) {
-      throw new Error('threshold must be greater than 0');
+      throw new Error("threshold must be greater than 0");
     }
     if (timeoutMs <= 0) {
-      throw new Error('timeoutMs must be greater than 0');
+      throw new Error("timeoutMs must be greater than 0");
     }
 
     this.threshold = threshold;
@@ -362,7 +362,7 @@ export class MotionManager {
    */
   getCounter(bufnr: number, threshold?: number, timeout?: number): MotionCounter {
     if (bufnr <= 0) {
-      throw new Error('bufnr must be greater than 0');
+      throw new Error("bufnr must be greater than 0");
     }
 
     if (!this.counters.has(bufnr)) {

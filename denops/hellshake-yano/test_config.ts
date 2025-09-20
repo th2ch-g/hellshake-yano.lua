@@ -54,9 +54,9 @@ const testCases = [
     name: "無効な値の処理",
     config: {
       per_key_motion_count: {
-        a: 0,    // 無効（0）
-        b: -1,   // 無効（負）
-        c: 5,    // 有効
+        a: 0, // 無効（0）
+        b: -1, // 無効（負）
+        c: 5, // 有効
       },
       default_motion_count: 3,
     } as TestConfig,

@@ -9,7 +9,7 @@ console.log("Original text:", JSON.stringify(lineText));
 const words = extractWordsFromLine(lineText, 1, true, false);
 
 // 「案件番号」の位置を確認
-const ankenWord = words.find(w => w.text === "案件番号");
+const ankenWord = words.find((w) => w.text === "案件番号");
 if (ankenWord) {
   console.log(`\n✅ "案件番号" found at column ${ankenWord.col}`);
   console.log("   Expected: col 19 (after 2 tabs = 16 cols + ・ = 2 cols + 1)");

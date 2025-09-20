@@ -47,7 +47,7 @@ test({
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because showHintsWithKey is not yet implemented"
+        "Should fail because showHintsWithKey is not yet implemented",
       );
     }
 
@@ -60,7 +60,7 @@ test({
       assertEquals(
         (error as Error).message.includes("Unknown function"),
         true,
-        "Should fail because VimScript function is not yet implemented"
+        "Should fail because VimScript function is not yet implemented",
       );
     }
   },
@@ -84,15 +84,15 @@ test({
       highlight_selected: true,
       debug_coordinates: false,
       per_key_min_length: {
-        "v": 1,  // Should detect 1-char words
-        "h": 3,  // Should detect 3+ char words only
+        "v": 1, // Should detect 1-char words
+        "h": 3, // Should detect 3+ char words only
       },
       default_min_word_length: 2,
     };
 
     // Test text with mix of 1-char, 2-char, and 3+ char words
     const testLines = [
-      "a by the quick brown fox",  // 1-char: "a", 2-char: "by", 3+char: "the", "quick", "brown", "fox"
+      "a by the quick brown fox", // 1-char: "a", 2-char: "by", 3+char: "the", "quick", "brown", "fox"
     ];
 
     // This should fail initially because showHintsWithKey doesn't exist
@@ -102,13 +102,12 @@ test({
 
       // For 'h' key (min_length=3), should only detect "the", "quick", "brown", "fox"
       await denops.dispatcher.showHintsWithKey("h");
-
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because showHintsWithKey method is not implemented"
+        "Should fail because showHintsWithKey method is not implemented",
       );
     }
   },
@@ -123,15 +122,14 @@ test({
 
     try {
       // Visual mode should also support key-specific min_word_length
-      await denops.dispatcher.showHintsWithKey("V");  // Visual line mode
-      await denops.dispatcher.showHintsWithKey("v");  // Visual character mode
-
+      await denops.dispatcher.showHintsWithKey("V"); // Visual line mode
+      await denops.dispatcher.showHintsWithKey("v"); // Visual character mode
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because visual mode integration is not implemented"
+        "Should fail because visual mode integration is not implemented",
       );
     }
   },
@@ -150,13 +148,12 @@ test({
 
       // Should properly pass key context to word detection
       await denops.dispatcher.showHintsWithKey("k");
-
     } catch (error) {
       // Expected failure in RED phase
       assertEquals(
         (error as Error).message.includes("showHintsWithKey"),
         true,
-        "Should fail because HintManager integration is not implemented"
+        "Should fail because HintManager integration is not implemented",
       );
     }
   },

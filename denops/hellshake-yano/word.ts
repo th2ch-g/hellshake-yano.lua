@@ -1,6 +1,6 @@
 import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
-import type { WordDetectionResult, DetectionContext } from "./word/detector.ts";
+import type { DetectionContext, WordDetectionResult } from "./word/detector.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
 
 /**
@@ -372,9 +372,9 @@ function isWideCharacter(char: string): boolean {
 
   // 基本的なCJK文字範囲
   if (
-    (code >= 0x3000 && code <= 0x9FFF) ||  // CJK統合漢字、ひらがな、カタカナ、CJK記号
-    (code >= 0xFF00 && code <= 0xFFEF) ||  // 全角ASCII、半角カナ
-    (code >= 0x2E80 && code <= 0x2FFF)     // CJK部首補助、康熙部首
+    (code >= 0x3000 && code <= 0x9FFF) || // CJK統合漢字、ひらがな、カタカナ、CJK記号
+    (code >= 0xFF00 && code <= 0xFFEF) || // 全角ASCII、半角カナ
+    (code >= 0x2E80 && code <= 0x2FFF) // CJK部首補助、康熙部首
   ) {
     return true;
   }
@@ -385,11 +385,11 @@ function isWideCharacter(char: string): boolean {
   // 全角二重鉤括弧『』は U+300E, U+300F
   // 全角角括弧【】は U+3010, U+3011
   if (
-    (code >= 0x300C && code <= 0x300F) ||  // 鉤括弧「」『』
-    (code >= 0x3010 && code <= 0x3011) ||  // 角括弧【】
-    (code >= 0x3014 && code <= 0x301F) ||  // その他の全角括弧類
-    (code >= 0xFE30 && code <= 0xFE6F) ||  // CJK互換形
-    (code >= 0x20000 && code <= 0x2FFFF)   // CJK拡張B-F、CJK互換漢字補助
+    (code >= 0x300C && code <= 0x300F) || // 鉤括弧「」『』
+    (code >= 0x3010 && code <= 0x3011) || // 角括弧【】
+    (code >= 0x3014 && code <= 0x301F) || // その他の全角括弧類
+    (code >= 0xFE30 && code <= 0xFE6F) || // CJK互換形
+    (code >= 0x20000 && code <= 0x2FFFF) // CJK拡張B-F、CJK互換漢字補助
   ) {
     return true;
   }
@@ -423,7 +423,7 @@ function isWideCharacter(char: string): boolean {
 function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number {
   let displayCol = 0;
   for (let i = 0; i < charIndex && i < text.length; i++) {
-    if (text[i] === '\t') {
+    if (text[i] === "\t") {
       // タブの場合、次のタブストップまでの距離を加算
       displayCol += tabWidth - (displayCol % tabWidth);
     } else if (isWideCharacter(text[i])) {

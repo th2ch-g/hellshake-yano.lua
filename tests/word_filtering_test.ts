@@ -57,7 +57,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
       // 現在の実装では全ての単語が抽出される
       assertEquals(words.length, 6);
-      assertEquals(words.map(w => w.text), ["a", "12", "abc", "123", "hello", "world"]);
+      assertEquals(words.map((w) => w.text), ["a", "12", "abc", "123", "hello", "world"]);
     });
   });
 
@@ -97,7 +97,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
       // 日本語も含まれること（単語は別々に分割される）
       assertEquals(words.length, 4);
-      assertEquals(words.map(w => w.text), ["こんにちは", "world", "テスト", "test"]);
+      assertEquals(words.map((w) => w.text), ["こんにちは", "world", "テスト", "test"]);
     });
   });
 

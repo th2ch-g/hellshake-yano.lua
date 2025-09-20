@@ -115,14 +115,58 @@ function getMemoryUsage(): number {
  */
 function generateLargeText(lines: number, wordsPerLine: number): string[] {
   const words = [
-    "example", "test", "word", "performance", "benchmark", "hellshake", "yano",
-    "vim", "neovim", "plugin", "typescript", "deno", "function", "variable",
-    "string", "number", "boolean", "object", "array", "method", "class",
-    "interface", "type", "const", "let", "var", "async", "await", "promise",
-    "callback", "event", "handler", "listener", "component", "module",
-    "import", "export", "default", "namespace", "declaration", "definition",
-    "implementation", "specification", "documentation", "comment", "annotation",
-    "decorator", "metadata", "configuration", "settings", "options", "parameters",
+    "example",
+    "test",
+    "word",
+    "performance",
+    "benchmark",
+    "hellshake",
+    "yano",
+    "vim",
+    "neovim",
+    "plugin",
+    "typescript",
+    "deno",
+    "function",
+    "variable",
+    "string",
+    "number",
+    "boolean",
+    "object",
+    "array",
+    "method",
+    "class",
+    "interface",
+    "type",
+    "const",
+    "let",
+    "var",
+    "async",
+    "await",
+    "promise",
+    "callback",
+    "event",
+    "handler",
+    "listener",
+    "component",
+    "module",
+    "import",
+    "export",
+    "default",
+    "namespace",
+    "declaration",
+    "definition",
+    "implementation",
+    "specification",
+    "documentation",
+    "comment",
+    "annotation",
+    "decorator",
+    "metadata",
+    "configuration",
+    "settings",
+    "options",
+    "parameters",
   ];
 
   const result: string[] = [];
@@ -316,7 +360,7 @@ test("Performance: Memory usage and leak detection", async (denops: Denops) => {
     memorySnapshots.push(currentMemory);
 
     // 短い間隔を空ける
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 
   const finalMemory = getMemoryUsage();
@@ -325,7 +369,9 @@ test("Performance: Memory usage and leak detection", async (denops: Denops) => {
   console.log(`初期メモリ: ${initialMemory} bytes`);
   console.log(`最終メモリ: ${finalMemory} bytes`);
   console.log(`メモリ増加: ${memoryIncrease} bytes`);
-  console.log(`メモリスナップショット: ${memorySnapshots.map(m => m.toLocaleString()).join(", ")}`);
+  console.log(
+    `メモリスナップショット: ${memorySnapshots.map((m) => m.toLocaleString()).join(", ")}`,
+  );
 
   // メモリ増加が1MB以下であることを確認
   assertLess(
@@ -388,9 +434,10 @@ test("Performance: Benchmark results output", async () => {
   // 結果をJSON形式で出力
   const summary = {
     totalTests: benchmarkResults.length,
-    successfulTests: benchmarkResults.filter(r => r.success).length,
-    failedTests: benchmarkResults.filter(r => !r.success).length,
-    averageExecutionTime: benchmarkResults.reduce((sum, r) => sum + r.avgTimePerIteration, 0) / benchmarkResults.length,
+    successfulTests: benchmarkResults.filter((r) => r.success).length,
+    failedTests: benchmarkResults.filter((r) => !r.success).length,
+    averageExecutionTime: benchmarkResults.reduce((sum, r) => sum + r.avgTimePerIteration, 0) /
+      benchmarkResults.length,
     results: benchmarkResults,
     timestamp: new Date().toISOString(),
   };

@@ -20,7 +20,7 @@ words.forEach((word, index) => {
     // タブ展開後の表示位置を手動計算
     let displayPos = 0;
     for (let i = 0; i < charIndex; i++) {
-      if (lineText[i] === '\t') {
+      if (lineText[i] === "\t") {
         displayPos += 8 - (displayPos % 8);
       } else {
         displayPos += 1;
@@ -31,23 +31,23 @@ words.forEach((word, index) => {
 });
 
 // 「案件番号」が一つの単語として検出されているか確認
-const ankenWord = words.find(w => w.text === "案件番号");
+const ankenWord = words.find((w) => w.text === "案件番号");
 if (ankenWord) {
   console.log("\n=== 案件番号 Found ===");
   console.log(`Position: col=${ankenWord.col}`);
 } else {
   console.log("\n=== 案件番号 NOT found as single word ===");
   console.log("Words containing '案':");
-  words.filter(w => w.text.includes("案")).forEach(w => {
+  words.filter((w) => w.text.includes("案")).forEach((w) => {
     console.log(`  "${w.text}" at col ${w.col}`);
   });
 }
 
 // 日本語文字幅の考慮が必要かチェック
 console.log("\n=== Character Width Check ===");
-const testChars = ['・', '案', '件', '番', '号', 'o', 'r'];
-testChars.forEach(char => {
+const testChars = ["・", "案", "件", "番", "号", "o", "r"];
+testChars.forEach((char) => {
   const code = char.charCodeAt(0);
   const isWide = (code >= 0x3000 && code <= 0x9FFF) || (code >= 0xFF00 && code <= 0xFFEF);
-  console.log(`'${char}' (code: ${code}): ${isWide ? 'WIDE (2 cols)' : 'NARROW (1 col)'}`);
+  console.log(`'${char}' (code: ${code}): ${isWide ? "WIDE (2 cols)" : "NARROW (1 col)"}`);
 });

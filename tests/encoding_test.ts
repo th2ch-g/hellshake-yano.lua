@@ -6,12 +6,12 @@
 import { assertEquals, assertThrows } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import {
-  charIndexToByteIndex,
   byteIndexToCharIndex,
+  charIndexToByteIndex,
+  charIndicesToByteIndices,
   getCharByteLength,
-  hasMultibyteCharacters,
   getEncodingInfo,
-  charIndicesToByteIndices
+  hasMultibyteCharacters,
 } from "../denops/hellshake-yano/utils/encoding.ts";
 
 describe("Character Encoding and Column Position", () => {
@@ -94,8 +94,11 @@ describe("Character Encoding and Column Position", () => {
 
     testCases.forEach(({ text, charIndex, expectedByteIndex }) => {
       const actual = charIndexToByteIndex(text, charIndex);
-      assertEquals(actual, expectedByteIndex,
-        `charIndexToByteIndex("${text}", ${charIndex}) should return ${expectedByteIndex}, got ${actual}`);
+      assertEquals(
+        actual,
+        expectedByteIndex,
+        `charIndexToByteIndex("${text}", ${charIndex}) should return ${expectedByteIndex}, got ${actual}`,
+      );
     });
   });
 
@@ -116,8 +119,11 @@ describe("Character Encoding and Column Position", () => {
 
     testCases.forEach(({ text, byteIndex, expectedCharIndex }) => {
       const actual = byteIndexToCharIndex(text, byteIndex);
-      assertEquals(actual, expectedCharIndex,
-        `byteIndexToCharIndex("${text}", ${byteIndex}) should return ${expectedCharIndex}, got ${actual}`);
+      assertEquals(
+        actual,
+        expectedCharIndex,
+        `byteIndexToCharIndex("${text}", ${byteIndex}) should return ${expectedCharIndex}, got ${actual}`,
+      );
     });
   });
 
@@ -134,8 +140,11 @@ describe("Character Encoding and Column Position", () => {
 
     testCases.forEach(({ byteIndex, expectedCharIndex }) => {
       const actual = byteIndexToCharIndex(text, byteIndex);
-      assertEquals(actual, expectedCharIndex,
-        `byteIndexToCharIndex("${text}", ${byteIndex}) should return ${expectedCharIndex}, got ${actual}`);
+      assertEquals(
+        actual,
+        expectedCharIndex,
+        `byteIndexToCharIndex("${text}", ${byteIndex}) should return ${expectedCharIndex}, got ${actual}`,
+      );
     });
   });
 
@@ -168,8 +177,11 @@ describe("Character Encoding and Column Position", () => {
 
     testCases.forEach(({ text, charIndex, expectedLength }) => {
       const actual = getCharByteLength(text, charIndex);
-      assertEquals(actual, expectedLength,
-        `getCharByteLength("${text}", ${charIndex}) should return ${expectedLength}, got ${actual}`);
+      assertEquals(
+        actual,
+        expectedLength,
+        `getCharByteLength("${text}", ${charIndex}) should return ${expectedLength}, got ${actual}`,
+      );
     });
   });
 
@@ -184,8 +196,11 @@ describe("Character Encoding and Column Position", () => {
 
     testCases.forEach(({ text, expected }) => {
       const actual = hasMultibyteCharacters(text);
-      assertEquals(actual, expected,
-        `hasMultibyteCharacters("${text}") should return ${expected}, got ${actual}`);
+      assertEquals(
+        actual,
+        expected,
+        `hasMultibyteCharacters("${text}") should return ${expected}, got ${actual}`,
+      );
     });
   });
 
@@ -247,7 +262,8 @@ describe("Encoding Functions Performance and Robustness", () => {
 
   it("should handle edge cases in real-world scenarios", () => {
     // 実際のマークダウンテキストのようなケース
-    const realWorldText = "# こんにちは世界\n\n- **項目1**: 説明文\n- **項目2**: [リンク](https://example.com)";
+    const realWorldText =
+      "# こんにちは世界\n\n- **項目1**: 説明文\n- **項目2**: [リンク](https://example.com)";
 
     // 様々な位置での変換をテスト
     for (let i = 0; i <= realWorldText.length; i++) {
@@ -255,8 +271,11 @@ describe("Encoding Functions Performance and Robustness", () => {
       const backToCharIndex = byteIndexToCharIndex(realWorldText, byteIndex);
 
       // 文字境界では往復変換が一致する
-      assertEquals(backToCharIndex, i,
-        `Round-trip conversion failed at char index ${i}: ${i} -> ${byteIndex} -> ${backToCharIndex}`);
+      assertEquals(
+        backToCharIndex,
+        i,
+        `Round-trip conversion failed at char index ${i}: ${i} -> ${byteIndex} -> ${backToCharIndex}`,
+      );
     }
   });
 
@@ -265,12 +284,15 @@ describe("Encoding Functions Performance and Robustness", () => {
     const charIndices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
     // 個別変換
-    const individualResults = charIndices.map(index => charIndexToByteIndex(text, index));
+    const individualResults = charIndices.map((index) => charIndexToByteIndex(text, index));
 
     // バッチ変換
     const batchResults = charIndicesToByteIndices(text, charIndices);
 
-    assertEquals(individualResults, batchResults,
-      "Individual and batch conversions should produce identical results");
+    assertEquals(
+      individualResults,
+      batchResults,
+      "Individual and batch conversions should produce identical results",
+    );
   });
 });

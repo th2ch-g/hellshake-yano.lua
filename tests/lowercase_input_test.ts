@@ -3,7 +3,12 @@ import type { Denops } from "@denops/std";
 
 // モックDenopsクラス
 class MockDenops implements Partial<Denops> {
-  meta = { host: "nvim" as const, mode: "debug" as const, version: "0.7.0", platform: "linux" as const };
+  meta = {
+    host: "nvim" as const,
+    mode: "debug" as const,
+    version: "0.7.0",
+    platform: "linux" as const,
+  };
   name = "test";
 
   private commands: string[] = [];

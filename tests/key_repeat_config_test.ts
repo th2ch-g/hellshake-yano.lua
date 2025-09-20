@@ -10,9 +10,15 @@ test("デフォルト設定値が正しく設定される", async (denops) => {
 
   // デフォルト値の確認（まだ実装されていないのでundefinedになる）
   try {
-    const suppressOnKeyRepeat = await denops.eval("get(g:hellshake_yano, 'suppress_on_key_repeat', 'NOT_FOUND')");
-    const keyRepeatThreshold = await denops.eval("get(g:hellshake_yano, 'key_repeat_threshold', 'NOT_FOUND')");
-    const keyRepeatResetDelay = await denops.eval("get(g:hellshake_yano, 'key_repeat_reset_delay', 'NOT_FOUND')");
+    const suppressOnKeyRepeat = await denops.eval(
+      "get(g:hellshake_yano, 'suppress_on_key_repeat', 'NOT_FOUND')",
+    );
+    const keyRepeatThreshold = await denops.eval(
+      "get(g:hellshake_yano, 'key_repeat_threshold', 'NOT_FOUND')",
+    );
+    const keyRepeatResetDelay = await denops.eval(
+      "get(g:hellshake_yano, 'key_repeat_reset_delay', 'NOT_FOUND')",
+    );
 
     // GREEN段階: デフォルト値が正しく設定されることを確認
     assertEquals(suppressOnKeyRepeat, true, "suppress_on_key_repeat should default to true");
@@ -88,10 +94,10 @@ test("設定がdenops側に正しく伝播される", async (denops) => {
     await denops.cmd("call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])");
     // 設定が正しく含まれていることを確認
     const configKeys = await denops.eval("keys(g:hellshake_yano)");
-    const hasNewOptions = (configKeys as string[]).some(key =>
-      key.includes('suppress_on_key_repeat') ||
-      key.includes('key_repeat_threshold') ||
-      key.includes('key_repeat_reset_delay')
+    const hasNewOptions = (configKeys as string[]).some((key) =>
+      key.includes("suppress_on_key_repeat") ||
+      key.includes("key_repeat_threshold") ||
+      key.includes("key_repeat_reset_delay")
     );
     assert(hasNewOptions, "New config options should be present");
   } catch (error) {

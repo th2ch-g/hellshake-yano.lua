@@ -276,7 +276,7 @@ export function getMinLengthForKey(config: Config, key: string): number {
 
 /**
  * キー別motion_count設定を取得する関数（process1実装）
- * 
+ *
  * @param key - 対象のキー
  * @param config - 設定オブジェクト
  * @returns そのキーに対するmotion_count値
@@ -783,7 +783,10 @@ export async function main(denops: Denops): Promise<void> {
             cursorLine,
             cursorCol,
             modeString,
-            { hint_position: config.hint_position, visual_hint_position: config.visual_hint_position },
+            {
+              hint_position: config.hint_position,
+              visual_hint_position: config.visual_hint_position,
+            },
           );
 
           if (currentHints.length === 0) {
@@ -1205,9 +1208,11 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     };
 
     // current_key_contextからコンテキストを作成
-    const context = config.current_key_context ? {
-      minWordLength: getMinLengthForKey(config, config.current_key_context)
-    } : undefined;
+    const context = config.current_key_context
+      ? {
+        minWordLength: getMinLengthForKey(config, config.current_key_context),
+      }
+      : undefined;
 
     const result = await detectWordsWithManager(denops, enhancedConfig, context);
 
@@ -1277,7 +1282,11 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
 /**
  * バッチ処理で最適化されたヒント表示
  */
-async function displayHintsOptimized(denops: Denops, hints: HintMapping[], mode: string = "normal"): Promise<void> {
+async function displayHintsOptimized(
+  denops: Denops,
+  hints: HintMapping[],
+  mode: string = "normal",
+): Promise<void> {
   try {
     // バッファの存在確認
     const bufnr = await denops.call("bufnr", "%") as number;
@@ -1412,7 +1421,11 @@ async function displayHintsWithExtmarksBatch(
 /**
  * バッチ処理でmatchaddを作成
  */
-async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[], mode: string = "normal"): Promise<void> {
+async function displayHintsWithMatchAddBatch(
+  denops: Denops,
+  hints: HintMapping[],
+  mode: string = "normal",
+): Promise<void> {
   const batchSize = 100; // matchaddはより高速なので大きなバッチサイズ
 
   for (let i = 0; i < hints.length; i += batchSize) {
@@ -1478,7 +1491,11 @@ async function displayHintsWithMatchAddBatch(denops: Denops, hints: HintMapping[
 /**
  * ヒントを表示する（エラーハンドリング強化版）
  */
-async function displayHints(denops: Denops, hints: HintMapping[], mode: string = "normal"): Promise<void> {
+async function displayHints(
+  denops: Denops,
+  hints: HintMapping[],
+  mode: string = "normal",
+): Promise<void> {
   try {
     // バッファの存在確認
     const bufnr = await denops.call("bufnr", "%") as number;
@@ -1591,7 +1608,11 @@ async function displayHints(denops: Denops, hints: HintMapping[], mode: string =
 /**
  * matchadd()を使用してヒントを表示する（フォールバック機能）
  */
-async function displayHintsWithMatchAdd(denops: Denops, hints: HintMapping[], mode: string = "normal"): Promise<void> {
+async function displayHintsWithMatchAdd(
+  denops: Denops,
+  hints: HintMapping[],
+  mode: string = "normal",
+): Promise<void> {
   try {
     for (const { word, hint } of hints) {
       try {
@@ -1959,7 +1980,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       if (singleOnlyKeys.includes(inputChar) && singleCharTarget) {
         try {
           // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
-          const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol || singleCharTarget.word.byteCol || singleCharTarget.word.col;
+          const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol ||
+            singleCharTarget.word.byteCol || singleCharTarget.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
           if (config.debug_mode) {
@@ -1996,7 +2018,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
         // マッチするヒントが1つだけで、それが単一文字の場合のみ即座にジャンプ
         try {
           // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
-          const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol || singleCharTarget.word.byteCol || singleCharTarget.word.col;
+          const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol ||
+            singleCharTarget.word.byteCol || singleCharTarget.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
           if (config.debug_mode) {
@@ -2074,7 +2097,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
         const target = matchingHints[0];
         try {
           // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
-          const jumpCol = target.hintByteCol || target.hintCol || target.word.byteCol || target.word.col;
+          const jumpCol = target.hintByteCol || target.hintCol || target.word.byteCol ||
+            target.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
           if (config.debug_mode) {
@@ -2098,7 +2122,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
         // タイムアウトで単一文字ヒントがある場合はそれを選択
         try {
           // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
-          const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol || singleCharTarget.word.byteCol || singleCharTarget.word.col;
+          const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol ||
+            singleCharTarget.word.byteCol || singleCharTarget.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
           if (config.debug_mode) {
@@ -2167,7 +2192,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
       // カーソルを移動（byteColが利用可能な場合は使用）
       try {
         // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
-        const jumpCol = target.hintByteCol || target.hintCol || target.word.byteCol || target.word.col;
+        const jumpCol = target.hintByteCol || target.hintCol || target.word.byteCol ||
+          target.word.col;
 
         // デバッグログ: ジャンプ位置の詳細
         if (config.debug_mode) {

@@ -18,13 +18,15 @@ async function readFile(path: string): Promise<string> {
 // Test configuration examples are syntactically correct vim
 function isValidVimConfig(configText: string): boolean {
   // Basic checks for vim configuration syntax
-  const lines = configText.split('\n').filter(line => line.trim() && !line.trim().startsWith('"'));
+  const lines = configText.split("\n").filter((line) =>
+    line.trim() && !line.trim().startsWith('"')
+  );
 
   for (const line of lines) {
     // Check for basic vim dict syntax
-    if (line.includes('let g:hellshake_yano') && !line.includes('{')) continue;
-    if (line.includes('\\') && (line.includes("'") || line.includes('"'))) continue; // vim dict entries
-    if (line.includes('}')) continue; // closing dict
+    if (line.includes("let g:hellshake_yano") && !line.includes("{")) continue;
+    if (line.includes("\\") && (line.includes("'") || line.includes('"'))) continue; // vim dict entries
+    if (line.includes("}")) continue; // closing dict
   }
 
   return true; // Basic syntax validation passed
@@ -45,15 +47,15 @@ Deno.test("README.md contains configuration examples", async () => {
   const readme = await readFile("README.md");
 
   // Check for key-specific examples
-  assertStringIncludes(readme, "'v': 1");   // Visual mode example
-  assertStringIncludes(readme, "'h': 2");   // hjkl navigation example
-  assertStringIncludes(readme, "'f': 3");   // Find character example
+  assertStringIncludes(readme, "'v': 1"); // Visual mode example
+  assertStringIncludes(readme, "'h': 2"); // hjkl navigation example
+  assertStringIncludes(readme, "'f': 3"); // Find character example
 
   // Extract vim configuration examples and validate syntax
   const configMatches = readme.match(/```vim\n([\s\S]*?)\n```/g);
   if (configMatches) {
     for (const match of configMatches) {
-      const config = match.replace(/```vim\n/, '').replace(/\n```/, '');
+      const config = match.replace(/```vim\n/, "").replace(/\n```/, "");
       assertEquals(isValidVimConfig(config), true, `Invalid vim config syntax: ${config}`);
     }
   }
@@ -128,7 +130,7 @@ Deno.test("Documentation consistency between English and Japanese", async () => 
   assertEquals(englishConfigs, japaneseConfigs, "Configuration examples count mismatch");
 
   // Check for key configuration options in both
-  const keyOptions = ['per_key_min_length', 'default_min_word_length', 'markers', 'motion_count'];
+  const keyOptions = ["per_key_min_length", "default_min_word_length", "markers", "motion_count"];
 
   for (const option of keyOptions) {
     assertStringIncludes(readme, option, `Missing ${option} in English README`);
