@@ -110,16 +110,14 @@ Deno.test("per_key_motion_count: edge cases", () => {
   const config = createTestConfig({
     motion_count: 3,
     per_key_motion_count: {
-      'v': 0, // zero value
+      'v': 0, // zero value (should fallback as it's invalid)
       'w': -1, // negative value (should fallback)
     },
     default_motion_count: 2,
   });
 
-  // Zero value should be returned as-is (might be valid for immediate trigger)
-  assertEquals(getMotionCountForKey('v', config), 0);
-
-  // Negative values should fallback to default
+  // Zero and negative values should fallback to default (only values >= 1 are valid)
+  assertEquals(getMotionCountForKey('v', config), 2);
   assertEquals(getMotionCountForKey('w', config), 2);
 });
 

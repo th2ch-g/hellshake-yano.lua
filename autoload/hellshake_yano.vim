@@ -36,7 +36,7 @@ endfunction
 " スクリプトローカル変数
 let s:motion_count = {}  " バッファごとの移動カウント
 let s:last_motion_time = {}  " バッファごとの最後の移動時刻
-let s:timer_id = {}  " バッファごとのタイマーID
+let s:timer_id = {}  " バッファごとのキー別タイマーID {bufnr: {key: timer_id}}
 let s:hints_visible = v:false  " ヒント表示状態
 
 " キーリピート検出用変数
@@ -61,30 +61,42 @@ function! s:init_motion_tracking(bufnr) abort
     let s:motion_count[a:bufnr] = {}  " キー別カウント辞書
     let s:last_motion_time[a:bufnr] = 0
   endif
+  if !has_key(s:timer_id, a:bufnr)
+    let s:timer_id[a:bufnr] = {}  " キー別タイマー辞書
+  endif
 endfunction
 
-" キー別カウントの初期化
+" ============================================================================
+" カウント管理関数群
+" ============================================================================
+
+" キー別カウントの初期化（最適化版）
+" 責務: 指定されたバッファとキーのカウント構造を初期化
 " @param bufnr バッファ番号
 " @param key キー文字
 function! s:init_key_count(bufnr, key) abort
+  " 一度の条件チェックで両方を初期化
   if !has_key(s:motion_count, a:bufnr)
-    let s:motion_count[a:bufnr] = {}
-  endif
-  if !has_key(s:motion_count[a:bufnr], a:key)
+    let s:motion_count[a:bufnr] = {a:key: 0}
+  elseif !has_key(s:motion_count[a:bufnr], a:key)
     let s:motion_count[a:bufnr][a:key] = 0
   endif
 endfunction
 
-" キー別カウントを取得
+" キー別カウントを取得（初期化不要版）
+" 責務: 現在のカウント値を取得（未初期化の場合0を返す）
 " @param bufnr バッファ番号
 " @param key キー文字
 " @return カウント値
 function! s:get_key_count(bufnr, key) abort
-  call s:init_key_count(a:bufnr, a:key)
-  return s:motion_count[a:bufnr][a:key]
+  if has_key(s:motion_count, a:bufnr) && has_key(s:motion_count[a:bufnr], a:key)
+    return s:motion_count[a:bufnr][a:key]
+  endif
+  return 0
 endfunction
 
 " キー別カウントを増加
+" 責務: カウントをインクリメント（必要に応じて初期化）
 " @param bufnr バッファ番号
 " @param key キー文字
 function! s:increment_key_count(bufnr, key) abort
@@ -93,29 +105,69 @@ function! s:increment_key_count(bufnr, key) abort
 endfunction
 
 " キー別カウントをリセット
+" 責務: カウントを0にリセット（構造が存在する場合のみ）
 " @param bufnr バッファ番号
 " @param key キー文字
 function! s:reset_key_count(bufnr, key) abort
-  call s:init_key_count(a:bufnr, a:key)
-  let s:motion_count[a:bufnr][a:key] = 0
+  if has_key(s:motion_count, a:bufnr) && has_key(s:motion_count[a:bufnr], a:key)
+    let s:motion_count[a:bufnr][a:key] = 0
+  endif
 endfunction
 
-" キー別のmotion_count設定値を取得
+" ============================================================================
+" 設定管理関数群
+" ============================================================================
+
+" キー別のmotion_count設定値を取得（最適化版）
+" 責務: キーに対応するmotion_count設定値を取得（キャッシュ機能付き）
 " @param key キー文字
-" @return motion_count値（設定されていない場合はdefault_motion_count）
+" @return motion_count値（優先順: per_key > default > legacy > 3）
+let s:motion_count_cache = {}  " 設定値のキャッシュ
+let s:cache_version = 0  " キャッシュのバージョン
+
 function! s:get_motion_count_for_key(key) abort
+  " キャッシュが有効か確認
+  if has_key(s:motion_count_cache, a:key)
+    return s:motion_count_cache[a:key]
+  endif
+
+  let result = 3  " デフォルト値
+
   " per_key_motion_countに設定があるかチェック
   if has_key(g:hellshake_yano, 'per_key_motion_count')
         \ && type(g:hellshake_yano.per_key_motion_count) == v:t_dict
-        \ && has_key(g:hellshake_yano.per_key_motion_count, a:key)
-    return g:hellshake_yano.per_key_motion_count[a:key]
+    let per_key = get(g:hellshake_yano.per_key_motion_count, a:key, 0)
+    if type(per_key) == v:t_number && per_key >= 1
+      let result = per_key
+      let s:motion_count_cache[a:key] = result
+      return result
+    endif
   endif
 
-  " default_motion_countまたは従来のmotion_countを返す
-  return get(g:hellshake_yano, 'default_motion_count', get(g:hellshake_yano, 'motion_count', 3))
+  " default_motion_countを使用
+  let default_val = get(g:hellshake_yano, 'default_motion_count', get(g:hellshake_yano, 'motion_count', 3))
+  if type(default_val) == v:t_number && default_val >= 1
+    let result = default_val
+  endif
+
+  " キャッシュに保存
+  let s:motion_count_cache[a:key] = result
+  return result
 endfunction
 
+" モーションカウント設定キャッシュをクリア
+" 責務: 設定変更時にキャッシュを破棄
+function! s:clear_motion_count_cache() abort
+  let s:motion_count_cache = {}
+  let s:cache_version += 1
+endfunction
+
+" ============================================================================
+" ヒント表示制御関数群
+" ============================================================================
+
 " キー別ヒント表示の必要性を判定
+" 責務: 現在のカウントと設定値を比較してヒント表示の要否を判定
 " @param bufnr バッファ番号
 " @param key キー文字
 " @return v:true = ヒント表示, v:false = 表示しない
@@ -130,11 +182,12 @@ function! s:should_trigger_hints_for_key(bufnr, key) abort
 endfunction
 
 " キー別モーションカウント処理
+" 責務: キー入力を処理し、カウントを更新し、タイマーをリセット
 " @param bufnr バッファ番号
 " @param key キー文字
 function! s:process_motion_count_for_key(bufnr, key) abort
-  " 既存のタイマーをクリア
-  call s:stop_and_clear_timer(s:timer_id, a:bufnr)
+  " 既存のタイマーをクリア（キー別）
+  call s:stop_and_clear_timer_for_key(a:bufnr, a:key)
 
   " キー別カウントを増加
   call s:increment_key_count(a:bufnr, a:key)
@@ -164,11 +217,37 @@ endfunction
 "   return !get(s:is_key_repeating, a:bufnr, v:false) && s:motion_count[a:bufnr] >= get(g:hellshake_yano, 'motion_count', 3)
 " endfunction
 
+" ============================================================================
+" タイマー管理関数群
+" ============================================================================
+
 " モーションタイムアウトタイマーを設定
-function! s:set_motion_timeout(bufnr) abort
-  let s:timer_id[a:bufnr] = timer_start(
+" 責務: 指定されたキーのタイマーを設定し、タイムアウト時にカウントをリセット
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:set_motion_timeout(bufnr, key) abort
+  if !has_key(s:timer_id, a:bufnr)
+    let s:timer_id[a:bufnr] = {}
+  endif
+
+  " 既存のタイマーがあれば停止
+  if has_key(s:timer_id[a:bufnr], a:key)
+    call timer_stop(s:timer_id[a:bufnr][a:key])
+  endif
+
+  " 新しいタイマーを設定
+  let s:timer_id[a:bufnr][a:key] = timer_start(
         \ get(g:hellshake_yano, 'motion_timeout', 2000),
-        \ {-> s:reset_count(a:bufnr)})
+        \ {-> s:reset_count_for_key(a:bufnr, a:key)})
+endfunction
+
+" キー別にカウントをリセット
+" 責務: カウントとタイマーを両方リセット（タイムアウト時に使用）
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:reset_count_for_key(bufnr, key) abort
+  call s:reset_key_count(a:bufnr, a:key)
+  call s:stop_and_clear_timer_for_key(a:bufnr, a:key)
 endfunction
 
 " デバッグ表示を処理
@@ -209,7 +288,7 @@ function! hellshake_yano#motion(key) abort
     call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
   else
-    call s:set_motion_timeout(bufnr)
+    call s:set_motion_timeout(bufnr, a:key)
     call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': s:get_key_count(bufnr, a:key) })
   endif
@@ -253,8 +332,29 @@ endfunction
 " @param bufnr バッファ番号
 function! s:stop_and_clear_timer(timer_dict, bufnr) abort
   if has_key(a:timer_dict, a:bufnr)
-    call timer_stop(a:timer_dict[a:bufnr])
+    " 新しいキー別構造の場合
+    if type(a:timer_dict[a:bufnr]) == v:t_dict
+      " 全キーのタイマーを停止
+      for key in keys(a:timer_dict[a:bufnr])
+        call timer_stop(a:timer_dict[a:bufnr][key])
+      endfor
+    else
+      " 古い構造の場合（互換性保持）
+      call timer_stop(a:timer_dict[a:bufnr])
+    endif
     unlet a:timer_dict[a:bufnr]
+  endif
+endfunction
+
+" キー別タイマー管理関数
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:stop_and_clear_timer_for_key(bufnr, key) abort
+  if has_key(s:timer_id, a:bufnr) && type(s:timer_id[a:bufnr]) == v:t_dict
+    if has_key(s:timer_id[a:bufnr], a:key)
+      call timer_stop(s:timer_id[a:bufnr][a:key])
+      unlet s:timer_id[a:bufnr][a:key]
+    endif
   endif
 endfunction
 
@@ -378,6 +478,15 @@ function! s:get_motion_keys() abort
     endfor
   endif
 
+  " per_key_motion_countで定義されたキーを自動的に追加（process5 sub1）
+  if has_key(g:hellshake_yano, 'per_key_motion_count') && type(g:hellshake_yano.per_key_motion_count) == v:t_dict
+    for key in keys(g:hellshake_yano.per_key_motion_count)
+      if index(keys, key) == -1
+        call add(keys, key)
+      endif
+    endfor
+  endif
+
   return keys
 endfunction
 
@@ -470,6 +579,9 @@ function! hellshake_yano#set_count(count) abort
 
     " denops側に設定を通知
     call s:notify_denops_config()
+
+    " キャッシュをクリア（process5 sub2）
+    call s:clear_motion_count_cache()
 
     echo printf('[hellshake-yano] Motion count set to %d', a:count)
   else
@@ -857,7 +969,7 @@ function! hellshake_yano#motion_with_key_context(key) abort
     call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
   else
-    call s:set_motion_timeout(bufnr)
+    call s:set_motion_timeout(bufnr, a:key)
     call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': s:get_key_count(bufnr, a:key) })
   endif

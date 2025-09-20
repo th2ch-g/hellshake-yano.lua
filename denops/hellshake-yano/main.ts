@@ -283,19 +283,24 @@ export function getMotionCountForKey(key: string, config: Config): number {
   // キー別設定が存在し、そのキーの設定があれば使用
   if (config.per_key_motion_count && config.per_key_motion_count[key] !== undefined) {
     const value = config.per_key_motion_count[key];
-    // 負の値は無効とみなし、デフォルトにフォールバック
-    if (value >= 0) {
+    // 1以上の整数値のみ有効とみなす
+    if (value >= 1 && Number.isInteger(value)) {
       return value;
     }
   }
 
   // default_motion_count が設定されていれば使用
-  if (config.default_motion_count !== undefined) {
+  if (config.default_motion_count !== undefined && config.default_motion_count >= 1) {
     return config.default_motion_count;
   }
 
   // 後方互換性：既存のmotion_countを使用
-  return config.motion_count;
+  if (config.motion_count !== undefined && config.motion_count >= 1) {
+    return config.motion_count;
+  }
+
+  // 最終的なデフォルト値
+  return 3;
 }
 
 /**
@@ -572,6 +577,26 @@ export async function main(denops: Denops): Promise<void> {
       // use_hint_groups の適用
       if (typeof cfg.use_hint_groups === "boolean") {
         config.use_hint_groups = cfg.use_hint_groups;
+      }
+
+      // per_key_motion_count の検証と適用（process4追加）
+      if (cfg.per_key_motion_count && typeof cfg.per_key_motion_count === "object") {
+        const validCounts: Record<string, number> = {};
+        for (const [key, count] of Object.entries(cfg.per_key_motion_count)) {
+          if (typeof count === "number" && count >= 1 && Number.isInteger(count)) {
+            validCounts[key] = count;
+          }
+        }
+        if (Object.keys(validCounts).length > 0) {
+          config.per_key_motion_count = validCounts;
+        }
+      }
+
+      // default_motion_count の検証と適用（process4追加）
+      if (typeof cfg.default_motion_count === "number") {
+        if (cfg.default_motion_count >= 1 && Number.isInteger(cfg.default_motion_count)) {
+          config.default_motion_count = cfg.default_motion_count;
+        }
       }
 
       if (typeof cfg.use_japanese === "boolean") {
