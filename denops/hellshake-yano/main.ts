@@ -66,6 +66,10 @@ export interface Config {
   default_min_word_length?: number; // per_key_min_lengthに存在しないキーのデフォルト値
   current_key_context?: string; // 内部使用：現在のキーコンテキスト
 
+  // キー別motion_count設定（process1追加）
+  per_key_motion_count?: Record<string, number>; // キー別のmotion_count設定
+  default_motion_count?: number; // per_key_motion_countに存在しないキーのデフォルト値
+
   // 後方互換性のため残す
   min_word_length?: number; // 旧形式の最小文字数設定
   enable?: boolean; // enabled のエイリアス（後方互換性）
@@ -266,6 +270,32 @@ export function getMinLengthForKey(config: Config, key: string): number {
 
   // 後方互換性：旧形式のmin_word_lengthを使用（デフォルト: 2）
   return config.min_word_length ?? 2;
+}
+
+/**
+ * キー別motion_count設定を取得する関数（process1実装）
+ * 
+ * @param key - 対象のキー
+ * @param config - 設定オブジェクト
+ * @returns そのキーに対するmotion_count値
+ */
+export function getMotionCountForKey(key: string, config: Config): number {
+  // キー別設定が存在し、そのキーの設定があれば使用
+  if (config.per_key_motion_count && config.per_key_motion_count[key] !== undefined) {
+    const value = config.per_key_motion_count[key];
+    // 負の値は無効とみなし、デフォルトにフォールバック
+    if (value >= 0) {
+      return value;
+    }
+  }
+
+  // default_motion_count が設定されていれば使用
+  if (config.default_motion_count !== undefined) {
+    return config.default_motion_count;
+  }
+
+  // 後方互換性：既存のmotion_countを使用
+  return config.motion_count;
 }
 
 /**
@@ -2310,6 +2340,9 @@ export function getDefaultConfig(): Config {
     debug_coordinates: false, // デフォルトでデバッグログは無効
     highlight_hint_marker: "DiffAdd",
     highlight_hint_marker_current: "DiffText",
+    // process1追加: キー別motion_count設定のデフォルト値
+    default_motion_count: 3, // グローバルなデフォルト値
+    // per_key_motion_countはデフォルトでは未定義（ユーザーが必要に応じて設定）
   };
 }
 

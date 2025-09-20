@@ -58,9 +58,87 @@ endfunction
 " モーション追跡の初期化
 function! s:init_motion_tracking(bufnr) abort
   if !has_key(s:motion_count, a:bufnr)
-    let s:motion_count[a:bufnr] = 0
+    let s:motion_count[a:bufnr] = {}  " キー別カウント辞書
     let s:last_motion_time[a:bufnr] = 0
   endif
+endfunction
+
+" キー別カウントの初期化
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:init_key_count(bufnr, key) abort
+  if !has_key(s:motion_count, a:bufnr)
+    let s:motion_count[a:bufnr] = {}
+  endif
+  if !has_key(s:motion_count[a:bufnr], a:key)
+    let s:motion_count[a:bufnr][a:key] = 0
+  endif
+endfunction
+
+" キー別カウントを取得
+" @param bufnr バッファ番号
+" @param key キー文字
+" @return カウント値
+function! s:get_key_count(bufnr, key) abort
+  call s:init_key_count(a:bufnr, a:key)
+  return s:motion_count[a:bufnr][a:key]
+endfunction
+
+" キー別カウントを増加
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:increment_key_count(bufnr, key) abort
+  call s:init_key_count(a:bufnr, a:key)
+  let s:motion_count[a:bufnr][a:key] += 1
+endfunction
+
+" キー別カウントをリセット
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:reset_key_count(bufnr, key) abort
+  call s:init_key_count(a:bufnr, a:key)
+  let s:motion_count[a:bufnr][a:key] = 0
+endfunction
+
+" キー別のmotion_count設定値を取得
+" @param key キー文字
+" @return motion_count値（設定されていない場合はdefault_motion_count）
+function! s:get_motion_count_for_key(key) abort
+  " per_key_motion_countに設定があるかチェック
+  if has_key(g:hellshake_yano, 'per_key_motion_count')
+        \ && type(g:hellshake_yano.per_key_motion_count) == v:t_dict
+        \ && has_key(g:hellshake_yano.per_key_motion_count, a:key)
+    return g:hellshake_yano.per_key_motion_count[a:key]
+  endif
+
+  " default_motion_countまたは従来のmotion_countを返す
+  return get(g:hellshake_yano, 'default_motion_count', get(g:hellshake_yano, 'motion_count', 3))
+endfunction
+
+" キー別ヒント表示の必要性を判定
+" @param bufnr バッファ番号
+" @param key キー文字
+" @return v:true = ヒント表示, v:false = 表示しない
+function! s:should_trigger_hints_for_key(bufnr, key) abort
+  if get(s:is_key_repeating, a:bufnr, v:false)
+    return v:false
+  endif
+
+  let key_count = s:get_key_count(a:bufnr, a:key)
+  let threshold = s:get_motion_count_for_key(a:key)
+  return key_count >= threshold
+endfunction
+
+" キー別モーションカウント処理
+" @param bufnr バッファ番号
+" @param key キー文字
+function! s:process_motion_count_for_key(bufnr, key) abort
+  " 既存のタイマーをクリア
+  call s:stop_and_clear_timer(s:timer_id, a:bufnr)
+
+  " キー別カウントを増加
+  call s:increment_key_count(a:bufnr, a:key)
+  let s:last_motion_time[a:bufnr] = reltime()
 endfunction
 
 " キーリピート検出の初期化
@@ -71,20 +149,20 @@ function! s:init_key_repeat_detection(bufnr) abort
   endif
 endfunction
 
-" モーションカウントを処理
-function! s:process_motion_count(bufnr) abort
-  " 既存のタイマーをクリア
-  call s:stop_and_clear_timer(s:timer_id, a:bufnr)
+" 【DEPRECATED】モーションカウントを処理（キー別対応版s:process_motion_count_for_keyを使用）
+" function! s:process_motion_count(bufnr) abort
+"   " 既存のタイマーをクリア
+"   call s:stop_and_clear_timer(s:timer_id, a:bufnr)
+"
+"   " カウントを増加
+"   let s:motion_count[a:bufnr] += 1
+"   let s:last_motion_time[a:bufnr] = reltime()
+" endfunction
 
-  " カウントを増加
-  let s:motion_count[a:bufnr] += 1
-  let s:last_motion_time[a:bufnr] = reltime()
-endfunction
-
-" ヒント表示の必要性を判定
-function! s:should_trigger_hints(bufnr) abort
-  return !get(s:is_key_repeating, a:bufnr, v:false) && s:motion_count[a:bufnr] >= get(g:hellshake_yano, 'motion_count', 3)
-endfunction
+" 【DEPRECATED】ヒント表示の必要性を判定（キー別対応版s:should_trigger_hints_for_keyを使用）
+" function! s:should_trigger_hints(bufnr) abort
+"   return !get(s:is_key_repeating, a:bufnr, v:false) && s:motion_count[a:bufnr] >= get(g:hellshake_yano, 'motion_count', 3)
+" endfunction
 
 " モーションタイムアウトタイマーを設定
 function! s:set_motion_timeout(bufnr) abort
@@ -121,29 +199,37 @@ function! hellshake_yano#motion(key) abort
     return a:key
   endif
 
-  " モーションカウントを処理
-  call s:process_motion_count(bufnr)
+  " キー別モーションカウントを処理
+  call s:process_motion_count_for_key(bufnr, a:key)
 
-  " ヒント表示かタイムアウト設定を判定・実行
-  if s:should_trigger_hints(bufnr)
-    call s:reset_count(bufnr)
+  " キー別ヒント表示かタイムアウト設定を判定・実行
+  if s:should_trigger_hints_for_key(bufnr, a:key)
+    call s:reset_key_count(bufnr, a:key)
     call hellshake_yano#show_hints_with_key(a:key)
     call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': get(g:hellshake_yano, 'motion_count', 3) })
+          \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
   else
     call s:set_motion_timeout(bufnr)
     call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:motion_count[bufnr] })
+          \ 'key': a:key, 'count': s:get_key_count(bufnr, a:key) })
   endif
 
   call s:handle_debug_display()
   return a:key
 endfunction
 
-" カウントのリセット
+" カウントのリセット（後方互換性のため保持、全キーをリセット）
 function! s:reset_count(bufnr) abort
   if has_key(s:motion_count, a:bufnr)
-    let s:motion_count[a:bufnr] = 0
+    " 新しい辞書構造の場合は全キーをリセット
+    if type(s:motion_count[a:bufnr]) == v:t_dict
+      for key in keys(s:motion_count[a:bufnr])
+        let s:motion_count[a:bufnr][key] = 0
+      endfor
+    else
+      " 古い構造の場合（migration中）
+      let s:motion_count[a:bufnr] = 0
+    endif
   endif
   call s:stop_and_clear_timer(s:timer_id, a:bufnr)
 endfunction
@@ -471,7 +557,8 @@ function! s:get_debug_info() abort
 
   " バッファ状態
   let debug_info.current_buffer = bufnr
-  let debug_info.current_count = get(s:motion_count, bufnr, 0)
+  " キー別カウント情報を含める
+  let debug_info.key_counts = get(s:motion_count, bufnr, {})
   let debug_info.hints_visible = s:hints_visible
   let debug_info.denops_ready = s:is_denops_ready()
 
@@ -512,7 +599,13 @@ function! s:build_debug_info(bufnr) abort
   call add(l:lines, 'Motion count threshold: ' . get(g:hellshake_yano, 'motion_count', 0))
   call add(l:lines, 'Timeout: ' . get(g:hellshake_yano, 'motion_timeout', 0) . 'ms')
   call add(l:lines, 'Current buffer: ' . a:bufnr)
-  call add(l:lines, 'Current count: ' . get(s:motion_count, a:bufnr, 0))
+  " キー別カウント情報を表示
+  let key_counts = get(s:motion_count, a:bufnr, {})
+  if type(key_counts) == v:t_dict && !empty(key_counts)
+    call add(l:lines, 'Key counts: ' . string(key_counts))
+  else
+    call add(l:lines, 'Key counts: (none)')
+  endif
   call add(l:lines, 'Hints visible: ' . (s:hints_visible ? 'v:true' : 'v:false'))
   call add(l:lines, 'Denops ready: ' . (s:is_denops_ready() ? 'true' : 'false'))
   call add(l:lines, 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'))
@@ -549,9 +642,15 @@ function! hellshake_yano#show_debug() abort
 
   let debug_info = s:get_debug_info()
 
-  " ステータスライン用の簡潔な形式
-  let status_msg = printf('[hellshake-yano] Count:%d Repeat:%s Debug:ON',
-        \ debug_info.current_count,
+  " ステータスライン用の簡潔な形式（キー別カウント対応）
+  let key_count_summary = ''
+  if !empty(debug_info.key_counts)
+    let key_count_summary = string(debug_info.key_counts)
+  else
+    let key_count_summary = '(none)'
+  endif
+  let status_msg = printf('[hellshake-yano] KeyCounts:%s Repeat:%s Debug:ON',
+        \ key_count_summary,
         \ (debug_info.key_repeat.is_repeating ? 'YES' : 'NO'))
 
   " エコーエリアに表示
@@ -747,24 +846,53 @@ function! hellshake_yano#motion_with_key_context(key) abort
     return a:key
   endif
 
-  " モーションカウントを処理
-  call s:process_motion_count(bufnr)
+  " キー別モーションカウントを処理
+  call s:process_motion_count_for_key(bufnr, a:key)
 
-  " ヒント表示かタイムアウト設定を判定・実行（キー情報付き）
-  if s:should_trigger_hints(bufnr)
-    call s:reset_count(bufnr)
+  " キー別ヒント表示かタイムアウト設定を判定・実行
+  if s:should_trigger_hints_for_key(bufnr, a:key)
+    call s:reset_key_count(bufnr, a:key)
     " キー情報付きでヒント表示を呼び出し
     call hellshake_yano#show_hints_with_key(a:key)
     call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': get(g:hellshake_yano, 'motion_count', 3) })
+          \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
   else
     call s:set_motion_timeout(bufnr)
     call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:motion_count[bufnr] })
+          \ 'key': a:key, 'count': s:get_key_count(bufnr, a:key) })
   endif
 
   call s:handle_debug_display()
   return a:key
+endfunction
+
+"=============================================================================
+" テスト用デバッグ関数群
+"=============================================================================
+
+" テスト用: キー別カウントを取得（外部からアクセス可能）
+function! hellshake_yano#debug_get_key_count(bufnr, key) abort
+  return s:get_key_count(a:bufnr, a:key)
+endfunction
+
+" テスト用: キー別motion_count設定値を取得
+function! hellshake_yano#debug_get_motion_count_for_key(key) abort
+  return s:get_motion_count_for_key(a:key)
+endfunction
+
+" テスト用: ヒント表示判定を取得
+function! hellshake_yano#debug_should_trigger_hints_for_key(bufnr, key) abort
+  return s:should_trigger_hints_for_key(a:bufnr, a:key)
+endfunction
+
+" テスト用: キー別のモーションカウントを手動で増加
+function! hellshake_yano#debug_increment_key_count(bufnr, key) abort
+  call s:increment_key_count(a:bufnr, a:key)
+endfunction
+
+" テスト用: キー別のモーションカウントをリセット
+function! hellshake_yano#debug_reset_key_count(bufnr, key) abort
+  call s:reset_key_count(a:bufnr, a:key)
 endfunction
 
 " 保存と復元

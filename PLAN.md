@@ -59,29 +59,29 @@
 ### process1 設定構造の拡張
 #### sub1 Config型の更新
 @target: denops/hellshake-yano/main.ts
-- [ ] Config interfaceに`per_key_motion_count?: Record<string, number>`を追加
-- [ ] `default_motion_count?: number`を追加
-- [ ] `getMotionCountForKey`ヘルパー関数を追加
+- [x] Config interfaceに`per_key_motion_count?: Record<string, number>`を追加
+- [x] `default_motion_count?: number`を追加
+- [x] `getMotionCountForKey`ヘルパー関数を追加
 
 #### sub2 VimScript側の設定拡張
 @target: plugin/hellshake-yano.vim
-- [ ] デフォルト設定に`per_key_motion_count`と`default_motion_count`を追加
-- [ ] 設定の検証ロジックを追加
+- [x] デフォルト設定に`per_key_motion_count`と`default_motion_count`を追加
+- [x] 設定の検証ロジックを追加
 
 ### process2 モーションカウント管理の拡張
 #### sub1 キー別カウント辞書の実装
 @target: autoload/hellshake_yano.vim
-- [ ] s:motion_count辞書を`{bufnr: {key: count}}`構造に変更
-- [ ] s:init_key_count(bufnr, key)関数を追加
-- [ ] s:get_key_count(bufnr, key)関数を追加
-- [ ] s:increment_key_count(bufnr, key)関数を追加
-- [ ] s:reset_key_count(bufnr, key)関数を追加
+- [x] s:motion_count辞書を`{bufnr: {key: count}}`構造に変更
+- [x] s:init_key_count(bufnr, key)関数を追加
+- [x] s:get_key_count(bufnr, key)関数を追加
+- [x] s:increment_key_count(bufnr, key)関数を追加
+- [x] s:reset_key_count(bufnr, key)関数を追加
 
 #### sub2 カウント判定ロジックの更新
 @target: autoload/hellshake_yano.vim
-- [ ] s:get_motion_count_for_key(key)関数を追加（設定値取得）
-- [ ] s:should_trigger_hints_for_key(bufnr, key)関数を追加
-- [ ] s:process_motion_count_for_key(bufnr, key)関数を追加
+- [x] s:get_motion_count_for_key(key)関数を追加（設定値取得）
+- [x] s:should_trigger_hints_for_key(bufnr, key)関数を追加
+- [x] s:process_motion_count_for_key(bufnr, key)関数を追加
 
 ### process3 モーション処理の更新
 #### sub1 hellshake_yano#motion関数の改修

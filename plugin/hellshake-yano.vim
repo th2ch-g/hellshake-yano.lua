@@ -60,6 +60,24 @@ if !has_key(g:hellshake_yano, 'default_min_word_length')
   let g:hellshake_yano.default_min_word_length = 2
 endif
 
+" キー別motion_count設定（process1追加）
+if !has_key(g:hellshake_yano, 'per_key_motion_count')
+  " デフォルト設定例：精密操作は即座に、頻繁なキーは3回で表示
+  let g:hellshake_yano.per_key_motion_count = {
+        \ 'v': 1,
+        \ 'V': 1,
+        \ 'w': 1,
+        \ 'b': 1,
+        \ 'h': 3,
+        \ 'j': 3,
+        \ 'k': 3,
+        \ 'l': 3,
+        \ }
+endif
+if !has_key(g:hellshake_yano, 'default_motion_count')
+  let g:hellshake_yano.default_motion_count = 3
+endif
+
 " 設定値の基本検証（TypeScript側でより詳細な検証を実施）
 function! s:validate_config() abort
   " key_repeat_threshold が設定されている場合のみ検証
@@ -105,6 +123,36 @@ function! s:validate_config() abort
       echom '[hellshake-yano] Warning: default_min_word_length must be a positive number'
       echohl None
       unlet g:hellshake_yano.default_min_word_length
+    endif
+  endif
+
+  " per_key_motion_count の検証（process1追加）
+  if has_key(g:hellshake_yano, 'per_key_motion_count')
+    if type(g:hellshake_yano.per_key_motion_count) != v:t_dict
+      echohl WarningMsg
+      echom '[hellshake-yano] Warning: per_key_motion_count must be a dictionary'
+      echohl None
+      unlet g:hellshake_yano.per_key_motion_count
+    else
+      " 各エントリの値が非負の数値であることを確認（0は即座表示として有効）
+      for [key, value] in items(g:hellshake_yano.per_key_motion_count)
+        if type(value) != v:t_number || value < 0
+          echohl WarningMsg
+          echom '[hellshake-yano] Warning: per_key_motion_count values must be non-negative numbers'
+          echohl None
+          unlet g:hellshake_yano.per_key_motion_count[key]
+        endif
+      endfor
+    endif
+  endif
+
+  " default_motion_count の検証（process1追加）
+  if has_key(g:hellshake_yano, 'default_motion_count')
+    if type(g:hellshake_yano.default_motion_count) != v:t_number || g:hellshake_yano.default_motion_count < 0
+      echohl WarningMsg
+      echom '[hellshake-yano] Warning: default_motion_count must be a non-negative number'
+      echohl None
+      unlet g:hellshake_yano.default_motion_count
     endif
   endif
 endfunction
