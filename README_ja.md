@@ -16,6 +16,7 @@ hellshake-yano.vimは、日本語テキストの単語境界を正確に検出�
 - **キーリピート抑制**: hjklキーの高速連打時にヒント表示を抑制してスムーズなスクロールを実現
 - **デバッグモード**: プラグインの動作状態を詳細に確認できるデバッグ機能
 - **パフォーマンスログ**: 実行時間を記録して性能のボトルネックを特定
+- **Visual modeヒント位置**: Visual modeで単語の語尾にヒントを表示し、自然な選択操作を実現
 
 ## インストール
 
@@ -46,6 +47,7 @@ let g:hellshake_yano = {
   \ 'motion_count': 3,
   \ 'motion_timeout': 2000,
   \ 'hint_position': 'start',
+  \ 'visual_hint_position': 'end',
   \ 'trigger_on_hjkl': v:true,
   \ 'counted_motions': [],
   \ 'enabled': v:true,
@@ -71,6 +73,7 @@ let g:hellshake_yano = {
 | `per_key_motion_count`          | 辞書        | {}              | キーごとのモーションカウント設定                  |
 | `motion_timeout`                | 数値        | 2000            | モーションカウントのタイムアウト（ミリ秒）        |
 | `hint_position`                 | 文字列      | 'start'         | ヒントの表示位置（'start'または'end'）            |
+| `visual_hint_position`          | 文字列      | 'end'           | Visual modeでのヒント表示位置                     |
 | `trigger_on_hjkl`               | 真偽値      | v:true          | hjkl移動でのトリガーを有効化                      |
 | `counted_motions`               | 配列        | []              | カスタムモーションキー（trigger_on_hjklを上書き） |
 | `enabled`                       | 真偽値      | v:true          | プラグインの有効/無効                             |
@@ -200,6 +203,36 @@ let g:hellshake_yano = {
     \ }
     \ }
   ```
+
+### Visual modeでのヒント位置設定
+
+**新機能**: Visual modeで単語を選択する際、ヒントを単語の語尾に表示し、より自然な選択操作を実現できます。通常、Visual modeでは単語の語尾からヤンクすることが多いため、この機能により操作効率が向上します。
+
+#### 設定例
+
+```vim
+let g:hellshake_yano = {
+  \ 'hint_position': 'start',         " Normal modeでは単語の先頭
+  \ 'visual_hint_position': 'end',    " Visual modeでは単語の語尾（デフォルト）
+  \ }
+```
+
+#### visual_hint_positionの値
+
+- `'end'`（デフォルト）: Visual modeで単語の語尾にヒントを表示し、ジャンプも語尾へ
+- `'start'`: 常に単語の先頭にヒントを表示
+- `'same'`: Normal modeと同じ設定（`hint_position`）に従う
+
+#### ユースケース
+
+**語尾からの選択（推奨）**
+- Visual modeで単語を選択する際、カーソルは通常語尾に位置
+- 語尾にヒントが表示されることで、自然な選択フローを実現
+- 特に日本語テキストで有効
+
+**統一された表示**
+- `visual_hint_position: 'same'`を設定すると、モードに関係なく一貫した表示
+- 混乱を避けたいユーザー向け
 
 ### キーごとのモーションカウント設定
 
