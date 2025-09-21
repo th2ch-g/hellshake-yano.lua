@@ -483,6 +483,8 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
 /**
  * 1行から単語を抽出する
  *
+ * @deprecated Use extractWordsUnified instead for better functionality and unified interface
+ *
  * 改善された単語抽出アルゴリズムにより、kebab-case、snake_case、
  * CamelCase、日本語文字種別分割などを適切に処理します。
  * タブ文字を含む行でも正確な表示位置を計算します。
@@ -495,8 +497,14 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
  * @since 1.0.0
  * @example
  * ```typescript
+ * // DEPRECATED: Use extractWordsUnified instead
  * const words = extractWordsFromLine('hello-world snake_case こんにちは', 1, true, false);
- * // こんにちは、hello、world、snake、caseなどの単語が抽出される
+ *
+ * // NEW: Use unified function
+ * const words = extractWordsUnified('hello-world snake_case こんにちは', 1, {
+ *   useImprovedDetection: true,
+ *   excludeJapanese: false
+ * });
  * ```
  */
 export function extractWordsFromLine(
@@ -647,7 +655,7 @@ export function extractWordsFromLine(
 
 /**
  * 設定に基づいて1行から単語を抽出（統合版）
- * @deprecated Use WordDetectionManager.detectWords instead for better performance and features
+ * @deprecated Use extractWordsUnified instead for unified interface and better performance
  * @description 設定オブジェクトに基づいて単語抽出を行うラッパー関数
  * @param lineText - 解析する行のテキスト
  * @param lineNumber - 行番号
@@ -656,7 +664,11 @@ export function extractWordsFromLine(
  * @since 1.0.0
  * @example
  * ```typescript
+ * // DEPRECATED:
  * const words = extractWordsFromLineWithConfig('hello こんにちは', 1, { use_japanese: true });
+ *
+ * // NEW:
+ * const words = extractWordsUnified('hello こんにちは', 1, { use_japanese: true });
  * ```
  */
 export function extractWordsFromLineWithConfig(
@@ -808,12 +820,21 @@ export async function detectWordsWithEnhancedConfig(
 
 /**
  * EnhancedWordConfigを使用して1行から単語を抽出する（アダプター版）
+ * @deprecated Use extractWordsUnified instead for unified interface
  * @description 設定に基づいて1行から単語を抽出するアダプター関数
  * @param lineText - 解析する行のテキスト
  * @param lineNumber - 行番号
  * @param config - EnhancedWordConfig設定
  * @returns Word[] - 抽出された単語の配列
  * @since 1.0.0
+ * @example
+ * ```typescript
+ * // DEPRECATED:
+ * const words = extractWordsFromLineWithEnhancedConfig('hello', 1, { strategy: 'hybrid' });
+ *
+ * // NEW:
+ * const words = extractWordsUnified('hello', 1, { strategy: 'hybrid' });
+ * ```
  */
 export function extractWordsFromLineWithEnhancedConfig(
   lineText: string,
@@ -827,6 +848,7 @@ export function extractWordsFromLineWithEnhancedConfig(
 
 /**
  * レガシー互換性アダプター関数
+ * @deprecated Use extractWordsUnified with legacyMode: true for the same behavior
  * @description extractWordsFromLineOriginalと100%互換性のある結果を返すアダプター関数。
  * 将来的には新しい実装をベースとした最適化版に切り替え可能な設計。
  *
@@ -911,4 +933,195 @@ export function extractWordsFromLineLegacy(
   }
 
   return words;
+}
+
+/**
+ * 統合された単語抽出設定インターフェース
+ *
+ * すべての既存の単語抽出関数の設定を統合し、後方互換性を保ちつつ
+ * 一貫したAPIを提供します。
+ *
+ * @since 2.1.0
+ */
+export interface UnifiedWordExtractionConfig {
+  // Core settings
+  useImprovedDetection?: boolean;
+  excludeJapanese?: boolean;
+
+  // Legacy WordConfig compatibility
+  use_japanese?: boolean;
+  use_improved_detection?: boolean;
+
+  // Enhanced config compatibility
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
+  per_key_min_length?: Record<string, number>;
+  default_min_word_length?: number;
+  current_key_context?: string;
+  min_word_length?: number;
+  enable_tinysegmenter?: boolean;
+
+  // Mode selection
+  legacyMode?: boolean;
+}
+
+/**
+ * 統合された単語抽出関数
+ *
+ * すべての既存の extractWordsFromLine* 関数を統合し、
+ * 単一のインターフェースで全ての機能を提供します。
+ *
+ * @param lineText - 解析する行のテキスト
+ * @param lineNumber - 行番号（1ベース）
+ * @param config - 統合された設定オブジェクト
+ * @returns Word[] - 抽出された単語の配列
+ *
+ * @example
+ * ```typescript
+ * // Legacy behavior (default)
+ * const words1 = extractWordsUnified("hello world", 1);
+ *
+ * // Improved detection
+ * const words2 = extractWordsUnified("hello-world", 1, { useImprovedDetection: true });
+ *
+ * // WordConfig compatibility
+ * const words3 = extractWordsUnified("hello こんにちは", 1, { use_japanese: true });
+ *
+ * // Enhanced config compatibility
+ * const words4 = extractWordsUnified("test", 1, {
+ *   strategy: "hybrid",
+ *   min_word_length: 3
+ * });
+ * ```
+ *
+ * @since 2.1.0
+ */
+export function extractWordsUnified(
+  lineText: string,
+  lineNumber: number,
+  config: UnifiedWordExtractionConfig = {}
+): Word[] {
+  // Configuration normalization
+  const normalizedConfig = normalizeUnifiedConfig(config);
+
+  // Route to appropriate implementation based on config
+  if (normalizedConfig.legacyMode) {
+    return extractWordsFromLineLegacy(lineText, lineNumber, normalizedConfig.excludeJapanese);
+  }
+
+  if (normalizedConfig.hasEnhancedFeatures) {
+    // Use enhanced config path
+    const enhancedConfig: EnhancedWordConfig = {
+      use_japanese: normalizedConfig.useJapanese,
+      strategy: normalizedConfig.strategy,
+      min_word_length: normalizedConfig.minWordLength,
+      enable_tinysegmenter: normalizedConfig.enableTinySegmenter,
+      per_key_min_length: normalizedConfig.perKeyMinLength,
+      default_min_word_length: normalizedConfig.defaultMinWordLength,
+      current_key_context: normalizedConfig.currentKeyContext,
+    };
+    return extractWordsFromLineWithEnhancedConfig(lineText, lineNumber, enhancedConfig);
+  }
+
+  if (normalizedConfig.useWordConfig) {
+    // Use WordConfig path
+    const wordConfig: WordConfig = {
+      use_japanese: normalizedConfig.useJapanese,
+      use_improved_detection: normalizedConfig.useImprovedDetection,
+    };
+    return extractWordsFromLineWithConfig(lineText, lineNumber, wordConfig);
+  }
+
+  // Check if we should use improved detection via extractWordsFromLine
+  if (normalizedConfig.useImprovedDetection ||
+      config.useImprovedDetection !== undefined ||
+      config.excludeJapanese !== undefined) {
+    return extractWordsFromLine(
+      lineText,
+      lineNumber,
+      normalizedConfig.useImprovedDetection,
+      normalizedConfig.excludeJapanese
+    );
+  }
+
+  // Default to legacy behavior for backward compatibility
+  return extractWordsFromLineLegacy(lineText, lineNumber, normalizedConfig.excludeJapanese);
+}
+
+/**
+ * 統合設定を正規化する内部関数
+ */
+interface NormalizedConfig {
+  useImprovedDetection: boolean;
+  excludeJapanese: boolean;
+  useJapanese: boolean;
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
+  minWordLength?: number;
+  enableTinySegmenter?: boolean;
+  perKeyMinLength?: Record<string, number>;
+  defaultMinWordLength?: number;
+  currentKeyContext?: string;
+  legacyMode: boolean;
+  hasEnhancedFeatures: boolean;
+  useWordConfig: boolean;
+}
+
+function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): NormalizedConfig {
+  // Legacy mode detection
+  const legacyMode = config.legacyMode === true;
+
+  // Enhanced features detection
+  const hasEnhancedFeatures = !!(
+    config.strategy ||
+    config.per_key_min_length ||
+    config.current_key_context ||
+    config.enable_tinysegmenter
+  );
+
+  // WordConfig features detection
+  const useWordConfig = !!(
+    config.use_japanese !== undefined ||
+    config.use_improved_detection !== undefined
+  ) && !hasEnhancedFeatures;
+
+  // Japanese handling priority:
+  // 1. excludeJapanese (direct parameter)
+  // 2. use_japanese (WordConfig/EnhancedConfig)
+  // 3. default: false (include Japanese)
+  let useJapanese: boolean;
+  let excludeJapanese: boolean;
+
+  if (config.excludeJapanese !== undefined) {
+    excludeJapanese = config.excludeJapanese;
+    useJapanese = !config.excludeJapanese;
+  } else if (config.use_japanese !== undefined) {
+    useJapanese = config.use_japanese;
+    excludeJapanese = !config.use_japanese;
+  } else {
+    useJapanese = true; // Default: include Japanese for legacy compatibility
+    excludeJapanese = false;
+  }
+
+  // Improved detection priority:
+  // 1. useImprovedDetection (direct parameter)
+  // 2. use_improved_detection (WordConfig)
+  // 3. default based on mode
+  const useImprovedDetection =
+    config.useImprovedDetection ??
+    config.use_improved_detection ??
+    false; // Default to false for legacy compatibility
+
+  return {
+    useImprovedDetection,
+    excludeJapanese,
+    useJapanese,
+    strategy: config.strategy,
+    minWordLength: config.min_word_length ?? config.default_min_word_length,
+    enableTinySegmenter: config.enable_tinysegmenter,
+    perKeyMinLength: config.per_key_min_length,
+    defaultMinWordLength: config.default_min_word_length,
+    currentKeyContext: config.current_key_context,
+    legacyMode,
+    hasEnhancedFeatures,
+    useWordConfig,
+  };
 }

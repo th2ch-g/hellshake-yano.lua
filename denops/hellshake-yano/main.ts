@@ -5,6 +5,8 @@ import {
   detectWordsWithManager,
   type EnhancedWordConfig,
   extractWordsFromLineWithConfig,
+  extractWordsUnified,
+  type UnifiedWordExtractionConfig,
 } from "./word.ts";
 import {
   getWordDetectionManager,
@@ -355,7 +357,7 @@ export async function main(denops: Denops): Promise<void> {
         if (validMarkers.length > 0) {
           config.markers = validMarkers;
         } else {
-          // console.warn("[hellshake-yano] Invalid markers provided, keeping default");
+          // Invalid markers provided, keeping default
         }
       }
 
@@ -364,7 +366,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.motion_count >= 1 && Number.isInteger(cfg.motion_count)) {
           config.motion_count = cfg.motion_count;
         } else {
-          // console.warn(`[hellshake-yano] Invalid motion_count: ${cfg.motion_count}, must be integer >= 1`);
+          // Invalid motion_count, must be integer >= 1
         }
       }
 
@@ -373,7 +375,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.motion_timeout >= 100) {
           config.motion_timeout = cfg.motion_timeout;
         } else {
-          // console.warn(`[hellshake-yano] Invalid motion_timeout: ${cfg.motion_timeout}, must be >= 100ms`);
+          // Invalid motion_timeout, must be >= 100ms
         }
       }
 
@@ -383,7 +385,7 @@ export async function main(denops: Denops): Promise<void> {
         if (validPositions.includes(cfg.hint_position)) {
           config.hint_position = cfg.hint_position;
         } else {
-          // console.warn(`[hellshake-yano] Invalid hint_position: ${cfg.hint_position}, must be one of: ${validPositions.join(", ")}`);
+          // Invalid hint_position, must be one of: start, end, overlay
         }
       }
 
@@ -393,7 +395,7 @@ export async function main(denops: Denops): Promise<void> {
         if (validPositions.includes(cfg.visual_hint_position)) {
           config.visual_hint_position = cfg.visual_hint_position;
         } else {
-          // console.warn(`[hellshake-yano] Invalid visual_hint_position: ${cfg.visual_hint_position}, must be one of: ${validPositions.join(", ")}`);
+          // Invalid visual_hint_position, must be one of: start, end, same, both
         }
       }
 
@@ -451,7 +453,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.maxHints >= 1 && Number.isInteger(cfg.maxHints)) {
           config.maxHints = cfg.maxHints;
         } else {
-          // console.warn(`[hellshake-yano] Invalid maxHints: ${cfg.maxHints}, must be integer >= 1`);
+          // Invalid maxHints, must be integer >= 1
         }
       }
 
@@ -460,7 +462,7 @@ export async function main(denops: Denops): Promise<void> {
         if (cfg.debounceDelay >= 0) {
           config.debounceDelay = cfg.debounceDelay;
         } else {
-          // console.warn(`[hellshake-yano] Invalid debounceDelay: ${cfg.debounceDelay}, must be >= 0`);
+          // Invalid debounceDelay, must be >= 0
         }
       }
 
@@ -905,10 +907,6 @@ export async function main(denops: Denops): Promise<void> {
             capabilities?: { hasExtmarks?: boolean };
             buffer?: { type?: string; readonly?: boolean };
           };
-          //             hasExtmarks: debugInfo.capabilities?.hasExtmarks,
-          //             bufferType: debugInfo.buffer?.type,
-          //             readonly: debugInfo.buffer?.readonly
-          //           });
         } catch (error) {
         }
 
@@ -1948,7 +1946,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     // 全体タイムアウトの場合
     if (char === -2) {
-      // await denops.cmd("echohl WarningMsg | echo 'Input timeout - hints cleared' | echohl None");
       await hideHints(denops);
       return;
     }
@@ -1961,7 +1958,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     // Ctrl+C やその他の制御文字の処理
     if (char < 32 && char !== 13) { // Enter(13)以外の制御文字
-      // await denops.cmd("echohl WarningMsg | echo 'Invalid input - hints cleared' | echohl None");
       await hideHints(denops);
       return;
     }

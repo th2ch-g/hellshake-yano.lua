@@ -1128,9 +1128,9 @@ export class HybridWordDetector implements WordDetector {
           const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
           allWords.push(...mergedWords);
         } else {
-          // TinySegmenter無効または日本語なし：extractWordsFromLineWithConfigを使用
-          const { extractWordsFromLineWithConfig } = await import("../word.ts");
-          let words = extractWordsFromLineWithConfig(lineText, lineNumber, this.config);
+          // TinySegmenter無効または日本語なし：統合関数を使用
+          const { extractWordsUnified } = await import("../word.ts");
+          let words = extractWordsUnified(lineText, lineNumber, this.config);
 
           // Apply context-based filtering if context is provided
           if (context?.minWordLength !== undefined) {

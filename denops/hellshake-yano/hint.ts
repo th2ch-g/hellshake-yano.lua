@@ -933,17 +933,8 @@ export function generateHintsWithGroups(
     remainingCount -= doubleCount;
   }
 
-  if (remainingCount > 0) {
-    const numberCount = Math.min(remainingCount, 100);
-    for (let i = 0; i < numberCount; i++) {
-      hints.push(i.toString().padStart(2, "0"));
-    }
-    remainingCount -= numberCount;
-  }
-
-  if (remainingCount > 0) {
-    hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, remainingCount, 3));
-  }
+  // 数字フォールバックを削除 - single_char_keysとmulti_char_keysの組み合わせのみを使用
+  // 3文字ヒントも生成しない（厳密にsingle/multiの定義に従う）
 
   return hints;
 }
