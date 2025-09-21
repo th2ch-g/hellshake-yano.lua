@@ -21,8 +21,8 @@ describe("Max Hints and Capacity Calculation", () => {
       // 期待される容量
       const singleCharCount = 10; // A,S,D,F,G,H,J,K,L,;
       const multiCharCount = 10 * 10; // QQ,QW,QE... (10×10 = 100)
-      const numberHintCount = 100; // 00-99
-      const expectedCapacity = singleCharCount + multiCharCount + numberHintCount; // 210
+      // 数字フォールバックはなし
+      const expectedCapacity = singleCharCount + multiCharCount; // 110
 
       // 実際に生成してテスト
       const hints = generateHintsWithGroups(expectedCapacity, config);
@@ -43,11 +43,8 @@ describe("Max Hints and Capacity Calculation", () => {
         }
       }
 
-      // 最後の100個は2桁数字
-      for (let i = 110; i < 210; i++) {
-        assertEquals(hints[i].length, 2);
-        assertEquals(/^\d{2}$/.test(hints[i]), true);
-      }
+      // 数字ヒントはなし
+      assertEquals(hints[110], undefined);
     });
 
     it("should handle vim config line scenario", () => {
@@ -94,8 +91,8 @@ describe("Max Hints and Capacity Calculation", () => {
         max_single_char_hints: 11,
       };
 
-      // 最大容量: 11 + (15×15) + 100 = 336
-      const maxCapacity = 336;
+      // 最大容量: 11 + (15×15) = 236 (数字フォールバックなし)
+      const maxCapacity = 236;
       const hints = generateHintsWithGroups(maxCapacity, config);
 
       assertEquals(hints.length, maxCapacity);
@@ -114,12 +111,7 @@ describe("Max Hints and Capacity Calculation", () => {
         assertEquals(/^[A-Z]{2}$/.test(hints[index]), true);
       }
 
-      // 2桁数字（100個）
-      for (let i = 0; i < 100; i++, index++) {
-        assertEquals(hints[index].length, 2);
-        assertEquals(/^\d{2}$/.test(hints[index]), true);
-      }
-
+      // 数字ヒントはなし
       assertEquals(index, maxCapacity);
     });
   });
@@ -153,15 +145,15 @@ describe("Max Hints and Capacity Calculation", () => {
     it("should handle more words than capacity gracefully", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
-        multi_char_keys: ["B", "C"], // 容量: 1 + 4 + 100 = 105
+        multi_char_keys: ["B", "C"], // 容量: 1 + 4 = 5 (数字フォールバックなし)
       };
 
       // 容量を超える数を要求
       const requestedCount = 110;
       const hints = generateHintsWithGroups(requestedCount, config);
 
-      // 3文字ヒントも生成される
-      assertEquals(hints.length, requestedCount);
+      // 5個のみ生成可能（数字フォールバックなし、３文字ヒントなし）
+      assertEquals(hints.length, 5);
 
       // 最初は1文字
       assertEquals(hints[0], "A");
@@ -170,12 +162,12 @@ describe("Max Hints and Capacity Calculation", () => {
       assertEquals(hints[1], "BB");
       assertEquals(hints[4], "CC");
 
-      // 次は2桁数字
-      assertEquals(hints[5], "00");
-      assertEquals(hints[104], "99");
+      // 数字ヒントはなし
+      assertEquals(hints[5], undefined);
+      assertEquals(hints[104], undefined);
 
-      // 最後は3文字ヒント
-      assertEquals(hints[105].length, 3);
+      // 3文字ヒントもなし
+      assertEquals(hints[105], undefined);
     });
   });
 });

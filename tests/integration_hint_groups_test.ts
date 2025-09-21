@@ -115,8 +115,8 @@ describe("Integration: Hint Groups Feature", () => {
       const hints = generateHintsWithGroups(100, config);
       const elapsedTime = Date.now() - startTime;
 
-      // 100個のヒントを200ms以内に生成（環境による変動を考慮）
-      assertEquals(hints.length, 100);
+      // 9 + 25 = 34個のヒントのみ生成可能（数字フォールバックなし）
+      assertEquals(hints.length, 34);
       assertEquals(elapsedTime < 200, true);
 
       // 最初の9個は1文字
@@ -142,12 +142,13 @@ describe("Integration: Hint Groups Feature", () => {
       assertEquals(hints[2], "BC");
       assertEquals(hints[3], "CB");
       assertEquals(hints[4], "CC");
-      // 5個目以降は数字ヒント（2文字の組み合わせが足りない場合）
-      assertEquals(hints[5], "00");
-      assertEquals(hints[6], "01");
-      assertEquals(hints[7], "02");
-      assertEquals(hints[8], "03");
-      assertEquals(hints[9], "04");
+      // 5個目以降は生成されない（数字フォールバックなし）
+      assertEquals(hints.length, 5);
+      assertEquals(hints[5], undefined);
+      assertEquals(hints[6], undefined);
+      assertEquals(hints[7], undefined);
+      assertEquals(hints[8], undefined);
+      assertEquals(hints[9], undefined);
     });
   });
 
@@ -178,9 +179,10 @@ describe("Integration: Hint Groups Feature", () => {
       // single_char_keys が優先される
       assertEquals(hints[0], "A");
       assertEquals(hints[1], "B");
-      // single_char_keysのみでmulti_char_keysが未定義の場合、数字ヒントにフォールバック
-      assertEquals(hints[2], "00");
-      assertEquals(hints[3], "01");
+      // single_char_keysのみでmulti_char_keysが未定義の場合、2個のみ生成される
+      assertEquals(hints.length, 2);
+      assertEquals(hints[2], undefined);
+      assertEquals(hints[3], undefined);
     });
   });
 });

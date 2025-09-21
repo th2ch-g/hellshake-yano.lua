@@ -75,14 +75,14 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       }
     });
 
-    it("should generate 2-digit number hints after alphabet exhaustion", () => {
+    it("should NOT generate number hints after alphabet exhaustion", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D"],
         multi_char_keys: ["B", "C"], // 2×2 = 4通りのみ
         max_single_char_hints: 3,
       };
 
-      // 3 + 4 = 7個のアルファベットヒント + 数字ヒント
+      // 3 + 4 = 7個のアルファベットヒントのみ（数字フォールバックなし）
       const hints = generateHintsWithGroups(20, config);
 
       // 最初の3個は single_char_keys
@@ -91,25 +91,16 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       // 次の4個は multi_char_keys の組み合わせ
       assertEquals(hints.slice(3, 7), ["BB", "BC", "CB", "CC"]);
 
-      // 8個目以降は2桁数字
-      assertEquals(hints[7], "00");
-      assertEquals(hints[8], "01");
-      assertEquals(hints[9], "02");
-      assertEquals(hints[10], "03");
-      assertEquals(hints[19], "12");
-
-      // 数字ヒントが2桁であることを確認
-      for (let i = 7; i < 20; i++) {
-        assertEquals(hints[i].length, 2);
-        assertEquals(
-          /^\d{2}$/.test(hints[i]),
-          true,
-          `Hint "${hints[i]}" should be a 2-digit number`,
-        );
-      }
+      // 8個目以降は生成されない（数字フォールバックなし）
+      assertEquals(hints.length, 7);
+      assertEquals(hints[7], undefined);
+      assertEquals(hints[8], undefined);
+      assertEquals(hints[9], undefined);
+      assertEquals(hints[10], undefined);
+      assertEquals(hints[19], undefined);
     });
 
-    it("should support up to 336 hints (11 single + 225 double-alpha + 100 numbers)", () => {
+    it("should support up to 236 hints (11 single + 225 double-alpha)", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
         multi_char_keys: [
@@ -132,10 +123,10 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         max_single_char_hints: 11,
       };
 
-      // 11 + 225 + 100 = 336個のヒントを生成
+      // 11 + 225 = 236個のヒントのみ生成（数字フォールバックなし）
       const hints = generateHintsWithGroups(336, config);
 
-      assertEquals(hints.length, 336);
+      assertEquals(hints.length, 236);
 
       // 最初の11個は1文字
       for (let i = 0; i < 11; i++) {
@@ -148,15 +139,8 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         assertEquals(/^[A-Z]{2}$/.test(hints[i]), true);
       }
 
-      // 最後の100個は2桁数字
-      for (let i = 236; i < 336; i++) {
-        assertEquals(hints[i].length, 2);
-        assertEquals(/^\d{2}$/.test(hints[i]), true);
-
-        // 00から99までの順番であることを確認
-        const expectedNumber = (i - 236).toString().padStart(2, "0");
-        assertEquals(hints[i], expectedNumber);
-      }
+      // 数字フォールバックはなし
+      assertEquals(hints[236], undefined);
     });
   });
 
@@ -255,7 +239,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         }
       }
 
-      assertEquals(hasNumberHint, true, "Distant words should have number hints");
+      assertEquals(hasNumberHint, false, "No number hints should be assigned");
     });
   });
 
@@ -276,32 +260,32 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         max_single_char_hints: 1,
       };
 
-      // 1 + 4 + 100 = 105個まで対応可能
+      // 1 + 4 = 5個のみ対応可能（数字フォールバックなし）
       const hints = generateHintsWithGroups(105, config);
 
-      assertEquals(hints.length, 105);
+      assertEquals(hints.length, 5);
       assertEquals(hints[0], "A"); // 1文字
       assertEquals(hints[1], "BB"); // 2文字アルファベット
-      assertEquals(hints[5], "00"); // 2桁数字開始
-      assertEquals(hints[104], "99"); // 最後の2桁数字
+      assertEquals(hints[5], undefined); // 数字ヒントはなし
+      assertEquals(hints[104], undefined); // 数字ヒントはなし
     });
 
-    it("should generate 3-char hints if even numbers are exhausted", () => {
+    it("should NOT generate 3-char hints anymore", () => {
       const config: HintKeyConfig = {
         single_char_keys: ["A"],
         multi_char_keys: ["B"], // 1×1 = 1通りのみ
         max_single_char_hints: 1,
       };
 
-      // 1 + 1 + 100 = 102個を超える場合
+      // 1 + 1 = 2個のみ対応可能（数字フォールバックなし、３文字ヒントなし）
       const hints = generateHintsWithGroups(103, config);
 
-      assertEquals(hints.length, 103);
+      assertEquals(hints.length, 2);
       assertEquals(hints[0], "A"); // 1文字
       assertEquals(hints[1], "BB"); // 2文字
-      assertEquals(hints[2], "00"); // 数字開始
-      assertEquals(hints[101], "99"); // 最後の数字
-      assertEquals(hints[102], "BBB"); // 3文字開始
+      assertEquals(hints[2], undefined); // 数字ヒントなし
+      assertEquals(hints[101], undefined); // 数字ヒントなし
+      assertEquals(hints[102], undefined); // 3文字ヒントなし
     });
   });
 });

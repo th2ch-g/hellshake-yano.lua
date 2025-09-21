@@ -91,9 +91,9 @@ describe("Hint Assignment with Character Groups", () => {
       assertEquals(hints[3], "WQ");
       assertEquals(hints[4], "WW");
 
-      // 6-7個目は2桁数字（新しい動作）
-      assertEquals(hints[5], "00");
-      assertEquals(hints[6], "01");
+      // 6個目以降は生成されない（数字フォールバックなし）
+      assertEquals(hints[5], undefined);
+      assertEquals(hints[6], undefined);
     });
   });
 
