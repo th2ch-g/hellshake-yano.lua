@@ -383,6 +383,72 @@ function! s:notify_denops_config() abort
   endif
 endfunction
 
+" ハイライト設定を再適用（公開関数）
+function! hellshake_yano#apply_highlights() abort
+  " highlight_hint_marker の設定適用
+  if has_key(g:hellshake_yano, 'highlight_hint_marker') && !empty(g:hellshake_yano.highlight_hint_marker)
+    call s:apply_highlight_setting('HellshakeYanoMarker', g:hellshake_yano.highlight_hint_marker)
+  endif
+
+  " highlight_hint_marker_current の設定適用
+  if has_key(g:hellshake_yano, 'highlight_hint_marker_current') && !empty(g:hellshake_yano.highlight_hint_marker_current)
+    call s:apply_highlight_setting('HellshakeYanoMarkerCurrent', g:hellshake_yano.highlight_hint_marker_current)
+  endif
+endfunction
+
+" ハイライト設定を適用する内部関数
+function! s:apply_highlight_setting(hlgroup_name, color_config) abort
+  " 文字列の場合（従来のハイライトグループ名）
+  if type(a:color_config) == v:t_string
+    try
+      " defaultを削除して強制的にリンクを更新
+      execute 'highlight link ' . a:hlgroup_name . ' ' . a:color_config
+    catch
+      call hellshake_yano#show_error('[hellshake-yano] Error: Failed to apply highlight: ' . v:exception)
+    endtry
+    return
+  endif
+
+  " 辞書の場合（fg/bg個別指定）
+  if type(a:color_config) == v:t_dict
+    let l:cmd_parts = ['highlight', a:hlgroup_name]
+
+    " fg（前景色）の処理
+    if has_key(a:color_config, 'fg') && !empty(a:color_config.fg)
+      let l:fg_color = hellshake_yano#normalize_color_name(a:color_config.fg)
+      if a:color_config.fg =~# '^#'
+        " 16進数色の場合はguifgのみ
+        call add(l:cmd_parts, 'guifg=' . a:color_config.fg)
+      else
+        " 色名の場合はctermfgとguifgの両方
+        call add(l:cmd_parts, 'ctermfg=' . l:fg_color)
+        call add(l:cmd_parts, 'guifg=' . l:fg_color)
+      endif
+    endif
+
+    " bg（背景色）の処理
+    if has_key(a:color_config, 'bg') && !empty(a:color_config.bg)
+      let l:bg_color = hellshake_yano#normalize_color_name(a:color_config.bg)
+      if a:color_config.bg =~# '^#'
+        " 16進数色の場合はguibgのみ
+        call add(l:cmd_parts, 'guibg=' . a:color_config.bg)
+      else
+        " 色名の場合はctermbgとguibgの両方
+        call add(l:cmd_parts, 'ctermbg=' . l:bg_color)
+        call add(l:cmd_parts, 'guibg=' . l:bg_color)
+      endif
+    endif
+
+    " ハイライトコマンドを実行
+    try
+      let l:highlight_cmd = join(l:cmd_parts, ' ')
+      execute l:highlight_cmd
+    catch
+      call hellshake_yano#show_error('[hellshake-yano] Error: Failed to apply highlight: ' . v:exception)
+    endtry
+  endif
+endfunction
+
 " エラーハンドリング付きでdenops関数を呼び出す
 function! s:call_denops_function(function_name, args, context) abort
   if !s:is_denops_ready()
@@ -628,22 +694,14 @@ function! hellshake_yano#update_highlight(marker_group, current_group) abort
     let g:hellshake_yano.highlight_hint_marker_current = a:current_group
   endif
 
-  " ハイライトを再適用
-  try
-    if !empty(a:marker_group)
-      execute 'highlight default link HellshakeYanoMarker ' . a:marker_group
-    endif
-    if !empty(a:current_group)
-      execute 'highlight default link HellshakeYanoMarkerCurrent ' . a:current_group
-    endif
+  " ハイライトを再適用（plugin/hellshake-yano.vimのs:apply_custom_highlightsを実行）
+  call hellshake_yano#apply_highlights()
 
-    " denops側に設定を通知
-    call s:notify_denops_config()
+  " denops側に設定を通知
+  call s:notify_denops_config()
 
-    echo printf('[hellshake-yano] Highlight updated: marker=%s, current=%s', a:marker_group, a:current_group)
-  catch
-    call hellshake_yano#show_error('[hellshake-yano] Error: Failed to update highlight: ' . v:exception)
-  endtry
+  echo printf('[hellshake-yano] Highlight updated: marker=%s, current=%s',
+        \ string(a:marker_group), string(a:current_group))
 endfunction
 
 "=============================================================================

@@ -499,6 +499,17 @@ export async function main(denops: Denops): Promise<void> {
       // use_hint_groups の適用
       if (typeof cfg.use_hint_groups === "boolean") {
         config.use_hint_groups = cfg.use_hint_groups;
+      } else {
+        // Option 2+3: Auto-detect hint groups mode when single_char_keys or multi_char_keys are defined
+        // If use_hint_groups is not explicitly set but single/multi char keys are defined,
+        // automatically enable hint groups for better user experience
+        if ((config.single_char_keys && config.single_char_keys.length > 0) ||
+            (config.multi_char_keys && config.multi_char_keys.length > 0)) {
+          config.use_hint_groups = true;
+          if (config.debug_mode) {
+            console.log("[hellshake-yano] Auto-enabled hint groups due to single_char_keys/multi_char_keys presence");
+          }
+        }
       }
 
       // per_key_motion_count の検証と適用（process4追加）
@@ -1167,7 +1178,21 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
  * @returns 生成されたヒント文字列の配列
  */
 function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
-  if (config.use_hint_groups && (config.single_char_keys || config.multi_char_keys)) {
+  // Option 2+3: Auto-detect hint groups mode when single_char_keys or multi_char_keys are defined
+  // unless explicitly disabled by use_hint_groups=false
+  const shouldUseHintGroups = config.use_hint_groups !== false &&
+    (config.single_char_keys || config.multi_char_keys);
+
+  if (shouldUseHintGroups && (config.single_char_keys || config.multi_char_keys)) {
+    if (config.debug_mode) {
+      console.log("[hellshake-yano] Auto-detected hint groups mode:", {
+        use_hint_groups: config.use_hint_groups,
+        has_single_char_keys: !!config.single_char_keys,
+        has_multi_char_keys: !!config.multi_char_keys,
+        shouldUseHintGroups
+      });
+    }
+
     const hintConfig: HintKeyConfig = {
       single_char_keys: config.single_char_keys,
       multi_char_keys: config.multi_char_keys,
@@ -1178,7 +1203,9 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
     // 設定の検証
     const validation = validateHintKeyConfig(hintConfig);
     if (!validation.valid) {
-      // console.error("[hellshake-yano] Invalid hint key configuration:", validation.errors);
+      if (config.debug_mode) {
+        console.error("[hellshake-yano] Invalid hint key configuration:", validation.errors);
+      }
       // フォールバックとして通常のヒント生成を使用
       return generateHints(wordCount, markers);
     }
@@ -1564,6 +1591,66 @@ async function displayHintsWithMatchAdd(
 }
 
 /**
+ * ヒントの表示だけをクリアする（currentHintsは保持）
+ * highlightCandidateHints用の専用関数
+ *
+ * @param denops - Denopsインスタンス
+ */
+async function clearHintDisplay(denops: Denops): Promise<void> {
+  try {
+    if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
+      // Neovim: extmarkをクリア
+      try {
+        const bufnr = await denops.call("bufnr", "%") as number;
+        if (bufnr !== -1) {
+          const bufExists = await denops.call("bufexists", bufnr) as number;
+          if (bufExists) {
+            await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+          }
+        }
+      } catch (extmarkError) {
+        // console.warn("[hellshake-yano] Failed to clear extmarks:", extmarkError);
+      }
+    }
+
+    // フォールバック用のmatchをクリア
+    if (fallbackMatchIds.length > 0) {
+      try {
+        for (const matchId of fallbackMatchIds) {
+          try {
+            await denops.call("matchdelete", matchId);
+          } catch (matchError) {
+            // 個別のmatch削除エラーは警告のみ
+            // console.warn(`[hellshake-yano] Failed to delete match ${matchId}:`, matchError);
+          }
+        }
+        fallbackMatchIds = [];
+      } catch (error) {
+        // console.warn("[hellshake-yano] Error clearing fallback matches:", error);
+        // 最後の手段として全matchをクリア
+        try {
+          await denops.call("clearmatches");
+        } catch (clearError) {
+          // console.error("[hellshake-yano] Failed to clear all matches:", clearError);
+        }
+      }
+    }
+
+    // Vim またはその他のケース: 全matchをクリア
+    if (denops.meta.host !== "nvim") {
+      try {
+        await denops.call("clearmatches");
+      } catch (clearError) {
+        // console.warn("[hellshake-yano] Failed to clear matches:", clearError);
+      }
+    }
+  } catch (error) {
+    // console.error("[hellshake-yano] Error in clearHintDisplay:", error);
+  }
+  // 注意: currentHints, hintsVisible, fallbackMatchIds は保持する
+}
+
+/**
  * ヒントを非表示にする（エラーハンドリング強化版）
  *
  * @param denops - Denopsインスタンス
@@ -1641,83 +1728,115 @@ async function highlightCandidateHints(
   if (!config.highlight_selected) return;
 
   try {
-    // 候補となるヒントを見つける
-    const candidates = currentHints.filter((h) => h.hint.startsWith(inputPrefix));
+    // 候補となるヒントを分類
+    const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputPrefix));
+    const nonMatchingHints = currentHints.filter((h) => !h.hint.startsWith(inputPrefix));
 
-    if (candidates.length === 0) return;
+    if (currentHints.length === 0) return;
 
     // バッファの存在確認
     const bufnr = await denops.call("bufnr", "%") as number;
     if (bufnr === -1) return;
 
-    // 現在のモードを取得
-    const mode = await denops.call("mode") as string;
-    const isVisualMode = mode === "v" || mode === "V" || mode === "\x16";
-    const isBothMode = isVisualMode && config.visual_hint_position === "both";
+    // 表示だけをクリア（currentHintsは保持）
+    await clearHintDisplay(denops);
 
-    // Neovimの場合はextmarkでハイライト
+    // Neovimの場合はextmarkで再表示
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
-      for (const candidate of candidates) {
+      // マッチするヒントを表示（1文字目をハイライト）
+      for (const hint of matchingHints) {
         try {
-          // bothモードの場合、ヒントの位置情報を使用
-          const position = calculateHintPositionWithCoordinateSystem(
-            candidate.word,
-            config.hint_position,
-            config.debug_coordinates,
-            isVisualMode,
-            isBothMode ? undefined : config.visual_hint_position,
-          );
-
-          // ヒントの実際の位置を使用（hintCol/hintByteColがあれば優先）
-          let col = position.nvim_col;
-          if (candidate.hintByteCol !== undefined && candidate.hintByteCol > 0) {
-            col = candidate.hintByteCol - 1; // 0ベースに変換
-          } else if (candidate.hintCol !== undefined && candidate.hintCol > 0) {
-            col = candidate.hintCol - 1; // 0ベースに変換
+          // 既存の位置情報を使用（再計算しない）
+          const line = hint.word.line - 1; // 0ベースに変換
+          let col = 0;
+          if (hint.hintByteCol !== undefined && hint.hintByteCol > 0) {
+            col = hint.hintByteCol - 1;
+          } else if (hint.hintCol !== undefined && hint.hintCol > 0) {
+            col = hint.hintCol - 1;
+          } else {
+            col = (hint.word.byteCol || hint.word.col) - 1;
           }
 
-          let virtTextPos: "overlay" | "eol" = "overlay";
+          // ヒントテキストを分割
+          const firstChar = hint.hint.substring(0, inputPrefix.length);
+          const remainingChars = hint.hint.substring(inputPrefix.length);
 
-          if (position.display_mode === "overlay") {
-            virtTextPos = "overlay";
+          // 分割したテキストを異なるハイライトで表示
+          const virtText: Array<[string, string]> = [];
+          if (firstChar) {
+            virtText.push([firstChar, "HellshakeYanoMarkerCurrent"]);
+          }
+          if (remainingChars) {
+            virtText.push([remainingChars, "HellshakeYanoMarker"]);
           }
 
           await denops.call(
             "nvim_buf_set_extmark",
             bufnr,
             extmarkNamespace,
-            position.nvim_line,
+            line,
             Math.max(0, col),
             {
-              virt_text: [[candidate.hint, "HellshakeYanoMarkerCurrent"]],
-              virt_text_pos: virtTextPos,
+              virt_text: virtText,
+              virt_text_pos: "overlay",
               priority: 999,
             },
           );
         } catch (error) {
-          // console.warn("[hellshake-yano] Failed to highlight candidate:", error);
+          // console.warn("[hellshake-yano] Failed to highlight matching hint:", error);
+        }
+      }
+
+      // マッチしないヒントを通常表示
+      for (const hint of nonMatchingHints) {
+        try {
+          // 既存の位置情報を使用（再計算しない）
+          const line = hint.word.line - 1; // 0ベースに変換
+          let col = 0;
+          if (hint.hintByteCol !== undefined && hint.hintByteCol > 0) {
+            col = hint.hintByteCol - 1;
+          } else if (hint.hintCol !== undefined && hint.hintCol > 0) {
+            col = hint.hintCol - 1;
+          } else {
+            col = (hint.word.byteCol || hint.word.col) - 1;
+          }
+
+          await denops.call(
+            "nvim_buf_set_extmark",
+            bufnr,
+            extmarkNamespace,
+            line,
+            Math.max(0, col),
+            {
+              virt_text: [[hint.hint, "HellshakeYanoMarker"]],
+              virt_text_pos: "overlay",
+              priority: 100,
+            },
+          );
+        } catch (error) {
+          // console.warn("[hellshake-yano] Failed to display non-matching hint:", error);
         }
       }
     } else {
-      // Vimの場合はmatchadd()でハイライト（フォールバック）
-      for (const candidate of candidates) {
+      // Vimの場合はmatchaddで再表示
+      // マッチするヒントをHellshakeYanoMarkerCurrentで表示
+      for (const hint of matchingHints) {
         try {
           const position = calculateHintPositionWithCoordinateSystem(
-            candidate.word,
+            hint.word,
             config.hint_position,
             config.debug_coordinates,
           );
-          let pattern: string;
 
+          let pattern: string;
           switch (position.display_mode) {
             case "before":
             case "after":
               pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
               break;
             case "overlay":
-              // 単語全体にマッチ（オーバーレイ風）
               pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${
-                position.vim_col + candidate.word.text.length + 1
+                position.vim_col + hint.word.text.length + 1
               }c`;
               break;
             default:
@@ -1732,12 +1851,53 @@ async function highlightCandidateHints(
           ) as number;
           fallbackMatchIds.push(matchId);
         } catch (error) {
-          // console.warn("[hellshake-yano] Failed to highlight candidate with matchadd:", error);
+          // console.warn("[hellshake-yano] Failed to highlight matching hint with matchadd:", error);
+        }
+      }
+
+      // マッチしないヒントをHellshakeYanoMarkerで表示
+      for (const hint of nonMatchingHints) {
+        try {
+          const position = calculateHintPositionWithCoordinateSystem(
+            hint.word,
+            config.hint_position,
+            config.debug_coordinates,
+          );
+
+          let pattern: string;
+          switch (position.display_mode) {
+            case "before":
+            case "after":
+              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
+              break;
+            case "overlay":
+              pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${
+                position.vim_col + hint.word.text.length + 1
+              }c`;
+              break;
+            default:
+              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
+          }
+
+          const matchId = await denops.call(
+            "matchadd",
+            "HellshakeYanoMarker",
+            pattern,
+            100,
+          ) as number;
+          fallbackMatchIds.push(matchId);
+        } catch (error) {
+          // console.warn("[hellshake-yano] Failed to display non-matching hint with matchadd:", error);
         }
       }
     }
+
+    // ヒント表示状態を保持
+    hintsVisible = true;
   } catch (error) {
     // console.error("[hellshake-yano] Error highlighting candidates:", error);
+    // エラー時は元のヒントを復元
+    hintsVisible = false;
   }
 }
 
@@ -1936,10 +2096,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
         // この場合は通常の処理フローを続ける
       }
     } else {
-      // 従来のロジック（後方互換性）
-      // 複数文字ヒントが存在する場合は待機、単一文字のみの場合は即座にジャンプ
-      if (matchingHints.length === 1 && singleCharTarget) {
-        // マッチするヒントが1つだけで、それが単一文字の場合のみ即座にジャンプ
+      // Option 3: 1文字ヒントが存在する場合は即座にジャンプ（他の条件に関係なく）
+      if (singleCharTarget) {
         try {
           // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
           const jumpCol = singleCharTarget.hintByteCol || singleCharTarget.hintCol ||
@@ -1947,7 +2105,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
           // デバッグログ: ジャンプ位置の詳細
           if (config.debug_mode) {
-            console.log(`[hellshake-yano:DEBUG] Jump to single matching hint:`);
+            console.log(`[hellshake-yano:DEBUG] Jump to single char target (Option 3):`);
             console.log(`  - text: "${singleCharTarget.word.text}"`);
             console.log(`  - line: ${singleCharTarget.word.line}`);
             console.log(`  - col: ${singleCharTarget.word.col} (display)`);
@@ -1969,7 +2127,10 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     }
 
     // 候補のヒントをハイライト表示（UX改善）
-    if (config.highlight_selected && matchingHints.length > 1) {
+    // Option 3: 1文字ヒントが存在する場合はハイライト処理をスキップ
+    const shouldHighlight = config.highlight_selected && !singleCharTarget;
+
+    if (shouldHighlight) {
       await highlightCandidateHints(denops, inputChar);
     }
 

@@ -1,4 +1,5 @@
 import type { Word, HintMapping, HintPosition, HintPositionWithCoordinateSystem, HintKeyConfig } from "./types.ts";
+export type { HintKeyConfig };
 
 // HintPosition interface moved to types.ts for consolidation
 // Use: import type { HintPosition } from "./types.ts";
@@ -891,8 +892,19 @@ export function generateHintsWithGroups(
 ): string[] {
   // デフォルト値の設定
   const defaultMarkers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  const singleCharKeys = config.single_char_keys || config.markers || defaultMarkers;
-  const multiCharKeys = config.multi_char_keys || singleCharKeys;
+  const defaultSingleCharKeys = "ASDFGHJKLNM0123456789".split("");
+  const defaultMultiCharKeys = "BCEIOPQRTUVWXYZ".split("");
+
+  // 厳密な分離: single_char_keysとmulti_char_keysを独立して扱う
+  const singleCharKeys = config.single_char_keys || [];
+  const multiCharKeys = config.multi_char_keys || [];
+
+  // 両方とも未定義の場合のみ、従来のロジックにフォールバック
+  if (singleCharKeys.length === 0 && multiCharKeys.length === 0) {
+    // 互換性のため、markersまたはデフォルトを使用
+    const fallbackKeys = config.markers || defaultMarkers;
+    return generateHints(wordCount, fallbackKeys);
+  }
 
   if (wordCount <= 0) {
     return [];
