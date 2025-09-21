@@ -17,8 +17,10 @@ smooth as in English.
 - **Full UTF-8 Support**: Correctly calculates byte positions for multi-byte Japanese characters
 - **Customizable Precision**: Adjustable word detection algorithms for different use cases
 - **Key Repeat Suppression**: Suppresses hint display during rapid hjkl repeats for smooth scrolling
-- **Visual Mode Optimization**: Intelligent hint positioning for natural word selection in Visual
-  mode
+- **Visual Mode Optimization**: Intelligent hint positioning for natural word selection in Visual mode
+- **Strict Key Separation**: Complete separation between single_char_keys and multi_char_keys for predictable navigation
+- **Performance Optimizations**: Instant jump for single-character hints without delay
+- **Smart Auto-Detection**: Automatically enables hint groups when single/multi char keys are configured
 
 ## Installation
 
@@ -375,13 +377,23 @@ Track plugin performance with built-in performance logging:
 
 ### Hint Groups Configuration
 
-The plugin supports intelligent hint grouping that separates single-character hints from
-multi-character hints for improved navigation efficiency:
+The plugin supports intelligent hint grouping with **strict separation** between single-character
+and multi-character hints for improved navigation efficiency:
 
-- **Single-character keys**: Used for immediate navigation with no timeout
-- **Multi-character keys**: Used for two-character hints when more targets are needed
-- **Max single-character hints**: Limits the number of single-character hints to prevent key
-  conflicts
+- **Single-character keys**: Used ONLY for immediate, single-key navigation with instant jump
+- **Multi-character keys**: Used ONLY for two-character hints - never appear as single hints
+- **Strict separation**: Keys in single_char_keys will NEVER generate multi-char hints (no AA if A is in single_char_keys)
+- **Auto-detection**: Setting single_char_keys or multi_char_keys automatically enables use_hint_groups
+- **Performance optimized**: Single-character hints jump instantly without highlight delays
+- **Max single-character hints**: Optional limit to balance between single and multi-char hints
+
+#### Important Behavior Changes (v2.0+)
+
+When using hint groups with strict separation:
+- If 'A' is in `single_char_keys`, 'AA' will NOT be generated
+- If 'B' is in `multi_char_keys` only, 'B' will NOT appear as a single-char hint
+- Single-character hints jump instantly without waiting for a second key
+- Multi-character hints show visual feedback when first key is pressed
 
 ### Advanced Highlight Configuration
 
