@@ -305,6 +305,12 @@ export class RegexWordDetector implements WordDetector {
     const allMatches: { text: string; index: number }[] = [];
 
     const minLength = this.getEffectiveMinLength(context, context?.currentKey);
+    const perKeyConfig = (this.globalConfig as Config | undefined)?.per_key_min_length ||
+      (this.config as unknown as { per_key_min_length?: Record<string, number> })
+        .per_key_min_length;
+    const enableSingleCharExpansion = Boolean(
+      minLength <= 1 && perKeyConfig && Object.values(perKeyConfig).some((value) => value <= 1),
+    );
 
     while ((match = basicWordRegex.exec(lineText)) !== null) {
       if (match[0].length >= minLength) {
@@ -376,6 +382,15 @@ export class RegexWordDetector implements WordDetector {
       } // Regular words
       else {
         splitMatches.push(originalMatch);
+      }
+
+      if (enableSingleCharExpansion && text.length > 1) {
+        for (let charIndex = 0; charIndex < text.length; charIndex++) {
+          const char = text[charIndex];
+          if (/^[a-zA-Z0-9]$/.test(char)) {
+            splitMatches.push({ text: char, index: baseIndex + charIndex });
+          }
+        }
       }
     }
 

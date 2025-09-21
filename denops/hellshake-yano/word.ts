@@ -27,6 +27,12 @@ export interface WordConfig {
 export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   /** 後方互換性のための単語検出ストラテジー */
   strategy?: "regex" | "tinysegmenter" | "hybrid";
+  /** キー別の最小文字数設定 */
+  per_key_min_length?: Record<string, number>;
+  /** キー別最小文字数のデフォルト */
+  default_min_word_length?: number;
+  /** 現在のキーコンテキスト（内部用） */
+  current_key_context?: string;
 }
 
 /**
@@ -159,7 +165,32 @@ export async function detectWordsWithManager(
 ): Promise<WordDetectionResult> {
   try {
     const manager = getWordDetectionManager(config);
-    return await manager.detectWordsFromBuffer(denops, context);
+    const initialResult = await manager.detectWordsFromBuffer(denops, context);
+
+    let runtimeConfig: EnhancedWordConfig = { ...config };
+    try {
+      const denopsConfig = await denops.call("get_config") as unknown;
+      if (denopsConfig && typeof denopsConfig === "object") {
+        runtimeConfig = {
+          ...runtimeConfig,
+          ...(denopsConfig as Partial<EnhancedWordConfig>),
+        };
+      }
+    } catch {
+      // get_config が存在しない場合は無視
+    }
+
+    const derivedContext = context ?? deriveContextFromConfig(runtimeConfig);
+    if (derivedContext?.minWordLength !== undefined) {
+      const threshold = derivedContext.minWordLength;
+      const filteredWords = initialResult.words.filter((word) => word.text.length >= threshold);
+      return {
+        ...initialResult,
+        words: filteredWords,
+      };
+    }
+
+    return initialResult;
   } catch (error) {
     // console.error("[detectWordsWithManager] Error:", error);
 
@@ -180,6 +211,27 @@ export async function detectWordsWithManager(
       },
     };
   }
+}
+
+function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext | undefined {
+  const key = config.current_key_context;
+  if (!key) {
+    return undefined;
+  }
+
+  const perKey = config.per_key_min_length ?? {};
+  const minFromKey = perKey[key];
+  const fallback = config.default_min_word_length ?? config.min_word_length;
+
+  const derived: DetectionContext = { currentKey: key };
+
+  if (typeof minFromKey === "number") {
+    derived.minWordLength = minFromKey;
+  } else if (typeof fallback === "number") {
+    derived.minWordLength = fallback;
+  }
+
+  return derived;
 }
 
 /**

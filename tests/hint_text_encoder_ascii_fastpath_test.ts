@@ -68,6 +68,12 @@ Deno.test({
       });
 
       assertEquals(mappings.length, 2);
+
+      const firstByteCol = mappings[0].hintByteCol;
+      const secondByteCol = mappings[1].hintByteCol;
+
+      assertEquals(firstByteCol, 6);
+      assertEquals(secondByteCol, 8);
       assertEquals(encodeCount, 1);
     } finally {
       globalThis.TextEncoder = OriginalTextEncoder;

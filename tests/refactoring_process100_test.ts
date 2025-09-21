@@ -3,7 +3,7 @@
  * TDD Red-Green-Refactor サイクルに基づいて、既存の動作を保証する
  */
 
-import { assertEquals, assertNotEquals } from "@std/assert";
+import { assertEquals, assertLess, assertNotEquals } from "@std/assert";
 import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
 import { getMinLengthForKey } from "../denops/hellshake-yano/main.ts";
 import {
@@ -120,11 +120,11 @@ Deno.test("Process100: Baseline behavior - Detection context propagation", async
     `Context無し: ${wordsWithoutContext.words.length}語, Context有り: ${wordsWithContext.words.length}語`,
   );
 
-  // 現在の動作ではContextが効いていない可能性があるので、ベースラインとして記録
-  assertEquals(
-    wordsWithoutContext.words.length,
+  // contextにより最小文字数が上書きされ、検出語数が減ることを確認
+  assertLess(
     wordsWithContext.words.length,
-    "現在はcontextが効いていない状態をベースライン化",
+    wordsWithoutContext.words.length,
+    "contextにより検出語数が減少する",
   );
 });
 

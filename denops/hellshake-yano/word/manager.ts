@@ -205,11 +205,12 @@ export class WordDetectionManager {
 
     // Use provided context or stored session context
     const effectiveContext = context || this.sessionContext || undefined;
+    const useCache = this.config.cache_enabled && !this.shouldSkipCache(effectiveContext);
 
     try {
       // Check cache first
-      if (this.config.cache_enabled) {
-        const cached = this.getCachedResult(text, startLine);
+      if (useCache) {
+        const cached = this.getCachedResult(text, startLine, effectiveContext);
         if (cached) {
           this.stats.cache_hits++;
           return {
@@ -236,8 +237,8 @@ export class WordDetectionManager {
       const words = await this.detectWithTimeout(detector, text, startLine, effectiveContext);
 
       // Cache the result
-      if (this.config.cache_enabled) {
-        this.cacheResult(text, startLine, words, detector.name);
+      if (useCache) {
+        this.cacheResult(text, startLine, words, detector.name, effectiveContext);
       }
 
       // Update statistics
@@ -459,10 +460,15 @@ export class WordDetectionManager {
    * @returns string - 生成されたキャッシュキー
    * @since 1.0.0
    */
-  private generateCacheKey(text: string, startLine: number): string {
+  private generateCacheKey(
+    text: string,
+    startLine: number,
+    context?: DetectionContext,
+  ): string {
     const configHash = this.generateConfigHash();
     const textHash = this.simpleHash(text);
-    return `${textHash}:${startLine}:${configHash}`;
+    const contextHash = context ? this.generateContextHash(context) : "noctx";
+    return `${textHash}:${startLine}:${configHash}:${contextHash}`;
   }
 
   private generateConfigHash(): string {
@@ -472,6 +478,8 @@ export class WordDetectionManager {
       // use_improved_detection: 統合済み（常に有効）
       min_word_length: this.config.min_word_length,
       max_word_length: this.config.max_word_length,
+      default_min_word_length: (this.globalConfig as Config | undefined)?.default_min_word_length,
+      per_key_min_length: (this.globalConfig as Config | undefined)?.per_key_min_length,
     };
     return this.simpleHash(JSON.stringify(relevantConfig));
   }
@@ -486,8 +494,12 @@ export class WordDetectionManager {
     return hash.toString(36);
   }
 
-  private getCachedResult(text: string, startLine: number): CacheEntry | null {
-    const key = this.generateCacheKey(text, startLine);
+  private getCachedResult(
+    text: string,
+    startLine: number,
+    context?: DetectionContext,
+  ): CacheEntry | null {
+    const key = this.generateCacheKey(text, startLine, context);
     const entry = this.cache.get(key);
 
     if (!entry) return null;
@@ -501,8 +513,14 @@ export class WordDetectionManager {
     return entry;
   }
 
-  private cacheResult(text: string, startLine: number, words: Word[], detector: string): void {
-    const key = this.generateCacheKey(text, startLine);
+  private cacheResult(
+    text: string,
+    startLine: number,
+    words: Word[],
+    detector: string,
+    context?: DetectionContext,
+  ): void {
+    const key = this.generateCacheKey(text, startLine, context);
 
     // Manage cache size
     if (this.cache.size >= this.config.cache_max_size) {
@@ -522,6 +540,23 @@ export class WordDetectionManager {
       detector,
       config_hash: this.generateConfigHash(),
     });
+  }
+
+  private generateContextHash(context: DetectionContext): string {
+    const payload = {
+      currentKey: context.currentKey ?? null,
+      minWordLength: context.minWordLength ?? null,
+    };
+    return this.simpleHash(JSON.stringify(payload));
+  }
+
+  private shouldSkipCache(context?: DetectionContext): boolean {
+    if (!context) {
+      return false;
+    }
+    // Only recognized fields are safe for cache key inclusion
+    const allowedKeys = ["currentKey", "minWordLength", "metadata"];
+    return Object.keys(context).some((key) => !allowedKeys.includes(key));
   }
 
   /**

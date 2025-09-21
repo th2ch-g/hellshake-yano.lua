@@ -38,10 +38,20 @@ export interface HintPositionWithCoordinateSystem {
 
 // パフォーマンス最適化用のキャッシュ
 let hintCache = new Map<string, string[]>();
-let assignmentCacheNormal = new Map<string, HintMapping[]>();
-let assignmentCacheVisual = new Map<string, HintMapping[]>();
-let assignmentCacheOther = new Map<string, HintMapping[]>();
+let assignmentCacheNormal = new Map<string, Word[]>();
+let assignmentCacheVisual = new Map<string, Word[]>();
+let assignmentCacheOther = new Map<string, Word[]>();
 const CACHE_MAX_SIZE = 100; // キャッシュの最大サイズ
+
+/**
+ * バッチ処理を開始する単語数の閾値
+ */
+export const BATCH_PROCESS_THRESHOLD = 500;
+
+/**
+ * バッチ処理時のバッチサイズ
+ */
+export const BATCH_BATCH_SIZE = 250;
 
 // TextEncoderを共有してインスタンス生成コストを削減
 const sharedTextEncoder = new TextEncoder();
@@ -77,7 +87,7 @@ function getByteLength(text: string): number {
   return length;
 }
 
-function getAssignmentCacheForMode(mode: string): Map<string, HintMapping[]> {
+function getAssignmentCacheForMode(mode: string): Map<string, Word[]> {
   if (mode === "visual") {
     return assignmentCacheVisual;
   }
@@ -108,6 +118,74 @@ function hashString(value: string): string {
     hash |= 0; // Convert to 32-bit integer
   }
   return hash.toString(36);
+}
+
+function createLazyHintMapping(
+  word: Word,
+  hint: string,
+  effectiveHintPosition: string,
+): HintMapping {
+  let cachedHintCol: number | undefined;
+  let cachedHintByteCol: number | undefined;
+
+  const compute = () => {
+    if (cachedHintCol !== undefined && cachedHintByteCol !== undefined) {
+      return;
+    }
+
+    let hintCol = word.col;
+    let hintByteCol = word.byteCol ?? word.col;
+
+    switch (effectiveHintPosition) {
+      case "end":
+        hintCol = word.col + word.text.length - 1;
+        if (word.byteCol) {
+          const textByteLength = getByteLength(word.text);
+          hintByteCol = word.byteCol + textByteLength - 1;
+        } else {
+          hintByteCol = hintCol;
+        }
+        break;
+      case "overlay":
+        hintCol = word.col;
+        hintByteCol = word.byteCol ?? word.col;
+        break;
+      default:
+        hintCol = word.col;
+        hintByteCol = word.byteCol ?? word.col;
+        break;
+    }
+
+    cachedHintCol = hintCol;
+    cachedHintByteCol = hintByteCol;
+  };
+
+  return {
+    word,
+    hint,
+    get hintCol(): number {
+      compute();
+      return cachedHintCol ?? word.col;
+    },
+    get hintByteCol(): number {
+      compute();
+      return cachedHintByteCol ?? (word.byteCol ?? word.col);
+    },
+  };
+}
+
+function storeAssignmentCache(
+  cache: Map<string, Word[]>,
+  cacheKey: string,
+  sortedWords: Word[],
+): void {
+  if (cache.size >= CACHE_MAX_SIZE) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey !== undefined) {
+      cache.delete(firstKey);
+    }
+  }
+  cache.set(cacheKey, sortedWords.slice());
 }
 
 /**
@@ -228,13 +306,14 @@ export function assignHintsToWords(
   );
 
   // キャッシュヒットチェック
-  if (assignmentCache.has(cacheKey)) {
-    const cached = assignmentCache.get(cacheKey)!;
-    // ヒントを新しいものに更新
-    return cached.map((mapping, index) => ({
-      word: mapping.word,
-      hint: hints[index] || "",
-    }));
+  const cachedWords = assignmentCache.get(cacheKey);
+  if (cachedWords) {
+    const effectiveHintPosition = isVisualMode && visualHintPositionSetting !== "same"
+      ? visualHintPositionSetting
+      : hintPositionSetting;
+    return cachedWords.map((word, index) =>
+      createLazyHintMapping(word, hints[index] || "", effectiveHintPosition)
+    );
   }
 
   // カーソル位置からの距離で最適化されたソート
@@ -245,47 +324,11 @@ export function assignHintsToWords(
     ? visualHintPositionSetting
     : hintPositionSetting;
 
-  const mappings = sortedWords.map((word, index) => {
-    let hintCol = word.col;
-    let hintByteCol = word.byteCol ?? word.col;
+  const mappings = sortedWords.map((word, index) =>
+    createLazyHintMapping(word, hints[index] || "", effectiveHintPosition)
+  );
 
-    switch (effectiveHintPosition) {
-      case "end":
-        hintCol = word.col + word.text.length - 1;
-        if (word.byteCol) {
-          const textByteLength = getByteLength(word.text);
-          hintByteCol = word.byteCol + textByteLength - 1;
-        } else {
-          hintByteCol = hintCol;
-        }
-        break;
-      case "overlay":
-        hintCol = word.col;
-        hintByteCol = word.byteCol ?? word.col;
-        break;
-      default:
-        hintCol = word.col;
-        hintByteCol = word.byteCol ?? word.col;
-        break;
-    }
-
-    return {
-      word,
-      hint: hints[index] || "",
-      hintCol,
-      hintByteCol,
-    };
-  });
-
-  // キャッシュに保存（サイズ制限付き）
-  if (assignmentCache.size >= CACHE_MAX_SIZE) {
-    // 最古のエントリを削除
-    const firstKey = assignmentCache.keys().next().value;
-    if (firstKey !== undefined) {
-      assignmentCache.delete(firstKey);
-    }
-  }
-  assignmentCache.set(cacheKey, mappings);
+  storeAssignmentCache(assignmentCache, cacheKey, sortedWords);
 
   return mappings;
 }
@@ -372,7 +415,7 @@ function sortWordsByDistanceOptimized(
   cursorCol: number,
 ): Word[] {
   // 大量の単語がある場合はバッチ処理でソート
-  if (words.length > 1000) {
+  if (words.length > BATCH_PROCESS_THRESHOLD) {
     return sortWordsInBatches(words, cursorLine, cursorCol);
   }
 
@@ -403,10 +446,10 @@ function sortWordsByDistanceOptimized(
 
 /**
  * 大量の単語をバッチ処理でソート
- * @description 1000個以上の単語を効率的にソートするためのバッチ処理アルゴリズム。メモリ使用量を抑制し、分割統治法を使用
+ * @description 500個を超える単語を効率的にソートするためのバッチ処理アルゴリズム。メモリ使用量を抑制し、分割統治法を使用
  *
  * ## アルゴリズム詳細
- * 1. **バッチ分割**: 500個ずつのバッチに分割
+ * 1. **バッチ分割**: 250個ずつのバッチに分割
  * 2. **個別ソート**: 各バッチを個別にsortWordsByDistanceOptimizedでソート
  * 3. **マージ処理**: ソート済みバッチをmergeSortedBatchesで結合
  * 4. **メモリ効率**: 一度に全データをメモリに展開せず、段階的処理
@@ -414,7 +457,7 @@ function sortWordsByDistanceOptimized(
  * ## パフォーマンス特性
  * - **時間計算量**: O(n log n) - nは総単語数
  * - **空間計算量**: O(n) - 最大バッチサイズ × バッチ数分のメモリ
- * - **バッチサイズ**: 500個（メモリとCPU効率のバランス点）
+ * - **バッチサイズ**: 250個（メモリとCPU効率のバランス点）
  * - **スケーラビリティ**: 10万個以上の単語でも安定動作
  *
  * @param words - ソートする単語の配列（1000個以上推奨）
@@ -452,7 +495,7 @@ function sortWordsByDistanceOptimized(
  * ```
  */
 function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number): Word[] {
-  const batchSize = 500;
+  const batchSize = BATCH_BATCH_SIZE;
   const sortedBatches: Word[][] = [];
 
   // バッチごとにソート
@@ -877,10 +920,25 @@ export function generateHintsWithGroups(
   hints.push(...generateSingleCharHints(singleCharKeys, singleCharCount));
 
   // 2文字以上のヒントが必要な場合
-  const remainingCount = wordCount - singleCharCount;
+  let remainingCount = wordCount - singleCharCount;
+
   if (remainingCount > 0) {
-    const multiCharHints = generateMultiCharHintsFromKeys(multiCharKeys, remainingCount);
-    hints.push(...multiCharHints);
+    const doubleLimit = multiCharKeys.length * multiCharKeys.length;
+    const doubleCount = Math.min(remainingCount, doubleLimit);
+    hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, doubleCount, 2));
+    remainingCount -= doubleCount;
+  }
+
+  if (remainingCount > 0) {
+    const numberCount = Math.min(remainingCount, 100);
+    for (let i = 0; i < numberCount; i++) {
+      hints.push(i.toString().padStart(2, "0"));
+    }
+    remainingCount -= numberCount;
+  }
+
+  if (remainingCount > 0) {
+    hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, remainingCount, 3));
   }
 
   return hints;
@@ -945,27 +1003,40 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
  * // ホームロウキーから20個のヒント生成（16の2文字 + 4の3文字）
  * ```
  */
-function generateMultiCharHintsFromKeys(keys: string[], count: number): string[] {
+function generateMultiCharHintsFromKeys(
+  keys: string[],
+  count: number,
+  startLength: number = 2,
+): string[] {
   const hints: string[] = [];
-  let generated = 0;
-
-  // 2文字の組み合わせ
-  for (let i = 0; i < keys.length && generated < count; i++) {
-    for (let j = 0; j < keys.length && generated < count; j++) {
-      hints.push(keys[i] + keys[j]);
-      generated++;
-    }
+  if (count <= 0 || keys.length === 0) {
+    return hints;
   }
 
-  // 3文字の組み合わせ（2文字でも足りない場合のみ）
-  if (generated < count) {
-    for (let i = 0; i < keys.length && generated < count; i++) {
-      for (let j = 0; j < keys.length && generated < count; j++) {
-        for (let k = 0; k < keys.length && generated < count; k++) {
-          hints.push(keys[i] + keys[j] + keys[k]);
-          generated++;
-        }
+  const maxLength = startLength === 2 ? 3 : startLength;
+
+  const generateForLength = (length: number, prefix: string[]): boolean => {
+    if (prefix.length === length) {
+      hints.push(prefix.join(""));
+      return hints.length < count;
+    }
+
+    for (const key of keys) {
+      prefix.push(key);
+      const shouldContinue = generateForLength(length, prefix);
+      prefix.pop();
+      if (!shouldContinue) {
+        return false;
       }
+    }
+
+    return true;
+  };
+
+  for (let length = startLength; length <= maxLength && hints.length < count; length++) {
+    const shouldContinue = generateForLength(length, []);
+    if (!shouldContinue) {
+      break;
     }
   }
 
