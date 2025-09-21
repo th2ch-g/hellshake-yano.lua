@@ -7,7 +7,7 @@
  */
 
 import type { Denops } from "@denops/std";
-import type { Word } from "../word.ts";
+import type { Word, DetectionContext, WordDetectionResult } from "../types.ts";
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
@@ -104,30 +104,8 @@ export interface WordDetectionConfig {
   japanese_min_word_length?: number;
 }
 
-/**
- * Detection context interface for process3 - コンテキスト情報の伝播
- *
- * @description 単語検出処理に渡されるコンテキスト情報
- * キー別の最小文字数設定や現在のモーションキー情報を含む
- *
- * @example
- * ```typescript
- * const context: DetectionContext = {
- *   currentKey: "f",           // 現在のモーションキー
- *   minWordLength: 3,          // このキーに対する最小単語長
- * };
- *
- * const words = await detector.detectWords(text, 1, context);
- * ```
- */
-export interface DetectionContext {
-  /** 現在実行中のモーションキー (f, t, w, b, etc.) */
-  currentKey?: string;
-  /** このコンテキストでの最小単語長（設定より優先される） */
-  minWordLength?: number;
-  /** 追加のコンテキスト情報（将来の拡張用） */
-  metadata?: Record<string, unknown>;
-}
+// DetectionContext interface moved to types.ts for consolidation
+// Use: import type { DetectionContext } from "../types.ts";
 
 // Base interface for all word detectors
 export interface WordDetector {
@@ -140,54 +118,8 @@ export interface WordDetector {
   isAvailable(): Promise<boolean>;
 }
 
-/**
- * Detection result with metadata
- *
- * @description 単語検出の結果とメタデータを含む包括的な結果オブジェクト
- * 検出された単語だけでなく、パフォーマンス情報やエラー情報も提供します
- *
- * @example
- * ```typescript
- * // 成功時の結果例
- * const successResult: WordDetectionResult = {
- *   words: [
- *     { text: "Hello", line: 1, col: 1, byteCol: 1 },
- *     { text: "world", line: 1, col: 7, byteCol: 7 }
- *   ],
- *   detector: "HybridWordDetector",
- *   success: true,
- *   performance: {
- *     duration: 25,        // 処理時間（ミリ秒）
- *     wordCount: 2,        // 検出された単語数
- *     linesProcessed: 1    // 処理された行数
- *   }
- * };
- *
- * // エラー時の結果例
- * const errorResult: WordDetectionResult = {
- *   words: [],
- *   detector: "TinySegmenterWordDetector",
- *   success: false,
- *   error: "TinySegmenter initialization failed",
- *   performance: {
- *     duration: 10,
- *     wordCount: 0,
- *     linesProcessed: 0
- *   }
- * };
- * ```
- */
-export interface WordDetectionResult {
-  words: Word[];
-  detector: string;
-  success: boolean;
-  error?: string;
-  performance: {
-    duration: number;
-    wordCount: number;
-    linesProcessed: number;
-  };
-}
+// WordDetectionResult interface moved to types.ts for consolidation
+// Use: import type { WordDetectionResult } from "../types.ts";
 
 /**
  * Regex-based Word Detector

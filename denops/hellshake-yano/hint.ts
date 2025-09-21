@@ -1,40 +1,10 @@
-import type { Word } from "./word.ts";
+import type { Word, HintMapping, HintPosition, HintPositionWithCoordinateSystem, HintKeyConfig } from "./types.ts";
 
-/**
- * ヒント表示位置の型定義
- * @description ヒントの表示位置とモードを定義するインターフェース
- * @since 1.0.0
- */
-export interface HintPosition {
-  /** 行番号（1ベース） */
-  line: number;
-  /** 列番号（1ベース） */
-  col: number;
-  /** 表示モード */
-  display_mode: "before" | "after" | "overlay";
-}
+// HintPosition interface moved to types.ts for consolidation
+// Use: import type { HintPosition } from "./types.ts";
 
-/**
- * 座標系対応版のヒント表示位置型定義
- * @description Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方に対応した位置情報
- * @since 1.0.0
- */
-export interface HintPositionWithCoordinateSystem {
-  /** 行番号（後方互換性のため） */
-  line: number;
-  /** 列番号（後方互換性のため） */
-  col: number;
-  /** 表示モード */
-  display_mode: "before" | "after" | "overlay";
-  /** Vim座標系列番号（1ベース、matchadd用） */
-  vim_col: number;
-  /** Neovim extmark座標系列番号（0ベース、extmark用） */
-  nvim_col: number;
-  /** Vim座標系行番号（1ベース、matchadd用） */
-  vim_line: number;
-  /** Neovim extmark座標系行番号（0ベース、extmark用） */
-  nvim_line: number;
-}
+// HintPositionWithCoordinateSystem interface moved to types.ts for consolidation
+// Use: import type { HintPositionWithCoordinateSystem } from "./types.ts";
 
 // パフォーマンス最適化用のキャッシュ
 let hintCache = new Map<string, string[]>();
@@ -53,39 +23,8 @@ export const BATCH_PROCESS_THRESHOLD = 500;
  */
 export const BATCH_BATCH_SIZE = 250;
 
-// TextEncoderを共有してインスタンス生成コストを削減
-const sharedTextEncoder = new TextEncoder();
-
-// マルチバイト文字のバイト長キャッシュ
-const byteLengthCache = new Map<string, number>();
-
-function isAscii(text: string): boolean {
-  for (let i = 0; i < text.length; i++) {
-    if (text.charCodeAt(i) > 0x7f) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function getByteLength(text: string): number {
-  if (text.length === 0) {
-    return 0;
-  }
-
-  if (isAscii(text)) {
-    return text.length;
-  }
-
-  const cached = byteLengthCache.get(text);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const length = sharedTextEncoder.encode(text).length;
-  byteLengthCache.set(text, length);
-  return length;
-}
+// 統一されたエンコーディングユーティリティを使用
+import { getByteLength } from "./utils/encoding.ts";
 
 function getAssignmentCacheForMode(mode: string): Map<string, Word[]> {
   if (mode === "visual") {
@@ -188,21 +127,8 @@ function storeAssignmentCache(
   cache.set(cacheKey, sortedWords.slice());
 }
 
-/**
- * ヒントと単語のマッピング
- * @description 検出された単語とそれに割り当てられたヒント文字列の組み合わせ
- * @since 1.0.0
- */
-export interface HintMapping {
-  /** マッピング対象の単語 */
-  word: Word;
-  /** 割り当てられたヒント文字列 */
-  hint: string;
-  /** ヒントの表示位置（ジャンプ先の列番号、1ベース） */
-  hintCol?: number;
-  /** ヒントの表示位置（ジャンプ先のバイト列番号、1ベース） */
-  hintByteCol?: number;
-}
+// HintMapping interface moved to types.ts for consolidation
+// Use: import type { HintMapping } from "./types.ts";
 
 /**
  * 指定数のヒントを生成する（最適化版）
@@ -817,27 +743,8 @@ export function calculateHintPositionWithCoordinateSystem(
   };
 }
 
-/**
- * ヒントキー設定インターフェース
- * @description 1文字ヒントと2文字以上ヒントで使用するキーを個別に設定するためのインターフェース
- * @since 1.0.0
- */
-export interface HintKeyConfig {
-  /** 1文字ヒント専用キー（例: ["A","S","D","F","G","H","J","K","L",";"]） */
-  single_char_keys?: string[];
-
-  /** 2文字以上ヒント専用キー（例: ["Q","W","E","R","T","Y","U","I","O","P"]） */
-  multi_char_keys?: string[];
-
-  /** 従来のmarkers（後方互換性のため維持） */
-  markers?: string[];
-
-  /** 1文字ヒントの最大数（この数を超えたら2文字ヒントを使用） */
-  max_single_char_hints?: number;
-
-  /** カーソルからの距離で1文字/2文字を決定するか */
-  use_distance_priority?: boolean;
-}
+// HintKeyConfig interface moved to types.ts for consolidation
+// Use: import type { HintKeyConfig } from "./types.ts";
 
 /**
  * キーグループを使用したヒント生成（高度な振り分けロジック付き）

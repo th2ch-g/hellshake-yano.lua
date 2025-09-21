@@ -1,0 +1,746 @@
+/**
+ * Hellshake-Yano 統合型定義ファイル
+ *
+ * Phase 5: 型定義の整理により、分散していた型定義を一箇所に集約し、
+ * 型安全性の向上、再利用性の確保、保守性の改善を実現します。
+ *
+ * アーキテクチャ:
+ * - 基本インターフェース: Word, HintMapping, Config等の主要型
+ * - 型エイリアス: 複雑な型を簡潔に表現
+ * - ユニオン型: 制限された値セットの表現
+ * - ジェネリクス: 再利用可能な型パラメータ
+ * - 型ガード関数: 実行時の型安全性確保
+ *
+ * @version 2.0.0
+ * @since Phase 5 - Type Definition Consolidation
+ */
+
+// ===== 基本インターフェース =====
+
+/**
+ * 単語情報インターフェース
+ *
+ * @description 検出された単語の位置とテキスト情報を保持する基本的なデータ構造
+ * Vim/Neovimの座標系に対応し、UTF-8互換性を考慮した設計
+ *
+ * @example
+ * ```typescript
+ * const word: Word = {
+ *   text: "example",
+ *   line: 1,
+ *   col: 5,
+ *   byteCol: 5  // UTF-8環境でのバイト位置
+ * };
+ * ```
+ */
+export interface Word {
+  /** 単語のテキスト（必須） */
+  text: string;
+  /** 行番号（1ベース、必須） */
+  line: number;
+  /** 列番号（1ベース、表示列位置、必須） */
+  col: number;
+  /** バイトベースの列番号（1ベース、UTF-8互換性用、オプショナル） */
+  byteCol?: number;
+}
+
+/**
+ * ヒントマッピング情報インターフェース（Phase 5: 型定義の整理で最適化）
+ *
+ * @description 単語とヒント文字列の対応関係を定義
+ * lazy evaluationによるパフォーマンス最適化を考慮した設計
+ *
+ * ### 改善点（REFACTOR）：
+ * - hintColとhintByteColは常に計算可能なため必須に変更
+ * - 型安全性を向上し、undefinedチェックを不要にする
+ * - パフォーマンスとメモリ効率を両立
+ *
+ * @example
+ * ```typescript
+ * const mapping: HintMapping = {
+ *   word: { text: "hello", line: 1, col: 5 },
+ *   hint: "A",
+ *   hintCol: 5,      // 必須（計算可能）
+ *   hintByteCol: 5   // 必須（計算可能）
+ * };
+ * ```
+ */
+export interface HintMapping {
+  /** マッピング対象の単語（必須） */
+  word: Word;
+  /** 割り当てられたヒント文字列（必須、空文字列不可） */
+  hint: string;
+  /** ヒントの表示位置（列番号、1ベース、必須） */
+  hintCol: number;
+  /** ヒントの表示位置（バイト列番号、1ベース、必須） */
+  hintByteCol: number;
+}
+
+/**
+ * ヒント表示位置情報インターフェース
+ *
+ * @description ヒントの正確な表示位置とモードを定義
+ * Vim座標系とNeovim座標系の両方に対応
+ */
+export interface HintPosition {
+  /** 行番号（1ベース） */
+  line: number;
+  /** 列番号（1ベース） */
+  col: number;
+  /** 表示モード */
+  display_mode: HintDisplayMode;
+}
+
+/**
+ * 座標系対応版ヒント表示位置インターフェース
+ *
+ * @description Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方に対応
+ */
+export interface HintPositionWithCoordinateSystem extends HintPosition {
+  /** Vim座標系列番号（1ベース、matchadd用） */
+  vim_col: number;
+  /** Neovim extmark座標系列番号（0ベース、extmark用） */
+  nvim_col: number;
+  /** Vim座標系行番号（1ベース、matchadd用） */
+  vim_line: number;
+  /** Neovim extmark座標系行番号（0ベース、extmark用） */
+  nvim_line: number;
+}
+
+/**
+ * 設定情報インターフェース（Phase 5: 型定義の整理で最適化）
+ *
+ * @description プラグインの動作設定を定義する包括的なインターフェース
+ * 不要なオプショナルプロパティを削除し、より厳密な型定義を提供
+ *
+ * ### 改善点：
+ * - 実質的に必須の項目からオプショナル修飾子を除去
+ * - デフォルト値が明確な項目の型安全性を向上
+ * - 後方互換性を保持しながら型精度を向上
+ */
+export interface Config {
+  // === 基本設定（必須項目） ===
+  /** ヒント文字として使用するマーカー配列（必須、空配列不可） */
+  markers: string[];
+  /** モーション実行に必要な移動回数（必須、正の整数） */
+  motion_count: number;
+  /** モーションタイムアウト（ミリ秒、必須、正の整数） */
+  motion_timeout: number;
+  /** ヒント表示位置（必須） */
+  hint_position: HintPositionType;
+  /** hjklキーでのトリガー有効化（必須、デフォルト値明確） */
+  trigger_on_hjkl: boolean;
+  /** カウント対象のモーション配列（必須、空配列可） */
+  counted_motions: string[];
+  /** プラグインの有効/無効（必須） */
+  enabled: boolean;
+  /** 最大ヒント数（必須、正の整数） */
+  maxHints: number;
+  /** デバウンス遅延時間（ミリ秒、必須、非負整数） */
+  debounceDelay: number;
+  /** 数字をヒント文字として使用（必須、デフォルト値明確） */
+  use_numbers: boolean;
+  /** 選択中のヒントをハイライト（必須、デフォルト値明確） */
+  highlight_selected: boolean;
+  /** 座標系デバッグログの有効/無効（必須、デフォルト値明確） */
+  debug_coordinates: boolean;
+
+  // === オプション設定 ===
+  /** Visual Modeでのヒント位置（デフォルト: 'end'） */
+  visual_hint_position?: HintPositionType;
+  /** 1文字ヒント専用キー */
+  single_char_keys?: string[];
+  /** 2文字以上ヒント専用キー */
+  multi_char_keys?: string[];
+  /** 1文字ヒントの最大数 */
+  max_single_char_hints?: number;
+  /** ヒントグループ機能を使用するか */
+  use_hint_groups?: boolean;
+
+  // === 単語検出設定 ===
+  /** 日本語を含む単語検出を行うか */
+  use_japanese?: boolean;
+  /** 単語検出アルゴリズム */
+  word_detection_strategy?: DetectionStrategy;
+  /** TinySegmenterを有効にするか */
+  enable_tinysegmenter?: boolean;
+  /** TinySegmenterを使用する最小文字数 */
+  segmenter_threshold?: number;
+  /** 日本語の最小単語長 */
+  japanese_min_word_length?: number;
+  /** 助詞や接続詞を前の単語と結合 */
+  japanese_merge_particles?: boolean;
+  /** 結合する最大文字数 */
+  japanese_merge_threshold?: number;
+
+  // === ハイライト設定 ===
+  /** ヒントマーカーのハイライト色 */
+  highlight_hint_marker?: string | HighlightColor;
+  /** 選択中ヒントのハイライト色 */
+  highlight_hint_marker_current?: string | HighlightColor;
+
+  // === パフォーマンス設定 ===
+  /** キーリピート時のヒント表示抑制 */
+  suppress_on_key_repeat?: boolean;
+  /** リピート判定の閾値（ミリ秒） */
+  key_repeat_threshold?: number;
+  /** リピート終了判定の遅延（ミリ秒） */
+  key_repeat_reset_delay?: number;
+
+  // === キー別設定 ===
+  /** キー別の最小文字数設定 */
+  per_key_min_length?: Record<string, number>;
+  /** per_key_min_lengthに存在しないキーのデフォルト値 */
+  default_min_word_length?: number;
+  /** キー別のmotion_count設定 */
+  per_key_motion_count?: Record<string, number>;
+  /** per_key_motion_countに存在しないキーのデフォルト値 */
+  default_motion_count?: number;
+  /** 内部使用：現在のキーコンテキスト */
+  current_key_context?: string;
+
+  // === 後方互換性 ===
+  /** 旧形式の最小文字数設定 */
+  min_word_length?: number;
+  /** enabled のエイリアス */
+  enable?: boolean;
+  /** デバッグモードの有効/無効 */
+  debug_mode?: boolean;
+  /** パフォーマンスログの有効/無効 */
+  performance_log?: boolean;
+}
+
+/**
+ * ハイライト色設定インターフェース
+ *
+ * @description 前景色と背景色を個別に指定可能な色設定
+ */
+export interface HighlightColor {
+  /** 前景色（'Red' or '#ff0000' or 'NONE'） */
+  fg?: string;
+  /** 背景色（'Blue' or '#0000ff' or 'NONE'） */
+  bg?: string;
+}
+
+/**
+ * 単語検出コンテキストインターフェース
+ *
+ * @description 単語検出処理に渡されるコンテキスト情報
+ * キー別の設定やモーション情報を含む
+ */
+export interface DetectionContext {
+  /** 現在実行中のモーションキー */
+  currentKey?: string;
+  /** このコンテキストでの最小単語長 */
+  minWordLength?: number;
+  /** 追加のコンテキスト情報 */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * 単語検出結果インターフェース
+ *
+ * @description 単語検出の結果とメタデータを含む包括的な結果オブジェクト
+ */
+export interface WordDetectionResult {
+  /** 検出された単語配列 */
+  words: Word[];
+  /** 使用された検出器名 */
+  detector: string;
+  /** 検出成功フラグ */
+  success: boolean;
+  /** エラーメッセージ（失敗時） */
+  error?: string;
+  /** パフォーマンス情報 */
+  performance: PerformanceMetric;
+}
+
+/**
+ * ヒントキー設定インターフェース
+ *
+ * @description 1文字ヒントと複数文字ヒントのキー設定
+ */
+export interface HintKeyConfig {
+  /** 1文字ヒント専用キー */
+  single_char_keys?: string[];
+  /** 2文字以上ヒント専用キー */
+  multi_char_keys?: string[];
+  /** 従来のmarkers（後方互換性） */
+  markers?: string[];
+  /** 1文字ヒントの最大数 */
+  max_single_char_hints?: number;
+  /** カーソルからの距離で1文字/2文字を決定するか */
+  use_distance_priority?: boolean;
+}
+
+// ===== 型エイリアス =====
+
+/**
+ * ヒント表示位置タイプ
+ *
+ * @description ヒントの表示位置を指定する文字列リテラル型
+ */
+export type HintPositionType = "start" | "end" | "overlay" | "same";
+
+/**
+ * ヒント表示モード
+ *
+ * @description ヒントの表示方法を指定するユニオン型
+ */
+export type HintDisplayMode = "before" | "after" | "overlay";
+
+/**
+ * 単語検出戦略
+ *
+ * @description 単語検出に使用するアルゴリズムを指定する型
+ */
+export type DetectionStrategy = "regex" | "tinysegmenter" | "hybrid";
+
+/**
+ * モーションキー
+ *
+ * @description Vimで使用可能なモーションキーのユニオン型
+ */
+export type MotionKey =
+  | "f" | "F" | "t" | "T"  // 文字検索モーション
+  | "w" | "W" | "b" | "B" | "e" | "E"  // 単語移動モーション
+  | "/" | "?" | "n" | "N"  // 検索モーション
+  | "h" | "j" | "k" | "l"  // 基本移動モーション
+  | ";" | ","  // リピートモーション
+  | string;    // 拡張可能性のため
+
+/**
+ * キャッシュキー
+ *
+ * @description キャッシュエントリを識別するためのキー型
+ */
+export type CacheKey = string;
+
+/**
+ * タイムスタンプ
+ *
+ * @description Unix timestamp (milliseconds)
+ */
+export type Timestamp = number;
+
+// ===== ジェネリクス型 =====
+
+/**
+ * キャッシュエントリジェネリック型
+ *
+ * @description 任意の型のデータをキャッシュするための汎用エントリ
+ * TTL（Time To Live）機能とタイムスタンプを含む
+ *
+ * @template T キャッシュするデータの型
+ */
+export interface CacheEntry<T> {
+  /** キャッシュキー */
+  key: CacheKey;
+  /** キャッシュされた値 */
+  value: T;
+  /** 作成時刻（Unixタイムスタンプ） */
+  timestamp: Timestamp;
+  /** 生存時間（ミリ秒、オプショナル） */
+  ttl?: number;
+}
+
+/**
+ * バリデーション結果ジェネリック型
+ *
+ * @description 任意の型に対するバリデーション結果を表現
+ * エラー情報とバリデート済みの値を含む
+ *
+ * @template T バリデーション対象の型
+ */
+export interface ValidationResult<T> {
+  /** バリデーション成功フラグ */
+  isValid: boolean;
+  /** バリデート済みの値（成功時） */
+  value?: T;
+  /** エラーメッセージ配列 */
+  errors: string[];
+  /** 警告メッセージ配列（オプショナル） */
+  warnings?: string[];
+}
+
+/**
+ * パフォーマンスメトリック型
+ *
+ * @description 処理のパフォーマンス情報を表現する汎用型
+ */
+export interface PerformanceMetric {
+  /** 処理時間（ミリ秒） */
+  duration: number;
+  /** 処理された単語数 */
+  wordCount: number;
+  /** 処理された行数 */
+  linesProcessed: number;
+  /** メモリ使用量（バイト、オプショナル） */
+  memoryUsage?: number;
+  /** キャッシュヒット数（オプショナル） */
+  cacheHits?: number;
+}
+
+/**
+ * 結果とエラーのジェネリック型
+ *
+ * @description Rust風のResult型を模倣した成功/失敗を表現する型
+ *
+ * @template T 成功時の値の型
+ * @template E エラー時の値の型
+ */
+export type Result<T, E = Error> =
+  | { success: true; value: T }
+  | { success: false; error: E };
+
+/**
+ * オプショナルジェネリック型
+ *
+ * @description 値が存在するかしないかを明示的に表現する型
+ *
+ * @template T 値の型
+ */
+export type Optional<T> = T | null | undefined;
+
+/**
+ * 部分的な深いプロパティ型
+ *
+ * @description 深いネストしたオブジェクトのすべてのプロパティをオプショナルにする
+ *
+ * @template T 対象のオブジェクト型
+ */
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+// ===== 型ガード関数 =====
+
+/**
+ * Word型の型ガード関数
+ *
+ * @description オブジェクトがWord型の構造を満たしているかを判定
+ * 実行時の型安全性を確保するために使用
+ *
+ * @param obj 判定対象のオブジェクト
+ * @returns Wordインターフェースを満たしている場合true
+ *
+ * @example
+ * ```typescript
+ * if (isWord(unknownObject)) {
+ *   // TypeScriptがWord型として認識
+ *   console.log(unknownObject.text);
+ * }
+ * ```
+ */
+export function isWord(obj: unknown): obj is Word {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as Word).text === "string" &&
+    typeof (obj as Word).line === "number" &&
+    typeof (obj as Word).col === "number" &&
+    (obj as Word).line > 0 &&
+    (obj as Word).col > 0 &&
+    ((obj as Word).byteCol === undefined || typeof (obj as Word).byteCol === "number")
+  );
+}
+
+/**
+ * HintMapping型の型ガード関数（Phase 5: 型定義の整理で最適化）
+ *
+ * @description オブジェクトがHintMapping型の構造を満たしているかを判定
+ * より厳密な型チェックでhintColとhintByteColの必須化に対応
+ *
+ * @param obj 判定対象のオブジェクト
+ * @returns HintMappingインターフェースを満たしている場合true
+ */
+export function isHintMapping(obj: unknown): obj is HintMapping {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    isWord((obj as HintMapping).word) &&
+    typeof (obj as HintMapping).hint === "string" &&
+    (obj as HintMapping).hint.length > 0 &&
+    typeof (obj as HintMapping).hintCol === "number" &&
+    (obj as HintMapping).hintCol > 0 &&
+    typeof (obj as HintMapping).hintByteCol === "number" &&
+    (obj as HintMapping).hintByteCol > 0
+  );
+}
+
+/**
+ * Config型の型ガード関数
+ *
+ * @description オブジェクトがConfig型の最小要件を満たしているかを判定
+ * すべてのプロパティを厳密にチェックするのではなく、必須項目のみ確認
+ *
+ * @param obj 判定対象のオブジェクト
+ * @returns Configインターフェースの必須項目を満たしている場合true
+ */
+export function isConfig(obj: unknown): obj is Config {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    Array.isArray((obj as Config).markers) &&
+    typeof (obj as Config).motion_count === "number" &&
+    typeof (obj as Config).motion_timeout === "number" &&
+    typeof (obj as Config).hint_position === "string" &&
+    typeof (obj as Config).trigger_on_hjkl === "boolean" &&
+    Array.isArray((obj as Config).counted_motions) &&
+    typeof (obj as Config).enabled === "boolean"
+  );
+}
+
+/**
+ * 有効なWord型の型ガード関数
+ *
+ * @description Word型であることに加えて、実用的な値を持っているかを判定
+ * 空文字列や無効な位置情報を排除
+ *
+ * @param obj 判定対象のオブジェクト
+ * @returns 有効なWordインターフェースを満たしている場合true
+ */
+export function isValidWord(obj: unknown): obj is Word {
+  return (
+    isWord(obj) &&
+    obj.text.trim().length > 0 &&
+    obj.line >= 1 &&
+    obj.col >= 1 &&
+    (obj.byteCol === undefined || obj.byteCol >= 1)
+  );
+}
+
+/**
+ * HintPosition型の型ガード関数
+ *
+ * @description オブジェクトがHintPosition型の構造を満たしているかを判定
+ *
+ * @param obj 判定対象のオブジェクト
+ * @returns HintPositionインターフェースを満たしている場合true
+ */
+export function isHintPosition(obj: unknown): obj is HintPosition {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as HintPosition).line === "number" &&
+    typeof (obj as HintPosition).col === "number" &&
+    (obj as HintPosition).line > 0 &&
+    (obj as HintPosition).col > 0 &&
+    ["before", "after", "overlay"].includes((obj as HintPosition).display_mode)
+  );
+}
+
+/**
+ * DetectionStrategy型の型ガード関数
+ *
+ * @description 文字列が有効なDetectionStrategy値かを判定
+ *
+ * @param value 判定対象の値
+ * @returns 有効なDetectionStrategy値の場合true
+ */
+export function isDetectionStrategy(value: unknown): value is DetectionStrategy {
+  return typeof value === "string" && ["regex", "tinysegmenter", "hybrid"].includes(value);
+}
+
+/**
+ * MotionKey型の型ガード関数
+ *
+ * @description 文字列が有効なMotionKey値かを判定
+ *
+ * @param value 判定対象の値
+ * @returns 有効なMotionKey値の場合true
+ */
+export function isMotionKey(value: unknown): value is MotionKey {
+  if (typeof value !== "string") return false;
+
+  const knownMotionKeys = [
+    "f", "F", "t", "T", "w", "W", "b", "B", "e", "E",
+    "/", "?", "n", "N", "h", "j", "k", "l", ";", ","
+  ];
+
+  return knownMotionKeys.includes(value) || value.length === 1;
+}
+
+/**
+ * CacheEntry型の型ガード関数
+ *
+ * @description オブジェクトがCacheEntry型の構造を満たしているかを判定
+ *
+ * @template T キャッシュ値の型
+ * @param obj 判定対象のオブジェクト
+ * @param valueGuard 値の型ガード関数（オプショナル）
+ * @returns CacheEntryインターフェースを満たしている場合true
+ */
+export function isCacheEntry<T>(
+  obj: unknown,
+  valueGuard?: (value: unknown) => value is T
+): obj is CacheEntry<T> {
+  const isBasicStructure = (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as CacheEntry<T>).key === "string" &&
+    typeof (obj as CacheEntry<T>).timestamp === "number" &&
+    ((obj as CacheEntry<T>).ttl === undefined || typeof (obj as CacheEntry<T>).ttl === "number")
+  );
+
+  if (!isBasicStructure) return false;
+
+  if (valueGuard) {
+    return valueGuard((obj as CacheEntry<T>).value);
+  }
+
+  return true;
+}
+
+// ===== ユーティリティ型 =====
+
+/**
+ * 読み取り専用の深いプロパティ型
+ *
+ * @description オブジェクトのすべてのプロパティを再帰的に読み取り専用にする
+ *
+ * @template T 対象のオブジェクト型
+ */
+export type DeepReadonly<T> = {
+  readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
+};
+
+/**
+ * 必須プロパティ型
+ *
+ * @description 指定されたプロパティを必須にする
+ *
+ * @template T 元のオブジェクト型
+ * @template K 必須にするプロパティのキー
+ */
+export type RequiredProperties<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+/**
+ * 型安全なキー型
+ *
+ * @description オブジェクトのキーを型安全に取得する
+ *
+ * @template T 対象のオブジェクト型
+ */
+export type SafeKeys<T> = keyof T;
+
+/**
+ * 値型の抽出
+ *
+ * @description オブジェクトの値の型を抽出する
+ *
+ * @template T 対象のオブジェクト型
+ */
+export type ValueOf<T> = T[keyof T];
+
+// ===== デフォルト値とファクトリ関数 =====
+
+/**
+ * デフォルトWord値を作成する
+ *
+ * @param text 単語のテキスト
+ * @param line 行番号（デフォルト: 1）
+ * @param col 列番号（デフォルト: 1）
+ * @returns デフォルト値が設定されたWordオブジェクト
+ */
+export function createDefaultWord(text: string, line = 1, col = 1): Word {
+  return { text, line, col };
+}
+
+/**
+ * デフォルトHintMapping値を作成する
+ *
+ * @param word 単語オブジェクト
+ * @param hint ヒント文字列
+ * @returns デフォルト値が設定されたHintMappingオブジェクト
+ */
+export function createDefaultHintMapping(word: Word, hint: string): HintMapping {
+  return {
+    word,
+    hint,
+    hintCol: word.col, // 単語の位置をデフォルトとして使用
+    hintByteCol: word.byteCol ?? word.col, // byteColがあれば使用、なければcolを使用
+  };
+}
+
+/**
+ * 空のConfig値を作成する
+ *
+ * @returns 最小限の必須プロパティを持つConfigオブジェクト
+ */
+export function createMinimalConfig(): Config {
+  return {
+    markers: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"],
+    motion_count: 3,
+    motion_timeout: 2000,
+    hint_position: "start",
+    trigger_on_hjkl: true,
+    counted_motions: [],
+    enabled: true,
+    maxHints: 100,
+    debounceDelay: 50,
+    use_numbers: false,
+    highlight_selected: false,
+    debug_coordinates: false,
+  };
+}
+
+/**
+ * CacheEntryを作成する
+ *
+ * @template T キャッシュ値の型
+ * @param key キャッシュキー
+ * @param value キャッシュする値
+ * @param ttl 生存時間（ミリ秒、オプショナル）
+ * @returns CacheEntryオブジェクト
+ */
+export function createCacheEntry<T>(key: CacheKey, value: T, ttl?: number): CacheEntry<T> {
+  return {
+    key,
+    value,
+    timestamp: Date.now(),
+    ttl,
+  };
+}
+
+/**
+ * ValidationResultを作成する
+ *
+ * @template T バリデーション対象の型
+ * @param isValid バリデーション成功フラグ
+ * @param value バリデート済みの値（オプショナル）
+ * @param errors エラーメッセージ配列（デフォルト: 空配列）
+ * @returns ValidationResultオブジェクト
+ */
+export function createValidationResult<T>(
+  isValid: boolean,
+  value?: T,
+  errors: string[] = []
+): ValidationResult<T> {
+  return { isValid, value, errors };
+}
+
+// ===== エクスポート統合 =====
+
+/**
+ * よく使用される型のエイリアス
+ * 短縮名での参照を可能にする
+ */
+export type {
+  Word as W,
+  HintMapping as HM,
+  Config as C,
+  HintPosition as HP,
+  DetectionContext as DC,
+  WordDetectionResult as WDR,
+};
+
+/**
+ * 型定義バージョン情報
+ */
+export const TYPES_VERSION = "2.0.0";
+
+/**
+ * 型定義の更新日時
+ */
+export const TYPES_LAST_UPDATED = "2024-01-01T00:00:00Z";

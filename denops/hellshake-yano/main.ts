@@ -23,116 +23,40 @@ import {
   type HintPositionWithCoordinateSystem,
   validateHintKeyConfig,
 } from "./hint.ts";
+// Phase 1 モジュール分割: 新しいモジュールからのインポート
+import {
+  type Config,
+  type HighlightColor,
+  getDefaultConfig,
+  validateConfig,
+  mergeConfig,
+  getPerKeyValue,
+} from "./config.ts";
+import {
+  CommandFactory,
+  enable,
+  disable,
+  toggle,
+  setCount,
+  setTimeout as setTimeoutCommand,
+} from "./commands.ts";
+import {
+  initializePlugin,
+  cleanupPlugin,
+  getPluginState,
+  updatePluginState,
+  healthCheck,
+  getPluginStatistics,
+  type PluginState,
+} from "./lifecycle.ts";
+import { LRUCache } from "./utils/cache.ts";
+import { validateConfigValue } from "./utils/validation.ts";
 
-// ハイライト色の個別指定インターフェース
-export interface HighlightColor {
-  fg?: string; // 前景色（'Red' or '#ff0000' or 'NONE'）
-  bg?: string; // 背景色（'Blue' or '#0000ff' or 'NONE'）
-}
+// Phase 1: Config型定義をconfig.tsに移行済み（削除完了）
 
-// 設定の型定義
-export interface Config {
-  markers: string[];
-  motion_count: number;
-  motion_timeout: number;
-  hint_position: string;
-  visual_hint_position?: "start" | "end" | "same"; // Visual Modeでのヒント位置 (デフォルト: 'end')
-  trigger_on_hjkl: boolean;
-  counted_motions: string[];
-  enabled: boolean;
-  maxHints: number; // パフォーマンス最適化: 最大ヒント数
-  debounceDelay: number; // デバウンス遅延時間
-  use_numbers: boolean; // 数字(0-9)をヒント文字として使用
-  highlight_selected: boolean; // 選択中のヒントをハイライト（UX改善）
-  debug_coordinates: boolean; // 座標系デバッグログの有効/無効
-  single_char_keys?: string[]; // 1文字ヒント専用キー
-  multi_char_keys?: string[]; // 2文字以上ヒント専用キー
-  max_single_char_hints?: number; // 1文字ヒントの最大数
-  use_hint_groups?: boolean; // ヒントグループ機能を使用するか
-  use_japanese?: boolean; // 日本語を含む単語検出を行うか（デフォルト: false）
-  word_detection_strategy?: "regex" | "tinysegmenter" | "hybrid"; // 単語検出アルゴリズム（デフォルト: "hybrid"）
-  enable_tinysegmenter?: boolean; // TinySegmenterを有効にするか（デフォルト: true）
-  segmenter_threshold?: number; // TinySegmenterを使用する最小文字数（デフォルト: 4）
-  // 日本語分割精度設定
-  japanese_min_word_length?: number; // 日本語の最小単語長（デフォルト: 2）
-  japanese_merge_particles?: boolean; // 助詞や接続詞を前の単語と結合（デフォルト: true）
-  japanese_merge_threshold?: number; // 結合する最大文字数（デフォルト: 2）
-  highlight_hint_marker?: string | HighlightColor; // ヒントマーカーのハイライト色
-  highlight_hint_marker_current?: string | HighlightColor; // 選択中ヒントのハイライト色
-  suppress_on_key_repeat?: boolean; // キーリピート時のヒント表示抑制（デフォルト: true）
-  key_repeat_threshold?: number; // リピート判定の閾値（ミリ秒、デフォルト: 50）
-
-  // キー別最小文字数設定（process1追加）
-  per_key_min_length?: Record<string, number>; // キー別の最小文字数設定
-  default_min_word_length?: number; // per_key_min_lengthに存在しないキーのデフォルト値
-  current_key_context?: string; // 内部使用：現在のキーコンテキスト
-
-  // キー別motion_count設定（process1追加）
-  per_key_motion_count?: Record<string, number>; // キー別のmotion_count設定
-  default_motion_count?: number; // per_key_motion_countに存在しないキーのデフォルト値
-
-  // 後方互換性のため残す
-  min_word_length?: number; // 旧形式の最小文字数設定
-  enable?: boolean; // enabled のエイリアス（後方互換性）
-  key_repeat_reset_delay?: number; // リピート終了判定の遅延（ミリ秒、デフォルト: 300）
-  debug_mode?: boolean; // デバッグモードの有効/無効（デフォルト: false）
-  performance_log?: boolean; // パフォーマンスログの有効/無効（デフォルト: false）
-}
-
-// グローバル状態
+// Phase 1: グローバル状態（config.tsから取得するように変更）
 // deno-lint-ignore prefer-const
-let config: Config = {
-  markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-  motion_count: 3,
-  motion_timeout: 2000,
-  hint_position: "start",
-  visual_hint_position: "end", // Visual Modeでは単語の末尾にヒント表示
-  trigger_on_hjkl: true,
-  counted_motions: [],
-  enabled: true,
-  maxHints: 336, // Approach A対応: 11単文字 + 225二文字 + 100数字 = 336個
-  debounceDelay: 50, // 50msのデバウンス
-  use_numbers: true, // デフォルトで数字を使用可能
-  highlight_selected: true, // デフォルトで選択中ヒントをハイライト
-  debug_coordinates: false, // デフォルトでデバッグログは無効
-  single_char_keys: [
-    "A",
-    "S",
-    "D",
-    "F",
-    "G",
-    "H",
-    "J",
-    "K",
-    "L",
-    "N",
-    "M",
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-  ],
-  multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-  // max_single_char_hints: undefined, // デフォルトは制限なし（single_char_keysの長さ）
-  use_hint_groups: true, // デフォルトで有効
-  // use_japanese: デフォルト値を設定しない（ユーザー設定を優先）
-  word_detection_strategy: "hybrid" as const, // ハイブリッド方式をデフォルトに
-  enable_tinysegmenter: true, // TinySegmenterを有効に
-  segmenter_threshold: 4, // 4文字以上でセグメンテーション
-  japanese_min_word_length: 2, // 2文字以上の単語のみヒント表示
-  japanese_merge_particles: true, // 助詞を前の単語と結合
-  japanese_merge_threshold: 2, // 2文字以下の単語を結合対象とする
-  highlight_hint_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
-  highlight_hint_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
-  debug_mode: false, // デバッグモード無効
-  performance_log: false, // パフォーマンスログ無効
-};
+let config: Config = getDefaultConfig();
 
 /**
  * 現在表示中のヒントマッピングの配列
@@ -162,23 +86,9 @@ let debounceTimeoutId: number | undefined;
  */
 let lastShowHintsTime = 0;
 
-/**
- * 単語検出結果のキャッシュ
- * @type {{ bufnr: number; topLine: number; bottomLine: number; content: string; words: any[] } | null}
- */
-let wordsCache: {
-  bufnr: number;
-  topLine: number;
-  bottomLine: number;
-  content: string;
-  words: any[];
-} | null = null;
-
-/**
- * ヒント生成結果のキャッシュ
- * @type {{ wordCount: number; hints: string[] } | null}
- */
-let hintsCache: { wordCount: number; hints: string[] } | null = null;
+// Phase 1: 新しいLRUCacheを使用（utils/cache.tsから）
+const wordsCache = new LRUCache<string, any[]>(100);
+const hintsCache = new LRUCache<string, string[]>(50);
 
 /**
  * パフォーマンス測定結果を格納するオブジェクト
@@ -1264,8 +1174,10 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
 
   // 従来のヒント生成処理
   // キャッシュヒットチェック
-  if (hintsCache && hintsCache.wordCount === wordCount) {
-    return hintsCache.hints.slice(0, wordCount);
+  const cacheKey = `${wordCount}-${markers?.join('') || 'default'}`;
+  const cachedHints = hintsCache.get(cacheKey);
+  if (cachedHints) {
+    return cachedHints.slice(0, wordCount);
   }
 
   // キャッシュミスの場合、新たにヒントを生成
@@ -1273,7 +1185,7 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
 
   // キャッシュを更新（最大1000個まで）
   if (wordCount <= 1000) {
-    hintsCache = { wordCount, hints };
+    hintsCache.set(cacheKey, hints);
   }
 
   return hints;

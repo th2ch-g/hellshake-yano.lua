@@ -2,6 +2,7 @@ import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import type { DetectionContext, WordDetectionResult } from "./word/detector.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
+import type { Word, Config } from "./types.ts";
 
 /**
  * 日本語除外機能の設定インターフェース（後方互換性のため保持）
@@ -35,21 +36,8 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   current_key_context?: string;
 }
 
-/**
- * 単語情報インターフェース
- *
- * @since 1.0.0
- */
-export interface Word {
-  /** 単語のテキスト */
-  text: string;
-  /** 行番号（1ベース） */
-  line: number;
-  /** 列番号（1ベース、文字ベース） */
-  col: number;
-  /** バイトベースの列番号（1ベース、UTF-8互換性用） */
-  byteCol?: number;
-}
+// Word interface moved to types.ts for consolidation
+// Use: import type { Word } from "./types.ts";
 
 // キャッシュとパフォーマンス設定
 const CACHE_MAX_SIZE = 100;

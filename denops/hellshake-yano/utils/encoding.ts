@@ -3,7 +3,67 @@
  *
  * This module provides utilities to convert between character indices and byte indices
  * for UTF-8 encoded text, specifically handling Japanese characters (3 bytes per character).
+ *
+ * 統一されたバイト長計算とエンコーディング処理を提供し、
+ * 複数のモジュール間での重複実装を排除します。
  */
+
+// TextEncoderを共有してインスタンス生成コストを削減
+const sharedTextEncoder = new TextEncoder();
+
+// マルチバイト文字のバイト長キャッシュ（性能最適化）
+const byteLengthCache = new Map<string, number>();
+
+/**
+ * ASCII文字のみかどうかを高速チェック
+ *
+ * @param text - チェック対象の文字列
+ * @returns ASCII文字のみの場合true
+ */
+export function isAscii(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * 統一されたバイト長計算関数（キャッシュ付き、ASCII最適化）
+ *
+ * @param text - バイト長を計算する文字列
+ * @returns UTF-8でのバイト長
+ */
+export function getByteLength(text: string): number {
+  if (text.length === 0) {
+    return 0;
+  }
+
+  // ASCII文字のみの場合は高速パス
+  if (isAscii(text)) {
+    return text.length;
+  }
+
+  // キャッシュをチェック
+  const cached = byteLengthCache.get(text);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // バイト長を計算してキャッシュに保存
+  const length = sharedTextEncoder.encode(text).length;
+  byteLengthCache.set(text, length);
+  return length;
+}
+
+/**
+ * バイト長キャッシュをクリア
+ * メモリ使用量制限や状況変化時に使用
+ */
+export function clearByteLengthCache(): void {
+  byteLengthCache.clear();
+}
 
 /**
  * 文字インデックスをUTF-8バイトインデックスに変換
