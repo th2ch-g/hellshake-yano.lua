@@ -1,133 +1,143 @@
-# title: Visual Modeでのヒント位置改善 & パフォーマンス最# title: パフォーマンス最適化
+## リファクタリング実装計画
 
-## 概要
+### Phase 1: モジュール分割（優先度：高）
 
-Visual
-mode対応の実装に伴い、処理速度が低下しないよう最適化を実施します。特にTextEncoderの使用方法、キャッシュ戦略、ヒント位置計算の効率化に焦点を当てます。
+#### sub1: main.tsの分割
 
-## 現状分析
+@target: denops/hellshake-yano/main.ts
 
-### 主要なボトルネック
+- [x] `config.ts`: 設定管理を独立モジュール化
+  - Config型定義の移動
+  - バリデーション関数の集約
+  - デフォルト値の管理
+- [x] `commands.ts`: コマンド処理を分離
+  - enable/disable/toggle等のコマンド
+  - setCount/setTimeoutコマンド
+- [x] `lifecycle.ts`: 初期化・終了処理を分離
+  - main関数のセットアップ処理
+  - クリーンアップ処理
+- [x] `api.ts`: 公開APIのみを残す
+  - エクスポート関数の整理
 
-1. **TextEncoderの重複インスタンス化**
-   - 現状: `assignHintsToWords`関数内で、各単語に対してTextEncoderを新規作成（行185）
-   - 影響: 100個の単語がある場合、100回のインスタンス化が発生
-   - 箇所: `denops/hellshake-yano/hint.ts:185`
+#### sub2: ユーティリティ統合
 
-2. **キャッシュキーの複雑化**
-   - 現状: Visual mode対応によりキャッシュキーが長くなり、文字列結合コストが増大
-   - 影響: キャッシュヒット率の低下、文字列処理のオーバーヘッド
-   - 箇所: `denops/hellshake-yano/hint.ts:147-149`
+- [x] `utils/cache.ts`: キャッシュロジックを統一
+  - 汎用LRUCache実装
+  - キャッシュ戦略の抽象化
+- [x] `utils/validation.ts`: バリデーション処理を集約
+  - 設定値の検証
+  - 入力値のサニタイズ
 
-3. **ヒント位置計算の重複**
-   - 現状: 同じ設定値の条件判定を各単語で繰り返し実行
-   - 影響: 不要な条件分岐と変数アクセスの繰り返し
-   - 箇所: `denops/hellshake-yano/hint.ts:165-196`
+### Phase 2: データ構造の簡潔化（優先度：中）
 
-## Process
+#### sub1: 設定の階層化
 
-### process1 TextEncoderの最適化
+@target: denops/hellshake-yano/config.ts (新規)
 
-#### sub1 共有インスタンスの作成
+- [x] CoreConfig: 基本設定
+  - enabled, markers, motionCount等
+- [x] HintConfig: ヒント関連設定
+  - hintPosition, visualHintPosition, maxHints等
+- [x] WordConfig: 単語検出関連設定
+  - useJapanese, detectionStrategy, minWordLength等
+- [x] PerformanceConfig: パフォーマンス関連
+  - debounceDelay, cacheSize, batchThreshold等
+- [x] DebugConfig: デバッグ設定
+  - debugMode, performanceLog, coordinateDebug等
 
-@target: denops/hellshake-yano/hint.ts
+#### sub2: キャッシュの汎用化
 
-- [x] モジュールレベルで単一のTextEncoderインスタンスを作成
-- [x] `const sharedEncoder = new TextEncoder();`をファイルトップに配置
-- [x] すべての`new TextEncoder()`を`sharedEncoder`に置換
+@target: denops/hellshake-yano/utils/cache.ts (新規)
 
-#### sub2 パフォーマンス測定
+- [x] 汎用LRUCacheクラスの実装
+- [x] メモリ効率的な実装
+- [x] 統計情報の収集機能
 
-- [ ] 最適化前後の処理時間を計測
-- [ ] 100単語、1000単語でのベンチマーク実施
+### Phase 3: 命名規則の統一（優先度：中）
 
-### process2 ヒント位置計算の事前処理
+#### sub1: camelCase統一
 
-#### sub1 設定の事前解析
+- [x] snake_caseからcamelCaseへの変換
+- [x] 後方互換性アダプターの実装
+- [x] 型定義の更新
 
-@target: denops/hellshake-yano/hint.ts (assignHintsToWords関数)
+#### sub2: 明確な命名規則適用
 
-- [x] 関数開始時に`effectiveHintPosition`を一度だけ計算
-- [x] Visual modeとhint_position設定の解析を事前に実施
-- [x] mapループ内では計算済みの値を使用
+- [x] boolean型: is/has/shouldプレフィックス
+- [x] 設定型: Configサフィックス
+- [x] マネージャー: Managerサフィックス
 
-#### sub2 条件分岐の削減
+### Phase 4: 関数の簡潔化（優先度：高）
 
-- [x] 重複する条件判定を削除
-- [x] 単一の`switch`文で位置計算を処理
+#### sub1: 長大関数の分割
 
-### process3 バイト長計算の最適化
+@target: denops/hellshake-yano/*.ts
 
-#### sub1 ASCII文字の高速判定
+- [x] 50行以上の関数を20-30行に分割
+- [x] 単一責任の原則を適用
+- [x] ヘルパー関数の抽出
 
-@target: denops/hellshake-yano/hint.ts
+#### sub2: 重複コードの削除
 
-- [x] ASCII文字のみの場合はTextEncoderを使用しない
-- [x] `text.length === [...text].length`でASCII判定を実装
-- [x] ASCII文字の場合は`text.length`をそのまま使用
+- [x] バイト長計算の統一
+- [x] ソート処理の共通化
+- [x] キャッシュ操作の抽象化
 
-#### sub2 マルチバイト文字のキャッシュ
+### Phase 5: 型定義の整理（優先度：低）
 
-- [x] 計算済みのバイト長をMapでキャッシュ
-- [x] 同じ単語の再計算を防止
+#### sub1: インターフェースの簡略化
 
-### process4 キャッシュ戦略の改善
+- [x] 不要なオプショナルプロパティの削除
+- [x] 型エイリアスの活用
+- [x] ユニオン型の適切な使用
 
-#### sub1 モード別キャッシュ
+#### sub2: 型の再利用
 
-@target: denops/hellshake-yano/hint.ts
+@target: denops/hellshake-yano/types.ts (新規)
 
-- [x] Normal mode用とVisual mode用で別のキャッシュマップを作成
-- [x] `normalModeCache`と`visualModeCache`に分離
-- [x] モードに応じて適切なキャッシュを使用
+- [x] 共通型定義の集約
+- [x] ジェネリクスの活用
+- [x] 型ガードの実装
 
-#### sub2 キャッシュキーの簡略化
+## 実装順序と期待効果
 
-- [x] キャッシュキーから冗長な情報を削除
-- [x] ハッシュ関数の導入を検討
+### 実装順序
 
-### process5 バッチ処理の閾値調整
+1. **Phase 1**: モジュール分割（最優先・影響大）
+2. **Phase 4**: 関数の簡潔化（可読性向上）
+3. **Phase 2**: データ構造の簡潔化（保守性向上）
+4. **Phase 3**: 命名規則の統一（一貫性向上）
+5. **Phase 5**: 型定義の整理（最終調整）
 
-#### sub1 閾値の最適化
+### 期待される効果
 
-@target: denops/hellshake-yano/hint.ts (sortWordsByDistanceOptimized関数)
+- **可読性**: 30-40%向上（ファイルサイズ削減）
+- **保守性**: 重複コード50%削減
+- **テスト性**: モジュール分離により単体テスト容易化
+- **パフォーマンス**: キャッシュ統一により10%高速化
+- **開発効率**: 機能追加時の影響範囲が明確化
 
-- [x] バッチ処理の閾値を1000から500に引き下げ
-- [x] バッチサイズを500から250に削減
+## リスクと対策
 
-#### sub2 パフォーマンステスト
+- **リスク**: 後方互換性の破壊
+  - **対策**: アダプター層で既存APIを維持
+  - **対策**: deprecation warningを段階的に追加
 
-- [x] 様々なサイズのデータセットでテスト
-- [x] 最適な閾値とバッチサイズを決定
+- **リスク**: リファクタリング中の不具合混入
+  - **対策**: 各フェーズ後に全テスト実行
+  - **対策**: カバレッジ90%以上を維持
 
-### process6 遅延評価の導入（オプション）
+- **リスク**: パフォーマンス劣化
+  - **対策**: ベンチマークテストの継続実施
+  - **対策**: プロファイリングによる検証
 
-#### sub1 getter プロパティの実装
+## 成功指標
 
-@target: denops/hellshake-yano/hint.ts
-
-- [x] `hintCol`と`hintByteCol`をgetter化
-- [x] 実際に使用される時のみ計算
-
-### process7 テストとベンチマーク
-
-#### sub1 パフォーマンステストの作成
-
-@target: tmp/claude/test_performance_optimization.ts (新規)
-
-- [x] 最適化前後のベンチマークテスト
-- [x] 様々なサイズのデータセットでテスト
-- [x] メモリ使用量の測定
-
-#### sub2 回帰テストの実施
-
-- [x] 既存機能が正しく動作することを確認
-- [x] Visual mode機能の動作確認
-
-#### 調査メモ (2025-09-20)
-
-- `tests/hint_text_encoder_optimization_test.ts` を追加し、TextEncoder共有化を検証。
-- 既存テスト失敗の主因を把握済み（下記TODO参照）。
+- main.tsを1,000行以下に削減
+- 各ファイル500行以下を目標
+- 関数の平均行数を30行以下に
+- テストカバレッジ90%以上維持
+- ベンチマーク結果が±5%以内
 
 #### TODO
 
@@ -193,3 +203,201 @@ mode対応の実装に伴い、処理速度が低下しないよう最適化を�
 - 1000単語: < 50ms
 - 5000単語: < 200ms
 - メモリ使用量: 現状から10%削減
+
+---
+
+# title: コード可読性・簡潔性向上のリファクタリング
+
+## 概要
+
+パフォーマンス最適化完了後、コードベース全体の可読性と保守性を向上させるため、包括的なリファクタリングを実施します。
+
+## 現状分析 (2025-09-21調査)
+
+### コードベース構造
+
+- **総行数**: 約8,493行
+- **最大ファイル**: main.ts (2,715行)
+- **エクスポート数**: 67個のパブリックAPI
+- **内部関数**: 24個の非公開関数
+- **主要モジュール**: 10ファイル
+
+### 識別された問題点
+
+#### 1. ファイルサイズの肥大化
+
+- `main.ts`が2,715行と巨大すぎる
+- 責任範囲が広すぎて理解が困難
+- 単一ファイルに多数の機能が混在
+
+#### 2. キャッシュ実装の重複
+
+- 3つの異なるキャッシュ（Normal/Visual/Other）が似た処理
+- キャッシュサイズ制限ロジックが複数箇所に散在
+- LRU削除ロジックの重複
+
+#### 3. 設定オブジェクトの複雑さ
+
+- `Config`インターフェースが約80個のプロパティ
+- 後方互換性のための冗長なプロパティが混在
+- フラットな構造で関連性が不明確
+
+#### 4. 命名規則の不統一
+
+- `hint_position` (snake_case) vs `hintPosition` (camelCase)の混在
+- 同じ概念に複数の名前（enabled/enable）
+- boolean型のプロパティ名が不明確
+
+#### 5. 関数の長さと複雑さ
+
+- 50行以上の関数が複数存在
+- ネストの深い条件分岐
+- 単一責任の原則違反
+
+## リファクタリング実装計画
+
+### Phase 1: モジュール分割（優先度：高）
+
+#### sub1: main.tsの分割
+
+@target: denops/hellshake-yano/main.ts
+
+- [x] `config.ts`: 設定管理を独立モジュール化
+  - Config型定義の移動
+  - バリデーション関数の集約
+  - デフォルト値の管理
+- [x] `commands.ts`: コマンド処理を分離
+  - enable/disable/toggle等のコマンド
+  - setCount/setTimeoutコマンド
+- [x] `lifecycle.ts`: 初期化・終了処理を分離
+  - main関数のセットアップ処理
+  - クリーンアップ処理
+- [x] `api.ts`: 公開APIのみを残す
+  - エクスポート関数の整理
+
+#### sub2: ユーティリティ統合
+
+- [x] `utils/cache.ts`: キャッシュロジックを統一
+  - 汎用LRUCache実装
+  - キャッシュ戦略の抽象化
+- [x] `utils/validation.ts`: バリデーション処理を集約
+  - 設定値の検証
+  - 入力値のサニタイズ
+
+### Phase 2: データ構造の簡潔化（優先度：中）
+
+#### sub1: 設定の階層化
+
+@target: denops/hellshake-yano/config.ts (新規)
+
+- [x] CoreConfig: 基本設定
+  - enabled, markers, motionCount等
+- [x] HintConfig: ヒント関連設定
+  - hintPosition, visualHintPosition, maxHints等
+- [x] WordConfig: 単語検出関連設定
+  - useJapanese, detectionStrategy, minWordLength等
+- [x] PerformanceConfig: パフォーマンス関連
+  - debounceDelay, cacheSize, batchThreshold等
+- [x] DebugConfig: デバッグ設定
+  - debugMode, performanceLog, coordinateDebug等
+
+#### sub2: キャッシュの汎用化
+
+@target: denops/hellshake-yano/utils/cache.ts (新規)
+
+- [x] 汎用LRUCacheクラスの実装
+- [x] メモリ効率的な実装
+- [x] 統計情報の収集機能
+
+### Phase 3: 命名規則の統一（優先度：中）
+
+#### sub1: camelCase統一
+
+- [x] snake_caseからcamelCaseへの変換
+- [x] 後方互換性アダプターの実装
+- [x] 型定義の更新
+
+#### sub2: 明確な命名規則適用
+
+- [x] boolean型: is/has/shouldプレフィックス
+- [x] 設定型: Configサフィックス
+- [x] マネージャー: Managerサフィックス
+
+### Phase 4: 関数の簡潔化（優先度：高）
+
+#### sub1: 長大関数の分割
+
+@target: denops/hellshake-yano/*.ts
+
+- [x] 50行以上の関数を20-30行に分割
+- [x] 単一責任の原則を適用
+- [x] ヘルパー関数の抽出
+
+#### sub2: 重複コードの削除
+
+- [x] バイト長計算の統一
+- [x] ソート処理の共通化
+- [x] キャッシュ操作の抽象化
+
+### Phase 5: 型定義の整理（優先度：低）
+
+#### sub1: インターフェースの簡略化
+
+- [x] 不要なオプショナルプロパティの削除
+- [x] 型エイリアスの活用
+- [x] ユニオン型の適切な使用
+
+#### sub2: 型の再利用
+
+@target: denops/hellshake-yano/types.ts (新規)
+
+- [x] 共通型定義の集約
+- [x] ジェネリクスの活用
+- [x] 型ガードの実装
+
+## 実装順序と期待効果
+
+### 実装順序
+
+1. **Phase 1**: モジュール分割（最優先・影響大）
+2. **Phase 4**: 関数の簡潔化（可読性向上）
+3. **Phase 2**: データ構造の簡潔化（保守性向上）
+4. **Phase 3**: 命名規則の統一（一貫性向上）
+5. **Phase 5**: 型定義の整理（最終調整）
+
+### 期待される効果
+
+- **可読性**: 30-40%向上（ファイルサイズ削減）
+- **保守性**: 重複コード50%削減
+- **テスト性**: モジュール分離により単体テスト容易化
+- **パフォーマンス**: キャッシュ統一により10%高速化
+- **開発効率**: 機能追加時の影響範囲が明確化
+
+## リスクと対策
+
+- **リスク**: 後方互換性の破壊
+  - **対策**: アダプター層で既存APIを維持
+  - **対策**: deprecation warningを段階的に追加
+
+- **リスク**: リファクタリング中の不具合混入
+  - **対策**: 各フェーズ後に全テスト実行
+  - **対策**: カバレッジ90%以上を維持
+
+- **リスク**: パフォーマンス劣化
+  - **対策**: ベンチマークテストの継続実施
+  - **対策**: プロファイリングによる検証
+
+## 成功指標
+
+- main.tsを1,000行以下に削減
+- 各ファイル500行以下を目標
+- 関数の平均行数を30行以下に
+- テストカバレッジ90%以上維持
+- ベンチマーク結果が±5%以内
+
+## TODO（リファクタリング関連）
+
+- [ ] `generateHintsWithGroups` に 2 桁数字フォールバック (`"00"`-`"99"`)
+      を挿入し、ヒント生成順序（単文字→2文字→数字→3文字…）を仕様どおりにする。
+- [ ] `WordDetectionManager` のキャッシュキーへ DetectionContext 情報（`currentKey`, `minWordLength`
+      など）を含めるか、コンテキスト付き呼び出し時はキャッシュを無効化し、キー別最小文字数を正しく反映できるようにする。
