@@ -39,10 +39,7 @@
 - [x] HintConfig: ヒント関連設定
   - hintPosition, visualHintPosition, maxHints等
 - [x] WordConfig: 単語検出関連設定
-  - useJapanese, detectionStrategy, minWordLength等
-- [x] PerformanceConfig: パフォーマンス関連
-  - debounceDelay, cacheSize, batchThreshold等
-- [x] DebugConfig: デバッグ設定
+
   - debugMode, performanceLog, coordinateDebug等
 
 #### sub2: キャッシュの汎用化
