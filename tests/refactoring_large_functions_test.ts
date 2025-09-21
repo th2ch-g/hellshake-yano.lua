@@ -16,7 +16,8 @@ import {
 } from "../denops/hellshake-yano/main.ts";
 import {
   extractWordsFromLine,
-  detectWords
+  detectWords,
+  type Word
 } from "../denops/hellshake-yano/word.ts";
 import {
   calculateHintPosition,
@@ -103,15 +104,17 @@ Deno.test("Red Phase: リファクタリング後の関数構造に対するテ�
     const config = getDefaultConfig();
 
     // 現在の実装でも基本機能が動作することを確認
-    const words = extractWordsFromLine(testLine, 0, config);
+    const words = extractWordsFromLine(testLine, 1);
     assert(Array.isArray(words), "単語配列が返される");
 
     // 各単語がWord型の構造を持つことを確認
     words.forEach(word => {
       assertExists(word.text, "単語テキストが存在");
-      assertExists(word.index, "単語インデックスが存在");
+      assertExists(word.line, "単語行番号が存在");
+      assertExists(word.col, "単語列番号が存在");
       assert(typeof word.text === "string", "単語テキストは文字列");
-      assert(typeof word.index === "number", "単語インデックスは数値");
+      assert(typeof word.line === "number", "単語行番号は数値");
+      assert(typeof word.col === "number", "単語列番号は数値");
     });
   });
 
@@ -139,11 +142,11 @@ Deno.test("Red Phase: リファクタリング後の関数構造に対するテ�
     // - validatePosition (位置検証)
     // - formatPosition (位置フォーマット)
 
-    const testPos = "10,20";
+    const testPos: Word = { text: "test", line: 10, col: 20 };
     const config = getDefaultConfig();
 
     // 現在の実装でも基本機能が動作することを確認
-    const position = calculateHintPosition(testPos, config);
+    const position = calculateHintPosition(testPos, "start");
     assert(typeof position === "object", "位置オブジェクトが返される");
   });
 });

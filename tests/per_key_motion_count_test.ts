@@ -8,7 +8,8 @@
  */
 
 import { assertEquals, assertNotEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { Config, getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
+import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 
 // Test helper to create minimal config with required fields
 function createTestConfig(partial: Partial<Config>): Config {
@@ -16,7 +17,7 @@ function createTestConfig(partial: Partial<Config>): Config {
     markers: ["A", "B", "C"],
     motion_count: 3,
     motion_timeout: 2000,
-    hint_position: "bottom",
+    hint_position: "start",
     trigger_on_hjkl: true,
     counted_motions: ["w", "b"],
     enabled: true,

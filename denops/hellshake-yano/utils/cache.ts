@@ -128,6 +128,13 @@ export class LRUCache<K, V> implements CacheInterface<K, V> {
   }
 
   /**
+   * 統計情報を取得（getStatsのエイリアス - 後方互換性のため）
+   */
+  getStatistics(): CacheStatistics {
+    return this.getStats();
+  }
+
+  /**
    * 統計情報をリセット
    */
   resetStatistics(): void {

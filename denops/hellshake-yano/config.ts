@@ -12,6 +12,9 @@ import type {
   HighlightColor
 } from "./types.ts";
 
+// Re-export HighlightColor for backward compatibility
+export type { HighlightColor };
+
 // HighlightColor interface moved to types.ts for consolidation
 // Use: import type { HighlightColor } from "./types.ts";
 
@@ -188,7 +191,7 @@ export interface Config {
   motion_count: number;
   motion_timeout: number;
   hint_position: string;
-  visual_hint_position?: "start" | "end" | "same"; // Visual Modeでのヒント位置 (デフォルト: 'end')
+  visual_hint_position?: "start" | "end" | "same" | "both"; // Visual Modeでのヒント位置 (デフォルト: 'end')
   trigger_on_hjkl: boolean;
   counted_motions: string[];
   enabled: boolean;

@@ -7,7 +7,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import type { Denops } from "@denops/std";
 import { test } from "@denops/test";
 import { MockDenops } from "./helpers/mock.ts";
-import type { Config } from "../denops/hellshake-yano/main.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
 
 test({
   mode: "all",

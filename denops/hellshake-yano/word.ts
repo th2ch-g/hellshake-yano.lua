@@ -1,8 +1,11 @@
 import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
-import type { DetectionContext, WordDetectionResult } from "./word/detector.ts";
+import type { DetectionContext, WordDetectionResult } from "./types.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
 import type { Word, Config } from "./types.ts";
+
+// Re-export Word for backward compatibility
+export type { Word };
 
 /**
  * 日本語除外機能の設定インターフェース（後方互換性のため保持）

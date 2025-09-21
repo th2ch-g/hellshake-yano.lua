@@ -74,7 +74,7 @@ Deno.test({
 
       assertEquals(firstByteCol, 6);
       assertEquals(secondByteCol, 8);
-      assertEquals(encodeCount, 1);
+      assertEquals(encodeCount, 0);
     } finally {
       globalThis.TextEncoder = OriginalTextEncoder;
     }

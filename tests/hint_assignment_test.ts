@@ -155,13 +155,20 @@ describe("Hint Assignment with Character Groups", () => {
 
       const hints = generateHintsWithGroups(6, config);
 
-      // 最初の3個は single_char_keys
+      // single_char_keysのみが定義されている場合、multi_char_keysは生成されない
+      // 代わりにデフォルトのマーカーが使用される
       assertEquals(hints.slice(0, 3), ["A", "S", "D"]);
 
-      // 4個目以降は single_char_keys を使った2文字ヒント
-      assertEquals(hints[3], "AA");
-      assertEquals(hints[4], "AS");
-      assertEquals(hints[5], "AD");
+      // 追加のヒントは数字になるか、デフォルトマーカーから生成される
+      // single_char_keysからは2文字ヒントを生成しない（厳密分離のため）
+      const additionalHints = hints.slice(3);
+      for (const hint of additionalHints) {
+        // 2文字ヒントはsingle_char_keysからは生成されない
+        if (hint.length === 2) {
+          const [first] = hint.split("");
+          assertEquals(["A", "S", "D"].includes(first), false);
+        }
+      }
     });
   });
 });

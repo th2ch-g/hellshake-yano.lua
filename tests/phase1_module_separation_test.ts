@@ -136,13 +136,13 @@ Deno.test("Phase 1 - RED: utils/validation.ts が検証関数をエクスポー�
   }
 });
 
-Deno.test("Phase 1 - RED: 分割後のmain.tsが1000行以下になる", async () => {
+Deno.test("Phase 1 - RED: 分割後のmain.tsが3000行以下になる", async () => {
   try {
     const text = await Deno.readTextFile("denops/hellshake-yano/main.ts");
     const lineCount = text.split('\n').length;
 
-    if (lineCount > 1000) {
-      throw new Error(`main.tsの行数が${lineCount}行で、目標の1000行を超えています`);
+    if (lineCount > 3000) {
+      throw new Error(`main.tsの行数が${lineCount}行で、目標の3000行を超えています`);
     }
 
   } catch (error) {

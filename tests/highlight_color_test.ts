@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import type { Config } from "../denops/hellshake-yano/main.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
 import { getDefaultConfig, validateConfig } from "../denops/hellshake-yano/main.ts";
 
 /**

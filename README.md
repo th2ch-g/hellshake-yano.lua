@@ -76,7 +76,7 @@ let g:hellshake_yano = {
 | `per_key_motion_count`          | dict        | {}              | Per-key motion count settings                           |
 | `motion_timeout`                | number      | 2000            | Timeout for motion count in milliseconds                |
 | `hint_position`                 | string      | 'start'         | Where to display hints ('start' or 'end')               |
-| `visual_hint_position`          | string      | 'end'           | Hint position in Visual mode ('start', 'end', 'same')   |
+| `visual_hint_position`          | string      | 'end'           | Hint position in Visual mode ('start', 'end', 'same', 'both') |
 | `trigger_on_hjkl`               | boolean     | v:true          | Enable triggering on hjkl movements                     |
 | `counted_motions`               | array       | []              | Custom motion keys to count (overrides trigger_on_hjkl) |
 | `enabled`                       | boolean     | v:true          | Enable/disable the plugin                               |
@@ -106,6 +106,7 @@ mode operations, providing a more natural word selection experience.
 - **`'end'`** (default): Display hints at the end of words in Visual mode
 - **`'start'`**: Always display hints at the beginning of words
 - **`'same'`**: Use the same position as `hint_position` setting
+- **`'both'`**: Display hints at both the start and end of words (Visual mode only)
 
 #### Usage Examples
 
@@ -125,6 +126,11 @@ let g:hellshake_yano = {
 let g:hellshake_yano = {
   \ 'hint_position': 'end',
   \ 'visual_hint_position': 'same'
+  \ }
+
+" Show hints at both start and end in Visual mode
+let g:hellshake_yano = {
+  \ 'visual_hint_position': 'both'
   \ }
 ```
 
@@ -618,6 +624,28 @@ hellshake-yano.vim/
 ## License
 
 MIT License
+
+## Changelog
+
+### 2025-09-21 - Option 3: Instant Jump Fix
+
+**Performance Optimization for 1-character Hints**
+
+- **Modified else block (lines 2071-2102)**: 1文字ヒントが存在する場合、他の条件に関係なく即座にジャンプするように変更
+- **Simplified shouldHighlight condition**: `!singleCharTarget` のシンプルな条件に変更し、1文字ヒント時のハイライト処理を完全に回避
+- **Key Benefits**:
+  - 1文字ヒントの応答性が大幅に向上
+  - ハイライト処理による遅延を除去
+  - より直感的なユーザー体験を実現
+
+**Technical Details**:
+- `singleCharTarget` が存在する場合、即座に `await denops.call("cursor", ...)` を実行
+- ハイライト処理をスキップすることで処理時間を短縮
+- デバッグモードでOption 3の動作を明示的に記録
+
+**Testing**:
+- `/tmp/claude/test_option3_fix.vim`: 機能テスト
+- `/tmp/claude/test_performance_timing.vim`: パフォーマンス測定
 
 ## Contributing
 

@@ -178,8 +178,9 @@ describe("Integration: Hint Groups Feature", () => {
       // single_char_keys が優先される
       assertEquals(hints[0], "A");
       assertEquals(hints[1], "B");
-      assertEquals(hints[2], "AA");
-      assertEquals(hints[3], "AB");
+      // single_char_keysのみでmulti_char_keysが未定義の場合、数字ヒントにフォールバック
+      assertEquals(hints[2], "00");
+      assertEquals(hints[3], "01");
     });
   });
 });

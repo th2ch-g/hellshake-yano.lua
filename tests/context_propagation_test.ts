@@ -14,14 +14,14 @@
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import type { DetectionContext } from "../denops/hellshake-yano/word/detector.ts";
+import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 import {
   HybridWordDetector,
   RegexWordDetector,
   TinySegmenterWordDetector,
 } from "../denops/hellshake-yano/word/detector.ts";
 import { WordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
-import type { Word } from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("DetectionContext interface should be defined", () => {
   // Test that the DetectionContext interface exists and has expected structure

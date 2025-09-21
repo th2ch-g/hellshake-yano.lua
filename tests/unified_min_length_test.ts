@@ -8,8 +8,8 @@ import {
   WordDetectionManager,
   type WordDetectionManagerConfig,
 } from "../denops/hellshake-yano/word/manager.ts";
-import type { Config } from "../denops/hellshake-yano/main.ts";
-import type { DetectionContext } from "../denops/hellshake-yano/word/detector.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
+import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("Unified min_length: Context overrides GlobalConfig", async () => {
   // グローバル設定でper_key_min_lengthを設定

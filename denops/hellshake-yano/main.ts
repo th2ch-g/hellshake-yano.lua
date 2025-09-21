@@ -18,36 +18,37 @@ import {
   clearHintCache,
   generateHints,
   generateHintsWithGroups,
-  type HintKeyConfig,
-  type HintMapping,
-  type HintPositionWithCoordinateSystem,
   validateHintKeyConfig,
 } from "./hint.ts";
+// Import types from the central types module for consistency
+import type {
+  Config,
+  HighlightColor,
+  HintKeyConfig,
+  HintMapping,
+  HintPositionWithCoordinateSystem,
+} from "./types.ts";
+
+// Re-export types for backward compatibility
+export type { Config, HighlightColor };
 // Phase 1 モジュール分割: 新しいモジュールからのインポート
-import {
-  type Config,
-  type HighlightColor,
-  getDefaultConfig,
-  validateConfig,
-  mergeConfig,
-  getPerKeyValue,
-} from "./config.ts";
+import { getPerKeyValue, mergeConfig } from "./config.ts";
 import {
   CommandFactory,
-  enable,
   disable,
-  toggle,
+  enable,
   setCount,
   setTimeout as setTimeoutCommand,
+  toggle,
 } from "./commands.ts";
 import {
-  initializePlugin,
   cleanupPlugin,
   getPluginState,
-  updatePluginState,
-  healthCheck,
   getPluginStatistics,
+  healthCheck,
+  initializePlugin,
   type PluginState,
+  updatePluginState,
 } from "./lifecycle.ts";
 import { LRUCache } from "./utils/cache.ts";
 import { validateConfigValue } from "./utils/validation.ts";
@@ -503,11 +504,15 @@ export async function main(denops: Denops): Promise<void> {
         // Option 2+3: Auto-detect hint groups mode when single_char_keys or multi_char_keys are defined
         // If use_hint_groups is not explicitly set but single/multi char keys are defined,
         // automatically enable hint groups for better user experience
-        if ((config.single_char_keys && config.single_char_keys.length > 0) ||
-            (config.multi_char_keys && config.multi_char_keys.length > 0)) {
+        if (
+          (config.single_char_keys && config.single_char_keys.length > 0) ||
+          (config.multi_char_keys && config.multi_char_keys.length > 0)
+        ) {
           config.use_hint_groups = true;
           if (config.debug_mode) {
-            console.log("[hellshake-yano] Auto-enabled hint groups due to single_char_keys/multi_char_keys presence");
+            console.log(
+              "[hellshake-yano] Auto-enabled hint groups due to single_char_keys/multi_char_keys presence",
+            );
           }
         }
       }
@@ -723,7 +728,6 @@ export async function main(denops: Denops): Promise<void> {
             },
           );
 
-
           if (currentHints.length === 0) {
             await denops.cmd("echo 'No valid hints could be generated'");
             return;
@@ -807,8 +811,8 @@ export async function main(denops: Denops): Promise<void> {
      * キャッシュをクリア
      */
     clearCache(): void {
-      wordsCache = null;
-      hintsCache = null;
+      wordsCache.clear();
+      hintsCache.clear();
     },
 
     /**
@@ -1189,7 +1193,7 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
         use_hint_groups: config.use_hint_groups,
         has_single_char_keys: !!config.single_char_keys,
         has_multi_char_keys: !!config.multi_char_keys,
-        shouldUseHintGroups
+        shouldUseHintGroups,
       });
     }
 
@@ -1215,7 +1219,7 @@ function generateHintsOptimized(wordCount: number, markers: string[]): string[] 
 
   // 従来のヒント生成処理
   // キャッシュヒットチェック
-  const cacheKey = `${wordCount}-${markers?.join('') || 'default'}`;
+  const cacheKey = `${wordCount}-${markers?.join("") || "default"}`;
   const cachedHints = hintsCache.get(cacheKey);
   if (cachedHints) {
     return cachedHints.slice(0, wordCount);
@@ -1510,7 +1514,10 @@ async function displayHints(
           // 失敗が多すぎる場合はextmarkを諦めてmatchaddに切り替え
           if (extmarkFailCount >= maxFailures) {
             // console.warn("[hellshake-yano] Too many extmark failures, switching to matchadd for remaining hints");
-            await displayHintsWithMatchAdd(denops, hints.slice(hints.indexOf({ word, hint })));
+            const currentIndex = hints.findIndex((h) => h.word === word && h.hint === hint);
+            if (currentIndex !== -1) {
+              await displayHintsWithMatchAdd(denops, hints.slice(currentIndex));
+            }
             break;
           }
         }
@@ -2013,7 +2020,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // 入力文字で始まる全てのヒントを探す（単一文字と複数文字の両方）
     const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
 
-
     if (matchingHints.length === 0) {
       // 該当するヒントがない場合は終了（視覚・音声フィードバック付き）
       await denops.cmd("echohl WarningMsg | echo 'No matching hint found' | echohl None");
@@ -2029,7 +2035,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // 単一文字のヒントと複数文字のヒントを分離
     const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
     const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
-
 
     if (config.use_hint_groups) {
       // デフォルトのキー設定

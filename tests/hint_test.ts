@@ -8,7 +8,7 @@ import {
   generateHints,
   type HintMapping,
 } from "../denops/hellshake-yano/hint.ts";
-import type { Word } from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 test("26個以下の単語に対するA-Zヒント生成", async (denops) => {
   // 10個の単語に対するヒント生成

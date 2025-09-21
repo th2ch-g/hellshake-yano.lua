@@ -97,11 +97,11 @@ describe("Config Tests", () => {
     });
 
     it("should reject invalid hint_position values", () => {
-      const result1 = validateConfig({ hint_position: "middle" });
+      const result1 = validateConfig({ hint_position: "middle" as any });
       assertEquals(result1.valid, false);
       assertEquals(result1.errors[0], "hint_position must be one of: start, end, overlay");
 
-      const result2 = validateConfig({ hint_position: "top" });
+      const result2 = validateConfig({ hint_position: "top" as any });
       assertEquals(result2.valid, false);
 
       const result3 = validateConfig({ hint_position: 123 as any });
@@ -201,7 +201,7 @@ describe("Config Tests", () => {
       const result = validateConfig({
         motion_count: 0,
         motion_timeout: 50,
-        hint_position: "invalid",
+        hint_position: "invalid" as any,
         markers: [],
       });
 

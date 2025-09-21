@@ -1,5 +1,7 @@
 import type { Word, HintMapping, HintPosition, HintPositionWithCoordinateSystem, HintKeyConfig } from "./types.ts";
-export type { HintKeyConfig };
+
+// Re-export types for backward compatibility
+export type { HintKeyConfig, HintMapping, HintPosition };
 
 // HintPosition interface moved to types.ts for consolidation
 // Use: import type { HintPosition } from "./types.ts";

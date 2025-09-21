@@ -597,6 +597,57 @@ export function isCacheEntry<T>(
   return true;
 }
 
+/**
+ * ValidationResult型の型ガード関数
+ *
+ * @description オブジェクトがValidationResult型の構造を満たしているかを判定
+ *
+ * @template T 検証される値の型
+ * @param obj 判定対象のオブジェクト
+ * @param valueGuard 値の型ガード関数（オプショナル）
+ * @returns ValidationResultインターフェースを満たしている場合true
+ */
+export function isValidationResult<T>(
+  obj: unknown,
+  valueGuard?: (value: unknown) => value is T
+): obj is ValidationResult<T> {
+  const isBasicStructure = (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as ValidationResult<T>).isValid === "boolean" &&
+    Array.isArray((obj as ValidationResult<T>).errors) &&
+    ((obj as ValidationResult<T>).warnings === undefined || Array.isArray((obj as ValidationResult<T>).warnings))
+  );
+
+  if (!isBasicStructure) return false;
+
+  if (valueGuard && (obj as ValidationResult<T>).value !== undefined) {
+    return valueGuard((obj as ValidationResult<T>).value);
+  }
+
+  return true;
+}
+
+/**
+ * PerformanceMetric型の型ガード関数
+ *
+ * @description オブジェクトがPerformanceMetric型の構造を満たしているかを判定
+ *
+ * @param obj 判定対象のオブジェクト
+ * @returns PerformanceMetricインターフェースを満たしている場合true
+ */
+export function isPerformanceMetric(obj: unknown): obj is PerformanceMetric {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as PerformanceMetric).duration === "number" &&
+    typeof (obj as PerformanceMetric).wordCount === "number" &&
+    typeof (obj as PerformanceMetric).linesProcessed === "number" &&
+    ((obj as PerformanceMetric).memoryUsage === undefined || typeof (obj as PerformanceMetric).memoryUsage === "number") &&
+    ((obj as PerformanceMetric).cacheHits === undefined || typeof (obj as PerformanceMetric).cacheHits === "number")
+  );
+}
+
 // ===== ユーティリティ型 =====
 
 /**

@@ -1,6 +1,7 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { afterEach, beforeEach, describe, it } from "https://deno.land/std@0.224.0/testing/bdd.ts";
-import { Config, getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
+import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 
 /**
  * Integration tests for per-key motion count feature
@@ -15,7 +16,7 @@ function createFullConfig(overrides: Partial<Config> = {}): Config {
     markers: ["A", "B", "C", "D", "E", "F", "G", "H"],
     motion_count: 3,
     motion_timeout: 2000,
-    hint_position: "bottom",
+    hint_position: "end",
     trigger_on_hjkl: true,
     counted_motions: ["w", "b", "e", "ge"],
     enabled: true,

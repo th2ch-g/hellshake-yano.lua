@@ -6,7 +6,7 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import { calculateHintPosition, type HintPosition } from "../denops/hellshake-yano/hint.ts";
-import type { Word } from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 describe("Hint Positioning - Word Start Display", () => {
   describe("Basic word start positioning", () => {

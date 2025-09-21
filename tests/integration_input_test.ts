@@ -2,7 +2,7 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type { Denops } from "@denops/std";
 import { MockDenops } from "./helpers/mock.ts";
 import { assignHintsToWords, generateHints } from "../denops/hellshake-yano/hint.ts";
-import type { Word } from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 /**
  * 統合テスト - ヒント表示から選択、ジャンプまでの完全なフロー

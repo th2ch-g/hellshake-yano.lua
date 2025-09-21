@@ -12,7 +12,7 @@ import {
   generateHintsWithGroups,
   type HintKeyConfig,
 } from "../denops/hellshake-yano/hint.ts";
-import type { Word } from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 describe("Hint Generation with Number Fallback (Approach A)", () => {
   describe("Non-overlapping hint generation", () => {

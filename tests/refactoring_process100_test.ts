@@ -10,8 +10,8 @@ import {
   WordDetectionManager,
   type WordDetectionManagerConfig,
 } from "../denops/hellshake-yano/word/manager.ts";
-import type { Config } from "../denops/hellshake-yano/main.ts";
-import type { DetectionContext } from "../denops/hellshake-yano/word/detector.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
+import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   // 各パターンでのgetMinLengthForKey関数の動作を記録

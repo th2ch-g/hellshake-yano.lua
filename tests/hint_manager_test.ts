@@ -6,7 +6,7 @@
 import { assert, assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
 import { beforeEach, describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
 import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
-import type { Config } from "../denops/hellshake-yano/main.ts";
+import type { Config } from "../denops/hellshake-yano/types.ts";
 
 describe("HintManager Tests", () => {
   let config: Config;

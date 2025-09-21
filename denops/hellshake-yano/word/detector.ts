@@ -8,6 +8,9 @@
 
 import type { Denops } from "@denops/std";
 import type { Word, DetectionContext, WordDetectionResult } from "../types.ts";
+
+// Re-export types for backward compatibility
+export type { DetectionContext, WordDetectionResult };
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
