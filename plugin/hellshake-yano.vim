@@ -159,7 +159,7 @@ function! s:validate_config() abort
 
   " visual_hint_position の検証
   if has_key(g:hellshake_yano, 'visual_hint_position')
-    let l:valid_values = ['start', 'end', 'same']
+    let l:valid_values = ['start', 'end', 'same', 'both']
     if type(g:hellshake_yano.visual_hint_position) != v:t_string || index(l:valid_values, g:hellshake_yano.visual_hint_position) == -1
       echohl WarningMsg
       echom '[hellshake-yano] Warning: visual_hint_position must be one of: ' . join(l:valid_values, ', ')

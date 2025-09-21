@@ -63,6 +63,23 @@ function createLazyHintMapping(
   word: Word,
   hint: string,
   effectiveHintPosition: string,
+  endHint?: string,  // bothモード用の終了位置ヒント
+): HintMapping | HintMapping[] {
+  // both モードの場合は2つのマッピングを返す
+  if (effectiveHintPosition === "both" && endHint) {
+    const startMapping = createSingleHintMapping(word, hint, "start");
+    const endMapping = createSingleHintMapping(word, endHint, "end");
+    return [startMapping, endMapping];
+  }
+
+  // 通常モードでは単一のマッピングを返す
+  return createSingleHintMapping(word, hint, effectiveHintPosition);
+}
+
+function createSingleHintMapping(
+  word: Word,
+  hint: string,
+  effectiveHintPosition: string,
 ): HintMapping {
   let cachedHintCol: number | undefined;
   let cachedHintByteCol: number | undefined;
@@ -237,9 +254,32 @@ export function assignHintsToWords(
     const effectiveHintPosition = isVisualMode && visualHintPositionSetting !== "same"
       ? visualHintPositionSetting
       : hintPositionSetting;
-    return cachedWords.map((word, index) =>
-      createLazyHintMapping(word, hints[index] || "", effectiveHintPosition)
-    );
+
+    // both モードの場合は各単語に対して2つのマッピングを作成
+    if (effectiveHintPosition === "both") {
+      const mappings: HintMapping[] = [];
+      cachedWords.forEach((word, index) => {
+        // bothモードでは各単語に2つのヒントが必要
+        const startHintIndex = index * 2;
+        const endHintIndex = index * 2 + 1;
+
+        // startとendのヒントを明示的に作成して順序を保証
+        if (hints[startHintIndex]) {
+          const startMapping = createSingleHintMapping(word, hints[startHintIndex], "start");
+          mappings.push(startMapping);
+        }
+        if (hints[endHintIndex]) {
+          const endMapping = createSingleHintMapping(word, hints[endHintIndex], "end");
+          mappings.push(endMapping);
+        }
+      });
+      return mappings;
+    }
+
+    return cachedWords.map((word, index) => {
+      const result = createLazyHintMapping(word, hints[index] || "", effectiveHintPosition);
+      return Array.isArray(result) ? result[0] : result;
+    });
   }
 
   // カーソル位置からの距離で最適化されたソート
@@ -250,9 +290,37 @@ export function assignHintsToWords(
     ? visualHintPositionSetting
     : hintPositionSetting;
 
-  const mappings = sortedWords.map((word, index) =>
-    createLazyHintMapping(word, hints[index] || "", effectiveHintPosition)
-  );
+  // both モードの場合は各単語に対して2つのマッピングを作成
+  const mappings: HintMapping[] = [];
+
+  if (effectiveHintPosition === "both") {
+    sortedWords.forEach((word, index) => {
+      // bothモードでは各単語に2つのヒントが必要
+      const startHintIndex = index * 2;
+      const endHintIndex = index * 2 + 1;
+      const startHint = hints[startHintIndex] || "";
+      const endHint = hints[endHintIndex] || "";
+
+      // start と end の位置を明示的に作成して順序を保証
+      if (startHint) {
+        const startMapping = createSingleHintMapping(word, startHint, "start");
+        mappings.push(startMapping);
+      }
+      if (endHint) {
+        const endMapping = createSingleHintMapping(word, endHint, "end");
+        mappings.push(endMapping);
+      }
+    });
+  } else {
+    sortedWords.forEach((word, index) => {
+      const result = createLazyHintMapping(word, hints[index] || "", effectiveHintPosition);
+      if (Array.isArray(result)) {
+        mappings.push(result[0]);
+      } else {
+        mappings.push(result);
+      }
+    });
+  }
 
   storeAssignmentCache(assignmentCache, cacheKey, sortedWords);
 
@@ -608,6 +676,10 @@ export function calculateHintPosition(
         // 通常のhint_positionに従う
         effectiveHintPosition = hintPosition;
         break;
+      case "both":
+        // bothモードは特別処理（後で2つの位置を返す）
+        effectiveHintPosition = "both";
+        break;
       default:
         // デフォルトはendを使用
         effectiveHintPosition = "end";
@@ -617,24 +689,32 @@ export function calculateHintPosition(
 
   // デバッグログ追加（パフォーマンスのためコメントアウト）
 
-  switch (effectiveHintPosition) {
-    case "start":
-      col = word.col;
-      display_mode = "before";
-      break;
-    case "end":
-      col = word.col + word.text.length - 1;
-      display_mode = "after";
-      break;
-    case "overlay":
-      col = word.col;
-      display_mode = "overlay";
-      break;
-    default:
-      // 無効な設定の場合はデフォルトで "start" 動作
-      col = word.col;
-      display_mode = "before";
-      break;
+  // bothモードの場合はstartとend両方の位置を計算する必要があるが、
+  // この関数は単一のHintPositionを返すため、startの位置を返す
+  // bothモードの完全な処理はcalculateHintPositionWithCoordinateSystemで行う
+  if (effectiveHintPosition === "both") {
+    col = word.col;
+    display_mode = "before";
+  } else {
+    switch (effectiveHintPosition) {
+      case "start":
+        col = word.col;
+        display_mode = "before";
+        break;
+      case "end":
+        col = word.col + word.text.length - 1;
+        display_mode = "after";
+        break;
+      case "overlay":
+        col = word.col;
+        display_mode = "overlay";
+        break;
+      default:
+        // 無効な設定の場合はデフォルトで "start" 動作
+        col = word.col;
+        display_mode = "before";
+        break;
+    }
   }
 
   return {
@@ -682,6 +762,9 @@ export function calculateHintPositionWithCoordinateSystem(
         break;
       case "same":
         effectiveHintPosition = hintPosition;
+        break;
+      case "both":
+        effectiveHintPosition = "both";
         break;
       default:
         effectiveHintPosition = "end";

@@ -279,8 +279,13 @@ export interface HintKeyConfig {
  * ヒント表示位置タイプ
  *
  * @description ヒントの表示位置を指定する文字列リテラル型
+ * - "start": 単語の先頭に表示
+ * - "end": 単語の最後に表示
+ * - "overlay": 単語の先頭に重ねて表示
+ * - "same": 通常のhint_positionと同じ設定を使用
+ * - "both": 単語の先頭と最後の両方に表示
  */
-export type HintPositionType = "start" | "end" | "overlay" | "same";
+export type HintPositionType = "start" | "end" | "overlay" | "same" | "both";
 
 /**
  * ヒント表示モード

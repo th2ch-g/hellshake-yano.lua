@@ -27,7 +27,7 @@ export interface CoreConfig {
 // ヒント関連設定
 export interface HintConfig {
   hintPosition: "start" | "end" | "same";
-  visualHintPosition: "start" | "end" | "same";
+  visualHintPosition: "start" | "end" | "same" | "both";
   maxHints: number;
   highlightSelected: boolean;
   useNumbers: boolean;
@@ -92,7 +92,7 @@ export interface CamelCaseConfig {
   motionCount: number;
   motionTimeout: number;
   hintPosition: "start" | "end" | "same";
-  visualHintPosition?: "start" | "end" | "same";
+  visualHintPosition?: "start" | "end" | "same" | "both";
   triggerOnHjkl: boolean;
   countedMotions: string[];
   maxHints: number;

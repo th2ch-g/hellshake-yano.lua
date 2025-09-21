@@ -386,6 +386,16 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
+      // visual_hint_position の検証と適用
+      if (typeof cfg.visual_hint_position === "string") {
+        const validPositions = ["start", "end", "same", "both"];
+        if (validPositions.includes(cfg.visual_hint_position)) {
+          config.visual_hint_position = cfg.visual_hint_position;
+        } else {
+          // console.warn(`[hellshake-yano] Invalid visual_hint_position: ${cfg.visual_hint_position}, must be one of: ${validPositions.join(", ")}`);
+        }
+      }
+
       // trigger_on_hjkl の適用
       if (typeof cfg.trigger_on_hjkl === "boolean") {
         config.trigger_on_hjkl = cfg.trigger_on_hjkl;
@@ -686,7 +696,10 @@ export async function main(denops: Denops): Promise<void> {
           const cursorCol = await denops.call("col", ".") as number;
 
           // キャッシュを使用してヒントを生成（最適化）
-          const hints = generateHintsOptimized(limitedWords.length, config.markers);
+          // bothモードの場合は2倍のヒントを生成
+          const isBothMode = modeString === "visual" && config.visual_hint_position === "both";
+          const hintsNeeded = isBothMode ? limitedWords.length * 2 : limitedWords.length;
+          const hints = generateHintsOptimized(hintsNeeded, config.markers);
           currentHints = assignHintsToWords(
             limitedWords,
             hints,
@@ -698,6 +711,7 @@ export async function main(denops: Denops): Promise<void> {
               visual_hint_position: config.visual_hint_position,
             },
           );
+
 
           if (currentHints.length === 0) {
             await denops.cmd("echo 'No valid hints could be generated'");
@@ -1245,7 +1259,8 @@ async function displayHintsWithExtmarksBatch(
 
     try {
       // バッチ内の各extmarkを作成
-      await Promise.all(batch.map(async ({ word, hint }, index) => {
+      await Promise.all(batch.map(async (mapping, index) => {
+        const { word, hint } = mapping;
         try {
           // バッファの有効性を再確認
           const bufValid = await denops.call("bufexists", bufnr) as number;
@@ -1253,39 +1268,32 @@ async function displayHintsWithExtmarksBatch(
             throw new Error(`Buffer ${bufnr} no longer exists`);
           }
 
-          const position = calculateHintPositionWithCoordinateSystem(
-            word,
-            config.hint_position,
-            config.debug_coordinates,
-            mode === "visual",
-            config.visual_hint_position,
-          );
-          // デバッグログ追加
-          if (config.debug_coordinates) {
-          }
-          const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
-          let virtTextPos: "overlay" | "eol" = "overlay";
-
-          if (position.display_mode === "overlay") {
-            virtTextPos = "overlay";
-          }
+          // HintMappingのhintCol/hintByteColを使用して位置を決定
+          // bothモードでも各マッピングは正しい位置情報を持っている
+          const hintLine = word.line;
+          const hintCol = mapping.hintCol || word.col;
+          const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
 
           // 行とカラムの境界チェック
           const lineCount = await denops.call("line", "$") as number;
-          if (word.line > lineCount || word.line < 1) {
-            // console.warn(`[hellshake-yano] Invalid line number: ${word.line} (max: ${lineCount})`);
+          if (hintLine > lineCount || hintLine < 1) {
+            // console.warn(`[hellshake-yano] Invalid line number: ${hintLine} (max: ${lineCount})`);
             return;
           }
+
+          // Neovim用の0ベース座標に変換
+          const nvimLine = hintLine - 1;
+          const nvimCol = hintByteCol - 1;
 
           await denops.call(
             "nvim_buf_set_extmark",
             bufnr,
             extmarkNamespace,
-            position.nvim_line,
-            Math.max(0, col),
+            nvimLine,
+            Math.max(0, nvimCol),
             {
               virt_text: [[hint, "HellshakeYanoMarker"]],
-              virt_text_pos: virtTextPos,
+              virt_text_pos: "overlay",
               priority: 100,
             },
           );
@@ -1345,32 +1353,18 @@ async function displayHintsWithMatchAddBatch(
 
     try {
       // バッチ内の各matchを作成
-      const matchPromises = batch.map(async ({ word, hint }) => {
+      const matchPromises = batch.map(async (mapping) => {
+        const { word, hint } = mapping;
         try {
-          const position = calculateHintPositionWithCoordinateSystem(
-            word,
-            config.hint_position,
-            config.debug_coordinates,
-            mode === "visual",
-            config.visual_hint_position,
-          );
-          if (config.debug_coordinates) {
-          }
-          let pattern: string;
+          // HintMappingのhintCol/hintByteColを使用して位置を決定
+          // bothモードでも各マッピングは正しい位置情報を持っている
+          const hintLine = word.line;
+          const hintCol = mapping.hintCol || word.col;
+          const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
 
-          switch (position.display_mode) {
-            case "before":
-            case "after":
-              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
-              break;
-            case "overlay":
-              pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${
-                position.vim_col + word.text.length + 1
-              }c`;
-              break;
-            default:
-              pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
-          }
+          // VimはbyteColを使用
+          const vimCol = hintByteCol;
+          const pattern = `\\%${hintLine}l\\%${vimCol}c.`;
 
           const matchId = await denops.call(
             "matchadd",
@@ -1656,16 +1650,32 @@ async function highlightCandidateHints(
     const bufnr = await denops.call("bufnr", "%") as number;
     if (bufnr === -1) return;
 
+    // 現在のモードを取得
+    const mode = await denops.call("mode") as string;
+    const isVisualMode = mode === "v" || mode === "V" || mode === "\x16";
+    const isBothMode = isVisualMode && config.visual_hint_position === "both";
+
     // Neovimの場合はextmarkでハイライト
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
       for (const candidate of candidates) {
         try {
+          // bothモードの場合、ヒントの位置情報を使用
           const position = calculateHintPositionWithCoordinateSystem(
             candidate.word,
             config.hint_position,
             config.debug_coordinates,
+            isVisualMode,
+            isBothMode ? undefined : config.visual_hint_position,
           );
-          const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
+
+          // ヒントの実際の位置を使用（hintCol/hintByteColがあれば優先）
+          let col = position.nvim_col;
+          if (candidate.hintByteCol !== undefined && candidate.hintByteCol > 0) {
+            col = candidate.hintByteCol - 1; // 0ベースに変換
+          } else if (candidate.hintCol !== undefined && candidate.hintCol > 0) {
+            col = candidate.hintCol - 1; // 0ベースに変換
+          }
+
           let virtTextPos: "overlay" | "eol" = "overlay";
 
           if (position.display_mode === "overlay") {
@@ -1843,6 +1853,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // 入力文字で始まる全てのヒントを探す（単一文字と複数文字の両方）
     const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
 
+
     if (matchingHints.length === 0) {
       // 該当するヒントがない場合は終了（視覚・音声フィードバック付き）
       await denops.cmd("echohl WarningMsg | echo 'No matching hint found' | echohl None");
@@ -1858,6 +1869,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // 単一文字のヒントと複数文字のヒントを分離
     const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
     const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
+
 
     if (config.use_hint_groups) {
       // デフォルトのキー設定

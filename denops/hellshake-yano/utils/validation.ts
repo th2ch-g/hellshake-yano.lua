@@ -232,7 +232,7 @@ export const CONFIG_VALIDATION_RULES = {
   visual_hint_position: {
     type: "string" as const,
     required: false,
-    enum: ["start", "end", "same"] as const,
+    enum: ["start", "end", "same", "both"] as const,
   },
   word_detection_strategy: {
     type: "string" as const,
