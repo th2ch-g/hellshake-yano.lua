@@ -2,7 +2,7 @@ import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import type { DetectionContext, WordDetectionResult } from "./types.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
-import type { Word, Config } from "./types.ts";
+import type { Config, Word } from "./types.ts";
 
 // Re-export Word for backward compatibility
 export type { Word };
@@ -998,7 +998,7 @@ export interface UnifiedWordExtractionConfig {
 export function extractWordsUnified(
   lineText: string,
   lineNumber: number,
-  config: UnifiedWordExtractionConfig = {}
+  config: UnifiedWordExtractionConfig = {},
 ): Word[] {
   // Configuration normalization
   const normalizedConfig = normalizeUnifiedConfig(config);
@@ -1032,14 +1032,16 @@ export function extractWordsUnified(
   }
 
   // Check if we should use improved detection via extractWordsFromLine
-  if (normalizedConfig.useImprovedDetection ||
-      config.useImprovedDetection !== undefined ||
-      config.excludeJapanese !== undefined) {
+  if (
+    normalizedConfig.useImprovedDetection ||
+    config.useImprovedDetection !== undefined ||
+    config.excludeJapanese !== undefined
+  ) {
     return extractWordsFromLine(
       lineText,
       lineNumber,
       normalizedConfig.useImprovedDetection,
-      normalizedConfig.excludeJapanese
+      normalizedConfig.excludeJapanese,
     );
   }
 
@@ -1105,8 +1107,7 @@ function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): Normalized
   // 1. useImprovedDetection (direct parameter)
   // 2. use_improved_detection (WordConfig)
   // 3. default based on mode
-  const useImprovedDetection =
-    config.useImprovedDetection ??
+  const useImprovedDetection = config.useImprovedDetection ??
     config.use_improved_detection ??
     false; // Default to false for legacy compatibility
 

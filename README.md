@@ -639,25 +639,12 @@ MIT License
 
 ## Changelog
 
-### 2025-09-21 - Option 3: Instant Jump Fix
+### Recent Updates
 
-**Performance Optimization for 1-character Hints**
-
-- **Modified else block (lines 2071-2102)**: 1文字ヒントが存在する場合、他の条件に関係なく即座にジャンプするように変更
-- **Simplified shouldHighlight condition**: `!singleCharTarget` のシンプルな条件に変更し、1文字ヒント時のハイライト処理を完全に回避
-- **Key Benefits**:
-  - 1文字ヒントの応答性が大幅に向上
-  - ハイライト処理による遅延を除去
-  - より直感的なユーザー体験を実現
-
-**Technical Details**:
-- `singleCharTarget` が存在する場合、即座に `await denops.call("cursor", ...)` を実行
-- ハイライト処理をスキップすることで処理時間を短縮
-- デバッグモードでOption 3の動作を明示的に記録
-
-**Testing**:
-- `/tmp/claude/test_option3_fix.vim`: 機能テスト
-- `/tmp/claude/test_performance_timing.vim`: パフォーマンス測定
+- **Improved Code Organization**: Removed deprecated functions and cleaned up the codebase
+- **Performance Optimization**: Enhanced 1-character hint response time for immediate jumps
+- **UTF-8 Support**: Full support for Japanese characters and proper byte position calculation
+- **Hint Group Separation**: Strict separation between single and multi-character hints for predictable navigation
 
 ## Contributing
 
