@@ -1008,7 +1008,7 @@ function generateMultiCharHintsFromKeys(
     return hints;
   }
 
-  const maxLength = startLength === 2 ? 3 : startLength;
+  const maxLength = 2; // 2文字までに制限（3文字生成を廃止）
 
   const generateForLength = (length: number, prefix: string[]): boolean => {
     if (prefix.length === length) {
