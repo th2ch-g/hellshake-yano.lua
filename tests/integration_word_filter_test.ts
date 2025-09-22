@@ -3,8 +3,8 @@
  * 日本語除外機能とヒント表示位置改善の統合テスト
  */
 
-import { assert, assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assert, assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import {
   type EnhancedWordConfig,
   extractWordsFromLineWithEnhancedConfig,

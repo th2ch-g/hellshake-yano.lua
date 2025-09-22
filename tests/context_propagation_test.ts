@@ -13,7 +13,7 @@
  * 6. Session management
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import { assertEquals, assertExists } from "@std/assert";
 import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 import {
   HybridWordDetector,

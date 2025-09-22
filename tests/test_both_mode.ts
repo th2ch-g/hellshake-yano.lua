@@ -5,7 +5,7 @@
  * "both" モードが正しく動作することを検証します。
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/testing/asserts.ts";
+import { assertEquals, assertExists } from "@std/assert";
 import { calculateHintPosition, calculateHintPositionWithCoordinateSystem, assignHintsToWords } from "../denops/hellshake-yano/hint.ts";
 import type { Word, Config } from "../denops/hellshake-yano/types.ts";
 

@@ -9,7 +9,7 @@
  * REFACTOR Phase: Clean up and optimize.
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.203.0/assert/mod.ts";
+import { assertEquals, assertExists } from "@std/assert";
 
 // Mock Denops interface for testing
 interface MockDenops {

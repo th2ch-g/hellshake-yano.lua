@@ -3,7 +3,7 @@
  * Tests to verify documentation completeness and accuracy for per-key configuration feature
  */
 
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 
 // Test helper to read files
 async function readFile(path: string): Promise<string> {

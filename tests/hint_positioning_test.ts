@@ -3,8 +3,8 @@
  * マークは単語の先頭に表示するテスト
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { calculateHintPosition, type HintPosition } from "../denops/hellshake-yano/hint.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 

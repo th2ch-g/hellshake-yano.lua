@@ -3,8 +3,8 @@
  * 日本語除外機能のテスト
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { extractWordsFromLineWithConfig } from "../denops/hellshake-yano/word.ts";
 
 describe("Word Filtering - Japanese Exclusion", () => {

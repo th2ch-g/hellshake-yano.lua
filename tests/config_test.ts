@@ -3,8 +3,8 @@
  * Process 9の設定機能をテストします
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { getDefaultConfig, validateConfig } from "../denops/hellshake-yano/main.ts";
 
 // 設定のマージ

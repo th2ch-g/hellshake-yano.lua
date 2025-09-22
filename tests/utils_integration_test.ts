@@ -4,7 +4,7 @@
  * リファクタリングで新しく作成・統一化されたユーティリティモジュールの動作を検証
  */
 
-import { assertEquals, assert } from "https://deno.land/std@0.220.0/assert/mod.ts";
+import { assertEquals, assert } from "@std/assert";
 
 // 統一化されたユーティリティモジュールをテスト
 import {

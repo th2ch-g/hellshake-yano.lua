@@ -5,7 +5,7 @@
  * 実際のimportとコンパイルを通じて検証します。
  */
 
-import { assertEquals, assertExists, assert } from "https://deno.land/std@0.220.0/assert/mod.ts";
+import { assertEquals, assertExists, assert } from "@std/assert";
 
 // types.tsからの型定義import
 import type {

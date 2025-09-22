@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.204.0/testing/asserts.ts";
+import { assertEquals } from "@std/assert";
 
 Deno.test({
   name: "assignHintsToWords はモードごとにキャッシュを独立させる",

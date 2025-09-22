@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno test --allow-all
 
-import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import { extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
 
 Deno.test("Single Character Word Detection Tests", async (t) => {

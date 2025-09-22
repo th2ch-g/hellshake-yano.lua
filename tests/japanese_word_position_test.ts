@@ -3,8 +3,8 @@
  * 「日本語」の「語」にヒントが表示される問題を再現
  */
 
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import {
   HybridWordDetector,
   RegexWordDetector,

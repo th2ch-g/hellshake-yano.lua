@@ -5,7 +5,7 @@
  * Uses the npm @birchill/tiny-segmenter package for accurate segmentation.
  */
 
-import { TinySegmenter as NpmTinySegmenter } from "npm:@birchill/tiny-segmenter@1.0.0";
+import { TinySegmenter as NpmTinySegmenter } from "@birchill/tiny-segmenter";
 
 /**
  * セグメンテーション結果インターフェース

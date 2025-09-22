@@ -4,7 +4,7 @@
  * 50行以上の長大関数を20-30行に分割し、単一責任の原則を適用するためのテスト
  */
 
-import { assertEquals, assertExists, assert } from "https://deno.land/std@0.220.0/assert/mod.ts";
+import { assertEquals, assertExists, assert } from "@std/assert";
 import type { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
 
 // テスト対象のモジュールをインポート

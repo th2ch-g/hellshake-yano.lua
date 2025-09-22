@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.204.0/testing/asserts.ts";
+import { assertEquals } from "@std/assert";
 import { BATCH_BATCH_SIZE, BATCH_PROCESS_THRESHOLD } from "../denops/hellshake-yano/hint.ts";
 
 Deno.test("sortWordsByDistanceOptimized uses 500 threshold", () => {

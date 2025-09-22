@@ -7,7 +7,7 @@
  * - 'h', 'j', 'k', 'l' with motion_count of 3 (show hints after 3 presses)
  */
 
-import { assertEquals, assertNotEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
+import { assertEquals, assertNotEquals } from "@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 

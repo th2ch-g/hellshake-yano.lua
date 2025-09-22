@@ -5,8 +5,8 @@
  * use_japanese設定が正しく動作することを確認
  */
 
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { detectWordsWithConfig, extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
 
 describe("Japanese Filtering Tests", () => {

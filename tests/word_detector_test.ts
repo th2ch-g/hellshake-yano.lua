@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "https://deno.land/std@0.217.0/assert/mod.ts";
+import { assertEquals, assertThrows } from "@std/assert";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // Test interfaces and types

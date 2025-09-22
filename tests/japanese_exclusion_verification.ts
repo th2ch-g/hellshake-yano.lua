@@ -3,8 +3,8 @@
  * Tests the word detection directly with Japanese exclusion enabled
  */
 
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import {
   HybridWordDetector,
   RegexWordDetector,

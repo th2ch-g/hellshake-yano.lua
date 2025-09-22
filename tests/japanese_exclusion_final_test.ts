@@ -3,8 +3,8 @@
  * Verifies that Japanese characters don't receive hints when use_japanese: false
  */
 
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 
 // Import the actual word detection function
 import { detectWords } from "../denops/hellshake-yano/word.ts";

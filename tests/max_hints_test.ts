@@ -4,8 +4,8 @@
  * maxHints設定とhint groups容量計算のテスト
  */
 
-import { assertEquals } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { generateHintsWithGroups, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
 
 describe("Max Hints and Capacity Calculation", () => {

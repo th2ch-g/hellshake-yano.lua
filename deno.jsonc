@@ -1,4 +1,14 @@
 {
+  "workspace": [
+    "./denops/hellshake-yano"
+  ],
+  "imports": {
+    "@denops/std": "jsr:@denops/std@^7.4.0",
+    "@denops/test": "jsr:@denops/test@^3.0.4",
+    "@std/assert": "jsr:@std/assert@^1.0.8",
+    "@std/path": "jsr:@std/path@^1.0.10",
+    "@std/testing": "jsr:@std/testing@^1.0.0"
+  },
   "fmt": {
     "indentWidth": 2,
     "lineWidth": 100,
@@ -11,12 +21,6 @@
   },
   "test": {
     "include": ["tests/"]
-  },
-  "imports": {
-    "@denops/test": "jsr:@denops/test@^3.0.4",
-    "@denops/std": "jsr:@denops/std@^7.4.0",
-    "@std/assert": "jsr:@std/assert@^1.0.8",
-    "@std/path": "jsr:@std/path@^1.0.10"
   },
   "compilerOptions": {
     "strict": true,

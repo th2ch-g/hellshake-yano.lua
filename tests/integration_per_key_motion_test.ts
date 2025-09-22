@@ -1,5 +1,5 @@
-import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { afterEach, beforeEach, describe, it } from "https://deno.land/std@0.224.0/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 

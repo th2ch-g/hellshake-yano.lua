@@ -3,7 +3,7 @@
  * TDD Red-Green-Refactor サイクル
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.199.0/assert/mod.ts";
+import { assertEquals, assertExists } from "@std/assert";
 import {
   Config,
   getDefaultConfig,

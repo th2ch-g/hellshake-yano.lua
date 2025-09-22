@@ -1,4 +1,4 @@
-import { assertEquals, assertNotEquals } from "https://deno.land/std@0.204.0/testing/asserts.ts";
+import { assertEquals, assertNotEquals } from "@std/assert";
 
 /**
  * 回帰テスト: 既存機能が最適化後も正しく動作することを確認

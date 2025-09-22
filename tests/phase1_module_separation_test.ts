@@ -3,7 +3,7 @@
  * TDD Red-Green-Refactorサイクルでの失敗するテスト（RED）
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.201.0/assert/mod.ts";
+import { assertEquals, assertExists } from "@std/assert";
 
 // テスト対象：分割後の新しいモジュール構造
 Deno.test("Phase 1 - RED: config.ts モジュールが存在する", async () => {

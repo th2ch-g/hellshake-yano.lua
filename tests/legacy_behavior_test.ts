@@ -1,4 +1,4 @@
-import { assertEquals, assertNotEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
+import { assertEquals, assertNotEquals } from "@std/assert";
 import { extractWordsFromLineLegacy } from "../denops/hellshake-yano/word.ts";
 
 /**

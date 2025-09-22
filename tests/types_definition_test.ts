@@ -11,7 +11,7 @@
  * 4. オプショナルプロパティ：不要な?修飾子の削除
  */
 
-import { assertEquals, assertExists, assert } from "https://deno.land/std@0.220.0/assert/mod.ts";
+import { assertEquals, assertExists, assert } from "@std/assert";
 
 // Phase 5実装前はこれらのimportは失敗する（REDフェーズ）
 // types.tsが作成されてから動作する（GREENフェーズ）

@@ -3,8 +3,8 @@
  * Process 50 Sub2の統合動作確認
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { MockDenops } from "./helpers/mock.ts";
 
 // generateHintsOptimized を直接テストできるようにエクスポートを追加する必要があるため、

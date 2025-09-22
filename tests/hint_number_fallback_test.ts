@@ -5,8 +5,8 @@
  * Approach A: カーソル近傍に1文字、遠距離に2文字アルファベット、さらに2桁数字
  */
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.221.0/assert/mod.ts";
-import { describe, it } from "https://deno.land/std@0.221.0/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import {
   assignHintsToWords,
   generateHintsWithGroups,
