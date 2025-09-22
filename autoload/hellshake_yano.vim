@@ -202,21 +202,6 @@ function! s:init_key_repeat_detection(bufnr) abort
   endif
 endfunction
 
-" 【DEPRECATED】モーションカウントを処理（キー別対応版s:process_motion_count_for_keyを使用）
-" function! s:process_motion_count(bufnr) abort
-"   " 既存のタイマーをクリア
-"   call s:stop_and_clear_timer(s:timer_id, a:bufnr)
-"
-"   " カウントを増加
-"   let s:motion_count[a:bufnr] += 1
-"   let s:last_motion_time[a:bufnr] = reltime()
-" endfunction
-
-" 【DEPRECATED】ヒント表示の必要性を判定（キー別対応版s:should_trigger_hints_for_keyを使用）
-" function! s:should_trigger_hints(bufnr) abort
-"   return !get(s:is_key_repeating, a:bufnr, v:false) && s:motion_count[a:bufnr] >= get(g:hellshake_yano, 'motion_count', 3)
-" endfunction
-
 " ============================================================================
 " タイマー管理関数群
 " ============================================================================
