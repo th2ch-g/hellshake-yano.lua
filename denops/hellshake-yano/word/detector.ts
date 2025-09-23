@@ -13,6 +13,7 @@ import type { Word, DetectionContext, WordDetectionResult } from "../types.ts";
 export type { DetectionContext, WordDetectionResult };
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
+import { ContextDetector, type SplittingRules } from "./context.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
 import { convertToDisplayColumn } from "../hint-utils.ts";
 import { WordDictionaryImpl, createBuiltinDictionary, applyDictionaryCorrection } from "./dictionary.ts";
@@ -119,7 +120,7 @@ export interface WordDetector {
   readonly priority: number; // Higher priority = preferred detector
   readonly supportedLanguages: string[]; // e.g., ['ja', 'en', 'any']
 
-  detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]>;
+  detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]>;
   canHandle(text: string): boolean;
   isAvailable(): Promise<boolean>;
 }
@@ -195,7 +196,7 @@ export class RegexWordDetector implements WordDetector {
     return this.config.min_word_length || 1;
   }
 
-  async detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]> {
+  async detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]> {
     const words: Word[] = [];
     const lines = text.split("\n");
 
@@ -586,7 +587,7 @@ export class TinySegmenterWordDetector implements WordDetector {
     return this.config.min_word_length || 1;
   }
 
-  async detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]> {
+  async detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]> {
     const words: Word[] = [];
     const lines = text.split("\n");
 
@@ -1174,6 +1175,7 @@ export class HybridWordDetector implements WordDetector {
   private segmenterDetector: TinySegmenterWordDetector;
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private contextDetector: ContextDetector; // コンテキスト認識による分割調整
 
   /**
    * HybridWordDetectorのコンストラクタ
@@ -1211,6 +1213,7 @@ export class HybridWordDetector implements WordDetector {
     // 子Detectorにも同じマージされた設定とグローバル設定を渡す
     this.regexDetector = new RegexWordDetector(this.config, globalConfig);
     this.segmenterDetector = new TinySegmenterWordDetector(this.config, globalConfig);
+    this.contextDetector = new ContextDetector(); // コンテキスト検出器を初期化
   }
 
   /**
@@ -1235,11 +1238,12 @@ export class HybridWordDetector implements WordDetector {
     return this.config.min_word_length || 1;
   }
 
-  async detectWords(text: string, startLine: number, context?: DetectionContext): Promise<Word[]> {
+  async detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]> {
     const lines = text.split("\n");
     const allWords: Word[] = [];
 
-    // デバッグログ：設定の確認
+    // コンテキスト認識による分割調整を適用
+    const enhancedContext = await this.enhanceContext(context, denops);
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -1248,6 +1252,23 @@ export class HybridWordDetector implements WordDetector {
       if (!lineText || lineText.trim().length === 0) {
         continue;
       }
+
+      // 行ごとのコンテキストを更新
+      const lineContext = enhancedContext.fileType
+        ? this.contextDetector.detectLineContext(lineText, enhancedContext.fileType)
+        : undefined;
+
+      const lineEnhancedContext = {
+        ...enhancedContext,
+        lineContext,
+        syntaxContext: enhancedContext.fileType
+          ? this.contextDetector.detectSyntaxContext(lineText, lineNumber, enhancedContext.fileType)
+          : enhancedContext.syntaxContext
+      };
+
+      // コンテキストに基づく分割ルールを適用
+      const splittingRules = this.contextDetector.getSplittingRules(lineEnhancedContext);
+      const contextWithRules = this.applyContextRules(lineEnhancedContext, splittingRules);
 
       // use_japanese 設定に基づいて処理を決定
       if (this.config.use_japanese === true) {
@@ -1259,10 +1280,10 @@ export class HybridWordDetector implements WordDetector {
           const segmenterWords = await this.segmenterDetector.detectWords(
             lineText,
             lineNumber,
-            context,
+            contextWithRules,
           );
           // 英数字も検出するためRegexDetectorも併用
-          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, context);
+          const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, contextWithRules);
           const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
           allWords.push(...mergedWords);
         } else {
@@ -1271,15 +1292,15 @@ export class HybridWordDetector implements WordDetector {
           let words = extractWordsUnified(lineText, lineNumber, this.config);
 
           // Apply context-based filtering if context is provided
-          if (context?.minWordLength !== undefined) {
-            words = words.filter((w) => w.text.length >= context.minWordLength!);
+          if (contextWithRules?.minWordLength !== undefined) {
+            words = words.filter((w) => w.text.length >= contextWithRules.minWordLength!);
           }
 
           allWords.push(...words);
         }
       } else {
         // 日本語除外モード：RegexDetectorを使用（日本語は除外される）
-        const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, context);
+        const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, contextWithRules);
         allWords.push(...regexWords);
       }
     }
@@ -1354,6 +1375,55 @@ export class HybridWordDetector implements WordDetector {
       seen.add(key);
       return true;
     });
+  }
+
+  /**
+   * コンテキストを拡張してファイルタイプ情報を追加
+   */
+  private async enhanceContext(context?: DetectionContext, denops?: Denops): Promise<DetectionContext> {
+    const baseContext = context || {};
+
+    // Denopsが利用可能な場合、ファイルタイプを取得
+    if (denops && !baseContext.fileType) {
+      try {
+        const fileType = await this.contextDetector.detectFileType(denops);
+        return {
+          ...baseContext,
+          fileType,
+          metadata: {
+            ...baseContext.metadata,
+            contextEnhanced: true,
+            enhancedAt: Date.now(),
+          },
+        };
+      } catch (error) {
+        // エラーが発生した場合は元のコンテキストを返すが、メタデータにエラー情報を記録
+        return {
+          ...baseContext,
+          metadata: {
+            ...baseContext.metadata,
+            contextEnhancementError: error instanceof Error ? error.message : String(error),
+            enhancedAt: Date.now(),
+          },
+        };
+      }
+    }
+
+    return baseContext;
+  }
+
+  /**
+   * コンテキストルールを適用して新しいコンテキストを生成
+   */
+  private applyContextRules(context: DetectionContext, splittingRules: SplittingRules): DetectionContext {
+    return {
+      ...context,
+      minWordLength: splittingRules.minWordLength || context.minWordLength,
+      metadata: {
+        ...context.metadata,
+        splittingRules,
+      },
+    };
   }
 
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {

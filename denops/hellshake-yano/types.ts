@@ -235,6 +235,48 @@ export interface DetectionContext {
   minWordLength?: number;
   /** 追加のコンテキスト情報 */
   metadata?: Record<string, unknown>;
+
+  // 新規追加フィールド（process4 sub3: コンテキスト認識による分割調整）
+  /** Vimのfiletype（'typescript', 'python'等） */
+  fileType?: string;
+  /** 構文コンテキスト情報 */
+  syntaxContext?: SyntaxContext;
+  /** 行コンテキスト情報 */
+  lineContext?: LineContext;
+}
+
+/** 構文コンテキスト情報 */
+export interface SyntaxContext {
+  /** コメント内か */
+  inComment: boolean;
+  /** 文字列リテラル内か */
+  inString: boolean;
+  /** 関数定義内か */
+  inFunction: boolean;
+  /** クラス定義内か */
+  inClass: boolean;
+  /** 言語名（fileTypeから判定） */
+  language: string;
+  /** Vimの構文グループ（オプション） */
+  syntaxGroups?: string[];
+}
+
+/** 行コンテキスト情報 */
+export interface LineContext {
+  /** コメント行か */
+  isComment: boolean;
+  /** ドキュメント文字列か */
+  isDocString: boolean;
+  /** import/require文か */
+  isImport: boolean;
+  /** インデントレベル（スペース数） */
+  indentLevel: number;
+  /** 行の種類（'code', 'comment', 'string'等） */
+  lineType: string;
+  /** 直前の文字（文脈判定用） */
+  precedingChar?: string;
+  /** 直後の文字（文脈判定用） */
+  followingChar?: string;
 }
 
 /**
