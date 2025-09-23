@@ -15,6 +15,7 @@ import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
 import { convertToDisplayColumn } from "../hint-utils.ts";
+import { WordDictionaryImpl, createBuiltinDictionary, applyDictionaryCorrection } from "./dictionary.ts";
 
 /**
  * Position-aware segment interface for tracking original positions
@@ -515,6 +516,7 @@ export class TinySegmenterWordDetector implements WordDetector {
   private segmenter: TinySegmenter;
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private dictionary: WordDictionaryImpl; // 辞書ベースの補正システム
 
   /**
    * TinySegmenterWordDetectorのコンストラクタ
@@ -547,6 +549,7 @@ export class TinySegmenterWordDetector implements WordDetector {
     this.config = this.mergeWithDefaults(config);
     this.globalConfig = globalConfig;
     this.segmenter = TinySegmenter.getInstance();
+    this.dictionary = createBuiltinDictionary(); // ビルトイン辞書で初期化
   }
 
   /**
@@ -673,8 +676,11 @@ export class TinySegmenterWordDetector implements WordDetector {
   }
 
   private segmentsToWords(segments: string[], originalText: string, lineNumber: number): Word[] {
+    // 辞書ベースの補正を適用
+    const correctedSegments = this.applyDictionaryCorrection(segments);
+
     // まず位置情報付きセグメントを作成
-    const positionSegments = this.createPositionSegments(segments, originalText);
+    const positionSegments = this.createPositionSegments(correctedSegments, originalText);
 
     // 日本語分割精度設定を適用（位置情報を保持）
     const mergedSegments = this.mergeShortSegmentsWithPosition(positionSegments);
@@ -711,6 +717,29 @@ export class TinySegmenterWordDetector implements WordDetector {
     }
 
     return words;
+  }
+
+  /**
+   * 辞書ベースの補正をセグメントに適用
+   *
+   * @description TinySegmenterの分割結果に対して辞書ベースの補正を適用します。
+   * プログラミング用語などの複合語を適切に結合し、過度な分割を防ぎます。
+   *
+   * @param segments - TinySegmenterによる分割結果
+   * @returns 辞書補正が適用されたセグメント配列
+   *
+   * @example
+   * ```typescript
+   * // "関数", "定義" → "関数定義"
+   * const segments = ["関数", "定義"];
+   * const corrected = this.applyDictionaryCorrection(segments);
+   * // Result: ["関数定義"]
+   * ```
+   *
+   * @private
+   */
+  private applyDictionaryCorrection(segments: string[]): string[] {
+    return applyDictionaryCorrection(segments, this.dictionary);
   }
 
   private async fallbackDetection(

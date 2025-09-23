@@ -482,6 +482,474 @@
   - デフォルト: Vimの設定値を使用
   - 明示的なタブ幅の指定
 
+### process4 TinySegmenter改善【段階的実装】
+#### 背景と問題点
+@problem: TinySegmenterによる日本語分割が過度に細分化され、意図通りにヒントが表示されない
+@impact: 複合語、専門用語、助詞の処理で不自然な分割が発生
+
+##### 現状の問題点
+1. **過度な分割**: 複合語や固有名詞が細かく分割されすぎる
+2. **助詞・接続詞の処理**: 限定的なパターンマッチングで対応
+3. **専門用語の認識不足**: プログラミング用語や業界用語が正しく認識されない
+4. **文脈考慮の欠如**: 単純な形態素解析のため、文脈に応じた分割ができない
+
+#### sub1 辞書ベースの補正システム【優先度: 高】
+@target: denops/hellshake-yano/word/dictionary.ts（新規作成）
+@test: denops/hellshake-yano/word/dictionary.test.ts（新規作成）
+@ref: denops/hellshake-yano/word/detector.ts（TinySegmenterWordDetector）
+
+##### 🔴 Red Phase: テストファースト
+- [ ] **辞書機能の基本テスト（10ケース）**
+  - [ ] カスタム単語の登録と検索
+  - [ ] 複合語パターンのマッチング
+  - [ ] 分割禁止ワードの識別
+  - [ ] 結合ルールの適用
+  - [ ] 優先度による競合解決
+  - [ ] 辞書ファイルの読み込み
+  - [ ] プロジェクト固有辞書の統合
+  - [ ] ビルトイン辞書の利用
+  - [ ] 辞書のキャッシュ機能
+  - [ ] 動的辞書更新
+
+- [ ] **日本語プログラミング用語テスト（8ケース）**
+  - [ ] 「関数定義」→ そのまま保持
+  - [ ] 「非同期処理」→ そのまま保持
+  - [ ] 「配列操作」→ そのまま保持
+  - [ ] 「オブジェクト指向」→ そのまま保持
+  - [ ] 「データベース接続」→ そのまま保持
+  - [ ] 「ユニットテスト」→ そのまま保持
+  - [ ] 「バージョン管理」→ そのまま保持
+  - [ ] 「デバッグ実行」→ そのまま保持
+
+##### 🟢 Green Phase: 実装
+- [ ] **Stage 1: 辞書インターフェース定義**
+  ```typescript
+  interface WordDictionary {
+    customWords: Set<string>;
+    compoundPatterns: RegExp[];
+    preserveWords: Set<string>;
+    mergeRules: Map<string, number>;
+  }
+
+  interface DictionaryConfig {
+    dictionaryPath?: string;
+    projectDictionaryPath?: string;
+    useBuiltinDictionary?: boolean;
+    enableLearning?: boolean;
+  }
+  ```
+
+- [ ] **Stage 2: ビルトイン辞書の実装**
+  - [ ] 日本語プログラミング用語辞書
+  - [ ] 頻出複合語リスト
+  - [ ] 助詞・接続詞の結合ルール
+
+- [ ] **Stage 3: TinySegmenterWordDetectorへの統合**
+  - [ ] `applyDictionaryCorrection`メソッドの追加
+  - [ ] `segmentsToWords`前に辞書補正を適用
+  - [ ] 辞書キャッシュの実装
+
+##### 🔵 Refactor Phase: 最適化
+- [ ] 辞書検索の高速化（Trie構造など）
+- [ ] メモリ使用量の最適化
+- [ ] 辞書の遅延読み込み
+
+#### sub1.5 ユーザー定義辞書機能【優先度: 高】
+@target: denops/hellshake-yano/word/dictionary-loader.ts（新規作成）
+@test: denops/hellshake-yano/word/dictionary-loader.test.ts（新規作成）
+@ref: denops/hellshake-yano/word/dictionary.ts（既存の辞書システム）
+
+##### 🔴 Red Phase: テストファースト
+- [ ] **辞書ファイル読み込みテスト（12ケース）**
+  - [ ] JSON形式の辞書ファイル読み込み
+  - [ ] YAML形式の辞書ファイル読み込み
+  - [ ] テキスト形式の辞書ファイル読み込み
+  - [ ] プロジェクト辞書の検索と読み込み
+  - [ ] グローバル辞書の検索と読み込み
+  - [ ] 存在しないファイルのハンドリング
+  - [ ] 不正な形式のファイルのハンドリング
+  - [ ] 空の辞書ファイルの処理
+  - [ ] 辞書の優先順位処理
+  - [ ] 複数辞書のマージ
+  - [ ] 循環参照の検出
+  - [ ] 大容量ファイルの処理
+
+- [ ] **辞書マージテスト（8ケース）**
+  - [ ] ビルトイン辞書との統合
+  - [ ] override戦略でのマージ
+  - [ ] merge戦略でのマージ
+  - [ ] 重複単語の処理
+  - [ ] パターンの競合解決
+  - [ ] 結合ルールの優先順位
+  - [ ] カスタム単語の追加
+  - [ ] 分割禁止ワードの統合
+
+- [ ] **Vim連携テスト（6ケース）**
+  - [ ] 設定値の読み取り
+  - [ ] 辞書パスの解決
+  - [ ] 動的再読み込み
+  - [ ] エラー通知
+  - [ ] デフォルト値の適用
+  - [ ] 環境変数の展開
+
+##### 🟢 Green Phase: 実装
+- [ ] **Stage 1: 辞書ファイルローダー**
+  ```typescript
+  class DictionaryLoader {
+    private readonly searchPaths = [
+      '.hellshake-yano/dictionary.json',
+      'hellshake-yano.dict.json',
+      '~/.config/hellshake-yano/dictionary.json'
+    ];
+
+    async loadUserDictionary(config?: DictionaryConfig): Promise<UserDictionary> {
+      // ファイル探索と読み込み
+    }
+
+    private async parseJsonDictionary(content: string): Promise<UserDictionary>
+    private async parseYamlDictionary(content: string): Promise<UserDictionary>
+    private async parseTextDictionary(content: string): Promise<UserDictionary>
+  }
+
+  interface UserDictionary {
+    customWords: string[];
+    preserveWords: string[];
+    mergeRules: Map<string, MergeStrategy>;
+    compoundPatterns: RegExp[];
+    metadata?: {
+      version?: string;
+      author?: string;
+      description?: string;
+    };
+  }
+  ```
+
+- [ ] **Stage 2: 辞書マージ機能**
+  ```typescript
+  class DictionaryMerger {
+    merge(
+      base: WordDictionary,
+      user: UserDictionary,
+      strategy: 'override' | 'merge' = 'merge'
+    ): WordDictionary {
+      // マージロジックの実装
+    }
+
+    private mergeCustomWords(base: Set<string>, user: string[]): Set<string>
+    private mergePatterns(base: RegExp[], user: RegExp[]): RegExp[]
+    private resolvePriority(conflicts: ConflictItem[]): ResolvedItem[]
+  }
+  ```
+
+- [ ] **Stage 3: Vim設定との連携**
+  ```typescript
+  interface VimDictionaryConfig {
+    dictionaryPath?: string;         // g:hellshake_yano_dictionary_path
+    useBuiltinDict?: boolean;        // g:hellshake_yano_use_builtin_dict
+    mergingStrategy?: 'override' | 'merge'; // g:hellshake_yano_dictionary_merge
+    autoReload?: boolean;            // g:hellshake_yano_auto_reload_dict
+  }
+
+  class VimConfigBridge {
+    async getConfig(denops: Denops): Promise<VimDictionaryConfig>
+    async notifyError(denops: Denops, error: string): Promise<void>
+    async reloadDictionary(denops: Denops): Promise<void>
+  }
+  ```
+
+- [ ] **Stage 4: 辞書管理コマンド**
+  ```typescript
+  // Vimコマンドの実装
+  export async function registerDictionaryCommands(denops: Denops) {
+    await denops.cmd('command! HellshakeYanoReloadDict call denops#request("hellshake-yano", "reloadDictionary", [])')
+    await denops.cmd('command! HellshakeYanoEditDict call denops#request("hellshake-yano", "editDictionary", [])')
+    await denops.cmd('command! HellshakeYanoShowDict call denops#request("hellshake-yano", "showDictionary", [])')
+    await denops.cmd('command! HellshakeYanoValidateDict call denops#request("hellshake-yano", "validateDictionary", [])')
+  }
+  ```
+
+##### 🔵 Refactor Phase: 最適化
+- [ ] **パフォーマンス最適化**
+  - [ ] 辞書キャッシュの実装
+  - [ ] ファイル変更監視（ホットリロード）
+  - [ ] 遅延読み込み戦略
+
+- [ ] **ユーザビリティ向上**
+  - [ ] 辞書ファイルテンプレート生成
+  - [ ] 辞書検証ツール
+  - [ ] マイグレーションヘルパー
+
+- [ ] **エラーハンドリング強化**
+  - [ ] 詳細なエラーメッセージ
+  - [ ] 辞書ファイルの自動バックアップ
+  - [ ] 復旧機能
+
+##### 辞書ファイル形式の仕様
+- [ ] **JSON形式仕様**
+  ```json
+  {
+    "$schema": "https://example.com/hellshake-yano-dict-schema.json",
+    "version": "1.0",
+    "customWords": ["機械学習", "深層学習"],
+    "preserveWords": ["HelloWorld", "getElementById"],
+    "mergeRules": {
+      "の": "always",
+      "を": "always"
+    },
+    "compoundPatterns": [".*Controller$", "^I[A-Z].*"]
+  }
+  ```
+
+- [ ] **YAML形式仕様**
+  ```yaml
+  version: "1.0"
+  customWords:
+    - 機械学習
+    - 深層学習
+  preserveWords:
+    - HelloWorld
+  mergeRules:
+    の: always
+    を: always
+  ```
+
+- [ ] **テキスト形式仕様**
+  ```
+  # カスタム単語（#でコメント）
+  機械学習
+  深層学習
+
+  # 分割禁止（!で開始）
+  !HelloWorld
+  !getElementById
+
+  # 結合ルール（=で定義）
+  の=always
+  を=always
+  ```
+
+##### マイルストーン
+- [ ] **M1**: 基本的な辞書ファイル読み込み機能
+- [ ] **M2**: 複数形式のサポート完了
+- [ ] **M3**: Vim連携機能の実装
+- [ ] **M4**: 辞書管理コマンドの完成
+- [ ] **M5**: ドキュメントとサンプル辞書の提供
+
+#### sub2 隣接文字解析による補正の強化【優先度: 高】
+@target: denops/hellshake-yano/utils/charType.ts（新規作成）
+@target: denops/hellshake-yano/word/detector.ts（mergeShortSegmentsWithPosition拡張）
+@test: denops/hellshake-yano/word/detector.test.ts（拡張）
+
+##### 🔴 Red Phase: テストファースト
+- [ ] **文字種判定テスト（12ケース）**
+  - [ ] ひらがな判定
+  - [ ] カタカナ判定
+  - [ ] 漢字判定
+  - [ ] 英大文字判定
+  - [ ] 英小文字判定
+  - [ ] 数字判定
+  - [ ] 記号判定
+  - [ ] 括弧判定
+  - [ ] 引用符判定
+  - [ ] スペース判定
+  - [ ] 混合文字列の解析
+  - [ ] 境界検出
+
+- [ ] **結合判定テスト（10ケース）**
+  - [ ] 助詞の前単語への結合
+  - [ ] 接続詞の処理
+  - [ ] 文字種境界での分割維持
+  - [ ] 括弧内テキストの保持
+  - [ ] 引用符内テキストの保持
+  - [ ] カタカナ連続の保持
+  - [ ] 英数字連続の保持
+  - [ ] 漢字＋ひらがなパターン
+  - [ ] 記号による境界認識
+  - [ ] CamelCase/snake_caseの処理
+
+##### 🟢 Green Phase: 実装
+- [ ] **Stage 1: 文字種判定ユーティリティ**
+  ```typescript
+  enum CharType {
+    Hiragana = 'hiragana',
+    Katakana = 'katakana',
+    Kanji = 'kanji',
+    AlphaUpper = 'alpha_upper',
+    AlphaLower = 'alpha_lower',
+    Number = 'number',
+    Symbol = 'symbol',
+    Bracket = 'bracket',
+    Quote = 'quote',
+    Space = 'space'
+  }
+
+  interface AdjacentAnalysis {
+    prevCharType: CharType;
+    currentCharType: CharType;
+    nextCharType: CharType;
+    shouldMergeWithPrev: boolean;
+    shouldMergeWithNext: boolean;
+  }
+  ```
+
+- [ ] **Stage 2: 拡張助詞・接続詞パターン**
+  - [ ] 包括的な助詞リスト
+  - [ ] 接続詞・接続助詞リスト
+  - [ ] 文末表現パターン
+
+- [ ] **Stage 3: mergeShortSegmentsWithPosition改良**
+  - [ ] 文字種境界の考慮
+  - [ ] 括弧・引用符内保持
+  - [ ] 優先度ベースの結合判定
+
+##### 🔵 Refactor Phase: 最適化
+- [ ] 文字種判定のキャッシュ
+- [ ] パターンマッチングの最適化
+- [ ] ルールの外部設定化
+
+#### sub3 コンテキスト認識による分割調整【優先度: 中】
+@target: denops/hellshake-yano/types.ts（DetectionContext拡張）
+@target: denops/hellshake-yano/word/context.ts（新規作成）
+@test: denops/hellshake-yano/word/context.test.ts（新規作成）
+
+##### 🔴 Red Phase: テストファースト
+- [ ] **ファイルタイプ別分割テスト（8ケース）**
+  - [ ] TypeScriptファイルでの分割
+  - [ ] JavaScriptファイルでの分割
+  - [ ] Pythonファイルでの分割
+  - [ ] Markdownファイルでの分割
+  - [ ] JSONファイルでの分割
+  - [ ] YAMLファイルでの分割
+  - [ ] HTMLファイルでの分割
+  - [ ] プレーンテキストでの分割
+
+- [ ] **文脈認識テスト（10ケース）**
+  - [ ] コメント内での分割
+  - [ ] 文字列リテラル内での分割
+  - [ ] 関数名の認識
+  - [ ] 変数名の認識
+  - [ ] クラス名の認識
+  - [ ] import文での分割
+  - [ ] CamelCase分割
+  - [ ] snake_case分割
+  - [ ] kebab-case分割
+  - [ ] インデントレベルの考慮
+
+##### 🟢 Green Phase: 実装
+- [ ] **Stage 1: DetectionContext拡張**
+  ```typescript
+  export interface DetectionContext {
+    currentKey?: string;
+    minWordLength?: number;
+    metadata?: Record<string, unknown>;
+    // 新規追加
+    fileType?: string;
+    syntaxContext?: SyntaxContext;
+    lineContext?: LineContext;
+  }
+
+  interface SyntaxContext {
+    inComment: boolean;
+    inString: boolean;
+    inFunction: boolean;
+    inClass: boolean;
+    language: string;
+  }
+
+  interface LineContext {
+    isComment: boolean;
+    isDocString: boolean;
+    isImport: boolean;
+    indentLevel: number;
+  }
+  ```
+
+- [ ] **Stage 2: ファイルタイプ別ルール**
+  - [ ] 言語別キーワードリスト
+  - [ ] 命名規則パターン
+  - [ ] 分割ルールマップ
+
+- [ ] **Stage 3: コンテキスト検出器**
+  - [ ] ファイルタイプ判定
+  - [ ] 構文解析（簡易）
+  - [ ] 行種別判定
+
+##### 🔵 Refactor Phase: 最適化
+- [ ] コンテキスト検出のキャッシュ
+- [ ] ルールの動的読み込み
+- [ ] 言語サーバーとの連携検討
+
+#### sub4 ハイブリッド検出アプローチの強化【優先度: 中】
+@target: denops/hellshake-yano/word/enhanced-hybrid.ts（新規作成）
+@test: denops/hellshake-yano/word/enhanced-hybrid.test.ts（新規作成）
+@ref: denops/hellshake-yano/word/detector.ts（HybridWordDetector）
+
+##### 🔴 Red Phase: テストファースト
+- [ ] **セグメント分析テスト（8ケース）**
+  - [ ] 純粋な日本語テキスト
+  - [ ] 純粋な英語テキスト
+  - [ ] 日英混在テキスト
+  - [ ] コード混在テキスト
+  - [ ] 記号主体テキスト
+  - [ ] 数値混在テキスト
+  - [ ] 空白・改行の処理
+  - [ ] 特殊文字の処理
+
+- [ ] **検出器選択テスト（6ケース）**
+  - [ ] 日本語での検出器選択
+  - [ ] 英語での検出器選択
+  - [ ] 混在での検出器選択
+  - [ ] 信頼度による切り替え
+  - [ ] フォールバック動作
+  - [ ] エラー時の復旧
+
+##### 🟢 Green Phase: 実装
+- [ ] **Stage 1: EnhancedHybridWordDetector基本構造**
+  ```typescript
+  class EnhancedHybridWordDetector extends HybridWordDetector {
+    private preProcessor: TextPreProcessor;
+    private postProcessor: TextPostProcessor;
+    private segmentAnalyzer: SegmentAnalyzer;
+
+    async detectWords(
+      text: string,
+      startLine: number,
+      context?: DetectionContext
+    ): Promise<Word[]> {
+      // 前処理 → セグメント分析 → 検出器選択 → 後処理
+    }
+  }
+  ```
+
+- [ ] **Stage 2: セグメント分析器**
+  ```typescript
+  interface TextSegment {
+    text: string;
+    type: 'japanese' | 'english' | 'mixed' | 'code' | 'symbol';
+    confidence: number;
+    startIndex: number;
+    endIndex: number;
+  }
+  ```
+
+- [ ] **Stage 3: 前処理・後処理パイプライン**
+  - [ ] 特殊パターン抽出
+  - [ ] 結果の統合
+  - [ ] 重複除去
+
+##### 🔵 Refactor Phase: 最適化
+- [ ] パイプライン処理の並列化
+- [ ] メモリ効率の改善
+- [ ] 検出器プールの実装
+
+##### マイルストーン
+- [ ] **M1**: 辞書システム基本実装完了
+- [ ] **M2**: 隣接文字解析強化完了
+- [ ] **M3**: コンテキスト認識実装完了
+- [ ] **M4**: ハイブリッド検出強化完了
+- [ ] **M5**: 統合テスト合格
+- [ ] **M6**: パフォーマンス目標達成（現状の110%以内）
+
 ### process10 ユニットテスト
 #### sub1 表示幅計算のテスト
 @target: tests/display_width_test.ts
