@@ -1,4 +1,6 @@
 import type { Word, HintMapping, HintPosition, HintPositionWithCoordinateSystem, HintKeyConfig } from "./types.ts";
+import { areWordsAdjacent, getWordDisplayEndCol, calculateHintDisplayPosition } from "./hint-utils.ts";
+import { getDisplayWidth } from "./utils/display.ts";
 
 // Re-export types for backward compatibility
 export type { HintKeyConfig, HintMapping, HintPosition };
@@ -689,6 +691,9 @@ export function calculateHintPosition(
   let col: number;
   let display_mode: "before" | "after" | "overlay";
 
+  // Default tab width - should be retrieved from Vim settings in production
+  const tabWidth = 8;
+
   // Visual Mode専用処理（process3追加）
   let effectiveHintPosition = hintPosition;
   if (isVisualMode && visualHintPosition) {
@@ -729,7 +734,8 @@ export function calculateHintPosition(
         display_mode = "before";
         break;
       case "end":
-        col = word.col + word.text.length - 1;
+        // 表示幅を使用してend位置を計算
+        col = calculateHintDisplayPosition(word, "end", tabWidth);
         display_mode = "after";
         break;
       case "overlay":
@@ -1150,6 +1156,9 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
 
   const result: { word: Word; adjacentWords: Word[] }[] = [];
 
+  // Default tab width - should be retrieved from Vim settings in production
+  const tabWidth = 8;
+
   for (const word of words) {
     const adjacentWords: Word[] = [];
 
@@ -1159,32 +1168,8 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
       // 同じ行の単語のみチェック
       if (word.line !== otherWord.line) continue;
 
-      // 隣接性を判定（1カラム以内の間隔）
-      const wordEndCol = word.col + word.text.length - 1;
-      const otherWordEndCol = otherWord.col + otherWord.text.length - 1;
-
-      // UTF-8対応：byteColがある場合はそれを使用
-      const wordEndByte = word.byteCol ? word.byteCol + getByteLength(word.text) - 1 : wordEndCol;
-      const otherWordEndByte = otherWord.byteCol ? otherWord.byteCol + getByteLength(otherWord.text) - 1 : otherWordEndCol;
-
-      // 距離計算（バイト位置があればそれを使用、なければ文字位置）
-      let distance: number;
-      if (word.byteCol && otherWord.byteCol) {
-        if (word.byteCol < otherWord.byteCol) {
-          distance = otherWord.byteCol - wordEndByte - 1;
-        } else {
-          distance = word.byteCol - otherWordEndByte - 1;
-        }
-      } else {
-        if (word.col < otherWord.col) {
-          distance = otherWord.col - wordEndCol - 1;
-        } else {
-          distance = word.col - otherWordEndCol - 1;
-        }
-      }
-
-      // 隣接判定（間隔が1以下）
-      if (distance <= 1) {
+      // 表示幅を考慮した隣接性を判定
+      if (areWordsAdjacent(word, otherWord, tabWidth)) {
         adjacentWords.push(otherWord);
       }
     }
@@ -1266,4 +1251,206 @@ export function shouldSkipHintForOverlap(
   }
 
   return false;
+}
+
+/**
+ * Check if a hint can be displayed in the available space
+ * considering adjacent words and minimum hint width requirements
+ *
+ * @param word - The word to check hint display for
+ * @param adjacentWords - Array of adjacent words
+ * @param minHintWidth - Minimum width required for hint display (default: 2)
+ * @param tabWidth - Tab width for display calculations (default: 8)
+ * @returns true if hint can be displayed, false otherwise
+ */
+export function canDisplayHint(
+  word: Word,
+  adjacentWords: Word[],
+  minHintWidth = 2,
+  tabWidth = 8
+): boolean {
+  if (adjacentWords.length === 0) {
+    return true; // No adjacent words, display is possible
+  }
+
+  const currentWordDisplayWidth = getDisplayWidth(word.text, tabWidth);
+  
+  // Check available space between adjacent words
+  for (const adjacentWord of adjacentWords) {
+    // Check if they are on the same line
+    if (word.line !== adjacentWord.line) {
+      continue; // Different lines, no conflict
+    }
+
+    const adjacentWordDisplayWidth = getDisplayWidth(adjacentWord.text, tabWidth);
+    
+    // Calculate positions
+    const currentWordEndPos = word.col + currentWordDisplayWidth - 1;
+    const adjacentWordEndPos = adjacentWord.col + adjacentWordDisplayWidth - 1;
+    
+    let availableSpace = 0;
+    
+    // Check if current word is to the left of adjacent word
+    if (currentWordEndPos < adjacentWord.col) {
+      availableSpace = adjacentWord.col - currentWordEndPos - 1;
+    }
+    // Check if current word is to the right of adjacent word
+    else if (word.col > adjacentWordEndPos) {
+      availableSpace = word.col - adjacentWordEndPos - 1;
+    }
+    // Words overlap or are adjacent - no space available
+    else {
+      availableSpace = 0;
+    }
+    
+    // If available space is less than minimum required, display is not possible
+    if (availableSpace < minHintWidth) {
+      return false;
+    }
+  }
+  
+  return true; // Sufficient space available
+}
+
+
+/**
+ * Prioritize hints based on predefined rules:
+ * 1. Text > Symbols 
+ * 2. Longer words > Shorter words (same type)
+ * 3. Left position > Right position (same length and type)
+ *
+ * @param words - Array of words with their adjacent word information
+ * @param tabWidth - Tab width for display calculations (default: 8)
+ * @returns Array of words that should display hints based on priority rules
+ */
+export function prioritizeHints(
+  words: { word: Word; adjacentWords: Word[] }[],
+  tabWidth = 8
+): Word[] {
+  const prioritizedWords: Word[] = [];
+  
+  // Group words by line for efficient processing
+  const wordsByLine = new Map<number, { word: Word; adjacentWords: Word[] }[]>();
+  
+  for (const wordInfo of words) {
+    const line = wordInfo.word.line;
+    if (!wordsByLine.has(line)) {
+      wordsByLine.set(line, []);
+    }
+    wordsByLine.get(line)!.push(wordInfo);
+  }
+  
+  // Process each line separately
+  for (const [line, lineWords] of wordsByLine) {
+    const lineResult = prioritizeWordsOnLine(lineWords, tabWidth);
+    prioritizedWords.push(...lineResult);
+  }
+  
+  return prioritizedWords;
+}
+
+/**
+ * Prioritize words on a single line
+ * Internal helper function for prioritizeHints
+ */
+function prioritizeWordsOnLine(
+  lineWords: { word: Word; adjacentWords: Word[] }[],
+  tabWidth: number
+): Word[] {
+  const result: Word[] = [];
+  const processedWords = new Set<Word>();
+  
+  // Sort words by column position for left-to-right processing
+  const sortedWords = lineWords.sort((a, b) => a.word.col - b.word.col);
+  
+  for (const wordInfo of sortedWords) {
+    if (processedWords.has(wordInfo.word)) {
+      continue; // Already processed in a conflict resolution
+    }
+    
+    const conflicts = findConflictingWords(wordInfo, lineWords, tabWidth);
+    
+    if (conflicts.length === 0) {
+      // No conflicts, add the word
+      result.push(wordInfo.word);
+      processedWords.add(wordInfo.word);
+    } else {
+      // Resolve conflicts and add the winner
+      const winner = resolveConflict([wordInfo, ...conflicts.map(w => lineWords.find(lw => lw.word === w)!)]);
+      result.push(winner);
+      
+      // Mark all conflicting words as processed
+      processedWords.add(wordInfo.word);
+      for (const conflict of conflicts) {
+        processedWords.add(conflict);
+      }
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Find words that conflict with the given word (space constraints)
+ */
+function findConflictingWords(
+  wordInfo: { word: Word; adjacentWords: Word[] },
+  allWords: { word: Word; adjacentWords: Word[] }[],
+  tabWidth: number
+): Word[] {
+  const conflicts: Word[] = [];
+  
+  for (const otherWordInfo of allWords) {
+    if (otherWordInfo.word === wordInfo.word) continue;
+    
+    // Check if hints would overlap
+    if (!canDisplayHint(wordInfo.word, [otherWordInfo.word], 2, tabWidth) ||
+        !canDisplayHint(otherWordInfo.word, [wordInfo.word], 2, tabWidth)) {
+      conflicts.push(otherWordInfo.word);
+    }
+  }
+  
+  return conflicts;
+}
+
+/**
+ * Resolve conflict between multiple words using priority rules
+ */
+function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }[]): Word {
+  if (conflictingWords.length === 1) {
+    return conflictingWords[0].word;
+  }
+  
+  // Rule 1: Text > Symbols
+  const textWords = conflictingWords.filter(w => !isSymbolWord(w.word));
+  const symbolWords = conflictingWords.filter(w => isSymbolWord(w.word));
+  
+  if (textWords.length > 0) {
+    // Prioritize text words
+    return resolveSameTypeConflict(textWords);
+  } else {
+    // All are symbols
+    return resolveSameTypeConflict(symbolWords);
+  }
+}
+
+/**
+ * Resolve conflict between words of the same type (all text or all symbols)
+ */
+function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[]): Word {
+  if (words.length === 1) {
+    return words[0].word;
+  }
+  
+  // Rule 2: Longer words > Shorter words
+  const maxLength = Math.max(...words.map(w => w.word.text.length));
+  const longestWords = words.filter(w => w.word.text.length === maxLength);
+  
+  if (longestWords.length === 1) {
+    return longestWords[0].word;
+  }
+  
+  // Rule 3: Left position > Right position
+  longestWords.sort((a, b) => a.word.col - b.word.col);
+  return longestWords[0].word;
 }

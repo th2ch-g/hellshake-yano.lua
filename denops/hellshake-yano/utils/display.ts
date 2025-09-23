@@ -111,7 +111,12 @@ function calculateCharWidth(codePoint: number, tabWidth: number): number {
     return 0;
   }
 
-  // Simple ASCII range
+  // Check for Latin-1 Supplement math symbols first
+  if (isLatinMathSymbol(codePoint)) {
+    return 2;
+  }
+
+  // Simple ASCII range (excluding math symbols already checked)
   if (codePoint < 0x100) {
     return 1;
   }
@@ -178,11 +183,25 @@ function isInEmojiRange(codePoint: number): boolean {
  */
 function isInExtendedWideRange(codePoint: number): boolean {
   return (
+    // Latin-1 Supplement math symbols (× ÷ etc.)
+    isLatinMathSymbol(codePoint) ||
     (codePoint >= 0x2190 && codePoint <= 0x21FF) || // Arrows
+    (codePoint >= 0x2460 && codePoint <= 0x24FF) || // Enclosed Alphanumerics (④ etc.)
+    (codePoint >= 0x2500 && codePoint <= 0x25FF) || // Box Drawing (□ etc.)
     (codePoint >= 0x2600 && codePoint <= 0x26FF) || // Miscellaneous Symbols
     (codePoint >= 0x2700 && codePoint <= 0x27BF) || // Dingbats
     (codePoint >= 0xFE10 && codePoint <= 0xFE1F) || // Vertical Forms
     (codePoint >= 0xFE30 && codePoint <= 0xFE6F)    // CJK Compatibility Forms + Small Form Variants
+  );
+}
+
+/**
+ * Check if character is a Latin-1 Supplement math symbol that should be width 2
+ */
+function isLatinMathSymbol(codePoint: number): boolean {
+  return (
+    codePoint === 0x00D7 || // × (multiplication sign)
+    codePoint === 0x00F7    // ÷ (division sign)
   );
 }
 

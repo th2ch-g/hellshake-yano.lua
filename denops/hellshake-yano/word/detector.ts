@@ -14,6 +14,7 @@ export type { DetectionContext, WordDetectionResult };
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
+import { convertToDisplayColumn } from "../hint-utils.ts";
 
 /**
  * Position-aware segment interface for tracking original positions
@@ -379,7 +380,7 @@ export class RegexWordDetector implements WordDetector {
       words.push({
         text: match.text,
         line: lineNumber,
-        col: match.index + 1, // Vim column numbers start at 1
+        col: convertToDisplayColumn(lineText, match.index, 8), // Display width based column position
         byteCol: byteIndex + 1, // Vim byte column numbers start at 1
       });
     }
@@ -419,7 +420,7 @@ export class RegexWordDetector implements WordDetector {
       words.push({
         text: match.text,
         line: lineNumber,
-        col: match.index + 1,
+        col: convertToDisplayColumn(lineText, match.index, 8), // Display width based column position
         byteCol: byteIndex + 1, // Vim byte column numbers start at 1
       });
     }
