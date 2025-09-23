@@ -21,6 +21,8 @@ smooth as in English.
 - **Strict Key Separation**: Complete separation between single_char_keys and multi_char_keys for predictable navigation
 - **Performance Optimizations**: Instant jump for single-character hints without delay
 - **Smart Auto-Detection**: Automatically enables hint groups when single/multi char keys are configured
+- **Dictionary System**: Built-in and user-defined dictionaries for improved Japanese word segmentation
+- **Hint Pattern Matching**: Regex-based hint prioritization for document structures (checkboxes, lists, headers)
 
 ## Installation
 
@@ -237,6 +239,98 @@ let g:hellshake_yano = {
 - **No Manual Configuration**: No need to set `counted_motions` for per-key configured keys
 - **Full Backward Compatibility**: Existing configurations continue to work unchanged
 - **Dynamic Context**: Each key press updates the context for accurate filtering
+
+### Dictionary System
+
+The plugin now supports both built-in and user-defined dictionaries to improve Japanese word segmentation and hint placement.
+
+#### Built-in Dictionary
+
+The plugin includes a comprehensive dictionary with:
+- **80+ Japanese programming terms**: 関数定義, 非同期処理, データベース接続, etc.
+- **Common compound words**: Automatically preserved during segmentation
+- **Particle merging rules**: Intelligent handling of Japanese particles (の, を, に, etc.)
+
+#### User-Defined Dictionaries
+
+Create custom dictionaries for your specific needs. The plugin searches for dictionary files in the following order:
+
+1. `.hellshake-yano/dictionary.json` (project-specific)
+2. `hellshake-yano.dict.json` (project root)
+3. `~/.config/hellshake-yano/dictionary.json` (global)
+
+#### Dictionary Formats
+
+**JSON Format** (recommended):
+```json
+{
+  "customWords": ["機械学習", "深層学習"],
+  "preserveWords": ["HelloWorld", "getElementById"],
+  "mergeRules": {
+    "の": "always",
+    "を": "always"
+  },
+  "hintPatterns": [
+    {
+      "pattern": "^-\\s*\\[\\s*\\]\\s*(.)",
+      "hintPosition": "capture:1",
+      "priority": 100,
+      "description": "Checkbox first character"
+    }
+  ]
+}
+```
+
+**YAML Format**:
+```yaml
+customWords:
+  - 機械学習
+  - 深層学習
+hintPatterns:
+  - pattern: "^-\\s*\\[\\s*\\]\\s*(.)"
+    hintPosition: "capture:1"
+    priority: 100
+```
+
+**Simple Text Format**:
+```
+# Custom words
+機械学習
+深層学習
+
+# Preserve words (prefix with !)
+!HelloWorld
+!getElementById
+
+# Hint patterns (prefix with @priority:pattern:position)
+@100:^-\s*\[\s*\]\s*(.):capture:1
+```
+
+#### Hint Pattern Matching
+
+Define regex patterns to prioritize hint placement for specific document structures:
+
+- **Checkboxes**: `- [ ] Task` → Hint on "T"
+- **Numbered lists**: `1. Item` → Hint on "I"
+- **Markdown headers**: `## Title` → Hint on "T"
+- **Japanese brackets**: 「内容」 → Hint on "内"
+
+#### Dictionary Commands
+
+```vim
+:HellshakeYanoReloadDict    " Reload dictionary
+:HellshakeYanoEditDict      " Edit dictionary file
+:HellshakeYanoShowDict      " Show current dictionary
+:HellshakeYanoValidateDict  " Validate dictionary format
+```
+
+#### Configuration
+
+```vim
+let g:hellshake_yano_dictionary_path = '~/.config/my-dict.json'
+let g:hellshake_yano_use_builtin_dict = v:true
+let g:hellshake_yano_dictionary_merge = 'merge'  " or 'override'
+```
 
 **Combining with `counted_motions`**:
 

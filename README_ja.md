@@ -20,6 +20,8 @@ hellshake-yano.vimは、日本語テキストの単語境界を正確に検出�
 - **スマート自動検出**: single/multi char keysが設定されると自動でヒントグループを有効化
 - **デバッグモード**: プラグインの動作状態を詳細に確認できるデバッグ機能
 - **パフォーマンスログ**: 実行時間を記録して性能のボトルネックを特定
+- **辞書システム**: ビルトイン辞書とユーザー定義辞書による日本語単語分割の改善
+- **ヒントパターンマッチング**: 正規表現によるヒント優先順位設定（チェックボックス、リスト、見出し対応）
 
 ## インストール
 
@@ -245,6 +247,98 @@ let g:hellshake_yano = {
 **語尾からの選択（推奨）**
 
 - Visual modeで単語を選択する際、カーソルは通常語尾に位置
+
+### 辞書システム
+
+プラグインは日本語の単語分割とヒント配置を改善するため、ビルトイン辞書とユーザー定義辞書の両方をサポートしています。
+
+#### ビルトイン辞書
+
+プラグインには以下を含む包括的な辞書が含まれています：
+- **80以上の日本語プログラミング用語**: 関数定義、非同期処理、データベース接続など
+- **一般的な複合語**: セグメンテーション時に自動的に保持
+- **助詞の結合ルール**: 日本語の助詞（の、を、に等）のインテリジェントな処理
+
+#### ユーザー定義辞書
+
+特定のニーズに合わせてカスタム辞書を作成できます。プラグインは以下の順序で辞書ファイルを検索します：
+
+1. `.hellshake-yano/dictionary.json`（プロジェクト固有）
+2. `hellshake-yano.dict.json`（プロジェクトルート）
+3. `~/.config/hellshake-yano/dictionary.json`（グローバル）
+
+#### 辞書フォーマット
+
+**JSONフォーマット**（推奨）:
+```json
+{
+  "customWords": ["機械学習", "深層学習"],
+  "preserveWords": ["HelloWorld", "getElementById"],
+  "mergeRules": {
+    "の": "always",
+    "を": "always"
+  },
+  "hintPatterns": [
+    {
+      "pattern": "^-\\s*\\[\\s*\\]\\s*(.)",
+      "hintPosition": "capture:1",
+      "priority": 100,
+      "description": "チェックボックスの最初の文字"
+    }
+  ]
+}
+```
+
+**YAMLフォーマット**:
+```yaml
+customWords:
+  - 機械学習
+  - 深層学習
+hintPatterns:
+  - pattern: "^-\\s*\\[\\s*\\]\\s*(.)"
+    hintPosition: "capture:1"
+    priority: 100
+```
+
+**シンプルテキストフォーマット**:
+```
+# カスタム単語
+機械学習
+深層学習
+
+# 保持する単語（!で始める）
+!HelloWorld
+!getElementById
+
+# ヒントパターン（@優先度:パターン:位置）
+@100:^-\s*\[\s*\]\s*(.):capture:1
+```
+
+#### ヒントパターンマッチング
+
+特定の文書構造に対してヒント配置を優先するための正規表現パターンを定義できます：
+
+- **チェックボックス**: `- [ ] タスク` → 「タ」にヒント
+- **番号付きリスト**: `1. 項目` → 「項」にヒント
+- **Markdownヘッダー**: `## タイトル` → 「タ」にヒント
+- **日本語括弧**: 「内容」 → 「内」にヒント
+
+#### 辞書コマンド
+
+```vim
+:HellshakeYanoReloadDict    " 辞書を再読み込み
+:HellshakeYanoEditDict      " 辞書ファイルを編集
+:HellshakeYanoShowDict      " 現在の辞書を表示
+:HellshakeYanoValidateDict  " 辞書フォーマットを検証
+```
+
+#### 設定
+
+```vim
+let g:hellshake_yano_dictionary_path = '~/.config/my-dict.json'
+let g:hellshake_yano_use_builtin_dict = v:true
+let g:hellshake_yano_dictionary_merge = 'merge'  " または 'override'
+```
 - 語尾にヒントが表示されることで、自然な選択フローを実現
 - 特に日本語テキストで有効
 

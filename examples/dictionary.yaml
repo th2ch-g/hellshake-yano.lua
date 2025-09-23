@@ -1,0 +1,46 @@
+version: "1.0"
+metadata:
+  author: "hellshake-yano"
+  description: "Sample YAML user dictionary for Japanese programming terms"
+  created: "2024-01-01"
+
+customWords:
+  - 機械学習
+  - 深層学習
+  - 人工知能
+  - ニューラルネットワーク
+  - アルゴリズム
+  - データサイエンス
+
+preserveWords:
+  - HelloWorld
+  - getElementById
+  - addEventListener
+  - TypeScript
+
+mergeRules:
+  の: always
+  を: always
+  に: always
+  が: always
+
+compoundPatterns:
+  - ".*Controller$"
+  - ".*Service$"
+  - "^I[A-Z].*"
+
+hintPatterns:
+  - pattern: "^-\\s*\\[\\s*\\]\\s*(.)"
+    hintPosition: "capture:1"
+    priority: 100
+    description: "チェックボックス後の最初の文字"
+
+  - pattern: "^\\d+\\.\\s*(.)"
+    hintPosition: "capture:1"
+    priority: 95
+    description: "番号付きリストの最初の文字"
+
+  - pattern: "^#+\\s*(.)"
+    hintPosition: "capture:1"
+    priority: 90
+    description: "Markdownヘッダーの最初の文字"

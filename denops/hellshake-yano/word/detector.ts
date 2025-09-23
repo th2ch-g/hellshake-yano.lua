@@ -16,6 +16,7 @@ import { charIndexToByteIndex } from "../utils/encoding.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
 import { convertToDisplayColumn } from "../hint-utils.ts";
 import { WordDictionaryImpl, createBuiltinDictionary, applyDictionaryCorrection } from "./dictionary.ts";
+import { DictionaryLoader, DictionaryMerger, VimConfigBridge, type UserDictionary } from "./dictionary-loader.ts";
 
 /**
  * Position-aware segment interface for tracking original positions
@@ -517,6 +518,10 @@ export class TinySegmenterWordDetector implements WordDetector {
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
   private dictionary: WordDictionaryImpl; // 辞書ベースの補正システム
+  private dictionaryLoader: DictionaryLoader; // ユーザー定義辞書ローダー
+  private dictionaryMerger: DictionaryMerger; // 辞書マージャー
+  private vimBridge: VimConfigBridge; // Vim設定ブリッジ
+  private mergedDictionary?: WordDictionaryImpl; // マージ済み辞書（キャッシュ）
 
   /**
    * TinySegmenterWordDetectorのコンストラクタ
@@ -550,6 +555,11 @@ export class TinySegmenterWordDetector implements WordDetector {
     this.globalConfig = globalConfig;
     this.segmenter = TinySegmenter.getInstance();
     this.dictionary = createBuiltinDictionary(); // ビルトイン辞書で初期化
+
+    // ユーザー定義辞書システムを初期化
+    this.dictionaryLoader = new DictionaryLoader();
+    this.dictionaryMerger = new DictionaryMerger();
+    this.vimBridge = new VimConfigBridge();
   }
 
   /**
@@ -738,8 +748,26 @@ export class TinySegmenterWordDetector implements WordDetector {
    *
    * @private
    */
+  /**
+   * ユーザー定義辞書を読み込んでマージ
+   */
+  async initializeUserDictionary(denops?: Denops): Promise<void> {
+    try {
+      if (denops) {
+        const config = await this.vimBridge.getConfig(denops);
+        const userDict = await this.dictionaryLoader.loadUserDictionary(config);
+        this.mergedDictionary = this.dictionaryMerger.merge(this.dictionary, userDict);
+      }
+    } catch (error) {
+      console.warn('Failed to initialize user dictionary:', error);
+      this.mergedDictionary = this.dictionary; // フォールバック
+    }
+  }
+
   private applyDictionaryCorrection(segments: string[]): string[] {
-    return applyDictionaryCorrection(segments, this.dictionary);
+    // マージ済み辞書があればそれを使用、なければビルトイン辞書を使用
+    const dictionary = this.mergedDictionary || this.dictionary;
+    return applyDictionaryCorrection(segments, dictionary);
   }
 
   private async fallbackDetection(

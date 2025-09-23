@@ -499,30 +499,30 @@
 @ref: denops/hellshake-yano/word/detector.ts（TinySegmenterWordDetector）
 
 ##### 🔴 Red Phase: テストファースト
-- [ ] **辞書機能の基本テスト（10ケース）**
-  - [ ] カスタム単語の登録と検索
-  - [ ] 複合語パターンのマッチング
-  - [ ] 分割禁止ワードの識別
-  - [ ] 結合ルールの適用
-  - [ ] 優先度による競合解決
-  - [ ] 辞書ファイルの読み込み
-  - [ ] プロジェクト固有辞書の統合
-  - [ ] ビルトイン辞書の利用
-  - [ ] 辞書のキャッシュ機能
-  - [ ] 動的辞書更新
+- [x] **辞書機能の基本テスト（10ケース）**
+  - [x] カスタム単語の登録と検索
+  - [x] 複合語パターンのマッチング
+  - [x] 分割禁止ワードの識別
+  - [x] 結合ルールの適用
+  - [x] 優先度による競合解決
+  - [x] 辞書ファイルの読み込み
+  - [x] プロジェクト固有辞書の統合
+  - [x] ビルトイン辞書の利用
+  - [x] 辞書のキャッシュ機能
+  - [x] 動的辞書更新
 
-- [ ] **日本語プログラミング用語テスト（8ケース）**
-  - [ ] 「関数定義」→ そのまま保持
-  - [ ] 「非同期処理」→ そのまま保持
-  - [ ] 「配列操作」→ そのまま保持
-  - [ ] 「オブジェクト指向」→ そのまま保持
-  - [ ] 「データベース接続」→ そのまま保持
-  - [ ] 「ユニットテスト」→ そのまま保持
-  - [ ] 「バージョン管理」→ そのまま保持
-  - [ ] 「デバッグ実行」→ そのまま保持
+- [x] **日本語プログラミング用語テスト（8ケース）**
+  - [x] 「関数定義」→ そのまま保持
+  - [x] 「非同期処理」→ そのまま保持
+  - [x] 「配列操作」→ そのまま保持
+  - [x] 「オブジェクト指向」→ そのまま保持
+  - [x] 「データベース接続」→ そのまま保持
+  - [x] 「ユニットテスト」→ そのまま保持
+  - [x] 「バージョン管理」→ そのまま保持
+  - [x] 「デバッグ実行」→ そのまま保持
 
 ##### 🟢 Green Phase: 実装
-- [ ] **Stage 1: 辞書インターフェース定義**
+- [x] **Stage 1: 辞書インターフェース定義**
   ```typescript
   interface WordDictionary {
     customWords: Set<string>;
@@ -539,15 +539,15 @@
   }
   ```
 
-- [ ] **Stage 2: ビルトイン辞書の実装**
-  - [ ] 日本語プログラミング用語辞書
-  - [ ] 頻出複合語リスト
-  - [ ] 助詞・接続詞の結合ルール
+- [x] **Stage 2: ビルトイン辞書の実装**
+  - [x] 日本語プログラミング用語辞書
+  - [x] 頻出複合語リスト
+  - [x] 助詞・接続詞の結合ルール
 
-- [ ] **Stage 3: TinySegmenterWordDetectorへの統合**
-  - [ ] `applyDictionaryCorrection`メソッドの追加
-  - [ ] `segmentsToWords`前に辞書補正を適用
-  - [ ] 辞書キャッシュの実装
+- [x] **Stage 3: TinySegmenterWordDetectorへの統合**
+  - [x] `applyDictionaryCorrection`メソッドの追加
+  - [x] `segmentsToWords`前に辞書補正を適用
+  - [x] 辞書キャッシュの実装
 
 ##### 🔵 Refactor Phase: 最適化
 - [ ] 辞書検索の高速化（Trie構造など）
@@ -560,40 +560,52 @@
 @ref: denops/hellshake-yano/word/dictionary.ts（既存の辞書システム）
 
 ##### 🔴 Red Phase: テストファースト
-- [ ] **辞書ファイル読み込みテスト（12ケース）**
-  - [ ] JSON形式の辞書ファイル読み込み
-  - [ ] YAML形式の辞書ファイル読み込み
-  - [ ] テキスト形式の辞書ファイル読み込み
-  - [ ] プロジェクト辞書の検索と読み込み
-  - [ ] グローバル辞書の検索と読み込み
-  - [ ] 存在しないファイルのハンドリング
-  - [ ] 不正な形式のファイルのハンドリング
-  - [ ] 空の辞書ファイルの処理
-  - [ ] 辞書の優先順位処理
-  - [ ] 複数辞書のマージ
-  - [ ] 循環参照の検出
-  - [ ] 大容量ファイルの処理
+- [x] **辞書ファイル読み込みテスト（12ケース）**
+  - [x] JSON形式の辞書ファイル読み込み
+  - [x] YAML形式の辞書ファイル読み込み
+  - [x] テキスト形式の辞書ファイル読み込み
+  - [x] プロジェクト辞書の検索と読み込み
+  - [x] グローバル辞書の検索と読み込み
+  - [x] 存在しないファイルのハンドリング
+  - [x] 不正な形式のファイルのハンドリング
+  - [x] 空の辞書ファイルの処理
+  - [x] 辞書の優先順位処理
+  - [x] 複数辞書のマージ
+  - [x] 循環参照の検出
+  - [x] 大容量ファイルの処理
 
-- [ ] **辞書マージテスト（8ケース）**
-  - [ ] ビルトイン辞書との統合
-  - [ ] override戦略でのマージ
-  - [ ] merge戦略でのマージ
-  - [ ] 重複単語の処理
-  - [ ] パターンの競合解決
-  - [ ] 結合ルールの優先順位
-  - [ ] カスタム単語の追加
-  - [ ] 分割禁止ワードの統合
+- [x] **辞書マージテスト（8ケース）**
+  - [x] ビルトイン辞書との統合
+  - [x] override戦略でのマージ
+  - [x] merge戦略でのマージ
+  - [x] 重複単語の処理
+  - [x] パターンの競合解決
+  - [x] 結合ルールの優先順位
+  - [x] カスタム単語の追加
+  - [x] 分割禁止ワードの統合
 
-- [ ] **Vim連携テスト（6ケース）**
-  - [ ] 設定値の読み取り
-  - [ ] 辞書パスの解決
-  - [ ] 動的再読み込み
-  - [ ] エラー通知
-  - [ ] デフォルト値の適用
-  - [ ] 環境変数の展開
+- [x] **Vim連携テスト（6ケース）**
+  - [x] 設定値の読み取り
+  - [x] 辞書パスの解決
+  - [x] 動的再読み込み
+  - [x] エラー通知
+  - [x] デフォルト値の適用
+  - [x] 環境変数の展開
+
+- [x] **ヒントパターンテスト（10ケース）**
+  - [x] 正規表現パターンマッチング
+  - [x] キャプチャグループの抽出
+  - [x] ヒント優先度の設定
+  - [x] チェックボックスパターン（`- [ ] テキスト`）
+  - [x] 番号付きリストパターン（`1. テキスト`）
+  - [x] Markdownヘッダーパターン（`## テキスト`）
+  - [x] 日本語括弧パターン（「テキスト」）
+  - [x] 複数パターンの競合解決
+  - [x] 優先度による並び替え
+  - [x] 隣接単語との調整
 
 ##### 🟢 Green Phase: 実装
-- [ ] **Stage 1: 辞書ファイルローダー**
+- [x] **Stage 1: 辞書ファイルローダー**
   ```typescript
   class DictionaryLoader {
     private readonly searchPaths = [
@@ -616,15 +628,29 @@
     preserveWords: string[];
     mergeRules: Map<string, MergeStrategy>;
     compoundPatterns: RegExp[];
+    hintPatterns?: HintPattern[];  // 新規追加
     metadata?: {
       version?: string;
       author?: string;
       description?: string;
     };
   }
+
+  interface HintPattern {
+    pattern: string | RegExp;  // 正規表現パターン
+    hintPosition: HintPositionRule;  // ヒント配置ルール
+    priority: number;  // 優先度（高いほど優先）
+    description?: string;  // 説明（オプション）
+  }
+
+  type HintPositionRule =
+    | 'capture:1' | 'capture:2' | 'capture:3'  // キャプチャグループ
+    | 'start'  // マッチの開始位置
+    | 'end'    // マッチの終了位置
+    | { offset: number; from: 'start' | 'end' };  // カスタムオフセット
   ```
 
-- [ ] **Stage 2: 辞書マージ機能**
+- [x] **Stage 2: 辞書マージ機能**
   ```typescript
   class DictionaryMerger {
     merge(
@@ -641,7 +667,7 @@
   }
   ```
 
-- [ ] **Stage 3: Vim設定との連携**
+- [x] **Stage 3: Vim設定との連携**
   ```typescript
   interface VimDictionaryConfig {
     dictionaryPath?: string;         // g:hellshake_yano_dictionary_path
@@ -657,7 +683,31 @@
   }
   ```
 
-- [ ] **Stage 4: 辞書管理コマンド**
+- [x] **Stage 4: ヒントパターン処理エンジン**
+  ```typescript
+  class HintPatternProcessor {
+    applyHintPatterns(words: Word[], text: string, patterns: HintPattern[]): Word[] {
+      // パターンマッチングとヒント優先度設定
+    }
+
+    private extractHintTarget(
+      match: RegExpExecArray,
+      rule: HintPositionRule
+    ): { text: string; position: number } | null {
+      // キャプチャグループや位置ルールの解析
+    }
+
+    private findWordAtPosition(words: Word[], position: number): Word | null {
+      // 指定位置の単語を検索
+    }
+
+    private sortByHintPriority(words: Word[]): Word[] {
+      // 優先度による並び替えと隣接調整
+    }
+  }
+  ```
+
+- [x] **Stage 5: 辞書管理コマンド**
   ```typescript
   // Vimコマンドの実装
   export async function registerDictionaryCommands(denops: Denops) {
@@ -685,7 +735,7 @@
   - [ ] 復旧機能
 
 ##### 辞書ファイル形式の仕様
-- [ ] **JSON形式仕様**
+- [x] **JSON形式仕様**
   ```json
   {
     "$schema": "https://example.com/hellshake-yano-dict-schema.json",
@@ -696,11 +746,37 @@
       "の": "always",
       "を": "always"
     },
-    "compoundPatterns": [".*Controller$", "^I[A-Z].*"]
+    "compoundPatterns": [".*Controller$", "^I[A-Z].*"],
+    "hintPatterns": [
+      {
+        "pattern": "^-\\s*\\[\\s*\\]\\s*(.)",
+        "hintPosition": "capture:1",
+        "priority": 100,
+        "description": "チェックボックス後の最初の文字"
+      },
+      {
+        "pattern": "^\\d+\\.\\s*(.)",
+        "hintPosition": "capture:1",
+        "priority": 95,
+        "description": "番号付きリストの最初の文字"
+      },
+      {
+        "pattern": "^(#+)\\s*(.)",
+        "hintPosition": "capture:2",
+        "priority": 90,
+        "description": "Markdownヘッダーの最初の文字"
+      },
+      {
+        "pattern": "「([^」])",
+        "hintPosition": "capture:1",
+        "priority": 80,
+        "description": "括弧内の最初の文字"
+      }
+    ]
   }
   ```
 
-- [ ] **YAML形式仕様**
+- [x] **YAML形式仕様**
   ```yaml
   version: "1.0"
   customWords:
@@ -711,9 +787,18 @@
   mergeRules:
     の: always
     を: always
+  hintPatterns:
+    - pattern: "^-\\s*\\[\\s*\\]\\s*(.)"
+      hintPosition: "capture:1"
+      priority: 100
+      description: "チェックボックス後の最初の文字"
+    - pattern: "^\\d+\\.\\s*(.)"
+      hintPosition: "capture:1"
+      priority: 95
+      description: "番号付きリストの最初の文字"
   ```
 
-- [ ] **テキスト形式仕様**
+- [x] **テキスト形式仕様**
   ```
   # カスタム単語（#でコメント）
   機械学習
@@ -726,14 +811,21 @@
   # 結合ルール（=で定義）
   の=always
   を=always
+
+  # ヒントパターン（@で定義、優先度:パターン:位置）
+  @100:^-\s*\[\s*\]\s*(.)：capture:1
+  @95:^\d+\.\s*(.)：capture:1
+  @90:^#+\s*(.)：capture:1
+  @80:「([^」])：capture:1
   ```
 
 ##### マイルストーン
-- [ ] **M1**: 基本的な辞書ファイル読み込み機能
-- [ ] **M2**: 複数形式のサポート完了
-- [ ] **M3**: Vim連携機能の実装
-- [ ] **M4**: 辞書管理コマンドの完成
-- [ ] **M5**: ドキュメントとサンプル辞書の提供
+- [x] **M1**: 基本的な辞書ファイル読み込み機能
+- [x] **M2**: 複数形式のサポート完了
+- [x] **M3**: ヒントパターン処理エンジンの実装
+- [ ] **M4**: Vim連携機能の実装
+- [ ] **M5**: 辞書管理コマンドの完成
+- [ ] **M6**: ドキュメントとサンプル辞書の提供
 
 #### sub2 隣接文字解析による補正の強化【優先度: 高】
 @target: denops/hellshake-yano/utils/charType.ts（新規作成）
