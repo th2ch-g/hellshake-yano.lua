@@ -1242,6 +1242,10 @@ async function displayHintsOptimized(
 // グローバル状態管理
 let _isRenderingHints = false;
 let _renderingAbortController: AbortController | null = null;
+let _highlightAbortController: AbortController | null = null;
+
+// バッチ処理の設定
+const HIGHLIGHT_BATCH_SIZE = 15; // 1バッチあたりの処理数（パフォーマンス調整可能）
 
 /**
  * 非同期ヒント表示関数
@@ -1927,6 +1931,317 @@ async function highlightCandidateHints(
 }
 
 /**
+ * 候補のヒントを非同期でハイライト表示（UX改善）
+ *
+ * @description fire-and-forgetパターンで描画を実行し、入力をブロックしない
+ * @param denops - Denops インスタンス
+ * @param inputPrefix - ユーザーが入力した文字列のプレフィックス
+ * @param onComplete - 描画完了時のコールバック（オプション）
+ * @returns void - Promiseを返さない（非ブロッキング）
+ *
+ * @example
+ * // 1文字目入力後のハイライト更新
+ * highlightCandidateHintsAsync(denops, "a");
+ *
+ * // 完了コールバック付き
+ * highlightCandidateHintsAsync(denops, "ab", () => {
+ *   console.log("Highlight rendering completed");
+ * });
+ */
+export function highlightCandidateHintsAsync(
+  denops: Denops,
+  inputPrefix: string,
+  onComplete?: () => void,
+): void {
+  // 前のハイライト描画をキャンセル
+  if (_highlightAbortController) {
+    _highlightAbortController.abort();
+  }
+
+  // 新しいAbortControllerを作成
+  _highlightAbortController = new AbortController();
+  const currentController = _highlightAbortController;
+
+  // 非同期でハイライト処理を実行（awaitしない）
+  (async () => {
+    try {
+      // AbortSignalをチェックしながら処理
+      if (currentController.signal.aborted) {
+        return;
+      }
+
+      await highlightCandidateHintsOptimized(denops, inputPrefix, currentController.signal);
+
+      // 完了コールバックを実行
+      if (onComplete && !currentController.signal.aborted) {
+        onComplete();
+      }
+    } catch (error) {
+      // エラーは内部でキャッチして、外部に投げない（非ブロッキング保証）
+      if (error instanceof Error) {
+        console.error("[hellshake-yano] Async highlight error:", error.message, error.stack);
+      } else {
+        console.error("[hellshake-yano] Async highlight error:", error);
+      }
+    } finally {
+      // この描画が現在のものである場合のみフラグをリセット
+      if (currentController === _highlightAbortController) {
+        _highlightAbortController = null;
+      }
+    }
+  })();
+}
+
+/**
+ * バッチ処理でヒントのハイライトを最適化
+ *
+ * @description 大量のヒントを処理する際にメインスレッドをブロックしないよう、
+ *              バッチごとに制御を返しながら段階的に描画を行う
+ * @param denops - Denops インスタンス
+ * @param inputPrefix - マッチングに使用する入力プレフィックス
+ * @param signal - 中断シグナル
+ * @throws Error - バッファが無効な場合やその他の描画エラー
+ */
+async function highlightCandidateHintsOptimized(
+  denops: Denops,
+  inputPrefix: string,
+  signal: AbortSignal,
+): Promise<void> {
+  if (!config.highlight_selected) return;
+
+  // 候補となるヒントを分類
+  const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputPrefix));
+  const nonMatchingHints = currentHints.filter((h) => !h.hint.startsWith(inputPrefix));
+
+  if (currentHints.length === 0) return;
+
+  // バッファの存在確認
+  const bufnr = await denops.call("bufnr", "%") as number;
+  if (bufnr === -1 || signal.aborted) return;
+
+  // 表示だけをクリア（currentHintsは保持）
+  await clearHintDisplay(denops);
+
+  if (signal.aborted) return;
+
+  // Neovimの場合はextmarkで再表示
+  if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
+    await processExtmarksBatched(denops, matchingHints, nonMatchingHints, inputPrefix, bufnr, signal);
+  } else {
+    // Vimの場合はmatchaddで再表示
+    await processMatchaddBatched(denops, matchingHints, nonMatchingHints, signal);
+  }
+
+  if (!signal.aborted) {
+    // ヒント表示状態を保持
+    hintsVisible = true;
+  }
+}
+
+/**
+ * Neovim extmarkのバッチ処理
+ */
+async function processExtmarksBatched(
+  denops: Denops,
+  matchingHints: HintMapping[],
+  nonMatchingHints: HintMapping[],
+  inputPrefix: string,
+  bufnr: number,
+  signal: AbortSignal,
+): Promise<void> {
+  // マッチするヒントを優先的に処理
+  let processed = 0;
+
+  for (const hint of matchingHints) {
+    if (signal.aborted) return;
+
+    try {
+      const line = hint.word.line - 1; // 0ベースに変換
+      let col = 0;
+      if (hint.hintByteCol !== undefined && hint.hintByteCol > 0) {
+        col = hint.hintByteCol - 1;
+      } else if (hint.hintCol !== undefined && hint.hintCol > 0) {
+        col = hint.hintCol - 1;
+      } else {
+        col = (hint.word.byteCol || hint.word.col) - 1;
+      }
+
+      // ヒントテキストを分割
+      const firstChar = hint.hint.substring(0, inputPrefix.length);
+      const remainingChars = hint.hint.substring(inputPrefix.length);
+
+      // 分割したテキストを異なるハイライトで表示
+      const virtText: Array<[string, string]> = [];
+      if (firstChar) {
+        virtText.push([firstChar, "HellshakeYanoMarkerCurrent"]);
+      }
+      if (remainingChars) {
+        virtText.push([remainingChars, "HellshakeYanoMarker"]);
+      }
+
+      await denops.call(
+        "nvim_buf_set_extmark",
+        bufnr,
+        extmarkNamespace,
+        line,
+        Math.max(0, col),
+        {
+          virt_text: virtText,
+          virt_text_pos: "overlay",
+          priority: 999,
+        },
+      );
+    } catch (error) {
+      // エラーは無視して続行
+    }
+
+    processed++;
+    // バッチサイズに達したら制御を返す
+    if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  // マッチしないヒントを通常表示
+  for (const hint of nonMatchingHints) {
+    if (signal.aborted) return;
+
+    try {
+      const line = hint.word.line - 1; // 0ベースに変換
+      let col = 0;
+      if (hint.hintByteCol !== undefined && hint.hintByteCol > 0) {
+        col = hint.hintByteCol - 1;
+      } else if (hint.hintCol !== undefined && hint.hintCol > 0) {
+        col = hint.hintCol - 1;
+      } else {
+        col = (hint.word.byteCol || hint.word.col) - 1;
+      }
+
+      await denops.call(
+        "nvim_buf_set_extmark",
+        bufnr,
+        extmarkNamespace,
+        line,
+        Math.max(0, col),
+        {
+          virt_text: [[hint.hint, "HellshakeYanoMarker"]],
+          virt_text_pos: "overlay",
+          priority: 100,
+        },
+      );
+    } catch (error) {
+      // エラーは無視して続行
+    }
+
+    processed++;
+    // バッチサイズに達したら制御を返す
+    if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+}
+
+/**
+ * Vim matchaddのバッチ処理
+ */
+async function processMatchaddBatched(
+  denops: Denops,
+  matchingHints: HintMapping[],
+  nonMatchingHints: HintMapping[],
+  signal: AbortSignal,
+): Promise<void> {
+  let processed = 0;
+
+  // マッチするヒントをHellshakeYanoMarkerCurrentで表示
+  for (const hint of matchingHints) {
+    if (signal.aborted) return;
+
+    try {
+      const position = calculateHintPositionWithCoordinateSystem(
+        hint.word,
+        config.hint_position,
+        config.debug_coordinates,
+      );
+
+      let pattern: string;
+      switch (position.display_mode) {
+        case "before":
+        case "after":
+          pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
+          break;
+        case "overlay":
+          pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${
+            position.vim_col + hint.word.text.length + 1
+          }c`;
+          break;
+        default:
+          pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
+      }
+
+      const matchId = await denops.call(
+        "matchadd",
+        "HellshakeYanoMarkerCurrent",
+        pattern,
+        999,
+      ) as number;
+      fallbackMatchIds.push(matchId);
+    } catch (error) {
+      // エラーは無視して続行
+    }
+
+    processed++;
+    // バッチサイズに達したら制御を返す
+    if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  // マッチしないヒントをHellshakeYanoMarkerで表示
+  for (const hint of nonMatchingHints) {
+    if (signal.aborted) return;
+
+    try {
+      const position = calculateHintPositionWithCoordinateSystem(
+        hint.word,
+        config.hint_position,
+        config.debug_coordinates,
+      );
+
+      let pattern: string;
+      switch (position.display_mode) {
+        case "before":
+        case "after":
+          pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
+          break;
+        case "overlay":
+          pattern = `\\%${position.vim_line}l\\%>${position.vim_col - 1}c\\%<${
+            position.vim_col + hint.word.text.length + 1
+          }c`;
+          break;
+        default:
+          pattern = `\\%${position.vim_line}l\\%${position.vim_col}c.`;
+      }
+
+      const matchId = await denops.call(
+        "matchadd",
+        "HellshakeYanoMarker",
+        pattern,
+        100,
+      ) as number;
+      fallbackMatchIds.push(matchId);
+    } catch (error) {
+      // エラーは無視して続行
+    }
+
+    processed++;
+    // バッチサイズに達したら制御を返す
+    if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+}
+
+/**
  * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする
  *
  * ユーザーが入力したヒント文字列に対応する位置にカーソルを移動します。
@@ -2150,7 +2465,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     const shouldHighlight = config.highlight_selected && !singleCharTarget;
 
     if (shouldHighlight) {
-      await highlightCandidateHints(denops, inputChar);
+      // 非同期版を使用してメインスレッドをブロックしない
+      highlightCandidateHintsAsync(denops, inputChar);
     }
 
     // 第2文字の入力を待機
