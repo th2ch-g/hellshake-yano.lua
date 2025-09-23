@@ -1029,74 +1029,304 @@
 #### sub3 コンテキスト認識による分割調整【優先度: 中】
 @target: denops/hellshake-yano/types.ts（DetectionContext拡張）
 @target: denops/hellshake-yano/word/context.ts（新規作成）
-@test: denops/hellshake-yano/word/context.test.ts（新規作成）
+@target: denops/hellshake-yano/word/context.test.ts（新規作成）
+@integration: denops/hellshake-yano/word/detector.ts（コンテキスト統合）
+
+##### 設計概要
+現在のDetectionContextの問題点を解決：
+- ファイルタイプ情報が含まれていない
+- 構文コンテキスト（コメント、文字列等）が考慮されていない
+- 言語固有の命名規則（CamelCase、snake_case等）に非対応
+- すべてのファイルで同じ分割ルールが適用される
 
 ##### 🔴 Red Phase: テストファースト
-- [ ] **ファイルタイプ別分割テスト（8ケース）**
-  - [ ] TypeScriptファイルでの分割
-  - [ ] JavaScriptファイルでの分割
-  - [ ] Pythonファイルでの分割
-  - [ ] Markdownファイルでの分割
-  - [ ] JSONファイルでの分割
-  - [ ] YAMLファイルでの分割
-  - [ ] HTMLファイルでの分割
-  - [ ] プレーンテキストでの分割
+- [ ] **ファイルタイプ別分割テスト（context.test.ts - 8ケース）**
+  - [ ] TypeScript: `import { Component } from '@angular/core'` → 適切な分割
+  - [ ] JavaScript: `const getUserName = (id) => users[id]` → 関数名と変数を認識
+  - [ ] Python: `def get_user_name(user_id):` → snake_caseを保持
+  - [ ] Markdown: `# 見出し [リンク](url)` → 構造要素を認識
+  - [ ] JSON: `"propertyName": "value"` → プロパティ名を保持
+  - [ ] YAML: `key: value # comment` → コメントを分離
+  - [ ] HTML: `<div class="container">` → タグと属性を認識
+  - [ ] プレーンテキスト: 通常の日本語文書 → 標準分割
 
-- [ ] **文脈認識テスト（10ケース）**
-  - [ ] コメント内での分割
-  - [ ] 文字列リテラル内での分割
-  - [ ] 関数名の認識
-  - [ ] 変数名の認識
-  - [ ] クラス名の認識
-  - [ ] import文での分割
-  - [ ] CamelCase分割
-  - [ ] snake_case分割
-  - [ ] kebab-case分割
-  - [ ] インデントレベルの考慮
+- [ ] **文脈認識テスト（context.test.ts - 10ケース）**
+  - [ ] コメント内: `// これはコメントです` → コメントとして認識
+  - [ ] 文字列リテラル内: `"Hello World"` → 文字列として保持
+  - [ ] 関数名: `getUserName` → 関数として認識
+  - [ ] 変数名: `userName` → 変数として認識
+  - [ ] クラス名: `UserManager` → クラスとして認識
+  - [ ] import文: `import { Component }` → import構文として処理
+  - [ ] CamelCase: `getUserName` → `[get][User][Name]`（設定による）
+  - [ ] snake_case: `user_name` → そのまま保持
+  - [ ] kebab-case: `user-name` → そのまま保持
+  - [ ] インデントレベル: 深さ0/2/4/8での重要度変化
 
 ##### 🟢 Green Phase: 実装
-- [ ] **Stage 1: DetectionContext拡張**
+- [ ] **Stage 1: DetectionContext拡張 (types.ts)**
   ```typescript
   export interface DetectionContext {
     currentKey?: string;
     minWordLength?: number;
     metadata?: Record<string, unknown>;
-    // 新規追加
-    fileType?: string;
+
+    // 新規追加フィールド
+    fileType?: string;           // Vimのfiletype（'typescript', 'python'等）
     syntaxContext?: SyntaxContext;
     lineContext?: LineContext;
   }
 
-  interface SyntaxContext {
-    inComment: boolean;
-    inString: boolean;
-    inFunction: boolean;
-    inClass: boolean;
-    language: string;
+  export interface SyntaxContext {
+    inComment: boolean;         // コメント内か
+    inString: boolean;          // 文字列リテラル内か
+    inFunction: boolean;        // 関数定義内か
+    inClass: boolean;          // クラス定義内か
+    language: string;          // 言語名（fileTypeから判定）
+    syntaxGroups?: string[];   // Vimの構文グループ（オプション）
   }
 
-  interface LineContext {
-    isComment: boolean;
-    isDocString: boolean;
-    isImport: boolean;
-    indentLevel: number;
+  export interface LineContext {
+    isComment: boolean;        // コメント行か
+    isDocString: boolean;      // ドキュメント文字列か
+    isImport: boolean;         // import/require文か
+    indentLevel: number;       // インデントレベル（スペース数）
+    lineType: string;         // 行の種類（'code', 'comment', 'string'等）
+    precedingChar?: string;    // 直前の文字（文脈判定用）
+    followingChar?: string;    // 直後の文字（文脈判定用）
   }
   ```
 
-- [ ] **Stage 2: ファイルタイプ別ルール**
-  - [ ] 言語別キーワードリスト
-  - [ ] 命名規則パターン
-  - [ ] 分割ルールマップ
+- [ ] **Stage 2: コンテキスト検出器 (context.ts)**
+  ```typescript
+  export class ContextDetector {
+    private cache = new Map<string, LanguageRule>();
 
-- [ ] **Stage 3: コンテキスト検出器**
-  - [ ] ファイルタイプ判定
-  - [ ] 構文解析（簡易）
-  - [ ] 行種別判定
+    // ファイルタイプの取得
+    async detectFileType(denops: Denops): Promise<string> {
+      const filetype = await denops.eval('&filetype') as string;
+      return filetype || 'text';
+    }
+
+    // 構文コンテキストの検出
+    detectSyntaxContext(
+      text: string,
+      line: number,
+      fileType: string
+    ): SyntaxContext {
+      const language = this.mapFileTypeToLanguage(fileType);
+      const patterns = this.getLanguagePatterns(language);
+
+      return {
+        inComment: this.isInComment(text, patterns.commentPatterns),
+        inString: this.isInString(text, patterns.stringPatterns),
+        inFunction: this.isInFunction(text, patterns.functionPatterns),
+        inClass: this.isInClass(text, patterns.classPatterns),
+        language
+      };
+    }
+
+    // 行コンテキストの検出
+    detectLineContext(
+      line: string,
+      fileType: string
+    ): LineContext {
+      const indentMatch = line.match(/^(\s*)/);
+      const indentLevel = indentMatch ? indentMatch[1].length : 0;
+
+      return {
+        isComment: this.isCommentLine(line, fileType),
+        isDocString: this.isDocStringLine(line, fileType),
+        isImport: this.isImportLine(line, fileType),
+        indentLevel,
+        lineType: this.detectLineType(line, fileType)
+      };
+    }
+
+    // コンテキストに基づく分割ルールの取得
+    getSplittingRules(context: DetectionContext): SplittingRules {
+      const fileType = context.fileType || 'text';
+      const rules = this.getLanguageRules(fileType);
+
+      // コンテキストに応じてルールを調整
+      if (context.syntaxContext?.inComment) {
+        return { ...rules, splitCamelCase: false };
+      }
+      if (context.syntaxContext?.inString) {
+        return { ...rules, preserveAll: true };
+      }
+
+      return rules;
+    }
+  }
+  ```
+
+- [ ] **Stage 3: ファイルタイプ別ルール定義 (context.ts)**
+  ```typescript
+  export interface LanguageRule {
+    // パターン定義
+    commentPatterns: RegExp[];      // コメントパターン
+    stringPatterns: RegExp[];       // 文字列パターン
+    functionPatterns: RegExp[];     // 関数定義パターン
+    classPatterns: RegExp[];        // クラス定義パターン
+    importPatterns: RegExp[];       // import文パターン
+
+    // キーワードと命名規則
+    keywords: string[];             // 予約語リスト
+    namingConventions: {
+      function: 'camelCase' | 'snake_case' | 'PascalCase';
+      variable: 'camelCase' | 'snake_case' | 'UPPER_CASE';
+      class: 'PascalCase';
+      constant: 'UPPER_CASE';
+    };
+
+    // 分割設定
+    splitCamelCase: boolean;        // CamelCaseを分割するか
+    preserveSnakeCase: boolean;     // snake_caseを保持するか
+    preserveKebabCase: boolean;     // kebab-caseを保持するか
+    respectIndentation: boolean;    // インデントを考慮するか
+  }
+
+  export const LANGUAGE_RULES: Record<string, LanguageRule> = {
+    typescript: {
+      commentPatterns: [/\/\/.*$/, /\/\*[\s\S]*?\*\//],
+      stringPatterns: [/"(?:[^"\\]|\\.)*"/, /'(?:[^'\\]|\\.)*'/, /`(?:[^`\\]|\\.)*`/],
+      functionPatterns: [/function\s+(\w+)/, /(\w+)\s*\([^)]*\)\s*=>/, /(\w+)\s*:\s*\([^)]*\)\s*=>/],
+      classPatterns: [/class\s+(\w+)/, /interface\s+(\w+)/],
+      importPatterns: [/^import\s+/, /^export\s+/],
+      keywords: ['import', 'export', 'class', 'interface', 'type', 'const', 'let', 'var'],
+      namingConventions: {
+        function: 'camelCase',
+        variable: 'camelCase',
+        class: 'PascalCase',
+        constant: 'UPPER_CASE'
+      },
+      splitCamelCase: true,
+      preserveSnakeCase: false,
+      preserveKebabCase: false,
+      respectIndentation: true
+    },
+
+    python: {
+      commentPatterns: [/#.*$/],
+      stringPatterns: [/"(?:[^"\\]|\\.)*"/, /'(?:[^'\\]|\\.)*'/, /"""[\s\S]*?"""/, /'''[\s\S]*?'''/],
+      functionPatterns: [/def\s+(\w+)/, /async\s+def\s+(\w+)/],
+      classPatterns: [/class\s+(\w+)/],
+      importPatterns: [/^import\s+/, /^from\s+.*\s+import/],
+      keywords: ['import', 'from', 'class', 'def', 'if', 'for', 'while', 'with'],
+      namingConventions: {
+        function: 'snake_case',
+        variable: 'snake_case',
+        class: 'PascalCase',
+        constant: 'UPPER_CASE'
+      },
+      splitCamelCase: false,
+      preserveSnakeCase: true,
+      preserveKebabCase: false,
+      respectIndentation: true
+    },
+
+    markdown: {
+      commentPatterns: [/<!--[\s\S]*?-->/],
+      stringPatterns: [/`[^`]*`/, /```[\s\S]*?```/],
+      functionPatterns: [],
+      classPatterns: [],
+      importPatterns: [],
+      keywords: [],
+      namingConventions: {
+        function: 'camelCase',
+        variable: 'camelCase',
+        class: 'PascalCase',
+        constant: 'UPPER_CASE'
+      },
+      splitCamelCase: false,
+      preserveSnakeCase: true,
+      preserveKebabCase: true,
+      respectIndentation: false
+    }
+    // 他の言語...
+  };
+  ```
+
+- [ ] **Stage 4: WordDetector統合 (detector.ts拡張)**
+  ```typescript
+  class TinySegmenterWordDetector {
+    private contextDetector = new ContextDetector();
+
+    async detectWords(
+      text: string,
+      startLine: number,
+      context?: DetectionContext
+    ): Promise<Word[]> {
+      // コンテキスト情報の取得と拡張
+      const enrichedContext = await this.enrichContext(context);
+
+      // ファイルタイプ別ルールの取得
+      const rules = this.contextDetector.getSplittingRules(enrichedContext);
+
+      // 各行ごとにコンテキスト認識分割を実行
+      const lines = text.split('\n');
+      const allWords: Word[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const lineContext = this.contextDetector.detectLineContext(
+          lines[i],
+          enrichedContext.fileType || 'text'
+        );
+
+        // コンテキストに応じた分割
+        const words = await this.splitWithContext(
+          lines[i],
+          startLine + i,
+          enrichedContext,
+          lineContext,
+          rules
+        );
+
+        allWords.push(...words);
+      }
+
+      return allWords;
+    }
+
+    private async enrichContext(
+      context?: DetectionContext
+    ): Promise<DetectionContext> {
+      if (!context) {
+        context = {};
+      }
+
+      // Vimのfiletypeを取得して追加
+      if (!context.fileType && this.denops) {
+        context.fileType = await this.contextDetector.detectFileType(this.denops);
+      }
+
+      return context;
+    }
+  }
+  ```
 
 ##### 🔵 Refactor Phase: 最適化
-- [ ] コンテキスト検出のキャッシュ
-- [ ] ルールの動的読み込み
-- [ ] 言語サーバーとの連携検討
+- [ ] **パフォーマンス最適化**
+  - [ ] ファイルタイプ別ルールのキャッシュ
+  - [ ] 正規表現の事前コンパイルとキャッシュ
+  - [ ] 行コンテキストの差分検出
+
+- [ ] **精度向上**
+  - [ ] Vim構文グループの活用（synID、synIDattr）
+  - [ ] 言語サーバープロトコル（LSP）との連携検討
+  - [ ] Tree-sitterベースの構文解析
+
+- [ ] **設定の外部化**
+  - [ ] ユーザー定義言語ルールのサポート
+  - [ ] プロジェクト別設定ファイル（.hellshake-yano/languages.json）
+  - [ ] 動的ルール更新機能
+
+##### マイルストーン
+- [ ] **M1**: DetectionContext拡張とインターフェース定義
+- [ ] **M2**: ContextDetectorクラスの実装
+- [ ] **M3**: 主要3言語（TypeScript、Python、Markdown）のルール実装
+- [ ] **M4**: WordDetectorへの統合とテスト
+- [ ] **M5**: 追加言語サポートとドキュメント作成
 
 #### sub4 ハイブリッド検出アプローチの強化【優先度: 中】
 @target: denops/hellshake-yano/word/enhanced-hybrid.ts（新規作成）
@@ -1175,11 +1405,10 @@
 - [ ] ASCII文字のテスト
 - [ ] タブ文字のテスト（様々なタブ幅）
 - [ ] 日本語文字のテスト
-
 - [ ] 絵文字・特殊文字のテスト
 - [ ] 混合文字列のテスト
 
-#### sub2 隣接判定のテス定ト
+#### sub2 隣接判定のテスト
 @target: tests/adjacency_with_display_test.ts
 - [ ] タブ文字を含む隣接判定
 - [ ] 日本語を含む隣接判定
