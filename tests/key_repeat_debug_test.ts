@@ -41,7 +41,7 @@ test("デバッグ: キーリピート状態がtrue→falseに遷移する", asy
 
   // 2回の高速入力でリピート判定させる
   await denops.cmd("call hellshake_yano#motion('l')");
-  await sleep(30);
+  await sleep(20);  // しきい値(50ms)より確実に短い間隔に（並列実行での遅延を考慮）
   await denops.cmd("call hellshake_yano#motion('l')");
 
   // 直後はリピート中(true=1)であるべき
