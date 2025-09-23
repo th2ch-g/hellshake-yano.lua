@@ -509,6 +509,8 @@ export class RegexWordDetector implements WordDetector {
  * @since 1.0.0
  * @author hellshake-yano.vim team
  */
+import { CharType, getCharType, analyzeString, findBoundaries, shouldMerge } from "../utils/charType.ts";
+
 export class TinySegmenterWordDetector implements WordDetector {
   readonly name = "TinySegmenterWordDetector";
   readonly priority = 2;
@@ -818,120 +820,198 @@ export class TinySegmenterWordDetector implements WordDetector {
     }
 
     const result: PositionSegment[] = [];
-    let buffer: PositionSegment | null = null;
-
-    // 日本語の助詞・接続詞パターン
-    // 助詞: を、で、に、へ、と、から、より、の、が、は、も、や、ね、よ、など
-    const particlePattern = /^[をでにへとからよりのがはもやねよなど]+$/;
-    // 接続詞: そして、しかし、だから、けれど、けど、もの、で、なら、ない、し
-    const conjunctionPattern = /^[そしてしかしだからけれどけどものでならないし]+$/;
 
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
+      const prevSegment = segments[i - 1];
       const nextSegment = segments[i + 1];
 
-      // 短いセグメントの処理
-      if (segment.text.length <= mergeThreshold) {
-        // 助詞・接続詞の場合は前の単語と結合
-        if (
-          mergeParticles &&
-          (particlePattern.test(segment.text) || conjunctionPattern.test(segment.text))
-        ) {
-          if (buffer) {
-            buffer = {
-              text: buffer.text + segment.text,
-              startIndex: buffer.startIndex,
-              endIndex: segment.endIndex,
-              originalIndex: buffer.originalIndex,
+      // 隣接文字解析による結合判定
+      if (prevSegment && shouldMerge(prevSegment.text, segment.text, nextSegment?.text)) {
+        if (result.length > 0) {
+          // 前の結果と結合
+          const lastResult = result[result.length - 1];
+          result[result.length - 1] = {
+            text: lastResult.text + segment.text,
+            startIndex: lastResult.startIndex,
+            endIndex: segment.endIndex,
+            originalIndex: lastResult.originalIndex,
+          };
+          continue;
+        }
+      }
+
+      // 文字種境界を考慮した処理
+      const segmentBoundaries = findBoundaries(segment.text);
+      if (segmentBoundaries.length > 2) { // 境界が開始と終了以外にもある場合
+        // 複数の文字種を含むセグメントを分割
+        for (let j = 0; j < segmentBoundaries.length - 1; j++) {
+          const start = segmentBoundaries[j];
+          const end = segmentBoundaries[j + 1];
+          const subText = segment.text.slice(start, end);
+          
+          if (subText.trim().length > 0) {
+            const subSegment: PositionSegment = {
+              text: subText,
+              startIndex: segment.startIndex + start,
+              endIndex: segment.startIndex + end,
+              originalIndex: segment.originalIndex,
             };
-          } else if (result.length > 0) {
-            // 前の結果と結合
-            const lastResult = result[result.length - 1];
-            result[result.length - 1] = {
-              text: lastResult.text + segment.text,
-              startIndex: lastResult.startIndex,
-              endIndex: segment.endIndex,
-              originalIndex: lastResult.originalIndex,
-            };
-          } else {
-            buffer = segment;
-          }
-        } else if (nextSegment && nextSegment.text.length <= mergeThreshold) {
-          // 次も短い場合はバッファに追加
-          if (buffer) {
-            buffer = {
-              text: buffer.text + segment.text,
-              startIndex: buffer.startIndex,
-              endIndex: segment.endIndex,
-              originalIndex: buffer.originalIndex,
-            };
-          } else {
-            buffer = segment;
-          }
-        } else {
-          // 単独で最小長を満たすか、バッファと結合
-          if (buffer) {
-            const merged = {
-              text: buffer.text + segment.text,
-              startIndex: buffer.startIndex,
-              endIndex: segment.endIndex,
-              originalIndex: buffer.originalIndex,
-            };
-            if (merged.text.length >= minLength) {
-              result.push(merged);
-            }
-            buffer = null;
-          } else if (segment.text.length >= minLength) {
-            result.push(segment);
-          } else if (result.length > 0) {
-            // 最小長に満たない場合は前の結果と結合
-            const lastResult = result[result.length - 1];
-            result[result.length - 1] = {
-              text: lastResult.text + segment.text,
-              startIndex: lastResult.startIndex,
-              endIndex: segment.endIndex,
-              originalIndex: lastResult.originalIndex,
-            };
-          } else {
-            buffer = segment;
+            
+            // 分割されたサブセグメントに対して処理を適用
+            this.processSegment(subSegment, null, result, mergeParticles, mergeThreshold, minLength);
           }
         }
       } else {
-        // 長いセグメント
-        if (buffer) {
-          if (buffer.text.length >= minLength) {
-            result.push(buffer);
-          } else if (result.length > 0) {
-            const lastResult = result[result.length - 1];
-            result[result.length - 1] = {
-              text: lastResult.text + buffer.text,
-              startIndex: lastResult.startIndex,
-              endIndex: buffer.endIndex,
-              originalIndex: lastResult.originalIndex,
-            };
-          }
-          buffer = null;
-        }
-        result.push(segment);
-      }
-    }
-
-    // 残ったバッファを処理
-    if (buffer) {
-      if (buffer.text.length >= minLength) {
-        result.push(buffer);
-      } else if (result.length > 0) {
-        const lastResult = result[result.length - 1];
-        result[result.length - 1] = {
-          text: lastResult.text + buffer.text,
-          startIndex: lastResult.startIndex,
-          endIndex: buffer.endIndex,
-          originalIndex: lastResult.originalIndex,
-        };
+        // 単一文字種セグメントの処理
+        this.processSegment(segment, null, result, mergeParticles, mergeThreshold, minLength);
       }
     }
 
     return result;
+  }
+
+  /**
+   * 個別セグメントの処理ロジック（共通化）
+   */
+  private processSegment(
+    segment: PositionSegment,
+    buffer: PositionSegment | null,
+    result: PositionSegment[],
+    mergeParticles: boolean,
+    mergeThreshold: number,
+    minLength: number
+  ): void {
+    // 拡張助詞・接続詞パターン
+    const extendedParticlePattern = /^(の|が|を|に|で|と|は|も|から|まで|より|へ|や|ね|よ|など|こそ|さえ|だけ|ばかり|しか|でも|なら|って|とか)+$/;
+    const extendedConjunctionPattern = /^(そして|また|しかし|だから|それで|ところで|つまり|要するに|ただし|もちろん|確かに|実際|結局|例えば)+$/;
+
+    // 括弧・引用符内保持判定
+    if (this.isQuotedOrBracketed(segment.text)) {
+      result.push(segment);
+      return;
+    }
+
+    // CamelCase分割処理
+    const camelCaseSegments = this.splitCamelCase(segment);
+    if (camelCaseSegments.length > 1) {
+      for (const camelSegment of camelCaseSegments) {
+        this.processBasicSegment(camelSegment, buffer, result, mergeParticles, mergeThreshold, minLength);
+      }
+      return;
+    }
+
+    // 基本的なセグメント処理
+    this.processBasicSegment(segment, buffer, result, mergeParticles, mergeThreshold, minLength);
+  }
+
+  /**
+   * 括弧・引用符内判定
+   */
+  private isQuotedOrBracketed(text: string): boolean {
+    const patterns = [
+      /^".*"$/,       // 二重引用符
+      /^'.*'$/,       // 単一引用符
+      /^`.*`$/,       // バッククォート
+      /^\(.*\)$/,     // 丸括弧
+      /^\[.*\]$/,     // 角括弧
+      /^\{.*\}$/,     // 波括弧
+      /^「.*」$/,     // 日本語括弧
+      /^『.*』$/,     // 日本語二重括弧
+      /^\(\(.*\)\)$/, // ネストした括弧
+    ];
+    
+    return patterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * CamelCase分割
+   */
+  private splitCamelCase(segment: PositionSegment): PositionSegment[] {
+    const text = segment.text;
+    
+    // CamelCaseパターンの判定
+    if (!/[a-zA-Z]/.test(text) || !/[A-Z]/.test(text)) {
+      return [segment]; // CamelCaseではない
+    }
+
+    const boundaries = findBoundaries(text);
+    if (boundaries.length <= 2) {
+      return [segment]; // 分割不要
+    }
+
+    const subSegments: PositionSegment[] = [];
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      const start = boundaries[i];
+      const end = boundaries[i + 1];
+      const subText = text.slice(start, end);
+      
+      if (subText.length > 0) {
+        subSegments.push({
+          text: subText,
+          startIndex: segment.startIndex + start,
+          endIndex: segment.startIndex + end,
+          originalIndex: segment.originalIndex,
+        });
+      }
+    }
+
+    return subSegments;
+  }
+
+  /**
+   * 基本的なセグメント処理ロジック
+   */
+  private processBasicSegment(
+    segment: PositionSegment,
+    buffer: PositionSegment | null,
+    result: PositionSegment[],
+    mergeParticles: boolean,
+    mergeThreshold: number,
+    minLength: number
+  ): void {
+    // 拡張助詞・接続詞パターン
+    const extendedParticlePattern = /^(の|が|を|に|で|と|は|も|から|まで|より|へ|や|ね|よ|など|こそ|さえ|だけ|ばかり|しか|でも|なら|って|とか)+$/;
+    const extendedConjunctionPattern = /^(そして|また|しかし|だから|それで|ところで|つまり|要するに|ただし|もちろん|確かに|実際|結局|例えば)+$/;
+
+    // 短いセグメントの処理
+    if (segment.text.length <= mergeThreshold) {
+      // 拡張助詞・接続詞の場合は前の単語と結合
+      if (
+        mergeParticles &&
+        (extendedParticlePattern.test(segment.text) || extendedConjunctionPattern.test(segment.text))
+      ) {
+        if (result.length > 0) {
+          // 前の結果と結合
+          const lastResult = result[result.length - 1];
+          result[result.length - 1] = {
+            text: lastResult.text + segment.text,
+            startIndex: lastResult.startIndex,
+            endIndex: segment.endIndex,
+            originalIndex: lastResult.originalIndex,
+          };
+        } else {
+          result.push(segment);
+        }
+      } else if (segment.text.length >= minLength) {
+        result.push(segment);
+      } else if (result.length > 0) {
+        // 最小長に満たない場合は前の結果と結合
+        const lastResult = result[result.length - 1];
+        result[result.length - 1] = {
+          text: lastResult.text + segment.text,
+          startIndex: lastResult.startIndex,
+          endIndex: segment.endIndex,
+          originalIndex: lastResult.originalIndex,
+        };
+      } else {
+        // 単独で追加
+        result.push(segment);
+      }
+    } else {
+      // 長いセグメント
+      result.push(segment);
+    }
   }
 
   /**

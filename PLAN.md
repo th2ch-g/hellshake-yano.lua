@@ -201,6 +201,7 @@
   - [ ] フォールバック動作の確認
   - [ ] パフォーマンス比較（Vim vs TypeScript）
 - [ ] **統合オプション**
+
   - [ ] 設定による切り替え機能
   - [ ] 自動判定ロジック（Vim利用可能性）
 
@@ -829,75 +830,201 @@
 
 #### sub2 隣接文字解析による補正の強化【優先度: 高】
 @target: denops/hellshake-yano/utils/charType.ts（新規作成）
+@target: denops/hellshake-yano/utils/charType.test.ts（新規作成）
 @target: denops/hellshake-yano/word/detector.ts（mergeShortSegmentsWithPosition拡張）
 @test: denops/hellshake-yano/word/detector.test.ts（拡張）
 
-##### 🔴 Red Phase: テストファースト
-- [ ] **文字種判定テスト（12ケース）**
-  - [ ] ひらがな判定
-  - [ ] カタカナ判定
-  - [ ] 漢字判定
-  - [ ] 英大文字判定
-  - [ ] 英小文字判定
-  - [ ] 数字判定
-  - [ ] 記号判定
-  - [ ] 括弧判定
-  - [ ] 引用符判定
-  - [ ] スペース判定
-  - [ ] 混合文字列の解析
-  - [ ] 境界検出
+##### 設計概要
+現在の`mergeShortSegmentsWithPosition`メソッドの問題点を解決：
+- 助詞・接続詞のパターンが限定的（固定的な正規表現）
+- 文字種（ひらがな、カタカナ、漢字、英字等）の境界を考慮していない
+- 括弧や引用符内のテキストを特別扱いしていない
+- CamelCase、snake_case等のプログラミング命名規則に非対応
 
-- [ ] **結合判定テスト（10ケース）**
-  - [ ] 助詞の前単語への結合
-  - [ ] 接続詞の処理
-  - [ ] 文字種境界での分割維持
-  - [ ] 括弧内テキストの保持
-  - [ ] 引用符内テキストの保持
-  - [ ] カタカナ連続の保持
-  - [ ] 英数字連続の保持
-  - [ ] 漢字＋ひらがなパターン
-  - [ ] 記号による境界認識
-  - [ ] CamelCase/snake_caseの処理
+##### 🔴 Red Phase: テストファースト
+- [x] **文字種判定テスト（charType.test.ts - 15ケース）**
+  - [x] ひらがな判定: `getCharType('あ') === CharType.Hiragana`
+  - [x] カタカナ判定: `getCharType('ア') === CharType.Katakana`
+  - [x] 漢字判定: `getCharType('漢') === CharType.Kanji`
+  - [x] 英大文字判定: `getCharType('A') === CharType.AlphaUpper`
+  - [x] 英小文字判定: `getCharType('a') === CharType.AlphaLower`
+  - [x] 数字判定: `getCharType('1') === CharType.Number`
+  - [x] 記号判定: `getCharType('!') === CharType.Symbol`
+  - [x] 開き括弧判定: `getCharType('(') === CharType.BracketOpen`
+  - [x] 閉じ括弧判定: `getCharType(')') === CharType.BracketClose`
+  - [x] 引用符判定: `getCharType('"') === CharType.Quote`
+  - [x] スペース判定: `getCharType(' ') === CharType.Space`
+  - [x] 混合文字列の解析: `analyzeString('漢字とEnglish')`
+  - [x] 境界検出: `findBoundaries('漢字English123')`
+  - [x] 全角文字判定: `isFullWidth('あ') === true`
+  - [x] 半角文字判定: `isHalfWidth('a') === true`
+
+- [x] **結合判定テスト（detector.test.ts拡張 - 12ケース）**
+  - [x] 助詞の前単語への結合: `機能を` → `[機能を]`
+  - [x] 接続詞の処理: `しかし` → 独立セグメント
+  - [x] 文字種境界での分割維持: `日本語English` → `[日本語][English]`
+  - [x] 括弧内テキストの保持: `(重要な内容)` → `[(重要な内容)]`
+  - [x] 引用符内テキストの保持: `"quoted text"` → `["quoted text"]`
+  - [x] カタカナ連続の保持: `システムエラー` → `[システムエラー]`
+  - [x] 英数字連続の保持: `test123` → `[test123]`
+  - [x] 漢字＋ひらがなパターン: `走る` → `[走る]`
+  - [x] 記号による境界認識: `word.method` → `[word][.][method]`
+  - [x] CamelCase処理: `getUserName` → `[get][User][Name]`
+  - [x] snake_case処理: `user_name` → `[user_name]`
+  - [x] kebab-case処理: `user-name` → `[user-name]`
 
 ##### 🟢 Green Phase: 実装
-- [ ] **Stage 1: 文字種判定ユーティリティ**
+- [x] **Stage 1: 文字種判定ユーティリティ (charType.ts)**
   ```typescript
-  enum CharType {
-    Hiragana = 'hiragana',
-    Katakana = 'katakana',
-    Kanji = 'kanji',
-    AlphaUpper = 'alpha_upper',
-    AlphaLower = 'alpha_lower',
-    Number = 'number',
-    Symbol = 'symbol',
-    Bracket = 'bracket',
-    Quote = 'quote',
-    Space = 'space'
+  // 文字種の定義
+  export enum CharType {
+    Hiragana = 'hiragana',          // ひらがな
+    Katakana = 'katakana',          // カタカナ
+    Kanji = 'kanji',                // 漢字
+    AlphaUpper = 'alpha_upper',     // 英大文字
+    AlphaLower = 'alpha_lower',     // 英小文字
+    Number = 'number',              // 数字
+    Symbol = 'symbol',              // 記号
+    BracketOpen = 'bracket_open',   // 開き括弧
+    BracketClose = 'bracket_close', // 閉じ括弧
+    Quote = 'quote',                // 引用符
+    Space = 'space',                // スペース
+    Unknown = 'unknown'             // 不明
   }
 
-  interface AdjacentAnalysis {
-    prevCharType: CharType;
+  // 文字種判定関数
+  export function getCharType(char: string): CharType {
+    // Unicode範囲で判定
+    const code = char.charCodeAt(0);
+    // ひらがな: U+3040-U+309F
+    // カタカナ: U+30A0-U+30FF
+    // 漢字: U+4E00-U+9FAF
+    // 実装...
+  }
+
+  // 隣接文字解析
+  export interface AdjacentAnalysis {
+    prevCharType: CharType | null;
     currentCharType: CharType;
-    nextCharType: CharType;
+    nextCharType: CharType | null;
     shouldMergeWithPrev: boolean;
     shouldMergeWithNext: boolean;
+    isInBrackets: boolean;
+    isInQuotes: boolean;
+  }
+
+  // 文字列全体の解析
+  export function analyzeString(text: string): AdjacentAnalysis[] {
+    // 各文字の文字種と隣接関係を解析
+  }
+
+  // 境界検出
+  export function findBoundaries(text: string): number[] {
+    // 文字種の変化点を検出
   }
   ```
 
-- [ ] **Stage 2: 拡張助詞・接続詞パターン**
-  - [ ] 包括的な助詞リスト
-  - [ ] 接続詞・接続助詞リスト
-  - [ ] 文末表現パターン
+- [x] **Stage 2: 拡張助詞・接続詞パターン**
+  ```typescript
+  // 包括的な助詞リスト
+  const PARTICLES = {
+    格助詞: ['を', 'に', 'で', 'と', 'へ', 'から', 'より', 'まで'],
+    副助詞: ['は', 'も', 'だけ', 'ばかり', 'など', 'なり', 'やら'],
+    接続助詞: ['て', 'で', 'ば', 'と', 'ても', 'けれど', 'が', 'のに'],
+    終助詞: ['か', 'な', 'よ', 'ね', 'わ', 'の', 'さ'],
+    準体助詞: ['の', 'こと']
+  };
 
-- [ ] **Stage 3: mergeShortSegmentsWithPosition改良**
-  - [ ] 文字種境界の考慮
-  - [ ] 括弧・引用符内保持
-  - [ ] 優先度ベースの結合判定
+  // 接続詞リスト
+  const CONJUNCTIONS = {
+    順接: ['だから', 'したがって', 'よって', 'ゆえに'],
+    逆接: ['しかし', 'けれども', 'だが', 'ところが'],
+    並列: ['また', 'および', 'ならびに'],
+    補足: ['つまり', 'すなわち', 'ただし', 'もっとも'],
+    転換: ['ところで', 'さて', 'では', 'それでは']
+  };
+
+  // 文末表現パターン
+  const SENTENCE_ENDINGS = [
+    'です', 'ます', 'でした', 'ました',
+    'だろう', 'でしょう', 'かもしれない'
+  ];
+  ```
+
+- [x] **Stage 3: mergeShortSegmentsWithPosition改良**
+  ```typescript
+  private mergeShortSegmentsWithPosition(
+    segments: PositionSegment[]
+  ): PositionSegment[] {
+    // 1. 文字種解析の実行
+    const analyses = segments.map(seg => analyzeString(seg.text));
+
+    // 2. 括弧・引用符のスコープ検出
+    const scopes = detectScopes(segments);
+
+    // 3. 結合判定ルールの適用
+    const mergedSegments = applyMergeRules(segments, analyses, scopes, {
+      // 文字種境界での分割
+      respectCharTypeBoundaries: true,
+      // 括弧内保持
+      preserveBracketContent: true,
+      // 引用符内保持
+      preserveQuoteContent: true,
+      // CamelCase分割
+      splitCamelCase: this.config.split_camel_case ?? false,
+      // 助詞結合
+      mergeParticles: this.config.japanese_merge_particles !== false
+    });
+
+    return mergedSegments;
+  }
+  ```
+
+- [ ] **Stage 4: Config拡張**
+  ```typescript
+  // types.ts のConfig interfaceに追加
+  export interface Config {
+    // ... 既存のフィールド ...
+
+    // === 文字種解析設定 ===
+    /** CamelCaseを分割するか */
+    split_camel_case?: boolean;
+    /** snake_caseを保持するか */
+    preserve_snake_case?: boolean;
+    /** 括弧内テキストを保持するか */
+    preserve_bracket_content?: boolean;
+    /** 引用符内テキストを保持するか */
+    preserve_quote_content?: boolean;
+    /** 文字種境界で分割するか */
+    respect_char_type_boundaries?: boolean;
+    /** カスタム助詞リスト */
+    custom_particles?: string[];
+    /** カスタム接続詞リスト */
+    custom_conjunctions?: string[];
+  }
+  ```
 
 ##### 🔵 Refactor Phase: 最適化
-- [ ] 文字種判定のキャッシュ
-- [ ] パターンマッチングの最適化
-- [ ] ルールの外部設定化
+- [x] **パフォーマンス最適化**
+  - [x] 文字種判定のキャッシュ（LRU Cache）
+  - [x] Unicode範囲チェックの最適化（ビットマスク使用）
+  - [x] 正規表現のプリコンパイル
+
+- [x] **メモリ最適化**
+  - [x] 文字列の使い回し（string interning）
+  - [x] 不要な中間配列の削減
+
+- [x] **設定の外部化**
+  - [x] 助詞・接続詞リストのJSON化
+  - [x] ユーザー定義ルールのサポート
+  - [x] 言語別設定ファイルの分離
+
+##### マイルストーン
+- [x] **M1**: 文字種判定ユーティリティの完成
+- [x] **M2**: 拡張助詞・接続詞パターンの実装
+- [x] **M3**: mergeShortSegmentsWithPosition改良の完成
+- [x] **M4**: パフォーマンステストと最適化
+- [x] **M5**: ドキュメントとサンプルの作成
 
 #### sub3 コンテキスト認識による分割調整【優先度: 中】
 @target: denops/hellshake-yano/types.ts（DetectionContext拡張）

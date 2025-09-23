@@ -1,0 +1,176 @@
+# Hellshake-Yano 辞書設定 (YAML形式)
+# YAMLは人間にとって読みやすく、編集しやすい形式です
+
+version: "1.0"
+description: "Hellshake-Yano カスタム辞書サンプル"
+
+# カスタム単語リスト
+# TinySegmenterが正しく認識できない専門用語を追加
+customWords:
+  # プログラミング一般
+  - 非同期処理
+  - 依存性注入
+  - 単体テスト
+  - 統合テスト
+  - 継続的インテグレーション
+  - 継続的デリバリー
+  - マイクロサービス
+  - コンテナ化
+  - 仮想化
+  - 負荷分散
+
+  # Web開発
+  - レスポンシブデザイン
+  - プログレッシブウェブアプリ
+  - シングルページアプリケーション
+  - サーバーサイドレンダリング
+  - 静的サイト生成
+  - アクセシビリティ
+
+  # データベース
+  - 正規化
+  - 非正規化
+  - インデックス最適化
+  - クエリ最適化
+  - トランザクション管理
+  - レプリケーション
+
+  # セキュリティ
+  - 暗号化
+  - 復号化
+  - 認証
+  - 認可
+  - 多要素認証
+  - ゼロトラスト
+
+  # AI・機械学習
+  - 深層学習
+  - 強化学習
+  - 転移学習
+  - 自然言語処理
+  - 画像認識
+  - 音声認識
+
+  # プロジェクト管理
+  - スプリント計画
+  - 振り返り
+  - デイリースクラム
+  - プロダクトバックログ
+  - スプリントバックログ
+  - ベロシティ
+
+# 複合語パターン（正規表現）
+# 複数の単語が組み合わさった表現を認識
+compoundPatterns:
+  - pattern: "(環境|開発|本番|テスト|ステージング)\\s*(構築|設定|セットアップ)"
+    description: "環境関連の複合語"
+
+  - pattern: "(コード|ソース|プログラム)\\s*(レビュー|品質|解析)"
+    description: "コード品質関連"
+
+  - pattern: "(システム|アプリケーション|サービス)\\s*(設計|開発|運用|保守)"
+    description: "システム開発ライフサイクル"
+
+  - pattern: "(データ|情報|ログ)\\s*(収集|分析|可視化)"
+    description: "データ処理関連"
+
+# 分割させたくない単語
+# 日本語の助詞など、単独でヒントを設定したくない文字
+preserveWords:
+  - で
+  - に
+  - を
+  - は
+  - が
+  - と
+  - の
+  - から
+  - まで
+  - より
+
+# マージルール
+# 隣接している場合に結合すべき単語とその優先度
+mergeRules:
+  ファイル: 2
+  システム: 2
+  フォルダ: 2
+  ディレクトリ: 2
+  プロジェクト: 2
+  アプリケーション: 3
+  サービス: 2
+  データベース: 3
+
+# ヒントパターン設定
+# 特定のパターンにマッチする場所を優先的にヒント対象とする
+hintPatterns:
+  - name: checkbox
+    pattern: "^\\s*-\\s*\\[\\s\\]\\s+(.)"
+    description: "未チェックのチェックボックス"
+    priority: 100
+    captureGroup: 1
+
+  - name: checked_checkbox
+    pattern: "^\\s*-\\s*\\[x\\]\\s+(.)"
+    description: "チェック済みボックス"
+    priority: 90
+    captureGroup: 1
+
+  - name: numbered_list
+    pattern: "^\\s*\\d+\\.\\s+(.)"
+    description: "番号付きリスト"
+    priority: 80
+    captureGroup: 1
+
+  - name: bullet_list
+    pattern: "^\\s*[*+-]\\s+(.)"
+    description: "箇条書きリスト"
+    priority: 70
+    captureGroup: 1
+
+  - name: markdown_heading
+    pattern: "^#+\\s+(.)"
+    description: "Markdown見出し"
+    priority: 110
+    captureGroup: 1
+
+  - name: quote
+    pattern: "^>\\s*(.)"
+    description: "引用ブロック"
+    priority: 60
+    captureGroup: 1
+
+  - name: code_block
+    pattern: "^```\\w*\\s*$"
+    description: "コードブロック開始"
+    priority: 50
+    captureGroup: 0
+
+  - name: link
+    pattern: "\\[([^\\]]+)\\]\\([^\\)]+\\)"
+    description: "Markdownリンク"
+    priority: 40
+    captureGroup: 1
+
+  - name: emphasis
+    pattern: "[*_]{1,2}([^*_]+)[*_]{1,2}"
+    description: "強調テキスト"
+    priority: 30
+    captureGroup: 1
+
+# カテゴリ別の設定例（オプション）
+categories:
+  programming:
+    enabled: true
+    words:
+      - リファクタリング
+      - デバッグ
+      - ブレークポイント
+      - スタックトレース
+
+  japanese_business:
+    enabled: true
+    words:
+      - 打ち合わせ
+      - 議事録
+      - 承認フロー
+      - 稟議書

@@ -22,6 +22,9 @@ import {
   generateHintsWithGroups,
   validateHintKeyConfig,
 } from "./hint.ts";
+// Dictionary system imports
+import { DictionaryLoader } from "./word/dictionary-loader.ts";
+import { VimConfigBridge } from "./word/dictionary-loader.ts";
 // Import types from the central types module for consistency
 import type {
   Config,
@@ -2883,3 +2886,195 @@ export function validateHighlightConfig(
 
   return { valid: errors.length === 0, errors };
 }
+
+// Dictionary system variables
+let dictionaryLoader: DictionaryLoader | null = null;
+let vimConfigBridge: VimConfigBridge | null = null;
+
+/**
+ * Initialize dictionary system
+ */
+async function initializeDictionarySystem(denops: Denops): Promise<void> {
+  try {
+    dictionaryLoader = new DictionaryLoader();
+    vimConfigBridge = new VimConfigBridge();
+
+    // Register dictionary commands
+    await registerDictionaryCommands(denops);
+
+    // Load initial dictionary
+    const config = await vimConfigBridge.getConfig(denops);
+    await dictionaryLoader.loadUserDictionary(config);
+
+    if (config.debug_mode) {
+      console.log("[hellshake-yano] Dictionary system initialized");
+    }
+  } catch (error) {
+    console.error("[hellshake-yano] Failed to initialize dictionary system:", error);
+  }
+}
+
+/**
+ * Register dictionary-related Vim commands
+ */
+async function registerDictionaryCommands(denops: Denops): Promise<void> {
+  // Reload dictionary command
+  await denops.cmd(
+    `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`
+  );
+
+  // Edit dictionary command
+  await denops.cmd(
+    `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`
+  );
+
+  // Show dictionary command
+  await denops.cmd(
+    `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`
+  );
+
+  // Validate dictionary command
+  await denops.cmd(
+    `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`
+  );
+}
+
+/**
+ * Reload dictionary from files
+ */
+export async function reloadDictionary(denops: Denops): Promise<void> {
+  try {
+    if (!dictionaryLoader || !vimConfigBridge) {
+      await initializeDictionarySystem(denops);
+      return;
+    }
+
+    const config = await vimConfigBridge.getConfig(denops);
+    const dictionary = await dictionaryLoader.loadUserDictionary(config);
+
+    // Update word detection manager with new dictionary
+    const manager = getWordDetectionManager({
+      enable_tinysegmenter: config.use_japanese !== false,
+      dictionary: dictionary,
+    });
+
+    await denops.cmd('echo "Dictionary reloaded successfully"');
+  } catch (error) {
+    await denops.cmd(`echoerr "Failed to reload dictionary: ${error}"`);
+  }
+}
+
+/**
+ * Edit dictionary file
+ */
+export async function editDictionary(denops: Denops): Promise<void> {
+  try {
+    if (!dictionaryLoader || !vimConfigBridge) {
+      await initializeDictionarySystem(denops);
+    }
+
+    const config = await vimConfigBridge.getConfig(denops);
+    const dictionaryPath = config.dictionaryPath ||
+      await dictionaryLoader!.findDictionaryFile();
+
+    if (dictionaryPath) {
+      await denops.cmd(`edit ${dictionaryPath}`);
+    } else {
+      // Create new dictionary file if not exists
+      const newPath = ".hellshake-yano/dictionary.json";
+      await denops.cmd(`edit ${newPath}`);
+
+      // Insert template
+      const template = {
+        customWords: ["例: 機械学習"],
+        preserveWords: ["例: HelloWorld"],
+        mergeRules: {
+          "の": "always",
+          "を": "always"
+        },
+        hintPatterns: [
+          {
+            pattern: "^-\\s*\\[\\s*\\]\\s*(.)",
+            hintPosition: "capture:1",
+            priority: 100,
+            description: "Checkbox first character"
+          }
+        ]
+      };
+
+      await denops.call("setline", 1, JSON.stringify(template, null, 2).split("\n"));
+    }
+  } catch (error) {
+    await denops.cmd(`echoerr "Failed to edit dictionary: ${error}"`);
+  }
+}
+
+/**
+ * Show current dictionary content
+ */
+export async function showDictionary(denops: Denops): Promise<void> {
+  try {
+    if (!dictionaryLoader || !vimConfigBridge) {
+      await initializeDictionarySystem(denops);
+    }
+
+    const config = await vimConfigBridge.getConfig(denops);
+    const dictionary = await dictionaryLoader!.loadUserDictionary(config);
+
+    // Create a new buffer to show dictionary content
+    await denops.cmd("new");
+    await denops.cmd("setlocal buftype=nofile");
+    await denops.cmd("setlocal bufhidden=wipe");
+    await denops.cmd("setlocal noswapfile");
+    await denops.cmd("file [HellshakeYano Dictionary]");
+
+    const content = JSON.stringify(dictionary, null, 2);
+    await denops.call("setline", 1, content.split("\n"));
+
+    // Set to readonly
+    await denops.cmd("setlocal readonly");
+    await denops.cmd("setlocal nomodifiable");
+  } catch (error) {
+    await denops.cmd(`echoerr "Failed to show dictionary: ${error}"`);
+  }
+}
+
+/**
+ * Validate dictionary format
+ */
+export async function validateDictionary(denops: Denops): Promise<void> {
+  try {
+    if (!dictionaryLoader || !vimConfigBridge) {
+      await initializeDictionarySystem(denops);
+    }
+
+    const config = await vimConfigBridge.getConfig(denops);
+    const result = await dictionaryLoader!.validateDictionary(config.dictionaryPath);
+
+    if (result.valid) {
+      await denops.cmd('echo "Dictionary format is valid"');
+    } else {
+      await denops.cmd(`echoerr "Dictionary validation failed: ${result.errors.join(', ')}"`);
+    }
+  } catch (error) {
+    await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
+  }
+}
+
+// Add dictionary commands to main initialization
+const originalMain = main;
+main = async function(denops: Denops): Promise<void> {
+  await originalMain(denops);
+
+  // Initialize dictionary system after main setup
+  await initializeDictionarySystem(denops);
+
+  // Register dictionary API methods
+  denops.dispatcher = {
+    ...denops.dispatcher,
+    reloadDictionary: async () => await reloadDictionary(denops),
+    editDictionary: async () => await editDictionary(denops),
+    showDictionary: async () => await showDictionary(denops),
+    validateDictionary: async () => await validateDictionary(denops),
+  };
+};

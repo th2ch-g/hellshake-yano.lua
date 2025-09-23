@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Hellshake-Yano 辞書設定サンプル",
+  "version": "1.0",
+
+  "customWords": [
+    "// プログラミング用語",
+    "非同期処理",
+    "依存性注入",
+    "単体テスト",
+    "統合テスト",
+    "継続的インテグレーション",
+    "継続的デリバリー",
+    "マイクロサービス",
+    "コンテナ化",
+    "仮想化",
+    "負荷分散",
+
+    "// Web開発",
+    "レスポンシブデザイン",
+    "プログレッシブウェブアプリ",
+    "シングルページアプリケーション",
+    "サーバーサイドレンダリング",
+    "静的サイト生成",
+    "アクセシビリティ",
+
+    "// データベース",
+    "正規化",
+    "非正規化",
+    "インデックス最適化",
+    "クエリ最適化",
+    "トランザクション管理",
+    "レプリケーション",
+
+    "// セキュリティ",
+    "暗号化",
+    "復号化",
+    "認証",
+    "認可",
+    "多要素認証",
+    "ゼロトラスト",
+
+    "// AI・機械学習",
+    "深層学習",
+    "強化学習",
+    "転移学習",
+    "自然言語処理",
+    "画像認識",
+    "音声認識",
+
+    "// プロジェクト管理",
+    "スプリント計画",
+    "振り返り",
+    "デイリースクラム",
+    "プロダクトバックログ",
+    "スプリントバックログ",
+    "ベロシティ"
+  ],
+
+  "compoundPatterns": [
+    {
+      "pattern": "(環境|開発|本番|テスト|ステージング)\\s*(構築|設定|セットアップ)",
+      "description": "環境関連の複合語"
+    },
+    {
+      "pattern": "(コード|ソース|プログラム)\\s*(レビュー|品質|解析)",
+      "description": "コード品質関連"
+    },
+    {
+      "pattern": "(システム|アプリケーション|サービス)\\s*(設計|開発|運用|保守)",
+      "description": "システム開発ライフサイクル"
+    },
+    {
+      "pattern": "(データ|情報|ログ)\\s*(収集|分析|可視化)",
+      "description": "データ処理関連"
+    }
+  ],
+
+  "preserveWords": [
+    "// 分割させたくない短い単語",
+    "で",
+    "に",
+    "を",
+    "は",
+    "が",
+    "と",
+    "の",
+    "から",
+    "まで",
+    "より"
+  ],
+
+  "mergeRules": {
+    "// 隣接すると結合すべき単語のペア": "",
+    "ファイル": 2,
+    "システム": 2,
+    "フォルダ": 2,
+    "ディレクトリ": 2,
+    "プロジェクト": 2,
+    "アプリケーション": 3,
+    "サービス": 2,
+    "データベース": 3
+  },
+
+  "hintPatterns": [
+    {
+      "name": "checkbox",
+      "pattern": "^\\s*-\\s*\\[\\s\\]\\s+(.)",
+      "description": "チェックボックスの最初の文字を優先",
+      "priority": 100,
+      "captureGroup": 1
+    },
+    {
+      "name": "checked_checkbox",
+      "pattern": "^\\s*-\\s*\\[x\\]\\s+(.)",
+      "description": "チェック済みボックスの最初の文字",
+      "priority": 90,
+      "captureGroup": 1
+    },
+    {
+      "name": "numbered_list",
+      "pattern": "^\\s*\\d+\\.\\s+(.)",
+      "description": "番号付きリストの最初の文字",
+      "priority": 80,
+      "captureGroup": 1
+    },
+    {
+      "name": "bullet_list",
+      "pattern": "^\\s*[*+-]\\s+(.)",
+      "description": "箇条書きリストの最初の文字",
+      "priority": 70,
+      "captureGroup": 1
+    },
+    {
+      "name": "markdown_heading",
+      "pattern": "^#+\\s+(.)",
+      "description": "Markdownの見出し",
+      "priority": 110,
+      "captureGroup": 1
+    },
+    {
+      "name": "quote",
+      "pattern": "^>\\s*(.)",
+      "description": "引用ブロックの最初の文字",
+      "priority": 60,
+      "captureGroup": 1
+    },
+    {
+      "name": "code_block",
+      "pattern": "^```\\w*\\s*$",
+      "description": "コードブロックの開始",
+      "priority": 50,
+      "captureGroup": 0
+    },
+    {
+      "name": "link",
+      "pattern": "\\[([^\\]]+)\\]\\([^\\)]+\\)",
+      "description": "Markdownリンクのテキスト部分",
+      "priority": 40,
+      "captureGroup": 1
+    },
+    {
+      "name": "emphasis",
+      "pattern": "[*_]{1,2}([^*_]+)[*_]{1,2}",
+      "description": "強調テキスト",
+      "priority": 30,
+      "captureGroup": 1
+    }
+  ]
+}
