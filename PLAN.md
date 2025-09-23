@@ -55,29 +55,29 @@
 ### process1 非同期描画の実装
 #### sub1 非同期描画関数の作成
 @target: denops/hellshake-yano/main.ts
-- [ ] `displayHintsAsync`関数の作成
+- [x] `displayHintsAsync`関数の作成
   - `displayHintsOptimized`のラッパー
   - Promiseをfire-and-forgetで実行
   - エラーハンドリングを内包
-- [ ] 描画状態管理の追加
+- [x] 描画状態管理の追加
   - `isRenderingHints`フラグ
   - `renderingAbortController`の実装
 
 #### sub2 非ブロッキング呼び出しへの変更
 @target: denops/hellshake-yano/main/operations.ts
 @target: denops/hellshake-yano/main.ts
-- [ ] `await`を削除して非同期実行
+- [x] `await`を削除して非同期実行
   - `displayHintsAsync(denops, currentHints, config)`
   - エラーは内部でcatch
-- [ ] 描画完了コールバックの追加（オプション）
+- [x] 描画完了コールバックの追加（オプション）
 
 ### process2 描画キャンセル機能
 #### sub1 AbortControllerの実装
 @target: denops/hellshake-yano/main.ts
-- [ ] 描画キャンセル機能の追加
+- [x] 描画キャンセル機能の追加
   - `AbortSignal`を使った中断
   - 部分的に描画されたヒントのクリーンアップ
-- [ ] キャンセル条件の定義
+- [x] キャンセル条件の定義
   - 新しいヒント表示要求時
   - カーソル移動時
   - モード変更時
@@ -87,6 +87,8 @@
 - [ ] バッチ描画処理に中断チェック追加
   - 各バッチ間で`signal.aborted`確認
   - 中断時は残りをスキップ
+
+※現在のdisplayHintsWithExtmarksBatch/displayHintsWithMatchAddBatch関数にはAbortSignalの対応が未実装
 
 ### process3 移動時の即座非表示
 #### sub1 CursorMovedイベントの最適化

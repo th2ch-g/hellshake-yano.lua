@@ -735,8 +735,8 @@ export async function main(denops: Denops): Promise<void> {
             return;
           }
 
-          // バッチ処理でヒントを表示（最適化）（モード情報付き）
-          await displayHintsOptimized(denops, currentHints, modeString);
+          // バッチ処理でヒントを非同期表示（最適化）（モード情報付き）
+          displayHintsAsync(denops, currentHints, { mode: modeString });
           hintsVisible = true;
 
           const endTime = performance.now();
@@ -1267,6 +1267,77 @@ async function displayHintsOptimized(
 
     // フォールバックとして通常の表示処理を使用
     await displayHints(denops, hints, mode);
+  }
+}
+
+// グローバル状態管理
+let _isRenderingHints = false;
+let _renderingAbortController: AbortController | null = null;
+
+/**
+ * 非同期ヒント表示関数
+ * fire-and-forgetパターンで描画を実行し、入力をブロックしない
+ */
+export function displayHintsAsync(
+  denops: Denops,
+  hints: HintMapping[],
+  config: any,
+  onComplete?: () => void,
+): void {
+  // 前の描画をキャンセル
+  if (_renderingAbortController) {
+    _renderingAbortController.abort();
+  }
+
+  // 新しいAbortControllerを作成
+  _renderingAbortController = new AbortController();
+  const currentController = _renderingAbortController;
+
+  // 描画状態を設定
+  _isRenderingHints = true;
+
+  // 非同期で描画を実行（awaitしない）
+  (async () => {
+    try {
+      // AbortSignalをチェックしながら描画
+      if (currentController.signal.aborted) {
+        return;
+      }
+
+      await displayHintsOptimized(denops, hints, config.mode || "normal");
+
+      // 完了コールバックを実行
+      if (onComplete && !currentController.signal.aborted) {
+        onComplete();
+      }
+    } catch (error) {
+      // エラーは内部でキャッチして、外部に投げない
+      console.error("[hellshake-yano] Async rendering error:", error);
+    } finally {
+      // この描画が現在のものである場合のみフラグをリセット
+      if (currentController === _renderingAbortController) {
+        _isRenderingHints = false;
+        _renderingAbortController = null;
+      }
+    }
+  })();
+}
+
+/**
+ * 描画中かどうかを取得
+ */
+export function isRenderingHints(): boolean {
+  return _isRenderingHints;
+}
+
+/**
+ * 現在の描画をキャンセル
+ */
+export function abortCurrentRendering(): void {
+  if (_renderingAbortController) {
+    _renderingAbortController.abort();
+    _renderingAbortController = null;
+    _isRenderingHints = false;
   }
 }
 

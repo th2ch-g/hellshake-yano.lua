@@ -10,7 +10,7 @@ import { type Config } from "../config.ts";
 import { detectWordsOptimized } from "../main.ts";
 import { generateHintsOptimized } from "../main.ts";
 import { assignHintsToWords } from "../hint.ts";
-import { displayHintsOptimized } from "../main.ts";
+import { displayHintsOptimized, displayHintsAsync } from "../main.ts";
 import { hideHints } from "../main.ts";
 
 // グローバル状態の管理
@@ -243,8 +243,10 @@ async function generateAndDisplayHints(
     },
   );
 
-  // ヒントを表示
-  await displayHintsOptimized(denops, currentHints, config);
+  // ヒントを非同期で表示（入力をブロックしない）
+  displayHintsAsync(denops, currentHints, config, () => {
+    // 描画完了時のコールバック（必要に応じて処理を追加）
+  });
   hintsVisible = true;
 }
 
