@@ -57,7 +57,6 @@ import {
 import { LRUCache } from "./utils/cache.ts";
 import { validateConfigValue } from "./utils/validation.ts";
 
-
 // deno-lint-ignore prefer-const
 let config: Config = getDefaultConfig();
 
@@ -1128,14 +1127,12 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     if (result.success) {
       return result.words;
     } else {
-
       // フォールバックとしてレガシーメソッドを使用
       return await detectWordsWithConfig(denops, {
         use_japanese: config.use_japanese,
       });
     }
   } catch (error) {
-
     // 最終フォールバックとしてレガシーメソッドを使用
     return await detectWordsWithConfig(denops, {
       use_japanese: config.use_japanese,
@@ -1233,7 +1230,6 @@ async function displayHintsOptimized(
       await displayHintsWithMatchAddBatch(denops, hints, mode, signal);
     }
   } catch (error) {
-
     // フォールバックとして通常の表示処理を使用
     await displayHints(denops, hints, mode);
   }
@@ -1569,7 +1565,6 @@ async function displayHints(
       await displayHintsWithMatchAdd(denops, hints);
     }
   } catch (error) {
-
     // 最後の手段としてユーザーに通知
     await denops.cmd(
       "echohl ErrorMsg | echo 'hellshake-yano: Failed to display hints' | echohl None",
@@ -2026,7 +2021,14 @@ async function highlightCandidateHintsOptimized(
 
   // Neovimの場合はextmarkで再表示
   if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
-    await processExtmarksBatched(denops, matchingHints, nonMatchingHints, inputPrefix, bufnr, signal);
+    await processExtmarksBatched(
+      denops,
+      matchingHints,
+      nonMatchingHints,
+      inputPrefix,
+      bufnr,
+      signal,
+    );
   } else {
     // Vimの場合はmatchaddで再表示
     await processMatchaddBatched(denops, matchingHints, nonMatchingHints, signal);
@@ -2098,7 +2100,7 @@ async function processExtmarksBatched(
     processed++;
     // バッチサイズに達したら制御を返す
     if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 
@@ -2136,7 +2138,7 @@ async function processExtmarksBatched(
     processed++;
     // バッチサイズに達したら制御を返す
     if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 }
@@ -2192,7 +2194,7 @@ async function processMatchaddBatched(
     processed++;
     // バッチサイズに達したら制御を返す
     if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 
@@ -2236,7 +2238,7 @@ async function processMatchaddBatched(
     processed++;
     // バッチサイズに達したら制御を返す
     if (processed % HIGHLIGHT_BATCH_SIZE === 0) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 }
@@ -2645,7 +2647,6 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // ヒントを非表示
     await hideHints(denops);
   } catch (error) {
-
     // タイムアウトをクリア
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -3163,22 +3164,22 @@ async function initializeDictionarySystem(denops: Denops): Promise<void> {
 async function registerDictionaryCommands(denops: Denops): Promise<void> {
   // Reload dictionary command
   await denops.cmd(
-    `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`
+    `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`,
   );
 
   // Edit dictionary command
   await denops.cmd(
-    `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`
+    `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`,
   );
 
   // Show dictionary command
   await denops.cmd(
-    `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`
+    `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`,
   );
 
   // Validate dictionary command
   await denops.cmd(
-    `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`
+    `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`,
   );
 }
 
@@ -3217,7 +3218,7 @@ export async function editDictionary(denops: Denops): Promise<void> {
     }
 
     const dictConfig = await vimConfigBridge!.getConfig(denops);
-    const dictionaryPath = dictConfig.dictionaryPath || '.hellshake-yano/dictionary.json';
+    const dictionaryPath = dictConfig.dictionaryPath || ".hellshake-yano/dictionary.json";
 
     if (dictionaryPath) {
       await denops.cmd(`edit ${dictionaryPath}`);
@@ -3232,16 +3233,16 @@ export async function editDictionary(denops: Denops): Promise<void> {
         preserveWords: ["例: HelloWorld"],
         mergeRules: {
           "の": "always",
-          "を": "always"
+          "を": "always",
         },
         hintPatterns: [
           {
             pattern: "^-\\s*\\[\\s*\\]\\s*(.)",
             hintPosition: "capture:1",
             priority: 100,
-            description: "Checkbox first character"
-          }
-        ]
+            description: "Checkbox first character",
+          },
+        ],
       };
 
       await denops.call("setline", 1, JSON.stringify(template, null, 2).split("\n"));
@@ -3298,14 +3299,14 @@ export async function validateDictionary(denops: Denops): Promise<void> {
         await Deno.stat(dictConfig.dictionaryPath);
       } catch {
         result.valid = false;
-        result.errors.push('Dictionary file not found');
+        result.errors.push("Dictionary file not found");
       }
     }
 
     if (result.valid) {
       await denops.cmd('echo "Dictionary format is valid"');
     } else {
-      await denops.cmd(`echoerr "Dictionary validation failed: ${result.errors.join(', ')}"`);
+      await denops.cmd(`echoerr "Dictionary validation failed: ${result.errors.join(", ")}"`);
     }
   } catch (error) {
     await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);

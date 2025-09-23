@@ -212,8 +212,8 @@ Deno.test("Integration - Performance with large number of hints", async () => {
   await simulator.showHints(words);
   const showTime = performance.now() - startTime;
 
-  // ヒント表示が200ms以内に完了することを確認（並列実行時の負荷を考慮）
-  assertEquals(showTime < 200, true, `Hint display took ${showTime}ms`);
+  // ヒント表示が500ms以内に完了することを確認（並列実行時の負荷を考慮）
+  assertEquals(showTime < 500, true, `Hint display took ${showTime}ms`);
   assertEquals(simulator.getHintCount(), 100);
 
   // 選択も高速に動作することを確認

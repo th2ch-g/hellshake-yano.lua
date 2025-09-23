@@ -1,123 +1,236 @@
-# title: 非同期レンダリング改善によるキー入力のレスポンス向上
+# title: main.ts肥大化問題の解決 - ファイル分割リファクタリング
 
 ## 概要
-- 1文字目入力後の`highlight_hint_marker_current`レンダリングを非同期化し、2文字目のキー入力を即座に受け付けられるようにする
+- 3313行に肥大したmain.tsを責務ごとに分割し、保守性とテスタビリティを向上させる
+- 既存のモジュール構造を活用しつつ、新規ディレクトリでの体系的な整理を行う
 
 ### goal
-- ヒントの再描画中でも2文字目のキーを遅延なく入力できる
-- 大量のヒント（100個以上）でもUIがフリーズしない
-- レンダリング途中でも新しい入力に即座に反応する
+- main.tsを300行程度のエントリポイントに縮小
+- 責務ごとに明確に分離されたモジュール構造の実現
+- 循環依存の解消とクリーンな依存関係の確立
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 既存の`displayHintsAsync`パターンに準拠した実装を行う
-- 後方互換性を維持し、既存の機能に影響を与えない
+- 後方互換性を完全に維持する
+- 既存のエクスポートされた関数はすべて維持する
+- テストが壊れないよう慎重に作業を進める
 
 ## 開発のゴール
-- `highlightCandidateHints`関数の非同期化
-- AbortControllerによる中断可能なレンダリング
-- バッチ処理による段階的な描画でメインスレッドのブロッキングを防止
+- main.tsの責務を明確に分離したモジュール構造
+- 各モジュールの独立性とテスタビリティの向上
+- パフォーマンスの維持または向上
 
 ## 実装仕様
 
 ### 問題の詳細
 1. **現状の問題**
-   - `highlightCandidateHints`関数（main.ts:1753-1926）が全ヒントを同期的に再描画
-   - 1文字目の入力後、全てのヒントに対してawaitを使った同期処理を実行
-   - NeovimとVim両方でmatchadd/extmarkを順次実行するため、大量のヒントがある場合に顕著な遅延
+   - main.tsが3313行の巨大ファイル
+   - 複数の責務（ヒント表示、検証、辞書、入力処理など）が混在
+   - 循環依存が既に発生（operations.tsがmain.tsをimport）
+   - テストとメンテナンスが困難
 
 2. **影響箇所**
-   - denops/hellshake-yano/main.ts:2153 - `await highlightCandidateHints`の呼び出し
-   - 既存の`displayHintsAsync`パターンは存在するが、`highlightCandidateHints`には適用されていない
+   - denops/hellshake-yano/main.ts（全体）
+   - denops/hellshake-yano/main/operations.ts（循環依存）
+   - 他ファイルからのインポート箇所
 
 3. **技術的アプローチ**
-   - 非同期関数への変換（fire-and-forget方式）
-   - AbortControllerによる中断制御
-   - バッチサイズ10-20個での段階的処理
+   - 段階的なモジュール分離
+   - index.tsによる再エクスポートで後方互換性維持
+   - グローバル状態の適切な管理
 
 ## 生成AIの学習用コンテキスト
 
-### TypeScriptファイル
-- denops/hellshake-yano/main.ts
-  - 1753-1926行: `highlightCandidateHints`関数（修正対象）
-  - 1249-1292行: `displayHintsAsync`関数（参考実装）
-  - 2153行付近: 呼び出し箇所
+### 現在のファイル構造
+```
+denops/hellshake-yano/
+├── main.ts (3313行)
+├── main/
+│   ├── dispatcher.ts
+│   ├── initialization.ts
+│   ├── input.ts
+│   └── operations.ts (循環依存あり)
+├── hint/
+├── word/
+├── utils/
+└── その他既存ファイル
+```
 
-### 関連ファイル
-- denops/hellshake-yano/main.ts
-  - グローバル変数: `_renderingAbortController`, `_isRenderingHints`
-  - ヘルパー関数: `clearHintDisplay`, `calculateHintPositionWithCoordinateSystem`
+### エクスポートされている関数（後方互換性必須）
+- getMinLengthForKey, getMotionCountForKey
+- displayHintsAsync, isRenderingHints, abortCurrentRendering
+- highlightCandidateHintsAsync
+- validateConfig, getDefaultConfig
+- validateHighlightGroupName, isValidColorName, isValidHexColor
+- normalizeColorName, validateHighlightColor
+- generateHighlightCommand, validateHighlightConfig
+- reloadDictionary, editDictionary, showDictionary, validateDictionary
 
 ## Process
 
-### process1 highlightCandidateHintsAsync関数の実装
-#### sub1 非同期関数の作成
+### process1 ディレクトリ構造の準備 - TDD Red-Green-Refactorアプローチ ✅
+#### sub1 新規ディレクトリ作成 ✅
+@target: denops/hellshake-yano/
+- [x] `display/` ディレクトリ作成（UI表示・ハイライト関連、約800行を格納予定）
+- [x] `validation/` ディレクトリ作成（設定・入力検証、約400行を格納予定）
+- [x] `dictionary/` ディレクトリ作成（辞書システム、約200行を格納予定）
+- [x] `input/` ディレクトリ作成（ユーザー入力処理、約400行を格納予定）
+- [x] `performance/` ディレクトリ作成（パフォーマンス管理、約150行を格納予定）
+- [x] `core/` ディレクトリ作成（コア機能、約300行を格納予定）
+
+#### sub2 TDDテストファイルの作成 ✅
+@target: test/structure/
+- [x] `directory-structure.test.ts`を作成（ディレクトリ存在確認テスト）
+- [x] Red: テストを先に書いて失敗させる
+- [x] Green: 最小実装でテストを通す
+- [x] Refactor: コード品質向上
+
+#### sub3 index.tsファイルの準備 ✅
+@target: 各新規ディレクトリ
+- [x] 各ディレクトリにindex.tsを作成
+- [x] 再エクスポート用のテンプレート準備
+- [x] TypeScript型定義とJSDocコメント追加
+- [x] 各モジュールに適切なコメントとTODOを配置
+
+#### sub4 Red-Green-Refactorサイクル実行 ✅
+@target: 全体
+- [x] **Cycle 1**: ディレクトリ構造（15分）
+  - Red: ディレクトリ存在テストを書く → 失敗確認
+  - Green: 6つのディレクトリを作成 → 成功確認
+  - Refactor: 権限設定とドキュメント対応
+- [x] **Cycle 2**: index.tsファイル（20分）
+  - Red: index.ts存在テストを書く → 失敗確認
+  - Green: 空のindex.tsを配置 → 成功確認
+  - Refactor: TypeScriptコンパイル設定確認
+- [x] **Cycle 3**: ドキュメント生成
+  - DIRECTORY_STRUCTURE.mdを生成
+  - 各ディレクトリの責務を文書化
+  - TDD実装プロセスの記録
+
+### process2 validation モジュールの分離
+#### sub1 config検証機能の移動
+@target: denops/hellshake-yano/validation/config.ts
+- [ ] validateConfig関数の移動（2672-2817行）
+- [ ] getDefaultConfig関数の移動（2819-2848行）
+- [ ] getMinLengthForKey関数の移動（174-194行）
+- [ ] getMotionCountForKey関数の移動（196-223行）
+- [ ] normalizeBackwardCompatibleFlags関数の移動（258-272行）
+
+#### sub2 highlight検証機能の移動
+@target: denops/hellshake-yano/validation/highlight.ts
+- [ ] validateHighlightGroupName関数の移動（2850-2878行）
+- [ ] isValidColorName関数の移動（2880-2921行）
+- [ ] isValidHexColor関数の移動（2923-2948行）
+- [ ] normalizeColorName関数の移動（2950-2967行）
+- [ ] validateHighlightColor関数の移動（2969-3059行）
+- [ ] generateHighlightCommand関数の移動（3061-3104行）
+- [ ] validateHighlightConfig関数の移動（3106-3138行）
+
+### process3 performance モジュールの分離
+#### sub1 パフォーマンス測定機能
+@target: denops/hellshake-yano/performance/metrics.ts
+- [ ] performanceMetricsオブジェクトの移動（100-144行）
+- [ ] recordPerformance関数の移動（146-172行）
+- [ ] パフォーマンス関連のグローバル変数
+
+#### sub2 デバッグ機能
+@target: denops/hellshake-yano/performance/debug.ts
+- [ ] collectDebugInfo関数の移動（225-241行）
+- [ ] clearDebugInfo関数の移動（243-256行）
+
+### process4 dictionary モジュールの分離
+#### sub1 辞書操作機能
+@target: denops/hellshake-yano/dictionary/operations.ts
+- [ ] initializeDictionarySystem関数の移動（3140-3161行）
+- [ ] registerDictionaryCommands関数の移動（3163-3186行）
+- [ ] reloadDictionary関数の移動（3188-3211行）
+- [ ] editDictionary関数の移動（3213-3255行）
+- [ ] showDictionary関数の移動（3257-3285行）
+- [ ] validateDictionary関数の移動（3287-3313行）
+
+### process5 core モジュールの分離
+#### sub1 単語検出機能
+@target: denops/hellshake-yano/core/detection.ts
+- [ ] detectWordsOptimized関数の移動（1108-1150行）
+- [ ] 関連するキャッシュとヘルパー関数
+
+#### sub2 ヒント生成機能
+@target: denops/hellshake-yano/core/generation.ts
+- [ ] generateHintsOptimized関数の移動（1152-1208行）
+- [ ] 関連するキャッシュとヘルパー関数
+
+#### sub3 基本操作
+@target: denops/hellshake-yano/core/operations.ts
+- [ ] showHints関数の実装
+- [ ] hideHints関数の移動（1699-1756行）
+- [ ] clearHintDisplay関数の移動（1645-1697行）
+
+### process6 display モジュールの分離
+#### sub1 レンダリング機能
+@target: denops/hellshake-yano/display/renderer.ts
+- [ ] displayHintsOptimized関数の移動（1210-1252行）
+- [ ] displayHintsAsync関数の移動（1254-1300行）
+- [ ] displayHintsWithExtmarksBatch関数の移動（1320-1416行）
+- [ ] displayHintsWithMatchAddBatch関数の移動（1418-1476行）
+- [ ] processExtmarksBatched関数の移動（2044-2145行）
+- [ ] processMatchaddBatched関数の移動（2147-2257行）
+
+#### sub2 ハイライト機能
+@target: denops/hellshake-yano/display/highlight.ts
+- [ ] highlightCandidateHints関数の移動（1758-1949行）
+- [ ] highlightCandidateHintsAsync関数の移動（1951-2003行）
+- [ ] highlightCandidateHintsOptimized関数の移動（2005-2042行）
+
+#### sub3 状態管理
+@target: denops/hellshake-yano/display/state.ts
+- [ ] isRenderingHints関数の移動（1302-1307行）
+- [ ] abortCurrentRendering関数の移動（1309-1318行）
+- [ ] レンダリング関連のグローバル変数
+
+### process7 input モジュールの分離
+#### sub1 入力処理機能
+@target: denops/hellshake-yano/input/handler.ts
+- [ ] waitForUserInput関数の移動（2259-2665行）
+- [ ] 既存のmain/input.tsとの統合検討
+
+### process8 main.ts のリファクタリング
+#### sub1 エントリポイントの整理
 @target: denops/hellshake-yano/main.ts
-@ref: denops/hellshake-yano/main.ts (displayHintsAsync)
-- [x] `highlightCandidateHintsAsync`関数の新規作成
-  - 引数: `denops: Denops`, `inputPrefix: string`, `onComplete?: () => void`
-  - 戻り値: `void`（Promiseを返さない）
-- [x] グローバル変数`_highlightAbortController`の追加
-- [ ] 既存の`highlightCandidateHints`関数はそのまま保持（後方互換性）
+- [ ] main関数の保持（322行〜）
+- [ ] 必要最小限のグローバル変数
+- [ ] 各モジュールからのインポート
+- [ ] 後方互換性のための再エクスポート
 
-#### sub2 AbortController実装
-@target: denops/hellshake-yano/main.ts
-- [x] 前の描画処理のキャンセル機能
-- [x] 新しいAbortControllerの作成
-- [x] signal.abortedのチェック処理
+### process9 循環依存の解消
+#### sub1 operations.tsの修正
+@target: denops/hellshake-yano/main/operations.ts
+- [ ] main.tsからのインポートを削除
+- [ ] 適切なモジュールからインポートに変更
 
-#### sub3 バッチ処理の実装
-@target: denops/hellshake-yano/main.ts
-- [x] HIGHLIGHT_BATCH_SIZE定数の定義（デフォルト: 15）
-- [x] matchingHintsとnonMatchingHintsの分離処理
-- [x] バッチループの実装
-  - matchingHintsを優先的に処理
-  - 各バッチ後にsetTimeout(0)で制御を返す
-- [x] Neovim（extmark）とVim（matchadd）の分岐処理
+### process10 統合テスト
+#### sub1 既存テストの動作確認
+@target: tests/
+- [ ] 全既存テストの実行
+- [ ] エラーの修正
+- [ ] パフォーマンステスト
 
-### process2 呼び出し箇所の変更
-#### sub1 main.ts内の呼び出し修正
-@target: denops/hellshake-yano/main.ts（2153行付近）
-- [x] `await highlightCandidateHints(denops, inputChar)`を
-- [x] `highlightCandidateHintsAsync(denops, inputChar)`に変更（awaitなし）
-
-### process10 ユニットテスト
-#### sub1 非同期処理のテスト
-@target: tests/async_highlight_test.ts（新規作成）
-- [x] 基本的な非同期動作のテスト
-- [x] AbortControllerによる中断テスト
-- [x] バッチ処理の動作確認
-- [x] 大量ヒント（100+）でのパフォーマンステスト
-
-#### sub2 互換性テスト
-@target: tests/compatibility_test.ts
-- [x] 既存の`highlightCandidateHints`が影響を受けないことを確認
-- [x] NeovimとVim両方での動作確認
-
-#### sub3 呼び出し箇所テスト
-@target: tests/call_site_test.ts（新規作成）
-- [x] 非同期版が使用されていることの確認
-- [x] awaitなし呼び出しの検証
-- [x] エラーハンドリングの確認
-
-#### sub4 統合テスト
-@target: tests/integration_call_site_test.ts（新規作成）
-- [x] 実際のソースコード検証
-- [x] コメントの適切性確認
-- [x] 古い同期版の除去確認
+#### sub2 インポートパスの更新
+@target: 全ファイル
+- [ ] main.tsからのインポートを確認
+- [ ] 必要に応じて新しいパスに更新
 
 ### process50 フォローアップ
-#### sub1 パフォーマンスチューニング（将来）
-- [ ] バッチサイズの最適化
-- [ ] 優先度アルゴリズムの改善
-- [ ] メモリ使用量の最適化
+#### sub1 ドキュメント更新
+- [ ] README.mdへの構造説明追加
+- [ ] 各モジュールのJSDocコメント
+- [ ] 依存関係図の作成
 
-### process100 リファクタリング
-- [ ] 共通処理の抽出
-- [ ] エラーハンドリングの強化
-- [ ] TypeScript型定義の改善
+### process100 グローバル状態の改善
+- [ ] 状態管理モジュールの作成
+- [ ] グローバル変数の最小化
+- [ ] イベントベースの通信検討
 
-### process200 ドキュメンテーション
-- [ ] 関数のJSDocコメント追加
-- [ ] README.mdへの機能説明追加
-- [ ] パフォーマンス改善効果の記載
+### process200 パフォーマンス最適化
+- [ ] モジュール間の通信最適化
+- [ ] 遅延読み込みの実装
+- [ ] バンドルサイズの確認

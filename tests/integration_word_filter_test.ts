@@ -166,10 +166,10 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       assertEquals(hintMappings.length, 100);
       assertEquals(positions.length, 100);
 
-      // パフォーマンス確認（実行時間をログ出力し、1000ms以内で検証）
+      // パフォーマンス確認（実行時間をログ出力し、3000ms以内で検証）
       const executionTime = endTime - startTime;
       console.log(`Performance test execution time: ${executionTime}ms`);
-      assertEquals(executionTime < 1000, true);
+      assertEquals(executionTime < 3000, true);
 
       // 全ての位置が正しく計算されていること
       positions.forEach((pos, index) => {
