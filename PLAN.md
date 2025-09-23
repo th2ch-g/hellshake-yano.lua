@@ -1,142 +1,126 @@
-# title: ヒント重複対策の実装
+# title: ヒント再描画パフォーマンス問題の修正
 
 ## 概要
-- 複数文字ヒントが隣接する単語と重なる問題を解決する選択的表示パターンの実装
+- ヒント入力時（フィルタリング時）に重複検出ロジックが実行されて遅くなる問題を修正
 
 ### goal
-- 「- **保守性**」のようなマークダウン記法で、記号と日本語の間でヒントが重ならないようにする
+- ヒント入力の1文字目でも滑らかに動作するようにする
+- 100単語以上でも瞬時にフィルタリングできるようにする
 
 ## 必須のルール
-- 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 既存の設定との互換性を維持すること
+- 既存のAPIとの互換性を維持すること
+- 初回表示時の重複検出機能は維持すること
 
 ## 開発のゴール
-- 記号と単語が隣接する場合、単語側のみにヒントを表示
-- 設定でパターンを選択可能にする
-- パフォーマンスへの影響を最小限にする
+- ヒント入力時のレスポンスを10ms以下に改善
+- 重複検出のオン/オフを状況に応じて制御
+- キャッシュの効果を最大化
 
 ## 実装仕様
 
-### ヒント重複検出の仕様
-1. **重複判定条件**
-   - 隣接する単語間の距離が2文字以内
-   - 前の単語が記号（`-`, `*`, `+`, `#`, `>`など）
-   - 後の単語が日本語または英語
+### パフォーマンス問題の詳細
+1. **現状の問題**
+   - `assignHintsToWords`が呼ばれるたびに`detectAdjacentWords`が実行（289行目）
+   - O(n²)の計算量で、100単語で10,000回、1000単語で1,000,000回の比較
+   - ヒント入力のたびに全処理が再実行される
 
-2. **優先順位ルール**
-   - 記号より単語を優先
-   - 短い単語より長い単語を優先
-   - 同じ長さなら後方の単語を優先
+2. **ボトルネック箇所**
+   - `detectAdjacentWords`: 全単語ペアの隣接判定
+   - `shouldSkipHintForOverlap`: 各単語の優先度判定
+   - 正規表現`isSymbolWord`: 繰り返し実行される記号判定
 
-3. **設定オプション**
-   - `hint_overlap_strategy`: 重複対策の戦略選択
-     - `"selective"`: 選択的表示（デフォルト）
-     - `"offset"`: 位置調整
-     - `"none"`: 対策なし
+3. **修正方針**
+   - フィルタリング時は重複検出をスキップ
+   - 設定で重複検出の有効/無効を切り替え可能に
+   - シンボル判定の結果をキャッシュ
 
 ## 生成AIの学習用コンテキスト
 
 ### TypeScriptファイル
 - `denops/hellshake-yano/hint.ts`
-  - `assignHintsToWords`関数: ヒント割り当てロジック
-  - `calculateHintPosition`関数: ヒント位置計算
-- `denops/hellshake-yano/word.ts`
-  - Word型定義と単語検出ロジック
-- `denops/hellshake-yano/config.ts`
-  - 設定管理
-
-### Vimファイル
-- `autoload/hellshake_yano.vim`
-  - ヒント表示トリガー関数
+  - 227-345行: `assignHintsToWords`関数
+  - 1129行: `detectAdjacentWords`関数
+  - 1223行: `shouldSkipHintForOverlap`関数
+- `denops/hellshake-yano/main/operations.ts`
+  - 234行: ヒント表示時の`assignHintsToWords`呼び出し
+- `denops/hellshake-yano/main.ts`
+  - 721行: フィルタリング時の`assignHintsToWords`呼び出し
 
 ## Process
 
-### process1 重複検出ロジックの実装
-#### sub1 隣接単語の検出関数作成
+### process1 パフォーマンス最適化の実装
+#### sub1 重複検出のスキップオプション追加
 @target: denops/hellshake-yano/hint.ts
-@ref: denops/hellshake-yano/types.ts
-- [ ] `detectAdjacentWords`関数の作成
-  - 同一行の隣接単語を検出
-  - 単語間の距離を計算
-- [ ] `isSymbolWord`関数の作成
-  - マークダウン記号の判定
-  - 特殊文字の判定
+- [ ] `assignHintsToWords`関数にオプションパラメータを追加
+  - `skipOverlapDetection?: boolean`パラメータ
+  - デフォルトは`false`で後方互換性維持
+- [ ] 重複検出処理を条件分岐でラップ
+  - `if (!skipOverlapDetection)`で囲む
 
-#### sub2 重複判定関数の実装
-@target: denops/hellshake-yano/hint.ts
-- [ ] `shouldSkipHintForOverlap`関数の作成
-  - 重複判定ロジック
-  - 優先順位の適用
-- [ ] キャッシュ機能の追加
-  - 判定結果のキャッシュ
+#### sub2 呼び出し元の修正
+@target: denops/hellshake-yano/main/operations.ts
+@target: denops/hellshake-yano/main.ts
+- [ ] 初回表示時は重複検出を有効
+  - `skipOverlapDetection: false`または省略
+- [ ] フィルタリング時は重複検出を無効
+  - `skipOverlapDetection: true`を追加
+- [ ] ヒント入力中フラグの管理
+  - `isFiltering`状態を追跡
 
-### process2 選択的ヒント表示の実装
-#### sub1 assignHintsToWords関数の修正
-@target: denops/hellshake-yano/hint.ts
-- [ ] 重複検出の組み込み
-  - 隣接単語のペアを検査
-  - スキップ対象の記録
-- [ ] ヒント割り当てロジックの修正
-  - スキップ対象を除外
-  - 残りの単語にヒントを割り当て
-
-#### sub2 パフォーマンス最適化
-@target: denops/hellshake-yano/hint.ts
-- [ ] バッチ処理の最適化
-  - 大量単語での処理速度維持
-- [ ] メモリ使用量の最適化
-
-### process3 設定オプションの追加
+### process2 設定による制御
 #### sub1 Config型の拡張
 @target: denops/hellshake-yano/config.ts
-- [ ] `hint_overlap_strategy`設定の追加
-  - 型定義の追加
-  - デフォルト値の設定
-- [ ] バリデーションの追加
+- [ ] `enable_overlap_detection`設定の追加
+  - デフォルト値: `false`（パフォーマンス優先）
+  - 型定義とバリデーション
+- [ ] `overlap_detection_threshold`設定の追加
+  - 単語数がこの値以下の場合のみ検出実行
+  - デフォルト値: `50`
 
-#### sub2 Vim側の設定伝達
-@target: autoload/hellshake_yano.vim
-- [ ] 設定値の読み込み
-- [ ] denopsへの設定伝達
-
-### process4 位置調整パターンの実装（オプション）
-#### sub1 オフセット計算の実装
+#### sub2 動的な重複検出の判定
 @target: denops/hellshake-yano/hint.ts
-- [ ] `calculateOffsetPosition`関数の作成
-  - 重複時の位置調整量計算
-  - 最適な配置位置の決定
-- [ ] ヒント位置の動的調整
+- [ ] 設定と単語数による自動判定ロジック
+  - `shouldPerformOverlapDetection`関数の作成
+  - 単語数と設定値の比較
+
+### process3 キャッシュの最適化
+#### sub1 シンボル判定のキャッシュ
+@target: denops/hellshake-yano/hint.ts
+- [ ] `isSymbolWord`の結果をキャッシュ
+  - Mapでword.textをキーに結果を保存
+  - キャッシュサイズの制限（100エントリ）
+- [ ] キャッシュクリア機能の追加
+
+#### sub2 隣接関係のキャッシュ改善
+@target: denops/hellshake-yano/hint.ts
+- [ ] キャッシュキーの最適化
+  - 単語の位置だけでなく内容も考慮
+  - ハッシュ関数の改良
+- [ ] キャッシュヒット率の向上
 
 ### process10 ユニットテスト
-#### sub1 重複検出のテスト
-@target: tests/hint_overlap_test.ts
-- [ ] 隣接単語検出のテスト
-- [ ] 記号判定のテスト
-- [ ] 優先順位ルールのテスト
+#### sub1 パフォーマンステスト
+@target: tests/performance_overlap_test.ts
+- [ ] 重複検出スキップ時の速度測定
+- [ ] 1000単語での処理時間比較
+- [ ] キャッシュヒット率の確認
 
-#### sub2 統合テスト
-@target: tests/integration_overlap_test.ts
-- [ ] マークダウンテキストでのテスト
-- [ ] 日本語・英語混在テキストのテスト
-- [ ] パフォーマンステスト
+#### sub2 機能テスト
+@target: tests/hint_overlap_skip_test.ts
+- [ ] スキップオプションの動作確認
+- [ ] 設定による制御のテスト
+- [ ] 後方互換性の確認
 
 ### process50 フォローアップ
-#### sub1 視覚的分離パターンの追加（将来拡張）
-@target: denops/hellshake-yano/hint.ts
-- [ ] 背景色による区別オプション
-- [ ] アンダーラインによる区別オプション
-
-#### sub2 コンテキスト認識の強化
-@target: denops/hellshake-yano/word.ts
-- [ ] コード vs テキストの判定
-- [ ] 言語別の最適化ルール
+#### sub1 より高度な最適化（将来）
+- [ ] Web Workerでの並列処理
+- [ ] インクリメンタルな重複検出
+- [ ] 空間インデックスの活用
 
 ### process100 リファクタリング
-- [ ] 関数の分割と整理
-- [ ] 重複コードの削除
-- [ ] 型定義の最適化
+- [ ] 重複検出ロジックの別モジュール化
+- [ ] パフォーマンス計測ユーティリティの追加
 
 ### process200 ドキュメンテーション
-- [ ] README.mdへの機能説明追加
-- [ ] 設定オプションのドキュメント化
-- [ ] トラブルシューティングガイドの作成
+- [ ] パフォーマンス設定のドキュメント化
+- [ ] チューニングガイドの作成

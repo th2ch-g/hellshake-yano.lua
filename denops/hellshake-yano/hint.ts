@@ -45,11 +45,13 @@ function createAssignmentCacheKey(
   cursorCol: number,
   hintPositionSetting: string,
   visualHintPositionSetting: string,
+  optimizationConfig?: { skipOverlapDetection?: boolean },
 ): string {
   const positionSignature = hashString(
     words.map((w) => `${w.line},${w.col}`).join(";"),
   );
-  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${visualHintPositionSetting}-${positionSignature}`;
+  const skipOverlap = optimizationConfig?.skipOverlapDetection ?? false;
+  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${visualHintPositionSetting}-${skipOverlap}-${positionSignature}`;
 }
 
 function hashString(value: string): string {
@@ -231,6 +233,7 @@ export function assignHintsToWords(
   cursorCol: number,
   mode: string = "normal",
   config?: { hint_position?: string; visual_hint_position?: string },
+  optimizationConfig?: { skipOverlapDetection?: boolean },
 ): HintMapping[] {
   if (words.length === 0 || hints.length === 0) {
     return [];
@@ -242,13 +245,14 @@ export function assignHintsToWords(
 
   const assignmentCache = getAssignmentCacheForMode(mode);
 
-  // キャッシュキーを生成（単語の位置とカーソル位置、モード情報を考慮）
+  // キャッシュキーを生成（単語の位置とカーソル位置、モード情報、最適化設定を考慮）
   const cacheKey = createAssignmentCacheKey(
     words,
     cursorLine,
     cursorCol,
     hintPositionSetting,
     visualHintPositionSetting,
+    optimizationConfig,
   );
 
   // キャッシュヒットチェック
@@ -285,8 +289,28 @@ export function assignHintsToWords(
     });
   }
 
+  // オーバーラップ検出を実行（optimizationConfigでスキップ可能）
+  let filteredWords = words;
+  const shouldSkipOverlapDetection = optimizationConfig?.skipOverlapDetection ?? false;
+
+  if (!shouldSkipOverlapDetection) {
+    const adjacencyResults = detectAdjacentWords(words);
+    const priorityRules = { symbolsPriority: 1, wordsPriority: 2 };
+
+    // オーバーラップでスキップすべき単語を特定
+    const wordsToSkip = new Set<Word>();
+    for (const { word, adjacentWords } of adjacencyResults) {
+      if (shouldSkipHintForOverlap(word, adjacentWords, priorityRules)) {
+        wordsToSkip.add(word);
+      }
+    }
+
+    // スキップ対象を除外した単語リストを作成
+    filteredWords = words.filter(word => !wordsToSkip.has(word));
+  }
+
   // カーソル位置からの距離で最適化されたソート
-  const sortedWords = sortWordsByDistanceOptimized(words, cursorLine, cursorCol);
+  const sortedWords = sortWordsByDistanceOptimized(filteredWords, cursorLine, cursorCol);
 
   // ヒントを割り当て（ヒント位置情報を含める）
   const effectiveHintPosition = isVisualMode && visualHintPositionSetting !== "same"
@@ -1096,4 +1120,150 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
     valid: errors.length === 0,
     errors,
   };
+}
+
+// ===== Hint Overlap Detection Functions =====
+
+/**
+ * オーバーラップ検出用のキャッシュ
+ */
+let adjacencyCache = new Map<string, { word: Word; adjacentWords: Word[] }[]>();
+
+/**
+ * 隣接する単語を検出する
+ * @description 同一行で隣接している単語（1カラム以内の間隔）を特定
+ * @param words - 検出対象の単語配列
+ * @returns 各単語とその隣接単語の配列
+ */
+export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords: Word[] }[] {
+  if (words.length === 0) {
+    return [];
+  }
+
+  // キャッシュキーを生成
+  const cacheKey = words.map(w => `${w.text}:${w.line}:${w.col}`).join('|');
+
+  // キャッシュヒットチェック
+  if (adjacencyCache.has(cacheKey)) {
+    return adjacencyCache.get(cacheKey)!;
+  }
+
+  const result: { word: Word; adjacentWords: Word[] }[] = [];
+
+  for (const word of words) {
+    const adjacentWords: Word[] = [];
+
+    for (const otherWord of words) {
+      if (word === otherWord) continue;
+
+      // 同じ行の単語のみチェック
+      if (word.line !== otherWord.line) continue;
+
+      // 隣接性を判定（1カラム以内の間隔）
+      const wordEndCol = word.col + word.text.length - 1;
+      const otherWordEndCol = otherWord.col + otherWord.text.length - 1;
+
+      // UTF-8対応：byteColがある場合はそれを使用
+      const wordEndByte = word.byteCol ? word.byteCol + getByteLength(word.text) - 1 : wordEndCol;
+      const otherWordEndByte = otherWord.byteCol ? otherWord.byteCol + getByteLength(otherWord.text) - 1 : otherWordEndCol;
+
+      // 距離計算（バイト位置があればそれを使用、なければ文字位置）
+      let distance: number;
+      if (word.byteCol && otherWord.byteCol) {
+        if (word.byteCol < otherWord.byteCol) {
+          distance = otherWord.byteCol - wordEndByte - 1;
+        } else {
+          distance = word.byteCol - otherWordEndByte - 1;
+        }
+      } else {
+        if (word.col < otherWord.col) {
+          distance = otherWord.col - wordEndCol - 1;
+        } else {
+          distance = word.col - otherWordEndCol - 1;
+        }
+      }
+
+      // 隣接判定（間隔が1以下）
+      if (distance <= 1) {
+        adjacentWords.push(otherWord);
+      }
+    }
+
+    result.push({ word, adjacentWords });
+  }
+
+  // キャッシュに保存（サイズ制限付き）
+  if (adjacencyCache.size >= CACHE_MAX_SIZE) {
+    const firstKey = adjacencyCache.keys().next().value;
+    if (firstKey !== undefined) {
+      adjacencyCache.delete(firstKey);
+    }
+  }
+  adjacencyCache.set(cacheKey, result);
+
+  return result;
+}
+
+/**
+ * 単語がマークダウン記号かどうかを判定する
+ * @description マークダウン記号やその他の記号文字のみで構成されているかチェック
+ * @param word - 判定対象の単語
+ * @returns 記号の場合true
+ */
+export function isSymbolWord(word: Word): boolean {
+  if (!word.text || word.text.trim().length === 0) {
+    return false;
+  }
+
+  // マークダウン記号パターン
+  const symbolPattern = /^[\-\*#`\[\](){}.,;:!?]+$/;
+
+  return symbolPattern.test(word.text);
+}
+
+/**
+ * オーバーラップによりヒントをスキップするかどうかを判定する
+ * @description 優先度ルールに基づいてヒント表示の要否を決定
+ * @param word - 判定対象の単語
+ * @param adjacentWords - 隣接している単語の配列
+ * @param priorityRules - 優先度ルール（記号 < 単語）
+ * @returns スキップする場合true
+ */
+export function shouldSkipHintForOverlap(
+  word: Word,
+  adjacentWords: Word[],
+  priorityRules: { symbolsPriority: number; wordsPriority: number }
+): boolean {
+  if (adjacentWords.length === 0) {
+    return false;
+  }
+
+  const isCurrentSymbol = isSymbolWord(word);
+
+  for (const adjacentWord of adjacentWords) {
+    const isAdjacentSymbol = isSymbolWord(adjacentWord);
+
+    // 優先度ルール: 記号 < 単語
+    if (isCurrentSymbol && !isAdjacentSymbol) {
+      // 現在が記号、隣接が単語 → 記号をスキップ
+      if (priorityRules.symbolsPriority < priorityRules.wordsPriority) {
+        return true;
+      }
+    }
+
+    // 同じ種類の場合は長さで判定
+    if (isCurrentSymbol === isAdjacentSymbol) {
+      if (word.text.length < adjacentWord.text.length) {
+        // 短い方をスキップ
+        return true;
+      } else if (word.text.length === adjacentWord.text.length) {
+        // 同じ長さの場合は位置で判定（後の単語を優先）
+        if (word.col < adjacentWord.col) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
