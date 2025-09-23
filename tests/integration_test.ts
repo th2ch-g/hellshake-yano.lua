@@ -253,7 +253,9 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
     };
 
     const testDenops = createMockDenopsWithPerKeyConfig(config);
-    const result = await detectWordsWithManager(testDenops, config);
+    // 'v'キーのコンテキストを渡す
+    const context = { currentKey: "v", minWordLength: 1 };
+    const result = await detectWordsWithManager(testDenops, config, context);
 
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
@@ -579,7 +581,9 @@ Deno.test("Visual mode integration tests", async (t) => {
         },
       };
 
-      const result = await detectWordsWithManager(testDenops, testConfig);
+      // Visual modeのコンテキストを渡す
+      const context = { currentKey: test.mode, minWordLength: 1 };
+      const result = await detectWordsWithManager(testDenops, testConfig, context);
 
       assertEquals(result.success, true, `${test.description} should succeed`);
 
@@ -627,7 +631,9 @@ Deno.test("Visual mode integration tests", async (t) => {
       },
     };
 
-    const result = await detectWordsWithManager(testDenops, testConfig);
+    // Visual line modeのコンテキストを渡す
+    const context = { currentKey: "V", minWordLength: 1 };
+    const result = await detectWordsWithManager(testDenops, testConfig, context);
 
     assertEquals(result.success, true, "Visual line mode should succeed");
 

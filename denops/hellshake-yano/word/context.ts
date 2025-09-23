@@ -107,7 +107,9 @@ export class ContextDetector {
     // キャッシュに保存（LRU的な制限を追加）
     if (this.contextCache.size > 1000) {
       const firstKey = this.contextCache.keys().next().value;
-      this.contextCache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.contextCache.delete(firstKey);
+      }
     }
     this.contextCache.set(cacheKey, context);
 

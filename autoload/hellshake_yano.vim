@@ -197,7 +197,7 @@ endfunction
 " キーリピート検出の初期化
 function! s:init_key_repeat_detection(bufnr) abort
   if !has_key(s:last_key_time, a:bufnr)
-    let s:last_key_time[a:bufnr] = 0
+    let s:last_key_time[a:bufnr] = s:get_elapsed_time()
     let s:is_key_repeating[a:bufnr] = v:false
   endif
 endfunction
@@ -464,7 +464,7 @@ function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
   " 前回のキー入力時刻との差を計算
   let time_diff = a:current_time - s:last_key_time[a:bufnr]
 
-  " キーリピート判定
+  " キーリピート判定（初回キー入力は除外、2回目以降で判定）
   if time_diff < a:config.threshold && s:last_key_time[a:bufnr] > 0
     " リピート状態に設定
     let s:is_key_repeating[a:bufnr] = v:true

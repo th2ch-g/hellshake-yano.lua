@@ -50,10 +50,10 @@ Deno.test({
     ];
     const hints = ["A", "B"];
 
-    // 日本語の終端位置のテスト
+    // 日本語の終端位置のテスト（隣接検出をスキップして両方の単語にヒントを割り当てる）
     const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {
       hint_position: "end",
-    });
+    }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 2);
 

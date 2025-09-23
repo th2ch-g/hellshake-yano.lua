@@ -112,11 +112,23 @@ export class SegmentAnalyzer {
     if (this.englishPattern.test(char)) {
       return "english";
     }
-    if (this.symbolPattern.test(char)) {
-      return "symbol";
-    }
     if (this.numericPattern.test(char)) {
       return "english"; // 数字は英語として扱う
+    }
+
+    // ピリオドとカンマは前後の文脈で判定
+    if (char === '.' || char === ',') {
+      // 前の文字が英数字なら英語の一部として扱う
+      if (index > 0) {
+        const prevChar = fullText[index - 1];
+        if (/[a-zA-Z0-9]/.test(prevChar)) {
+          return "english";
+        }
+      }
+    }
+
+    if (this.symbolPattern.test(char)) {
+      return "symbol";
     }
 
     return "symbol"; // デフォルト
@@ -308,9 +320,8 @@ export class EnhancedHybridWordDetector extends HybridWordDetector {
   private postProcessor: TextPostProcessor;
   private detectorCache: Map<string, WordDetector>;
 
-  constructor(name: string = "enhanced-hybrid") {
+  constructor() {
     super({ use_japanese: true });  // HybridWordDetectorはconfigを受け取る
-    this.name = name;
     this.segmentAnalyzer = new SegmentAnalyzer();
     this.preProcessor = new TextPreProcessor();
     this.postProcessor = new TextPostProcessor();
@@ -364,6 +375,15 @@ export class EnhancedHybridWordDetector extends HybridWordDetector {
     // セグメントタイプの統計を計算
     const typeStats = this.calculateTypeStatistics(segments);
 
+    // 日本語と英語の両方が存在する場合は混在として扱う
+    const hasJapanese = typeStats.has("japanese") && (typeStats.get("japanese") || 0) > 0;
+    const hasEnglish = typeStats.has("english") && (typeStats.get("english") || 0) > 0;
+
+    if (hasJapanese && hasEnglish) {
+      // 混在テキストの場合はHybridを使用
+      return this.getOrCreateDetector("hybrid");
+    }
+
     // 最も多いタイプに基づいて検出器を選択
     const dominantType = this.getDominantType(typeStats);
 
@@ -391,16 +411,13 @@ export class EnhancedHybridWordDetector extends HybridWordDetector {
       switch (type) {
         case "tinysegmenter":
           detector = new TinySegmenterWordDetector({ enable_tinysegmenter: true });
-          detector.name = "tinysegmenter";
           break;
         case "regexp":
           detector = new RegexWordDetector({ use_japanese: false });
-          detector.name = "regexp";
           break;
         case "hybrid":
         default:
-          detector = new HybridWordDetector({ use_japanese: true });
-          detector.name = "hybrid";
+          detector = new HybridWordDetector({ use_japanese: true })
           break;
       }
 

@@ -254,7 +254,7 @@ test("assignHintsToWords はヒント設定を一度だけ評価する", async (
     },
   });
 
-  const mappings = assignHintsToWords(words, hints, 1, 1, "visual", config);
+  const mappings = assignHintsToWords(words, hints, 1, 1, "visual", config, { skipOverlapDetection: true });
 
   assertEquals(mappings.length, 2);
   assertEquals(hintPositionAccess, 1);

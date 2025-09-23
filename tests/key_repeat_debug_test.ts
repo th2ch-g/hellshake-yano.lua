@@ -11,6 +11,9 @@ test("デバッグ: キーリピート設定と状態が表示される", async 
   await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 55");
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 280");
 
+  // プラグインを明示的に有効化
+  await denops.cmd("let g:hellshake_yano.enabled = v:true");
+
   // デバッグ情報を取得（リスト）
   const info = await denops.call("hellshake_yano#get_debug_info") as string[];
   const dbg = info.join("\n");
@@ -32,6 +35,9 @@ test("デバッグ: キーリピート状態がtrue→falseに遷移する", asy
   await denops.cmd("let g:hellshake_yano.suppress_on_key_repeat = v:true");
   await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 50");
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 300");
+
+  // プラグインを明示的に有効化
+  await denops.cmd("let g:hellshake_yano.enabled = v:true");
 
   // 2回の高速入力でリピート判定させる
   await denops.cmd("call hellshake_yano#motion('l')");

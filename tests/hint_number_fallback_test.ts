@@ -163,14 +163,28 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       };
 
       const hints = generateHintsWithGroups(words.length, config);
-      const assignments = assignHintsToWords(words, hints, 10, 16); // カーソル位置
+      const assignments = assignHintsToWords(
+        words,
+        hints,
+        10,
+        16,
+        "normal",
+        undefined,
+        { skipOverlapDetection: true } // 隣接検出をスキップして全単語にヒントを割り当てる
+      );
+
+      // デバッグ出力
+      console.log("Assignments:", assignments.length);
+      assignments.forEach(a => {
+        console.log(`  - word: "${a.word.text}", hint: "${a.hint}"`);
+      });
 
       // カーソルに最も近い単語が1文字ヒントを持つべき
       const near1Assignment = assignments.find((a) => a.word.text === "near1");
       const near2Assignment = assignments.find((a) => a.word.text === "near2");
 
-      assertExists(near1Assignment);
-      assertExists(near2Assignment);
+      assertExists(near1Assignment, "near1 assignment should exist");
+      assertExists(near2Assignment, "near2 assignment should exist");
 
       // 近い単語は1文字ヒント（A, S, D）のいずれかを持つべき
       assertEquals(near1Assignment.hint.length, 1);

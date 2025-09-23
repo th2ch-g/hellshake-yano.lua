@@ -6,8 +6,8 @@ Deno.test("assignHintsToWords - skipOverlapDetection parameter (RED phase)", asy
   // テスト用の隣接する単語データ
   const createOverlappingWords = (): Word[] => [
     { text: "hello", line: 1, col: 1 },
-    { text: "world", line: 1, col: 7 }, // hello の直後（col 6で終了 + 1カラム = col 7）
-    { text: "test", line: 1, col: 13 }, // world の直後
+    { text: "world", line: 1, col: 6 }, // hello の直後（隣接: col 1-5 = hello, col 6 = world）
+    { text: "test", line: 1, col: 11 }, // world の直後（隣接: col 6-10 = world, col 11 = test）
     { text: "isolated", line: 2, col: 1 }, // 別行の単語（オーバーラップしない）
   ];
 
@@ -82,8 +82,8 @@ Deno.test("assignHintsToWords - skipOverlapDetection parameter (RED phase)", asy
 Deno.test("assignHintsToWords - NEW API with skipOverlapDetection (should FAIL)", async (t) => {
   const words: Word[] = [
     { text: "test1", line: 1, col: 1 },
-    { text: "test2", line: 1, col: 7 }, // 隣接
-    { text: "test3", line: 1, col: 13 }, // 隣接
+    { text: "test2", line: 1, col: 6 }, // 隣接（test1の終端col:5の次）
+    { text: "test3", line: 1, col: 11 }, // 隣接（test2の終端col:10の次）
   ];
   const hints = ["A", "B", "C"];
 

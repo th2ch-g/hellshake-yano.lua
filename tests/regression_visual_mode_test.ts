@@ -83,7 +83,7 @@ Deno.test({
     const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
       hint_position: "start",
       visual_hint_position: "end",
-    });
+    }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 2);
 
@@ -151,7 +151,7 @@ Deno.test({
     const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
       hint_position: "start",
       visual_hint_position: "end",
-    });
+    }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 3);
 

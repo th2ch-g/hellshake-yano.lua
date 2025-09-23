@@ -605,7 +605,7 @@ export class TinySegmenterWordDetector implements WordDetector {
       try {
         const result = await this.segmenter.segment(lineText);
         if (result.success) {
-          const lineWords = this.segmentsToWords(result.segments, lineText, lineNumber);
+          const lineWords = this.segmentsToWords(result.segments, lineText, lineNumber, context);
           words.push(...lineWords);
         } else {
           // Fallback on segmentation failure
@@ -688,7 +688,7 @@ export class TinySegmenterWordDetector implements WordDetector {
     return this.segmenter.shouldSegment(lineText, threshold);
   }
 
-  private segmentsToWords(segments: string[], originalText: string, lineNumber: number): Word[] {
+  private segmentsToWords(segments: string[], originalText: string, lineNumber: number, context?: DetectionContext): Word[] {
     // 辞書ベースの補正を適用
     const correctedSegments = this.applyDictionaryCorrection(segments);
 
@@ -699,11 +699,14 @@ export class TinySegmenterWordDetector implements WordDetector {
     const mergedSegments = this.mergeShortSegmentsWithPosition(positionSegments);
     const words: Word[] = [];
 
+    // Use context-aware min length instead of config min length
+    const effectiveMinLength = this.getEffectiveMinLength(context, context?.currentKey);
+
     for (const segment of mergedSegments) {
       if (segment.text.trim().length > 0) {
-        // 単語の長さフィルタリング
+        // 単語の長さフィルタリング - use context-aware length
         if (
-          segment.text.length >= (this.config.min_word_length || 1) &&
+          segment.text.length >= effectiveMinLength &&
           segment.text.length <= (this.config.max_word_length || 50)
         ) {
           // 数字除外オプション
@@ -1284,14 +1287,20 @@ export class HybridWordDetector implements WordDetector {
           );
           // 英数字も検出するためRegexDetectorも併用
           const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, contextWithRules);
-          const mergedWords = this.mergeWordResults(segmenterWords, regexWords);
+          let mergedWords = this.mergeWordResults(segmenterWords, regexWords);
+
+          // Apply context-based filtering if context is provided
+          if (contextWithRules?.minWordLength !== undefined) {
+            mergedWords = mergedWords.filter((w) => w.text.length >= contextWithRules.minWordLength!);
+          }
+
           allWords.push(...mergedWords);
         } else {
           // TinySegmenter無効または日本語なし：統合関数を使用
           const { extractWordsUnified } = await import("../word.ts");
           let words = extractWordsUnified(lineText, lineNumber, this.config);
 
-          // Apply context-based filtering if context is provided
+          // Apply context-based filtering if context is provided (since extractWordsUnified doesn't handle context)
           if (contextWithRules?.minWordLength !== undefined) {
             words = words.filter((w) => w.text.length >= contextWithRules.minWordLength!);
           }
@@ -1300,7 +1309,13 @@ export class HybridWordDetector implements WordDetector {
         }
       } else {
         // 日本語除外モード：RegexDetectorを使用（日本語は除外される）
-        const regexWords = await this.regexDetector.detectWords(lineText, lineNumber, contextWithRules);
+        let regexWords = await this.regexDetector.detectWords(lineText, lineNumber, contextWithRules);
+
+        // Apply context-based filtering if context is provided
+        if (contextWithRules?.minWordLength !== undefined) {
+          regexWords = regexWords.filter((w) => w.text.length >= contextWithRules.minWordLength!);
+        }
+
         allWords.push(...regexWords);
       }
     }
@@ -1418,7 +1433,8 @@ export class HybridWordDetector implements WordDetector {
   private applyContextRules(context: DetectionContext, splittingRules: SplittingRules): DetectionContext {
     return {
       ...context,
-      minWordLength: splittingRules.minWordLength || context.minWordLength,
+      // contextのminWordLengthを優先、なければsplittingRulesのものを使用
+      minWordLength: context.minWordLength ?? splittingRules.minWordLength,
       metadata: {
         ...context.metadata,
         splittingRules,

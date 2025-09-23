@@ -8,6 +8,7 @@ import {
   TextPostProcessor
 } from "./enhanced-hybrid.ts";
 import { Word } from "../types.ts";
+import { TinySegmenterWordDetector, RegexWordDetector, HybridWordDetector } from "./detector.ts";
 
 describe("EnhancedHybridWordDetector", () => {
   describe("Segment Analysis Tests", () => {
@@ -87,7 +88,7 @@ describe("EnhancedHybridWordDetector", () => {
   });
 
   describe("Detector Selection Tests", () => {
-    const detector = new EnhancedHybridWordDetector("enhanced-hybrid");
+    const detector = new EnhancedHybridWordDetector();
 
     it("should select TinySegmenter for Japanese text", async () => {
       const segments: TextSegment[] = [{
@@ -99,7 +100,8 @@ describe("EnhancedHybridWordDetector", () => {
       }];
 
       const selectedDetector = detector.selectDetector(segments);
-      assertEquals(selectedDetector.name.includes("tinysegmenter"), true);
+      // TinySegmenterWordDetectorが選択されることを確認
+      assertEquals(selectedDetector instanceof TinySegmenterWordDetector, true);
     });
 
     it("should select RegExp detector for English text", async () => {
@@ -112,7 +114,8 @@ describe("EnhancedHybridWordDetector", () => {
       }];
 
       const selectedDetector = detector.selectDetector(segments);
-      assertEquals(selectedDetector.name.includes("regexp"), true);
+      // RegexWordDetectorが選択されることを確認
+      assertEquals(selectedDetector instanceof RegexWordDetector, true);
     });
 
     it("should select Hybrid for mixed text", async () => {
@@ -134,7 +137,8 @@ describe("EnhancedHybridWordDetector", () => {
       ];
 
       const selectedDetector = detector.selectDetector(segments);
-      assertEquals(selectedDetector.name.includes("hybrid"), true);
+      // HybridWordDetectorが選択されることを確認
+      assertEquals(selectedDetector instanceof HybridWordDetector, true);
     });
 
     it("should switch detector based on confidence threshold", async () => {
@@ -171,7 +175,7 @@ describe("EnhancedHybridWordDetector", () => {
     });
 
     it("should recover from errors gracefully", async () => {
-      const detector = new EnhancedHybridWordDetector("enhanced-hybrid");
+      const detector = new EnhancedHybridWordDetector();
 
       // エラーが発生しても処理を継続
       const result = await detector.detectWords("", 1);

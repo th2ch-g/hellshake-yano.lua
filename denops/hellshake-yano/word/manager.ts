@@ -234,7 +234,7 @@ export class WordDetectionManager {
       }
 
       // Perform detection with timeout
-      const words = await this.detectWithTimeout(detector, text, startLine, effectiveContext);
+      const words = await this.detectWithTimeout(detector, text, startLine, effectiveContext, denops);
 
       // Cache the result
       if (useCache) {
@@ -266,7 +266,7 @@ export class WordDetectionManager {
         try {
           const fallbackDetector = this.getFallbackDetector();
           if (fallbackDetector) {
-            const words = await fallbackDetector.detectWords(text, startLine, effectiveContext);
+            const words = await fallbackDetector.detectWords(text, startLine, effectiveContext, denops);
             return {
               words,
               detector: `${fallbackDetector.name} (fallback)`,
@@ -430,9 +430,10 @@ export class WordDetectionManager {
     text: string,
     startLine: number,
     context?: DetectionContext,
+    denops?: Denops,
   ): Promise<Word[]> {
     if (!this.config.timeout_ms) {
-      return detector.detectWords(text, startLine, context);
+      return detector.detectWords(text, startLine, context, denops);
     }
 
     return new Promise((resolve, reject) => {
@@ -440,7 +441,7 @@ export class WordDetectionManager {
         reject(new Error(`Detection timeout (${this.config.timeout_ms}ms)`));
       }, this.config.timeout_ms);
 
-      detector.detectWords(text, startLine, context)
+      detector.detectWords(text, startLine, context, denops)
         .then((result) => {
           clearTimeout(timeoutId);
           resolve(result);
