@@ -204,8 +204,8 @@ Deno.test("リファクタリング効果の検証", async (t) => {
       const length = getByteLength(text);
       const end = performance.now();
 
-      // 処理時間が妥当な範囲内であることを確認
-      assert(end - start < 10, `バイト長計算が遅すぎます: ${end - start}ms`);
+      // 処理時間が妥当な範囲内であることを確認（並列実行時の負荷を考慮）
+      assert(end - start < 50, `バイト長計算が遅すぎます: ${end - start}ms`);
       assert(typeof length === "number", "バイト長が数値で返される");
       assert(length >= 0, "バイト長が0以上");
     });

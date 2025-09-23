@@ -30,10 +30,11 @@ test("デバッグ: キーリピート状態がtrue→falseに遷移する", asy
   await denops.cmd("call setline(1, ['hello world'])");
   await denops.cmd("normal! gg0");
 
-  // 設定（抑制を有効、しきい値=50ms、リセット=300ms）
+  // 設定（抑制を有効、しきい値=100ms、リセット=300ms）
+  // 並列実行時の処理遅延を考慮してしきい値を大きく設定
   await denops.cmd("let g:hellshake_yano.motion_count = 10");
   await denops.cmd("let g:hellshake_yano.suppress_on_key_repeat = v:true");
-  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 50");
+  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 100");  // 50ms -> 100ms
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 300");
 
   // プラグインを明示的に有効化
@@ -41,7 +42,7 @@ test("デバッグ: キーリピート状態がtrue→falseに遷移する", asy
 
   // 2回の高速入力でリピート判定させる
   await denops.cmd("call hellshake_yano#motion('l')");
-  await sleep(20);  // しきい値(50ms)より確実に短い間隔に（並列実行での遅延を考慮）
+  await sleep(40);  // しきい値(100ms)の半分以下の間隔で実行（並列実行での遅延を考慮）
   await denops.cmd("call hellshake_yano#motion('l')");
 
   // 直後はリピート中(true=1)であるべき

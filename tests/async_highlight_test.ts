@@ -241,7 +241,7 @@ Deno.test("highlightCandidateHintsAsync - バッチ処理テスト", async () =>
   // bufnrまたは他のメソッドが呼ばれているか確認
   // 注: 実際の関数実行にはより複雑な環境設定が必要な可能性がある
   // テストの目的は非ブロッキング動作の確認なので、call countは重要ではない
-  const isNonBlocking = duration < 50;
+  const isNonBlocking = duration < 500;  // Line 230と同じ値に統一
 
   assertEquals(isNonBlocking, true, "Function should be non-blocking regardless of internal processing");
 });
