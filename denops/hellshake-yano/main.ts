@@ -1241,6 +1241,7 @@ async function displayHintsOptimized(
   denops: Denops,
   hints: HintMapping[],
   mode: string = "normal",
+  signal?: AbortSignal,
 ): Promise<void> {
   try {
     // バッファの存在確認
@@ -1257,10 +1258,10 @@ async function displayHintsOptimized(
 
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
       // Neovim: バッチ処理でextmarkを作成
-      await displayHintsWithExtmarksBatch(denops, bufnr, hints, mode);
+      await displayHintsWithExtmarksBatch(denops, bufnr, hints, mode, signal);
     } else {
       // Vim: バッチ処理でmatchaddを作成
-      await displayHintsWithMatchAddBatch(denops, hints, mode);
+      await displayHintsWithMatchAddBatch(denops, hints, mode, signal);
     }
   } catch (error) {
     // console.error("[hellshake-yano] Critical error in displayHintsOptimized:", error);
@@ -1304,7 +1305,7 @@ export function displayHintsAsync(
         return;
       }
 
-      await displayHintsOptimized(denops, hints, config.mode || "normal");
+      await displayHintsOptimized(denops, hints, config.mode || "normal", currentController.signal);
 
       // 完了コールバックを実行
       if (onComplete && !currentController.signal.aborted) {
@@ -1349,12 +1350,18 @@ async function displayHintsWithExtmarksBatch(
   bufnr: number,
   hints: HintMapping[],
   mode: string = "normal",
+  signal?: AbortSignal,
 ): Promise<void> {
   const batchSize = 50; // バッチサイズ
   let extmarkFailCount = 0;
   const maxFailures = 5;
 
   for (let i = 0; i < hints.length; i += batchSize) {
+    // Check if the operation was aborted
+    if (signal?.aborted) {
+      return;
+    }
+
     const batch = hints.slice(i, i + batchSize);
 
     try {
@@ -1420,7 +1427,7 @@ async function displayHintsWithExtmarksBatch(
             // console.warn("[hellshake-yano] Too many extmark failures, switching to matchadd for remaining hints");
             const remainingHints = hints.slice(i + index + 1);
             if (remainingHints.length > 0) {
-              await displayHintsWithMatchAddBatch(denops, remainingHints);
+              await displayHintsWithMatchAddBatch(denops, remainingHints, mode, signal);
             }
             return;
           }
@@ -1445,10 +1452,16 @@ async function displayHintsWithMatchAddBatch(
   denops: Denops,
   hints: HintMapping[],
   mode: string = "normal",
+  signal?: AbortSignal,
 ): Promise<void> {
   const batchSize = 100; // matchaddはより高速なので大きなバッチサイズ
 
   for (let i = 0; i < hints.length; i += batchSize) {
+    // Check if the operation was aborted
+    if (signal?.aborted) {
+      return;
+    }
+
     const batch = hints.slice(i, i + batchSize);
 
     try {
