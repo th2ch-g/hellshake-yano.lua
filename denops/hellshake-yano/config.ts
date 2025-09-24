@@ -1,16 +1,9 @@
 /**
  * 設定管理モジュール
- * Phase 1: モジュール分割でmain.tsから分離
- * Phase 2: データ構造の簡潔化 - 階層化設定の追加
- * Phase 3: 命名規則の統一 - camelCase統一と明確な命名規則
- * Phase 5: 型定義の整理 - 主要な型定義はtypes.tsに移行
  */
 
 // Import consolidated types from types.ts
-import type {
-  Config as BaseConfig,
-  HighlightColor
-} from "./types.ts";
+import type { Config as BaseConfig, HighlightColor } from "./types.ts";
 
 // Re-export HighlightColor for backward compatibility
 export type { HighlightColor };
@@ -295,7 +288,9 @@ export function getDefaultConfig(): Config {
 /**
  * 設定値のバリデーション（camelCaseとsnake_case両方に対応）
  */
-export function validateConfig(config: Partial<Config | CamelCaseConfig>): { valid: boolean; errors: string[] } {
+export function validateConfig(
+  config: Partial<Config | CamelCaseConfig>,
+): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // motion_count / motionCount の検証
@@ -338,20 +333,28 @@ export function validateConfig(config: Partial<Config | CamelCaseConfig>): { val
   }
 
   // visual_hint_position / visualHintPositionの検証
-  const visualHintPositionValue = (config as any).visual_hint_position ?? (config as any).visualHintPosition;
+  const visualHintPositionValue = (config as any).visual_hint_position ??
+    (config as any).visualHintPosition;
   if (visualHintPositionValue !== undefined) {
     const validPositions = ["start", "end", "same"];
     if (!validPositions.includes(visualHintPositionValue)) {
-      errors.push(`visual_hint_position/visualHintPosition must be one of: ${validPositions.join(", ")}`);
+      errors.push(
+        `visual_hint_position/visualHintPosition must be one of: ${validPositions.join(", ")}`,
+      );
     }
   }
 
   // word_detection_strategy / wordDetectionStrategyの検証
-  const wordDetectionStrategyValue = (config as any).word_detection_strategy ?? (config as any).wordDetectionStrategy;
+  const wordDetectionStrategyValue = (config as any).word_detection_strategy ??
+    (config as any).wordDetectionStrategy;
   if (wordDetectionStrategyValue !== undefined) {
     const validStrategies = ["regex", "tinysegmenter", "hybrid"];
     if (!validStrategies.includes(wordDetectionStrategyValue)) {
-      errors.push(`word_detection_strategy/wordDetectionStrategy must be one of: ${validStrategies.join(", ")}`);
+      errors.push(
+        `word_detection_strategy/wordDetectionStrategy must be one of: ${
+          validStrategies.join(", ")
+        }`,
+      );
     }
   }
 
@@ -390,8 +393,27 @@ export function getDefaultHierarchicalConfig(): HierarchicalConfig {
       highlightSelected: true,
       useNumbers: true,
       singleCharKeys: [
-        "A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M",
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        "A",
+        "S",
+        "D",
+        "F",
+        "G",
+        "H",
+        "J",
+        "K",
+        "L",
+        "N",
+        "M",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
       ],
       multiCharKeys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
       useHintGroups: true,
@@ -438,7 +460,10 @@ export function createHierarchicalConfig(flatConfig: Partial<Config> = {}): Hier
       motionCount: flatConfig.motion_count ?? defaults.core.motionCount,
     },
     hint: {
-      hintPosition: (flatConfig.hint_position ?? defaults.hint.hintPosition) as "start" | "end" | "same",
+      hintPosition: (flatConfig.hint_position ?? defaults.hint.hintPosition) as
+        | "start"
+        | "end"
+        | "same",
       visualHintPosition: flatConfig.visual_hint_position ?? defaults.hint.visualHintPosition,
       maxHints: flatConfig.maxHints ?? defaults.hint.maxHints,
       highlightSelected: flatConfig.highlight_selected ?? defaults.hint.highlightSelected,
@@ -448,26 +473,34 @@ export function createHierarchicalConfig(flatConfig: Partial<Config> = {}): Hier
       maxSingleCharHints: flatConfig.max_single_char_hints,
       useHintGroups: flatConfig.use_hint_groups ?? defaults.hint.useHintGroups,
       highlightHintMarker: flatConfig.highlight_hint_marker ?? defaults.hint.highlightHintMarker,
-      highlightHintMarkerCurrent: flatConfig.highlight_hint_marker_current ?? defaults.hint.highlightHintMarkerCurrent,
+      highlightHintMarkerCurrent: flatConfig.highlight_hint_marker_current ??
+        defaults.hint.highlightHintMarkerCurrent,
     },
     word: {
       useJapanese: flatConfig.use_japanese ?? defaults.word.useJapanese,
       detectionStrategy: flatConfig.word_detection_strategy ?? defaults.word.detectionStrategy,
       enableTinySegmenter: flatConfig.enable_tinysegmenter ?? defaults.word.enableTinySegmenter,
       segmenterThreshold: flatConfig.segmenter_threshold ?? defaults.word.segmenterThreshold,
-      japaneseMinWordLength: flatConfig.japanese_min_word_length ?? defaults.word.japaneseMinWordLength,
-      japaneseMergeParticles: flatConfig.japanese_merge_particles ?? defaults.word.japaneseMergeParticles,
-      japaneseMergeThreshold: flatConfig.japanese_merge_threshold ?? defaults.word.japaneseMergeThreshold,
-      defaultMinWordLength: flatConfig.default_min_word_length ?? flatConfig.min_word_length ?? defaults.word.defaultMinWordLength,
+      japaneseMinWordLength: flatConfig.japanese_min_word_length ??
+        defaults.word.japaneseMinWordLength,
+      japaneseMergeParticles: flatConfig.japanese_merge_particles ??
+        defaults.word.japaneseMergeParticles,
+      japaneseMergeThreshold: flatConfig.japanese_merge_threshold ??
+        defaults.word.japaneseMergeThreshold,
+      defaultMinWordLength: flatConfig.default_min_word_length ?? flatConfig.min_word_length ??
+        defaults.word.defaultMinWordLength,
       perKeyMinLength: flatConfig.per_key_min_length,
       currentKeyContext: flatConfig.current_key_context,
     },
     performance: {
       debounceDelay: flatConfig.debounceDelay ?? defaults.performance.debounceDelay,
       motionTimeout: flatConfig.motion_timeout ?? defaults.performance.motionTimeout,
-      suppressOnKeyRepeat: flatConfig.suppress_on_key_repeat ?? defaults.performance.suppressOnKeyRepeat,
-      keyRepeatThreshold: flatConfig.key_repeat_threshold ?? defaults.performance.keyRepeatThreshold,
-      keyRepeatResetDelay: flatConfig.key_repeat_reset_delay ?? defaults.performance.keyRepeatResetDelay,
+      suppressOnKeyRepeat: flatConfig.suppress_on_key_repeat ??
+        defaults.performance.suppressOnKeyRepeat,
+      keyRepeatThreshold: flatConfig.key_repeat_threshold ??
+        defaults.performance.keyRepeatThreshold,
+      keyRepeatResetDelay: flatConfig.key_repeat_reset_delay ??
+        defaults.performance.keyRepeatResetDelay,
       perKeyMotionCount: flatConfig.per_key_motion_count,
       defaultMotionCount: flatConfig.default_motion_count,
       triggerOnHjkl: flatConfig.trigger_on_hjkl ?? defaults.performance.triggerOnHjkl,
@@ -539,7 +572,7 @@ export function flattenHierarchicalConfig(hierarchicalConfig: HierarchicalConfig
  */
 export function mergeHierarchicalConfig(
   baseConfig: HierarchicalConfig,
-  updates: Partial<HierarchicalConfig>
+  updates: Partial<HierarchicalConfig>,
 ): HierarchicalConfig {
   return {
     core: { ...baseConfig.core, ...updates.core },
@@ -588,7 +621,7 @@ export function getPerKeyValue<T>(
   key: string,
   perKeyRecord: Record<string, T> | undefined,
   defaultValue: T | undefined,
-  fallbackValue: T
+  fallbackValue: T,
 ): T {
   // キー別設定が存在する場合
   if (perKeyRecord && perKeyRecord[key] !== undefined) {
@@ -738,17 +771,22 @@ export function createModernConfig(input: Partial<CamelCaseConfig | Config> = {}
 
         if (snakeProps.length > 0) {
           target[prop] = value;
-          snakeProps.forEach(snakeProp => {
+          snakeProps.forEach((snakeProp) => {
             target[snakeProp] = value;
           });
           return true;
         }
 
         // boolean型の命名規則プロパティ（読み取り専用）
-        if ([
-          "isEnabled", "shouldUseNumbers", "shouldHighlightSelected",
-          "shouldTriggerOnHjkl", "hasDebugCoordinates"
-        ].includes(prop)) {
+        if (
+          [
+            "isEnabled",
+            "shouldUseNumbers",
+            "shouldHighlightSelected",
+            "shouldTriggerOnHjkl",
+            "hasDebugCoordinates",
+          ].includes(prop)
+        ) {
           // これらは元のプロパティと同期する読み取り専用
           return true;
         }
@@ -756,7 +794,7 @@ export function createModernConfig(input: Partial<CamelCaseConfig | Config> = {}
 
       target[prop as keyof ModernConfig] = value;
       return true;
-    }
+    },
   });
 
   // 初期値をsnake_case形式でも設定
@@ -790,7 +828,9 @@ export function validateNamingConvention(name: string): NamingValidation {
 /**
  * Deprecation warningsを取得
  */
-export function getDeprecationWarnings(config: Partial<Config> | Partial<CamelCaseConfig>): DeprecationWarning[] {
+export function getDeprecationWarnings(
+  config: Partial<Config> | Partial<CamelCaseConfig>,
+): DeprecationWarning[] {
   const warnings: DeprecationWarning[] = [];
 
   for (const [snakeKey, camelKey] of Object.entries(SNAKE_TO_CAMEL_MAPPING)) {
