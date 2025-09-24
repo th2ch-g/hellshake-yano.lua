@@ -593,18 +593,24 @@ export async function main(denops: Denops): Promise<void> {
      * ヒントを表示（デバウンス機能付き）
      */
     async showHints(): Promise<void> {
+      // 既存のデバウンスタイマーをクリア
+      if (debounceTimeoutId) {
+        clearTimeout(debounceTimeoutId);
+        debounceTimeoutId = undefined;
+      }
+
       // デバウンス処理
       const now = Date.now();
       if (now - lastShowHintsTime < config.debounceDelay) {
-        if (debounceTimeoutId) {
-          clearTimeout(debounceTimeoutId);
-        }
-        debounceTimeoutId = setTimeout(() => {
-          this.showHintsInternal();
+        // デバウンス期間内の場合は、タイマーをセットして遅延実行
+        debounceTimeoutId = setTimeout(async () => {
+          debounceTimeoutId = undefined;
+          await this.showHintsInternal();
         }, config.debounceDelay) as unknown as number;
         return;
       }
 
+      // デバウンス期間外の場合は即座に実行
       await this.showHintsInternal();
     },
 
@@ -620,6 +626,23 @@ export async function main(denops: Denops): Promise<void> {
       if (debounceTimeoutId) {
         clearTimeout(debounceTimeoutId);
         debounceTimeoutId = undefined;
+      }
+
+      // 既存のヒントを強制的に非表示にして状態をリセット
+      if (hintsVisible || currentHints.length > 0) {
+        await hideHints(denops);
+      }
+
+      // 状態フラグを確実にリセット
+      hintsVisible = false;
+      currentHints = [];
+
+      // 入力バッファをクリア（重要：前回の入力が残っていると即座にヒントが消える）
+      try {
+        // getchar(0)でバッファ内の文字を全て消費
+        await denops.cmd("while getchar(0) | endwhile");
+      } catch {
+        // エラーが発生しても続行
       }
 
       // 日本語テキスト対応: 毎回キャッシュをクリアして正確な位置を計算
@@ -717,6 +740,8 @@ export async function main(denops: Denops): Promise<void> {
 
           // バッチ処理でヒントを非同期表示（最適化）（モード情報付き）
           displayHintsAsync(denops, currentHints, { mode: modeString });
+
+          // ヒント表示状態を確実に設定
           hintsVisible = true;
 
           const endTime = performance.now();
@@ -1692,9 +1717,13 @@ async function clearHintDisplay(denops: Denops): Promise<void> {
  * @throws Vim/Neovim APIエラーが発生した場合（ただし内部でキャッチして継続）
  */
 async function hideHints(denops: Denops): Promise<void> {
-  if (!hintsVisible) {
+  // 既にヒントが非表示で、currentHintsも空の場合は早期リターン
+  if (!hintsVisible && currentHints.length === 0 && fallbackMatchIds.length === 0) {
     return;
   }
+
+  // 状態を先にリセットして、再入を防ぐ
+  hintsVisible = false;
 
   try {
     if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
@@ -1721,7 +1750,6 @@ async function hideHints(denops: Denops): Promise<void> {
             // 個別のmatch削除エラーは警告のみ
           }
         }
-        fallbackMatchIds = [];
       } catch (error) {
         // 最後の手段として全matchをクリア
         try {
@@ -1740,7 +1768,7 @@ async function hideHints(denops: Denops): Promise<void> {
     }
   } catch (error) {
   } finally {
-    // エラーが発生しても状態はリセットする
+    // エラーが発生しても状態は必ずリセットする
     currentHints = [];
     hintsVisible = false;
     fallbackMatchIds = [];
@@ -2267,6 +2295,9 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     // プロンプトを表示
     // await denops.cmd("echo 'Select hint: '");
+
+    // 短い待機時間を入れて、前回の入力が誤って拾われるのを防ぐ
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // タイムアウト付きでユーザー入力を取得
     const inputPromise = denops.call("getchar") as Promise<number>;
