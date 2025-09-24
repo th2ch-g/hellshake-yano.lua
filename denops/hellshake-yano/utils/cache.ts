@@ -1,7 +1,5 @@
 /**
  * 汎用LRUキャッシュ実装とキャッシュ管理の統一インターフェース
- * Phase 1: モジュール分割でキャッシュロジックを統一
- * Phase 4: 複数のキャッシュ実装を抽象化し、統一されたキャッシュ管理を提供
  */
 
 /**
@@ -205,9 +203,7 @@ export abstract class CacheStrategy<K, V> {
  */
 export class StringCacheStrategy<V> extends CacheStrategy<string, V> {
   generateKey(...args: any[]): string {
-    return args.map(arg =>
-      typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join('|');
+    return args.map((arg) => typeof arg === "object" ? JSON.stringify(arg) : String(arg)).join("|");
   }
 }
 
@@ -215,7 +211,12 @@ export class StringCacheStrategy<V> extends CacheStrategy<string, V> {
  * 単語検出用のキャッシュ戦略
  */
 export class WordDetectionCacheStrategy extends StringCacheStrategy<any[]> {
-  override generateKey(bufnr: number, topLine: number, bottomLine: number, content: string): string {
+  override generateKey(
+    bufnr: number,
+    topLine: number,
+    bottomLine: number,
+    content: string,
+  ): string {
     return `${bufnr}|${topLine}|${bottomLine}|${content.length}|${this.hashString(content)}`;
   }
 
