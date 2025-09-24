@@ -150,19 +150,6 @@ export async function initializePlugin(
   }
 }
 
-/**
- * プラグインの設定を初期化・同期する
- */
-export function initializeConfig(userConfig: Partial<Config> = {}): Config {
-  try {
-    const defaultConfig = getDefaultConfig();
-    const finalConfig = mergeConfig(defaultConfig, userConfig);
-
-    return finalConfig;
-  } catch (error) {
-    throw new Error(`Failed to initialize config: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
 
 /**
  * プラグインをクリーンアップ（終了処理）
@@ -228,12 +215,6 @@ async function hideAllHints(denops: Denops): Promise<void> {
   }
 }
 
-/**
- * プラグインの状態をリセット
- */
-export function resetPluginState(): void {
-  globalStateManager.resetState();
-}
 
 /**
  * 現在のプラグイン状態を取得

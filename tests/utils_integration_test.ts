@@ -4,29 +4,24 @@
  * リファクタリングで新しく作成・統一化されたユーティリティモジュールの動作を検証
  */
 
-import { assertEquals, assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 
 // 統一化されたユーティリティモジュールをテスト
 import {
+  charIndexToByteIndex,
   getByteLength,
   isAscii,
-  charIndexToByteIndex
 } from "../denops/hellshake-yano/utils/encoding.ts";
 
-import {
-  sortByIndex,
-  sortByPriorityDesc,
-  sortBy
-} from "../denops/hellshake-yano/utils/sort.ts";
+import { sortByIndex, sortByPriorityDesc, sortBy } from "../denops/hellshake-yano/utils/sort.ts";
 
 import {
-  LRUCache,
   CacheManager,
-  globalCacheManager
+  globalCacheManager,
+  LRUCache,
 } from "../denops/hellshake-yano/utils/cache.ts";
 
 Deno.test("統一されたエンコーディングユーティリティのテスト", async (t) => {
-
   await t.step("getByteLength関数の動作確認", () => {
     // ASCII文字のテスト
     assertEquals(getByteLength("hello"), 5);
@@ -69,12 +64,11 @@ Deno.test("統一されたエンコーディングユーティリティのテス
 });
 
 Deno.test("統一されたソートユーティリティのテスト", async (t) => {
-
   await t.step("sortByIndex関数の動作確認", () => {
     const items = [
       { index: 3, value: "third" },
       { index: 1, value: "first" },
-      { index: 2, value: "second" }
+      { index: 2, value: "second" },
     ];
 
     const sorted = sortByIndex(items);
@@ -90,7 +84,7 @@ Deno.test("統一されたソートユーティリティのテスト", async (t)
     const items = [
       { priority: 5, value: "medium" },
       { priority: 10, value: "high" },
-      { priority: 1, value: "low" }
+      { priority: 1, value: "low" },
     ];
 
     const sorted = sortByPriorityDesc(items);
@@ -103,17 +97,17 @@ Deno.test("統一されたソートユーティリティのテスト", async (t)
     const items = [
       { name: "Charlie", age: 30 },
       { name: "Alice", age: 25 },
-      { name: "Bob", age: 35 }
+      { name: "Bob", age: 35 },
     ];
 
     // 名前でソート
-    const sortedByName = sortBy(items, item => item.name);
+    const sortedByName = sortBy(items, (item) => item.name);
     assertEquals(sortedByName[0].name, "Alice");
     assertEquals(sortedByName[1].name, "Bob");
     assertEquals(sortedByName[2].name, "Charlie");
 
     // 年齢でソート（降順）
-    const sortedByAge = sortBy(items, item => item.age, false);
+    const sortedByAge = sortBy(items, (item) => item.age, false);
     assertEquals(sortedByAge[0].age, 35);
     assertEquals(sortedByAge[1].age, 30);
     assertEquals(sortedByAge[2].age, 25);
@@ -121,7 +115,6 @@ Deno.test("統一されたソートユーティリティのテスト", async (t)
 });
 
 Deno.test("統一されたキャッシュシステムのテスト", async (t) => {
-
   await t.step("LRUCache基本動作の確認", () => {
     const cache = new LRUCache<string, number>(3);
 
@@ -187,7 +180,6 @@ Deno.test("統一されたキャッシュシステムのテスト", async (t) =>
 });
 
 Deno.test("リファクタリング効果の検証", async (t) => {
-
   await t.step("パフォーマンス改善の確認", () => {
     // バイト長計算の高速化を確認
     const testTexts = [
@@ -195,11 +187,11 @@ Deno.test("リファクタリング効果の検証", async (t) => {
       "こんにちは世界",
       "混合テキストHello世界123",
       "".repeat(100),
-      "日本語".repeat(50)
+      "日本語".repeat(50),
     ];
 
     // ASCII文字の高速パスが機能していることを間接的に確認
-    testTexts.forEach(text => {
+    testTexts.forEach((text) => {
       const start = performance.now();
       const length = getByteLength(text);
       const end = performance.now();
@@ -232,7 +224,7 @@ Deno.test("リファクタリング効果の検証", async (t) => {
     // 同じインターフェースで異なるキャッシュが使用できることを確認
     const caches = [
       new LRUCache<string, number>(10),
-      globalCacheManager.getCache<string, number>("test_consistency")
+      globalCacheManager.getCache<string, number>("test_consistency"),
     ];
 
     caches.forEach((cache, index) => {
