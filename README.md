@@ -102,14 +102,14 @@ let g:hellshake_yano = {
 
 ### Visual Mode Hint Position
 
-The `visual_hint_position` option allows you to customize hint placement specifically for Visual
-mode operations, providing a more natural word selection experience.
+  The `visual_hint_position` option allows you to customize hint placement specifically for Visual
+  mode operations, providing a more natural word selection experience.
 
-#### Available Options
+  #### Available Options
 
-- **`'end'`** (default): Display hints at the end of words in Visual mode
-- **`'start'`**: Always display hints at the beginning of words
-- **`'same'`**: Use the same position as `hint_position` setting
+  - **`'end'`** (default): Display hints at the end of words in Visual mode
+  - **`'start'`**: Always display hints at the beginning of words
+  - **`'same'`**: Use the same position as `hint_position` setting
 - **`'both'`**: Display hints at both the start and end of words (Visual mode only)
 
 #### Usage Examples
