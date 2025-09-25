@@ -354,6 +354,162 @@ export interface ModernConfig extends CamelCaseConfig {
 }
 
 /**
+ * 統一設定インターフェース (UnifiedConfig)
+ * Process2 sub1で導入された完全にフラット化されたcamelCase設定インターフェース。
+ * 階層構造を排除し、32個の設定項目をすべて一つの階層で定義します。
+ * TDD Red-Green-Refactor方式で実装された型安全な設定システムです。
+ *
+ * @interface UnifiedConfig
+ * @example
+ * ```typescript
+ * const config: UnifiedConfig = {
+ *   enabled: true,
+ *   markers: ['A', 'S', 'D', 'F'],
+ *   motionCount: 3,
+ *   motionTimeout: 2000,
+ *   hintPosition: 'start',
+ *   useNumbers: true,
+ *   highlightSelected: true
+ * };
+ * ```
+ */
+export interface UnifiedConfig {
+  // Core settings (6 properties)
+  /** プラグインの有効/無効状態 */
+  enabled: boolean;
+  /** ヒント表示に使用するマーカー文字の配列 */
+  markers: string[];
+  /** 必要なモーション回数 */
+  motionCount: number;
+  /** モーションのタイムアウト時間（ミリ秒） */
+  motionTimeout: number;
+  /** 通常モードでのヒント表示位置 */
+  hintPosition: "start" | "end" | "same";
+  /** Visualモードでのヒント表示位置 */
+  visualHintPosition?: "start" | "end" | "same" | "both";
+
+  // Hint settings (8 properties)
+  /** hjklキーでのトリガーを有効にするか */
+  triggerOnHjkl: boolean;
+  /** カウント対象のモーション文字列配列 */
+  countedMotions: string[];
+  /** パフォーマンス最適化のための最大ヒント表示数 */
+  maxHints: number;
+  /** ヒント表示のデバウンス遅延時間（ミリ秒） */
+  debounceDelay: number;
+  /** 数字(0-9)をヒント文字として使用するか */
+  useNumbers: boolean;
+  /** 選択中のヒントをハイライト表示するか */
+  highlightSelected: boolean;
+  /** 座標系デバッグログの出力有効/無効 */
+  debugCoordinates: boolean;
+  /** 1文字ヒント専用のキー配列 */
+  singleCharKeys: string[];
+
+  // Extended hint settings (4 properties)
+  /** 2文字以上のヒント専用のキー配列 */
+  multiCharKeys: string[];
+  /** 1文字ヒントの最大表示数（オプション） */
+  maxSingleCharHints?: number;
+  /** ヒントグループ機能を使用するか */
+  useHintGroups: boolean;
+  /** ヒントマーカーのハイライト色設定 */
+  highlightHintMarker: string | HighlightColor;
+
+  // Word detection settings (7 properties)
+  /** 選択中ヒントマーカーのハイライト色設定 */
+  highlightHintMarkerCurrent: string | HighlightColor;
+  /** キーリピート時のヒント表示を抑制するか */
+  suppressOnKeyRepeat: boolean;
+  /** キーリピートと判定する時間の閾値（ミリ秒） */
+  keyRepeatThreshold: number;
+  /** 日本語を含む単語検出を行うか */
+  useJapanese?: boolean;
+  /** 単語検出アルゴリズム */
+  wordDetectionStrategy: "regex" | "tinysegmenter" | "hybrid";
+  /** TinySegmenter（日本語形態素解析）を有効にするか */
+  enableTinySegmenter: boolean;
+  /** TinySegmenterを使用する最小文字数の閾値 */
+  segmenterThreshold: number;
+
+  // Japanese word settings (7 properties)
+  /** 日本語単語として扱う最小文字数 */
+  japaneseMinWordLength: number;
+  /** 助詞や接続詞を前の単語と結合するか */
+  japaneseMergeParticles: boolean;
+  /** 単語結合時の最大文字数の閾値 */
+  japaneseMergeThreshold: number;
+  /** キー別の最小文字数設定（オプション） */
+  perKeyMinLength?: Record<string, number>;
+  /** デフォルトの最小単語長 */
+  defaultMinWordLength: number;
+  /** キー別のモーション回数設定（オプション） */
+  perKeyMotionCount?: Record<string, number>;
+  /** デフォルトのモーション回数（オプション） */
+  defaultMotionCount?: number;
+}
+
+/**
+ * デフォルト統一設定定数
+ * UnifiedConfigの型安全な初期値を定義します。
+ * 既存のgetDefaultConfig()から値を継承し、完全にフラット化された構造で提供します。
+ *
+ * @constant {UnifiedConfig} DEFAULT_UNIFIED_CONFIG
+ * @example
+ * ```typescript
+ * const config = { ...DEFAULT_UNIFIED_CONFIG, motionCount: 5 };
+ * console.log(config.enabled);     // true
+ * console.log(config.motionCount); // 5
+ * ```
+ */
+export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
+  // Core settings
+  enabled: true,
+  markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+  motionCount: 3,
+  motionTimeout: 2000,
+  hintPosition: "start",
+  visualHintPosition: "end",
+
+  // Hint settings
+  triggerOnHjkl: true,
+  countedMotions: [],
+  maxHints: 336,
+  debounceDelay: 50,
+  useNumbers: true,
+  highlightSelected: true,
+  debugCoordinates: false,
+  singleCharKeys: [
+    "A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M",
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+  ],
+
+  // Extended hint settings
+  multiCharKeys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
+  maxSingleCharHints: 21, // Length of singleCharKeys
+  useHintGroups: true,
+  highlightHintMarker: "DiffAdd",
+
+  // Word detection settings
+  highlightHintMarkerCurrent: "DiffText",
+  suppressOnKeyRepeat: true,
+  keyRepeatThreshold: 50,
+  useJapanese: false, // Explicit default for Japanese support
+  wordDetectionStrategy: "hybrid",
+  enableTinySegmenter: true,
+  segmenterThreshold: 4,
+
+  // Japanese word settings
+  japaneseMinWordLength: 2,
+  japaneseMergeParticles: true,
+  japaneseMergeThreshold: 2,
+  perKeyMinLength: {}, // Default empty record
+  defaultMinWordLength: 3,
+  perKeyMotionCount: {}, // Default empty record
+  defaultMotionCount: 3, // Default motion count for keys not specified
+};
+
+/**
  * メイン設定インターフェース
  * プラグインの核となる設定インターフェースで、既存コードとの互換性を維持しています。
  * snake_caseの命名規則を使用し、全ての機能設定を含んでいます。
@@ -1357,4 +1513,164 @@ export function getDeprecationWarnings(
   }
 
   return warnings;
+}
+
+/**
+ * 設定変換レイヤー (Process2 Sub2)
+ * 旧設定(Config)からUnifiedConfigへの変換
+ * TDD Red-Green-Refactor方式で実装
+ * 全32個のプロパティをsnake_case → camelCaseに変換
+ */
+
+/**
+ * プロパティ値を取得するヘルパー関数
+ * snake_case、camelCase両方からの値取得を支援する
+ *
+ * @param config 設定オブジェクト
+ * @param snakeProp snake_caseのプロパティ名
+ * @param camelProp camelCaseのプロパティ名
+ * @param defaultValue デフォルト値
+ * @returns 取得された値またはデフォルト値
+ */
+function getConfigValue<T>(
+  config: any,
+  snakeProp: string,
+  camelProp: string,
+  defaultValue: T
+): T {
+  return config[snakeProp] ?? config[camelProp] ?? defaultValue;
+}
+
+/**
+ * 旧設定をUnifiedConfigに変換する関数
+ * snake_case/camelCase両方の入力に対応し、完全にフラット化されたUnifiedConfigを出力
+ * 32個のプロパティをすべて変換し、型安全性を保証する
+ *
+ * @param config 変換元の旧設定（Configまたは部分設定）
+ * @returns 変換されたUnifiedConfig
+ * @example
+ * ```typescript
+ * const oldConfig = { motion_count: 5, hint_position: 'end' };
+ * const unified = toUnifiedConfig(oldConfig);
+ * console.log(unified.motionCount);   // 5
+ * console.log(unified.hintPosition);  // 'end'
+ * ```
+ */
+export function toUnifiedConfig(config: Partial<Config> | Partial<CamelCaseConfig> = {}): UnifiedConfig {
+  const defaults = DEFAULT_UNIFIED_CONFIG;
+  const c = config as any;
+
+  return {
+    // Core settings (6 properties)
+    enabled: c.enabled ?? defaults.enabled,
+    markers: c.markers ?? defaults.markers,
+    motionCount: getConfigValue(c, "motion_count", "motionCount", defaults.motionCount),
+    motionTimeout: getConfigValue(c, "motion_timeout", "motionTimeout", defaults.motionTimeout),
+    hintPosition: getConfigValue(c, "hint_position", "hintPosition", defaults.hintPosition),
+    visualHintPosition: getConfigValue(c, "visual_hint_position", "visualHintPosition", defaults.visualHintPosition),
+
+    // Hint settings (8 properties)
+    triggerOnHjkl: getConfigValue(c, "trigger_on_hjkl", "triggerOnHjkl", defaults.triggerOnHjkl),
+    countedMotions: getConfigValue(c, "counted_motions", "countedMotions", defaults.countedMotions),
+    maxHints: c.maxHints ?? defaults.maxHints,
+    debounceDelay: c.debounceDelay ?? defaults.debounceDelay,
+    useNumbers: getConfigValue(c, "use_numbers", "useNumbers", defaults.useNumbers),
+    highlightSelected: getConfigValue(c, "highlight_selected", "highlightSelected", defaults.highlightSelected),
+    debugCoordinates: getConfigValue(c, "debug_coordinates", "debugCoordinates", defaults.debugCoordinates),
+    singleCharKeys: getConfigValue(c, "single_char_keys", "singleCharKeys", defaults.singleCharKeys),
+
+    // Extended hint settings (4 properties)
+    multiCharKeys: getConfigValue(c, "multi_char_keys", "multiCharKeys", defaults.multiCharKeys),
+    maxSingleCharHints: getConfigValue(c, "max_single_char_hints", "maxSingleCharHints", defaults.maxSingleCharHints),
+    useHintGroups: getConfigValue(c, "use_hint_groups", "useHintGroups", defaults.useHintGroups),
+    highlightHintMarker: getConfigValue(c, "highlight_hint_marker", "highlightHintMarker", defaults.highlightHintMarker),
+
+    // Word detection settings (7 properties)
+    highlightHintMarkerCurrent: getConfigValue(c, "highlight_hint_marker_current", "highlightHintMarkerCurrent", defaults.highlightHintMarkerCurrent),
+    suppressOnKeyRepeat: getConfigValue(c, "suppress_on_key_repeat", "suppressOnKeyRepeat", defaults.suppressOnKeyRepeat),
+    keyRepeatThreshold: getConfigValue(c, "key_repeat_threshold", "keyRepeatThreshold", defaults.keyRepeatThreshold),
+    useJapanese: getConfigValue(c, "use_japanese", "useJapanese", defaults.useJapanese),
+    wordDetectionStrategy: getConfigValue(c, "word_detection_strategy", "wordDetectionStrategy", defaults.wordDetectionStrategy),
+    enableTinySegmenter: getConfigValue(c, "enable_tinysegmenter", "enableTinySegmenter", defaults.enableTinySegmenter),
+    segmenterThreshold: getConfigValue(c, "segmenter_threshold", "segmenterThreshold", defaults.segmenterThreshold),
+
+    // Japanese word settings (7 properties)
+    japaneseMinWordLength: getConfigValue(c, "japanese_min_word_length", "japaneseMinWordLength", defaults.japaneseMinWordLength),
+    japaneseMergeParticles: getConfigValue(c, "japanese_merge_particles", "japaneseMergeParticles", defaults.japaneseMergeParticles),
+    japaneseMergeThreshold: getConfigValue(c, "japanese_merge_threshold", "japaneseMergeThreshold", defaults.japaneseMergeThreshold),
+    perKeyMinLength: getConfigValue(c, "per_key_min_length", "perKeyMinLength", defaults.perKeyMinLength),
+    defaultMinWordLength: getConfigValue(c, "default_min_word_length", "defaultMinWordLength", defaults.defaultMinWordLength),
+    perKeyMotionCount: getConfigValue(c, "per_key_motion_count", "perKeyMotionCount", defaults.perKeyMotionCount),
+    defaultMotionCount: getConfigValue(c, "default_motion_count", "defaultMotionCount", defaults.defaultMotionCount),
+  };
+}
+
+/**
+ * UnifiedConfigを旧設定(Config)に変換する関数
+ * camelCase → snake_caseの逆変換を行い、既存コードとの互換性を維持
+ * 32個のプロパティをすべて変換し、後方互換性のための追加プロパティも含む
+ *
+ * @param config 変換元のUnifiedConfig
+ * @returns 変換された旧設定(Config)
+ * @example
+ * ```typescript
+ * const unified = { motionCount: 5, hintPosition: 'end' };
+ * const oldConfig = fromUnifiedConfig(unified);
+ * console.log(oldConfig.motion_count);   // 5
+ * console.log(oldConfig.hint_position);  // 'end'
+ * ```
+ */
+export function fromUnifiedConfig(config: Partial<UnifiedConfig> = {}): Config {
+  const defaults = getDefaultConfig();
+
+  return {
+    // Core settings (6 properties)
+    enabled: config.enabled ?? defaults.enabled,
+    markers: config.markers ?? defaults.markers,
+    motion_count: config.motionCount ?? defaults.motion_count,
+    motion_timeout: config.motionTimeout ?? defaults.motion_timeout,
+    hint_position: config.hintPosition ?? defaults.hint_position,
+    visual_hint_position: config.visualHintPosition ?? defaults.visual_hint_position,
+
+    // Hint settings (8 properties)
+    trigger_on_hjkl: config.triggerOnHjkl ?? defaults.trigger_on_hjkl,
+    counted_motions: config.countedMotions ?? defaults.counted_motions,
+    maxHints: config.maxHints ?? defaults.maxHints,
+    debounceDelay: config.debounceDelay ?? defaults.debounceDelay,
+    use_numbers: config.useNumbers ?? defaults.use_numbers,
+    highlight_selected: config.highlightSelected ?? defaults.highlight_selected,
+    debug_coordinates: config.debugCoordinates ?? defaults.debug_coordinates,
+    single_char_keys: config.singleCharKeys ?? defaults.single_char_keys,
+
+    // Extended hint settings (4 properties)
+    multi_char_keys: config.multiCharKeys ?? defaults.multi_char_keys,
+    max_single_char_hints: config.maxSingleCharHints ?? defaults.max_single_char_hints,
+    use_hint_groups: config.useHintGroups ?? defaults.use_hint_groups,
+    highlight_hint_marker: config.highlightHintMarker ?? defaults.highlight_hint_marker,
+
+    // Word detection settings (7 properties)
+    highlight_hint_marker_current: config.highlightHintMarkerCurrent ?? defaults.highlight_hint_marker_current,
+    suppress_on_key_repeat: config.suppressOnKeyRepeat ?? defaults.suppress_on_key_repeat,
+    key_repeat_threshold: config.keyRepeatThreshold ?? defaults.key_repeat_threshold,
+    use_japanese: config.useJapanese ?? defaults.use_japanese,
+    word_detection_strategy: config.wordDetectionStrategy ?? defaults.word_detection_strategy,
+    enable_tinysegmenter: config.enableTinySegmenter ?? defaults.enable_tinysegmenter,
+    segmenter_threshold: config.segmenterThreshold ?? defaults.segmenter_threshold,
+
+    // Japanese word settings (7 properties)
+    japanese_min_word_length: config.japaneseMinWordLength ?? defaults.japanese_min_word_length,
+    japanese_merge_particles: config.japaneseMergeParticles ?? defaults.japanese_merge_particles,
+    japanese_merge_threshold: config.japaneseMergeThreshold ?? defaults.japanese_merge_threshold,
+    per_key_min_length: config.perKeyMinLength ?? defaults.per_key_min_length,
+    default_min_word_length: config.defaultMinWordLength ?? defaults.default_min_word_length,
+    per_key_motion_count: config.perKeyMotionCount ?? defaults.per_key_motion_count,
+    default_motion_count: config.defaultMotionCount ?? defaults.default_motion_count,
+
+    // Legacy compatibility (後方互換性のため)
+    min_word_length: config.defaultMinWordLength ?? defaults.min_word_length,
+    enable: config.enabled ?? defaults.enable,
+    key_repeat_reset_delay: defaults.key_repeat_reset_delay,
+    debug_mode: defaults.debug_mode,
+    performance_log: defaults.performance_log,
+  };
 }

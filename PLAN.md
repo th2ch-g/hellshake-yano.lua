@@ -253,26 +253,26 @@ export interface UnifiedConfig {
 #### sub1 統一設定インターフェース(UnifiedConfig)の作成と基盤整備
 @target: denops/hellshake-yano/config.ts
 @ref: denops/hellshake-yano/types.ts
-- [ ] UnifiedConfigインターフェースの定義（すべてcamelCase、32項目）
-- [ ] DEFAULT_UNIFIED_CONFIG定数の定義（型安全な初期値）
-- [ ] 階層構造を完全にフラット化（ネストなし）
-- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
-- [ ] 既存のconfig_test.tsが通ることを確認（後方互換性の検証）
-- [ ] unified_config_test.tsを新規作成
-- [ ] UnifiedConfigの型テストを追加（型ガード、必須項目等）
-- [ ] `deno test tests/unified_config_test.ts`でテストがパス
+- [x] UnifiedConfigインターフェースの定義（すべてcamelCase、32項目）
+- [x] DEFAULT_UNIFIED_CONFIG定数の定義（型安全な初期値）
+- [x] 階層構造を完全にフラット化（ネストなし）
+- [x] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [x] 既存のconfig_test.tsが通ることを確認（後方互換性の検証）
+- [x] unified_config_test.tsを新規作成
+- [x] UnifiedConfigの型テストを追加（型ガード、必須項目等）
+- [x] `deno test tests/unified_config_test.ts`でテストがパス
 
 #### sub2 設定変換レイヤーの実装
 @target: denops/hellshake-yano/config.ts
-- [ ] toUnifiedConfig()関数：旧設定→UnifiedConfigへの変換
-- [ ] fromUnifiedConfig()関数：UnifiedConfig→旧設定への変換
-- [ ] snake_case/camelCase双方向マッピングの完全実装
-- [ ] 各階層設定（CoreConfig等）からの変換サポート
-- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
-- [ ] config_conversion_test.tsを作成
-- [ ] 全31個のプロパティマッピングをテスト
-- [ ] `deno test tests/config_conversion_test.ts`でテストがパス
-- [ ] `deno test tests/config_test.ts`で既存テストがパス
+- [x] toUnifiedConfig()関数：旧設定→UnifiedConfigへの変換
+- [x] fromUnifiedConfig()関数：UnifiedConfig→旧設定への変換
+- [x] snake_case/camelCase双方向マッピングの完全実装
+- [x] 各階層設定（CoreConfig等）からの変換サポート
+- [x] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [x] config_conversion_test.tsを作成
+- [x] 全32個のプロパティマッピングをテスト
+- [x] `deno test tests/config_conversion_test.ts`でテストがパス
+- [x] `deno test tests/config_test.ts`で既存テストがパス
 
 #### sub3 バリデーション統合
 @target: denops/hellshake-yano/config.ts
