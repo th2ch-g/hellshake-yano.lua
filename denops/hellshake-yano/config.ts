@@ -1,5 +1,27 @@
 /**
  * 設定管理モジュール
+ *
+ * ⚠️ 重要な移行通知 ⚠️
+ * ===================
+ * Process2 Sub9: 旧インターフェース廃止予定
+ *
+ * 以下のインターフェースはv3.0.0で削除される予定です:
+ * - CoreConfig      (@deprecated)
+ * - HintConfig      (@deprecated)
+ * - WordConfig      (@deprecated)
+ * - PerformanceConfig (@deprecated)
+ *
+ * 🔄 移行パス:
+ * 1. UnifiedConfigを使用するように既存のコードを更新
+ * 2. 階層構造からフラット構造（camelCase）への変更
+ * 3. 移行ヘルパー関数の活用: toUnifiedConfig(), fromUnifiedConfig()
+ *
+ * 📅 タイムライン:
+ * - v2.5.0: 廃止予定警告開始
+ * - v2.8.0: 廃止予定警告強化
+ * - v3.0.0: 完全削除
+ *
+ * 詳細な移行ガイドは各インターフェースの@deprecatedコメントを参照
  */
 
 // Import consolidated types from types.ts
@@ -16,13 +38,29 @@ export type { HighlightColor };
  * プラグインの基本的な動作を制御する設定項目を定義します。
  * Phase 2の階層化された設定構造の一部として使用されます。
  *
+ * @deprecated このインターフェースはv3.0.0で削除される予定です。
+ * 代わりにUnifiedConfigを使用してください。
+ * 移行方法: CoreConfig → UnifiedConfigのフラット構造
+ * @see UnifiedConfig - 統一設定インターフェース
+ * @since 1.0.0
+ * @remove v3.0.0
+ *
  * @interface CoreConfig
  * @example
  * ```typescript
+ * // 廃止予定 - 使用しないでください
  * const coreConfig: CoreConfig = {
  *   enabled: true,
  *   markers: ['A', 'S', 'D', 'F'],
  *   motionCount: 3
+ * };
+ *
+ * // 推奨: UnifiedConfigを使用
+ * const unifiedConfig: UnifiedConfig = {
+ *   enabled: true,
+ *   markers: ['A', 'S', 'D', 'F'],
+ *   motionCount: 3,
+ *   // その他のプロパティ...
  * };
  * ```
  */
@@ -40,9 +78,17 @@ export interface CoreConfig {
  * ヒントの表示位置、文字、ハイライトなどの設定を定義します。
  * ユーザビリティとパフォーマンスの最適化に関する設定が含まれます。
  *
+ * @deprecated このインターフェースはv3.0.0で削除される予定です。
+ * 代わりにUnifiedConfigを使用してください。
+ * 移行方法: HintConfig → UnifiedConfigのフラット構造（camelCase）
+ * @see UnifiedConfig - 統一設定インターフェース
+ * @since 1.0.0
+ * @remove v3.0.0
+ *
  * @interface HintConfig
  * @example
  * ```typescript
+ * // 廃止予定 - 使用しないでください
  * const hintConfig: HintConfig = {
  *   hintPosition: 'start',
  *   visualHintPosition: 'end',
@@ -52,6 +98,19 @@ export interface CoreConfig {
  *   singleCharKeys: ['A', 'S', 'D'],
  *   multiCharKeys: ['B', 'C', 'E'],
  *   useHintGroups: true
+ * };
+ *
+ * // 推奨: UnifiedConfigを使用
+ * const unifiedConfig: UnifiedConfig = {
+ *   hintPosition: 'start',
+ *   visualHintPosition: 'end',
+ *   maxHints: 336,
+ *   highlightSelected: true,
+ *   useNumbers: true,
+ *   singleCharKeys: ['A', 'S', 'D'],
+ *   multiCharKeys: ['B', 'C', 'E'],
+ *   useHintGroups: true,
+ *   // その他の統合されたプロパティ...
  * };
  * ```
  */
@@ -85,9 +144,17 @@ export interface HintConfig {
  * 日本語を含む多言語対応の単語検出アルゴリズムの設定を定義します。
  * TinySegmenterやハイブリッド方式での単語境界検出を制御します。
  *
+ * @deprecated このインターフェースはv3.0.0で削除される予定です。
+ * 代わりにUnifiedConfigを使用してください。
+ * 移行方法: WordConfig → UnifiedConfigの単語検出プロパティ（camelCase）
+ * @see UnifiedConfig - 統一設定インターフェース
+ * @since 1.0.0
+ * @remove v3.0.0
+ *
  * @interface WordConfig
  * @example
  * ```typescript
+ * // 廃止予定 - 使用しないでください
  * const wordConfig: WordConfig = {
  *   useJapanese: true,
  *   detectionStrategy: 'hybrid',
@@ -97,6 +164,19 @@ export interface HintConfig {
  *   japaneseMergeParticles: true,
  *   japaneseMergeThreshold: 2,
  *   defaultMinWordLength: 3
+ * };
+ *
+ * // 推奨: UnifiedConfigを使用
+ * const unifiedConfig: UnifiedConfig = {
+ *   useJapanese: true,
+ *   wordDetectionStrategy: 'hybrid',  // detectionStrategy → wordDetectionStrategy
+ *   enableTinySegmenter: true,
+ *   segmenterThreshold: 4,
+ *   japaneseMinWordLength: 2,
+ *   japaneseMergeParticles: true,
+ *   japaneseMergeThreshold: 2,
+ *   defaultMinWordLength: 3,
+ *   // その他の統合されたプロパティ...
  * };
  * ```
  */
@@ -128,9 +208,17 @@ export interface WordConfig {
  * プラグインのパフォーマンス最適化とレスポンシブネスに関する設定を定義します。
  * デバウンス処理、キーリピート処理、モーション制御などが含まれます。
  *
+ * @deprecated このインターフェースはv3.0.0で削除される予定です。
+ * 代わりにUnifiedConfigを使用してください。
+ * 移行方法: PerformanceConfig → UnifiedConfigのパフォーマンスプロパティ（camelCase）
+ * @see UnifiedConfig - 統一設定インターフェース
+ * @since 1.0.0
+ * @remove v3.0.0
+ *
  * @interface PerformanceConfig
  * @example
  * ```typescript
+ * // 廃止予定 - 使用しないでください
  * const performanceConfig: PerformanceConfig = {
  *   debounceDelay: 50,
  *   motionTimeout: 2000,
@@ -139,6 +227,17 @@ export interface WordConfig {
  *   keyRepeatResetDelay: 300,
  *   triggerOnHjkl: true,
  *   countedMotions: ['j', 'k']
+ * };
+ *
+ * // 推奨: UnifiedConfigを使用
+ * const unifiedConfig: UnifiedConfig = {
+ *   debounceDelay: 50,
+ *   motionTimeout: 2000,
+ *   suppressOnKeyRepeat: true,
+ *   keyRepeatThreshold: 50,
+ *   triggerOnHjkl: true,
+ *   countedMotions: ['j', 'k'],
+ *   // その他の統合されたプロパティ...
  * };
  * ```
  */

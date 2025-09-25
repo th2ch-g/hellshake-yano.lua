@@ -6,7 +6,7 @@
  */
 
 import type { Denops } from "@denops/std";
-import { type Config } from "../config.ts";
+import { type Config, toUnifiedConfig } from "../config.ts";
 import { getDefaultConfig } from "../config.ts";
 import { type DebugInfo } from "../types.ts";
 import {
@@ -54,8 +54,8 @@ export function createConfigDispatcher(
       // その他の設定項目の検証と適用
       validateAndApplyOtherConfigs(cfg, config);
 
-      // マネージャーの設定を同期
-      syncManagerConfig(config);
+      // マネージャーの設定を同期（旧Config → UnifiedConfigに変換）
+      syncManagerConfig(toUnifiedConfig(config));
     },
 
     /**
@@ -71,7 +71,7 @@ export function createConfigDispatcher(
     resetConfig(): void {
       // デフォルト設定で初期化
       Object.assign(config, getDefaultConfig());
-      syncManagerConfig(config);
+      syncManagerConfig(toUnifiedConfig(config));
     },
   };
 }
