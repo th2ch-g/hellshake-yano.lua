@@ -668,77 +668,32 @@ export function getDefaultConfig(): Config {
  * // { valid: false, errors: ['motion_count/motionCount must be a positive integer'] }
  * ```
  */
-export function validateConfig(
-  config: Partial<Config | CamelCaseConfig>,
+/**
+ * UnifiedConfig用統合バリデーション関数 (Process2 Sub3)
+ * TDD Red-Green-Refactor方式で実装された単一バリデーション関数
+ * camelCase形式のエラーメッセージで統一されたバリデーション
+ *
+ * @param config 検証するUnifiedConfig（部分設定可）
+ * @returns バリデーション結果（valid: boolean, errors: string[]）
+ * @example
+ * ```typescript
+ * const result = validateUnifiedConfig({ motionCount: 3, hintPosition: 'start' });
+ * if (result.valid) {
+ *   console.log('設定は有効です');
+ * } else {
+ *   console.error('エラー:', result.errors);
+ * }
+ * ```
+ */
+export function validateUnifiedConfig(
+  config: Partial<UnifiedConfig>,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // motion_count / motionCount の検証
-  const motionCountValue = (config as any).motion_count ?? (config as any).motionCount;
-  if (motionCountValue !== undefined) {
-    if (!Number.isInteger(motionCountValue) || motionCountValue <= 0) {
-      errors.push("motion_count/motionCount must be a positive integer");
-    }
-  }
+  // Core settings validation (6 properties)
+  // enabled - boolean（バリデーション不要、型で保証）
 
-  // motion_timeout / motionTimeoutの検証
-  const motionTimeoutValue = (config as any).motion_timeout ?? (config as any).motionTimeout;
-  if (motionTimeoutValue !== undefined) {
-    if (!Number.isInteger(motionTimeoutValue) || motionTimeoutValue <= 0) {
-      errors.push("motion_timeout/motionTimeout must be a positive integer");
-    }
-  }
-
-  // maxHintsの検証
-  if (config.maxHints !== undefined) {
-    if (!Number.isInteger(config.maxHints) || config.maxHints <= 0) {
-      errors.push("maxHints must be a positive integer");
-    }
-  }
-
-  // debounceDelayの検証
-  if (config.debounceDelay !== undefined) {
-    if (!Number.isInteger(config.debounceDelay) || config.debounceDelay < 0) {
-      errors.push("debounceDelay must be a non-negative integer");
-    }
-  }
-
-  // hint_position / hintPositionの検証
-  const hintPositionValue = (config as any).hint_position ?? (config as any).hintPosition;
-  if (hintPositionValue !== undefined) {
-    const validPositions = ["start", "end", "same"];
-    if (!validPositions.includes(hintPositionValue)) {
-      errors.push(`hint_position/hintPosition must be one of: ${validPositions.join(", ")}`);
-    }
-  }
-
-  // visual_hint_position / visualHintPositionの検証
-  const visualHintPositionValue = (config as any).visual_hint_position ??
-    (config as any).visualHintPosition;
-  if (visualHintPositionValue !== undefined) {
-    const validPositions = ["start", "end", "same"];
-    if (!validPositions.includes(visualHintPositionValue)) {
-      errors.push(
-        `visual_hint_position/visualHintPosition must be one of: ${validPositions.join(", ")}`,
-      );
-    }
-  }
-
-  // word_detection_strategy / wordDetectionStrategyの検証
-  const wordDetectionStrategyValue = (config as any).word_detection_strategy ??
-    (config as any).wordDetectionStrategy;
-  if (wordDetectionStrategyValue !== undefined) {
-    const validStrategies = ["regex", "tinysegmenter", "hybrid"];
-    if (!validStrategies.includes(wordDetectionStrategyValue)) {
-      errors.push(
-        `word_detection_strategy/wordDetectionStrategy must be one of: ${
-          validStrategies.join(", ")
-        }`,
-      );
-    }
-  }
-
-  // markers配列の検証
+  // markers - 配列の検証
   if (config.markers !== undefined) {
     if (!Array.isArray(config.markers) || config.markers.length === 0) {
       errors.push("markers must be a non-empty array");
@@ -750,10 +705,153 @@ export function validateConfig(
     }
   }
 
+  // motionCount - 正の整数
+  if (config.motionCount !== undefined) {
+    if (!Number.isInteger(config.motionCount) || config.motionCount <= 0) {
+      errors.push("motionCount must be a positive integer");
+    }
+  }
+
+  // motionTimeout - 正の整数
+  if (config.motionTimeout !== undefined) {
+    if (!Number.isInteger(config.motionTimeout) || config.motionTimeout <= 0) {
+      errors.push("motionTimeout must be a positive integer");
+    }
+  }
+
+  // hintPosition - 列挙値
+  if (config.hintPosition !== undefined) {
+    const validPositions = ["start", "end", "same"];
+    if (!validPositions.includes(config.hintPosition)) {
+      errors.push(`hintPosition must be one of: ${validPositions.join(", ")}`);
+    }
+  }
+
+  // visualHintPosition - 列挙値（オプショナル）
+  if (config.visualHintPosition !== undefined) {
+    const validPositions = ["start", "end", "same", "both"];
+    if (!validPositions.includes(config.visualHintPosition)) {
+      errors.push(`visualHintPosition must be one of: ${validPositions.join(", ")}`);
+    }
+  }
+
+  // Hint settings validation (8 properties)
+  // triggerOnHjkl, useNumbers, highlightSelected - boolean（型で保証）
+
+  // countedMotions - 配列（バリデーション不要、型で保証）
+
+  // maxHints - 正の整数
+  if (config.maxHints !== undefined) {
+    if (!Number.isInteger(config.maxHints) || config.maxHints <= 0) {
+      errors.push("maxHints must be a positive integer");
+    }
+  }
+
+  // debounceDelay - 非負整数（0を許可）
+  if (config.debounceDelay !== undefined) {
+    if (!Number.isInteger(config.debounceDelay) || config.debounceDelay < 0) {
+      errors.push("debounceDelay must be a non-negative integer");
+    }
+  }
+
+  // debugCoordinates - boolean（型で保証）
+
+  // singleCharKeys, multiCharKeys - 配列（型で保証）
+
+  // Extended hint settings validation (4 properties)
+  // maxSingleCharHints - オプショナル正の整数
+  if (config.maxSingleCharHints !== undefined) {
+    if (!Number.isInteger(config.maxSingleCharHints) || config.maxSingleCharHints <= 0) {
+      errors.push("maxSingleCharHints must be a positive integer");
+    }
+  }
+
+  // useHintGroups - boolean（型で保証）
+  // highlightHintMarker, highlightHintMarkerCurrent - string | HighlightColor（型で保証）
+
+  // Word detection settings validation (7 properties)
+  // suppressOnKeyRepeat - boolean（型で保証）
+
+  // keyRepeatThreshold - 非負整数
+  if (config.keyRepeatThreshold !== undefined) {
+    if (!Number.isInteger(config.keyRepeatThreshold) || config.keyRepeatThreshold < 0) {
+      errors.push("keyRepeatThreshold must be a non-negative integer");
+    }
+  }
+
+  // useJapanese - オプショナルboolean（型で保証）
+
+  // wordDetectionStrategy - 列挙値
+  if (config.wordDetectionStrategy !== undefined) {
+    const validStrategies = ["regex", "tinysegmenter", "hybrid"];
+    if (!validStrategies.includes(config.wordDetectionStrategy)) {
+      errors.push(`wordDetectionStrategy must be one of: ${validStrategies.join(", ")}`);
+    }
+  }
+
+  // enableTinySegmenter - boolean（型で保証）
+
+  // segmenterThreshold - 正の整数
+  if (config.segmenterThreshold !== undefined) {
+    if (!Number.isInteger(config.segmenterThreshold) || config.segmenterThreshold <= 0) {
+      errors.push("segmenterThreshold must be a positive integer");
+    }
+  }
+
+  // Japanese word settings validation (7 properties)
+  // japaneseMinWordLength - 正の整数
+  if (config.japaneseMinWordLength !== undefined) {
+    if (!Number.isInteger(config.japaneseMinWordLength) || config.japaneseMinWordLength <= 0) {
+      errors.push("japaneseMinWordLength must be a positive integer");
+    }
+  }
+
+  // japaneseMergeParticles - boolean（型で保証）
+
+  // japaneseMergeThreshold - 正の整数
+  if (config.japaneseMergeThreshold !== undefined) {
+    if (!Number.isInteger(config.japaneseMergeThreshold) || config.japaneseMergeThreshold <= 0) {
+      errors.push("japaneseMergeThreshold must be a positive integer");
+    }
+  }
+
+  // perKeyMinLength, perKeyMotionCount - Record<string, number>（バリデーション不要、型で保証）
+
+  // defaultMinWordLength - 正の整数
+  if (config.defaultMinWordLength !== undefined) {
+    if (!Number.isInteger(config.defaultMinWordLength) || config.defaultMinWordLength <= 0) {
+      errors.push("defaultMinWordLength must be a positive integer");
+    }
+  }
+
+  // defaultMotionCount - オプショナル正の整数
+  if (config.defaultMotionCount !== undefined) {
+    if (!Number.isInteger(config.defaultMotionCount) || config.defaultMotionCount <= 0) {
+      errors.push("defaultMotionCount must be a positive integer");
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * 既存validateConfig関数（互換性維持）
+ * validateUnifiedConfig()にリダイレクトされる統合バリデーション
+ * snake_caseとcamelCase両方の入力をサポート
+ *
+ * @deprecated この関数は内部的にvalidateUnifiedConfig()を使用します。新しいコードではvalidateUnifiedConfig()を直接使用してください。
+ * @param config 検証する設定オブジェクト
+ * @returns バリデーション結果
+ */
+export function validateConfig(
+  config: Partial<Config | CamelCaseConfig>,
+): { valid: boolean; errors: string[] } {
+  // 旧設定をUnifiedConfigに変換してvalidateUnifiedConfig()に委譲
+  const unifiedConfig = toUnifiedConfig(config as any);
+  return validateUnifiedConfig(unifiedConfig);
 }
 
 /**

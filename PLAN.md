@@ -276,15 +276,15 @@ export interface UnifiedConfig {
 
 #### sub3 バリデーション統合
 @target: denops/hellshake-yano/config.ts
-- [ ] validateUnifiedConfig()関数の実装（単一バリデーション）
-- [ ] 既存のvalidateConfig()をvalidateUnifiedConfig()へリダイレクト
-- [ ] main.tsの重複validateConfig()を削除マーク（@deprecated）
-- [ ] エラーメッセージを統一（camelCase形式）
-- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
-- [ ] config_validation_test.tsを作成
-- [ ] 各項目の境界値テスト（正常系/異常系）
-- [ ] `deno test tests/config_validation_test.ts`でテストがパス
-- [ ] `deno test tests/config_test.ts`で既存バリデーションテストがパス
+- [x] validateUnifiedConfig()関数の実装（単一バリデーション）
+- [x] 既存のvalidateConfig()をvalidateUnifiedConfig()へリダイレクト
+- [x] main.tsの重複validateConfig()を削除マーク（@deprecated）
+- [x] エラーメッセージを統一（camelCase形式）
+- [x] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [x] config_validation_test.tsを作成
+- [x] 各項目の境界値テスト（正常系/異常系）
+- [x] `deno test tests/config_validation_test.ts`でテストがパス
+- [x] `deno test tests/config_test.ts`で既存バリデーションテストがパス
 
 #### sub4 デフォルト値管理の統一
 @target: denops/hellshake-yano/config.ts

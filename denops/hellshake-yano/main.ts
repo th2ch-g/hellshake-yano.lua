@@ -2864,18 +2864,23 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 }
 
 /**
- * 設定値を検証する
+ * 設定値を検証する (DEPRECATED)
  * プラグイン設定の妥当性をチェックし、エラー情報を返す
+ *
+ * @deprecated この関数は廃止予定です。代わりに config.ts の validateUnifiedConfig() を使用してください。
+ * この関数は Process2 Sub3 の統合バリデーション実装により、重複したバリデーションロジックとなりました。
+ * 新しいコードでは import { validateUnifiedConfig } from "./config.ts" を使用してください。
  *
  * @param cfg 検証対象の設定オブジェクト（部分的でも可）
  * @returns {{valid: boolean, errors: string[]}} 検証結果とエラーメッセージのリスト
  * @since 1.0.0
  * @example
- * // 設定を検証
+ * // 旧方式（非推奨）
  * const result = validateConfig({ motion_count: -1 });
- * if (!result.valid) {
- *   console.log('設定エラー:', result.errors);
- * }
+ *
+ * // 新方式（推奨）
+ * import { validateUnifiedConfig } from "./config.ts";
+ * const result = validateUnifiedConfig({ motionCount: -1 });
  */
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
