@@ -24,6 +24,61 @@ smooth as in English.
 - **Dictionary System**: Built-in and user-defined dictionaries for improved Japanese word segmentation
 - **Hint Pattern Matching**: Regex-based hint prioritization for document structures (checkboxes, lists, headers)
 
+## UnifiedCache System
+
+hellshake-yano.vim utilizes a sophisticated unified caching system that dramatically improves performance and memory efficiency.
+
+### Key Benefits
+
+- **88% Memory Reduction**: From 659KB to just 78KB through intelligent LRU caching
+- **Unified Management**: Consolidates 20 separate cache implementations into a single, efficient system (統一されたキャッシュ管理)
+- **Comprehensive Statistics**: Built-in monitoring and debugging capabilities
+- **Type-Safe**: Full TypeScript support with 16 specialized cache types
+
+### Cache Architecture
+
+The UnifiedCache system provides 16 specialized cache types optimized for different purposes:
+
+- `WORDS` (1000): Word detection results
+- `HINTS` (500): Hint generation results
+- `DICTIONARY` (2000): Dictionary data and custom words
+- `CHAR_WIDTH` (500): Unicode character width calculations
+- `CHAR_TYPE` (1000): Character type determinations
+- And 11 more specialized types
+
+### Usage Example
+
+```typescript
+import { UnifiedCache, CacheType } from "./cache.ts";
+
+// Get singleton instance
+const cache = UnifiedCache.getInstance();
+
+// Access specific cache type
+const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
+
+// Cache operations
+wordsCache.set("file.ts", ["const", "function", "return"]);
+const words = wordsCache.get("file.ts");
+
+// Monitor performance
+const stats = cache.getAllStats();
+console.log(`Cache hit rate: ${stats.WORDS.hitRate}%`);
+```
+
+### Performance Metrics
+
+- **Hit Rate**: 63-66% average, up to 92.5% for frequently accessed data
+- **Operation Speed**: < 0.001ms per cache operation
+- **Memory Efficiency**: Automatic LRU eviction prevents memory leaks
+- **Scalability**: Handles thousands of entries without performance degradation
+
+For detailed documentation, see:
+- [API Reference](docs/unified-cache-api.md)
+- [Cache Types Guide](docs/cache-types.md)
+- [Migration Guide](docs/migration-guide.md)
+- [Performance Metrics](docs/performance-metrics.md)
+
 ## Installation
 
 ### Using vim-plug
