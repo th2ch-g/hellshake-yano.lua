@@ -231,19 +231,135 @@ export interface UnifiedConfig {
 - 保守性の大幅な向上
 
 ### process2 設定インターフェース統合
-#### sub1 統一設定インターフェースの作成
+
+#### 現状調査結果
+**設定インターフェースの詳細分析（合計10個以上）**
+- **主要インターフェース（10個）**
+  - `Config` (types.ts 121行目) - メイン設定
+  - `CoreConfig` (config.ts 29行目) - 基本設定
+  - `HintConfig` (config.ts 58行目) - ヒント関連
+  - `WordConfig` (config.ts 103行目) - 単語検出
+  - `PerformanceConfig` (config.ts 145行目) - パフォーマンス
+  - `DebugConfig` (config.ts 185行目) - デバッグ
+  - `HierarchicalConfig` (config.ts 211行目) - 階層化設定
+  - `CamelCaseConfig` (config.ts 241行目) - camelCase統一設定
+  - `ModernConfig` (config.ts 318行目) - モダン設定
+  - `HintKeyConfig` (types.ts 339行目) - ヒントキー設定
+- **命名規則の混在**: snake_case/camelCase（31個のマッピング定義）
+- **デフォルト値管理**: 複数箇所に分散（getDefaultConfig等）
+- **バリデーション**: main.tsとconfig.tsに重複実装
+- **既存テスト**: config_test.tsに33個のテストケース
+
+#### sub1 統一設定インターフェース(UnifiedConfig)の作成と基盤整備
 @target: denops/hellshake-yano/config.ts
 @ref: denops/hellshake-yano/types.ts
-- [ ] UnifiedConfig インターフェースの定義（32項目）
-- [ ] DEFAULT_CONFIG 定数の定義
-- [ ] すべての設定をcamelCaseに統一
-- [ ] 階層構造を完全にフラット化
+- [ ] UnifiedConfigインターフェースの定義（すべてcamelCase、32項目）
+- [ ] DEFAULT_UNIFIED_CONFIG定数の定義（型安全な初期値）
+- [ ] 階層構造を完全にフラット化（ネストなし）
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] 既存のconfig_test.tsが通ることを確認（後方互換性の検証）
+- [ ] unified_config_test.tsを新規作成
+- [ ] UnifiedConfigの型テストを追加（型ガード、必須項目等）
+- [ ] `deno test tests/unified_config_test.ts`でテストがパス
 
-#### sub2 既存設定の移行
-@target: 各ファイルの設定参照箇所
-- [ ] Config、CoreConfig、HintConfig等をUnifiedConfigに置き換え
-- [ ] 設定アクセスパスの更新
-- [ ] バリデーション関数の統合
+#### sub2 設定変換レイヤーの実装
+@target: denops/hellshake-yano/config.ts
+- [ ] toUnifiedConfig()関数：旧設定→UnifiedConfigへの変換
+- [ ] fromUnifiedConfig()関数：UnifiedConfig→旧設定への変換
+- [ ] snake_case/camelCase双方向マッピングの完全実装
+- [ ] 各階層設定（CoreConfig等）からの変換サポート
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] config_conversion_test.tsを作成
+- [ ] 全31個のプロパティマッピングをテスト
+- [ ] `deno test tests/config_conversion_test.ts`でテストがパス
+- [ ] `deno test tests/config_test.ts`で既存テストがパス
+
+#### sub3 バリデーション統合
+@target: denops/hellshake-yano/config.ts
+- [ ] validateUnifiedConfig()関数の実装（単一バリデーション）
+- [ ] 既存のvalidateConfig()をvalidateUnifiedConfig()へリダイレクト
+- [ ] main.tsの重複validateConfig()を削除マーク（@deprecated）
+- [ ] エラーメッセージを統一（camelCase形式）
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] config_validation_test.tsを作成
+- [ ] 各項目の境界値テスト（正常系/異常系）
+- [ ] `deno test tests/config_validation_test.ts`でテストがパス
+- [ ] `deno test tests/config_test.ts`で既存バリデーションテストがパス
+
+#### sub4 デフォルト値管理の統一
+@target: denops/hellshake-yano/config.ts
+- [ ] getDefaultUnifiedConfig()関数の実装
+- [ ] 既存のgetDefaultConfig()をgetDefaultUnifiedConfig()へリダイレクト
+- [ ] getDefaultHierarchicalConfig()を@deprecatedマーク
+- [ ] createMinimalConfig()をUnifiedConfigベースに更新
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] config_defaults_test.tsを作成
+- [ ] デフォルト値の一致性テスト
+- [ ] `deno test tests/config_defaults_test.ts`でテストがパス
+- [ ] `deno test tests/config_test.ts`でデフォルト値テストがパス
+
+#### sub5 main.tsの設定処理移行
+@target: denops/hellshake-yano/main.ts
+- [ ] config変数をUnifiedConfig型へ変更
+- [ ] getDefaultConfig()の実装をconfig.tsへ委譲
+- [ ] validateConfig()の実装をconfig.tsへ委譲
+- [ ] 設定アクセスをcamelCaseに統一
+- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [ ] `deno test tests/main_test.ts`で既存テストがパス
+- [ ] `deno test tests/integration_test.ts`で統合テストがパス
+
+#### sub6 各モジュールの設定参照更新（hint.ts）
+@target: denops/hellshake-yano/hint.ts
+@ref: denops/hellshake-yano/hint/manager.ts
+- [ ] Config型インポートをUnifiedConfigへ変更
+- [ ] 設定アクセスをcamelCaseプロパティへ更新
+- [ ] hint_position→hintPosition等の変更
+- [ ] `deno check denops/hellshake-yano/hint.ts`で型チェック
+- [ ] `deno test tests/hint*.ts`でhint関連テストがパス
+
+#### sub7 各モジュールの設定参照更新（word関連）
+@target: denops/hellshake-yano/word/detector.ts
+@ref: denops/hellshake-yano/word/manager.ts, denops/hellshake-yano/word/context.ts
+- [ ] Config型インポートをUnifiedConfigへ変更
+- [ ] 設定アクセスをcamelCaseプロパティへ更新
+- [ ] use_japanese→useJapanese等の変更
+- [ ] `deno check denops/hellshake-yano/word/*.ts`で型チェック
+- [ ] `deno test tests/word*.ts`でword関連テストがパス
+
+#### sub8 lifecycle.tsとAPI層の更新
+@target: denops/hellshake-yano/lifecycle.ts
+@ref: denops/hellshake-yano/api.ts, denops/hellshake-yano/commands.ts
+- [ ] Config型インポートをUnifiedConfigへ変更
+- [ ] mergeConfig()をUnifiedConfig対応に更新
+- [ ] APIのconfigプロパティをUnifiedConfigへ
+- [ ] `deno check denops/hellshake-yano/{lifecycle,api,commands}.ts`で型チェック
+- [ ] `deno test tests/lifecycle*.ts`でテストがパス
+- [ ] `deno test tests/api*.ts`でテストがパス
+
+#### sub9 旧インターフェースの削除準備
+@target: denops/hellshake-yano/config.ts
+@ref: denops/hellshake-yano/types.ts
+- [ ] CoreConfig, HintConfig, WordConfig等に@deprecatedマーク
+- [ ] 移行ガイドコメントの追加
+- [ ] 削除予定バージョンの明記
+- [ ] `deno check denops/hellshake-yano/`で全体の型チェック
+- [ ] `deno test tests/`で全75個のテストファイルがパス
+
+#### sub10 ドキュメント更新
+@target: docs/, README.md
+- [ ] UnifiedConfigのAPIドキュメント作成
+- [ ] 設定項目一覧（32項目）の説明書作成
+- [ ] snake_case→camelCase移行ガイド作成
+- [ ] 設定例とベストプラクティスの記載
+- [ ] MIGRATION.mdに移行手順を追加
+
+#### 成果物と期待される改善
+- 設定インターフェースが10個以上から1つに統合
+- 命名規則の統一（すべてcamelCase）
+- バリデーション処理の一元化
+- デフォルト値管理の単一化
+- 約2,500行のコード削減見込み
+- 保守性とコード可読性の大幅向上
 
 ### process3 main.ts簡素化
 #### sub1 core.tsへの機能移動
