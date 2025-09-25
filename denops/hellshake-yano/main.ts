@@ -1,3 +1,22 @@
+/**
+ * @fileoverview Hellshake-Yano.vim プラグインのメインエントリーポイント
+ *
+ * このファイルは、Vim/Neovim用のヒント表示プラグインのコア機能を提供します。
+ * 主な機能：
+ * - グローバル設定とステート管理
+ * - プラグインの初期化（main関数）
+ * - 各種コマンドのディスパッチャーAPI
+ * - パフォーマンス監視とデバッグ機能
+ * - ヒントの表示・非表示機能
+ * - 単語検出とヒント生成
+ * - キャッシュ管理
+ * - エラーハンドリングとリトライロジック
+ *
+ * @author Hellshake-Yano Team
+ * @version 2.0.0
+ * @since 1.0.0
+ */
+
 import type { Denops } from "@denops/std";
 import {
   detectWords,
@@ -57,46 +76,99 @@ import {
 import { LRUCache } from "./utils/cache.ts";
 import { validateConfigValue } from "./utils/validation.ts";
 
+/**
+ * プラグインのグローバル設定オブジェクト
+ * すべての設定値とオプションを管理します。
+ * @type {Config}
+ * @since 1.0.0
+ */
 // deno-lint-ignore prefer-const
 let config: Config = getDefaultConfig();
 
 /**
  * 現在表示中のヒントマッピングの配列
+ * @type {HintMapping[]}
+ * @since 1.0.0
  */
 let currentHints: HintMapping[] = [];
 
 /**
  * ヒントが現在表示されているかどうかのフラグ
+ * @type {boolean}
+ * @since 1.0.0
  */
 let hintsVisible = false;
 
 /**
  * Neovimのextmark用ネームスペースID（Vimの場合はundefined）
+ * Neovimでのハイライト表示に使用される名前空間の識別子
+ * @type {number | undefined}
+ * @since 1.0.0
  */
 let extmarkNamespace: number | undefined;
-let fallbackMatchIds: number[] = []; // matchadd()のフォールバック用ID
+
+/**
+ * matchadd()のフォールバック用IDリスト
+ * VimやNeovim extmarkが使用できない場合の代替手段として使用
+ * @type {number[]}
+ * @since 1.0.0
+ */
+let fallbackMatchIds: number[] = [];
 
 /**
  * デバウンス用のタイムアウトID
+ * ヒント表示/非表示の頻繁な切り替えを防ぐため
  * @type {number | undefined}
+ * @since 1.0.0
  */
 let debounceTimeoutId: number | undefined;
 
 /**
  * 最後にヒントを表示した時刻（ミリ秒）
+ * パフォーマンス測定とタイミング制御に使用
  * @type {number}
+ * @since 1.0.0
  */
 let lastShowHintsTime = 0;
 
+/**
+ * 単語検出結果のキャッシュ
+ * 検出済みの単語情報を保存し、パフォーマンスを向上
+ * @type {LRUCache<string, any[]>}
+ * @since 1.0.0
+ */
 const wordsCache = new LRUCache<string, any[]>(100);
+
+/**
+ * ヒント生成結果のキャッシュ
+ * 生成済みのヒント文字列を保存し、計算コストを削減
+ * @type {LRUCache<string, string[]>}
+ * @since 1.0.0
+ */
 const hintsCache = new LRUCache<string, string[]>(50);
 
 /**
- * パフォーマンス測定結果を格納するオブジェクト
- * @property showHints - ヒント表示処理の実行時間（ミリ秒）
- * @property hideHints - ヒント非表示処理の実行時間（ミリ秒）
- * @property wordDetection - 単語検出処理の実行時間（ミリ秒）
- * @property hintGeneration - ヒント生成処理の実行時間（ミリ秒）
+ * パフォーマンス測定結果を保持するインターフェース
+ * 各操作の実行時間を配列形式で記録し、統計分析に利用
+ * @interface
+ * @since 1.0.0
+ */
+interface PerformanceMetrics {
+  /** ヒント表示処理の実行時間リスト（ミリ秒） */
+  showHints: number[];
+  /** ヒント非表示処理の実行時間リスト（ミリ秒） */
+  hideHints: number[];
+  /** 単語検出処理の実行時間リスト（ミリ秒） */
+  wordDetection: number[];
+  /** ヒント生成処理の実行時間リスト（ミリ秒） */
+  hintGeneration: number[];
+}
+
+/**
+ * パフォーマンス測定結果を格納するグローバルオブジェクト
+ * 最新50件の処理時間を保持し、メモリ使用量を制限
+ * @type {PerformanceMetrics}
+ * @since 1.0.0
  */
 let performanceMetrics: PerformanceMetrics = {
   showHints: [],
@@ -106,41 +178,37 @@ let performanceMetrics: PerformanceMetrics = {
 };
 
 /**
- * パフォーマンス測定結果を保持するインターフェース
- * @property showHints - ヒント表示処理の実行時間（ミリ秒）
- * @property hideHints - ヒント非表示処理の実行時間（ミリ秒）
- * @property wordDetection - 単語検出処理の実行時間（ミリ秒）
- * @property hintGeneration - ヒント生成処理の実行時間（ミリ秒）
- */
-interface PerformanceMetrics {
-  showHints: number[];
-  hideHints: number[];
-  wordDetection: number[];
-  hintGeneration: number[];
-}
-
-/**
  * デバッグ情報を格納するインターフェース
+ * プラグインの現在状態とパフォーマンス情報を包含
+ * @interface
+ * @since 1.0.0
  */
 interface DebugInfo {
-  /** 現在の設定情報 */
+  /** 現在の設定情報のスナップショット */
   config: Config;
-  /** ヒントの表示状態 */
+  /** ヒントの表示状態フラグ */
   hintsVisible: boolean;
-  /** 現在のヒントマッピング配列 */
+  /** 現在表示中のヒントマッピング配列 */
   currentHints: HintMapping[];
-  /** パフォーマンス測定結果 */
+  /** パフォーマンス測定結果の集計 */
   metrics: PerformanceMetrics;
-  /** デバッグ情報取得時刻 */
+  /** デバッグ情報取得時刻（Unix timestamp） */
   timestamp: number;
 }
 
 /**
- * パフォーマンス測定結果を記録する
+ * パフォーマンス測定結果を記録する内部関数
+ * 操作の実行時間を測定し、統計情報として蓄積
  *
- * @param operation - 測定対象の操作名
- * @param startTime - 操作開始時刻（ミリ秒）
- * @param endTime - 操作終了時刻（ミリ秒）
+ * @param operation 測定対象の操作名（PerformanceMetricsのキー）
+ * @param startTime 操作開始時刻（ミリ秒、performance.now()の戻り値）
+ * @param endTime 操作終了時刻（ミリ秒、performance.now()の戻り値）
+ * @returns {void}
+ * @since 1.0.0
+ * @example
+ * const start = performance.now();
+ * // 何らかの処理
+ * recordPerformance('showHints', start, performance.now());
  */
 function recordPerformance(
   operation: keyof PerformanceMetrics,
@@ -165,10 +233,15 @@ function recordPerformance(
 
 /**
  * 指定されたキーに対する最小文字数を取得する
+ * キー別の設定、デフォルト設定、後方互換設定の順に優先度を適用
  *
- * @param config - 設定オブジェクト
- * @param key - 対象のキー文字
- * @returns キーに対応する最小文字数
+ * @param config プラグインの設定オブジェクト
+ * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+ * @returns {number} そのキーに対応する最小文字数（デフォルト: 2）
+ * @since 1.0.0
+ * @example
+ * const minLength = getMinLengthForKey(config, 'f');
+ * // 'f'キーに対する最小文字数を取得（例: 3）
  */
 export function getMinLengthForKey(config: Config, key: string): number {
   // キー別設定が存在し、そのキーの設定があれば使用
@@ -186,11 +259,16 @@ export function getMinLengthForKey(config: Config, key: string): number {
 }
 
 /**
- * キー別motion_count設定を取得する関数
+ * キー別motion_count設定を取得する
+ * モーションに応じた動作回数の設定値を決定
  *
- * @param key - 対象のキー
- * @param config - 設定オブジェクト
- * @returns そのキーに対するmotion_count値
+ * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+ * @param config プラグインの設定オブジェクト
+ * @returns {number} そのキーに対するmotion_count値（デフォルト: 3）
+ * @since 1.0.0
+ * @example
+ * const motionCount = getMotionCountForKey('f', config);
+ * // 'f'モーションに対する動作回数を取得（例: 5）
  */
 export function getMotionCountForKey(key: string, config: Config): number {
   // キー別設定が存在し、そのキーの設定があれば使用
@@ -217,9 +295,14 @@ export function getMotionCountForKey(key: string, config: Config): number {
 }
 
 /**
- * 現在のデバッグ情報を収集する
+ * 現在のデバッグ情報を収集する内部関数
+ * プラグインの状態とパフォーマンス情報を統合して取得
  *
- * @returns 現在の設定、ヒント状態、パフォーマンス指標を含むデバッグ情報
+ * @returns {DebugInfo} 設定、ヒント状態、パフォーマンス指標を含む包括的なデバッグ情報
+ * @since 1.0.0
+ * @example
+ * const debugInfo = collectDebugInfo();
+ * console.log(`現在のヒント数: ${debugInfo.currentHints.length}`);
  */
 function collectDebugInfo(): DebugInfo {
   return {
@@ -237,7 +320,11 @@ function collectDebugInfo(): DebugInfo {
 }
 
 /**
- * デバッグ情報のクリア
+ * デバッグ情報をクリアする内部関数
+ * 蓄積されたパフォーマンス測定データを初期化
+ *
+ * @returns {void}
+ * @since 1.0.0
  */
 function clearDebugInfo(): void {
   performanceMetrics = {
@@ -249,10 +336,12 @@ function clearDebugInfo(): void {
 }
 
 /**
- * 後方互換性のあるフラグを正規化する
+ * 後方互換性のあるフラグを正規化する内部関数
+ * 廃止された設定項目を除去し、互換性を保持
  *
- * @param cfg - 正規化する設定オブジェクト
- * @returns 後方互換性を保ちつつ正規化された設定
+ * @param cfg 正規化対象の部分的な設定オブジェクト
+ * @returns {Partial<Config>} 後方互換性を保ちつつ正規化された設定
+ * @since 1.0.0
  */
 function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
   const normalized = { ...cfg };
@@ -265,10 +354,12 @@ function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config>
 }
 
 /**
- * メイン設定を単語検出マネージャー用設定に変換する
+ * メイン設定を単語検出マネージャー用設定に変換する内部関数
+ * プラグイン設定を単語検出エンジン用の形式にマッピング
  *
- * @param config - 変換元のメイン設定
- * @returns WordDetectionManagerが使用する形式の設定
+ * @param config 変換元のメイン設定オブジェクト
+ * @returns {WordDetectionManagerConfig} 単語検出マネージャー用の設定形式
+ * @since 1.0.0
  */
 function convertConfigForManager(config: Config): WordDetectionManagerConfig {
   return {
@@ -295,9 +386,13 @@ function convertConfigForManager(config: Config): WordDetectionManagerConfig {
 }
 
 /**
- * メイン設定と単語検出マネージャーの設定を同期する
+ * メイン設定と単語検出マネージャーの設定を同期する内部関数
+ * プラグイン設定の変更を単語検出エンジンに反映
  *
- * @param config - 同期元のメイン設定
+ * @param config 同期元のメイン設定オブジェクト
+ * @returns {void}
+ * @since 1.0.0
+ * @throws 設定の同期に失敗した場合（エラーは内部で処理され、ログ出力される）
  */
 function syncManagerConfig(config: Config): void {
   try {
@@ -316,7 +411,22 @@ function syncManagerConfig(config: Config): void {
 }
 
 /**
- * プラグインのメインエントリポイント
+ * プラグインのメインエントリポイント関数
+ * Vim/Neovim用のHellshake-Yanoプラグインを初期化し、ディスパッチャーを設定
+ *
+ * 主な処理内容：
+ * - Neovim環境でのextmarkネームスペース作成
+ * - 単語検出マネージャーの設定同期
+ * - ディスパッチャーAPIの定義と登録
+ * - プラグインの各種機能（設定更新、ヒント表示、デバッグなど）の提供
+ *
+ * @param denops Denosランタイムオブジェクト（Vim/Neovimとの通信インターフェース）
+ * @returns {Promise<void>} プラグイン初期化完了のPromise
+ * @since 1.0.0
+ * @throws プラグイン初期化に失敗した場合
+ * @example
+ * // プラグインの初期化（通常はDenopsによって自動実行）
+ * await main(denops);
  */
 export async function main(denops: Denops): Promise<void> {
   // Neovimの場合のみextmarkのnamespaceを作成
@@ -333,7 +443,15 @@ export async function main(denops: Denops): Promise<void> {
   // dispatcherの設定
   denops.dispatcher = {
     /**
-     * 設定を更新（検証処理付き）
+     * プラグイン設定を更新する（検証処理付き）
+     * 新しい設定値を検証し、有効な項目のみを適用
+     *
+     * @param newConfig 更新する設定オブジェクト（型安全でない外部入力）
+     * @returns {void}
+     * @since 1.0.0
+     * @example
+     * // Vim scriptから設定を更新
+     * call denops#request('hellshake-yano', 'updateConfig', [{'motion_count': 5}])
      */
     updateConfig(newConfig: unknown): void {
       // 型安全のため、Partial<Config>として処理
@@ -813,7 +931,14 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * キャッシュをクリア
+     * 全てのキャッシュをクリアする
+     * 単語検出とヒント生成の結果キャッシュを初期化
+     *
+     * @returns {void}
+     * @since 1.0.0
+     * @example
+     * // Vim scriptからキャッシュをクリア
+     * call denops#request('hellshake-yano', 'clearCache', [])
      */
     clearCache(): void {
       wordsCache.clear();
@@ -1089,21 +1214,42 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * デバッグ情報を取得
+     * デバッグ情報を取得する
+     * 現在のプラグイン状態とパフォーマンス情報を包含した詳細情報を返す
+     *
+     * @returns {DebugInfo} 設定、ヒント状態、パフォーマンス統計を含むデバッグ情報
+     * @since 1.0.0
+     * @example
+     * // Vim scriptからデバッグ情報を取得
+     * let debug_info = denops#request('hellshake-yano', 'getDebugInfo', [])
      */
     getDebugInfo(): DebugInfo {
       return collectDebugInfo();
     },
 
     /**
-     * パフォーマンス情報をクリア
+     * パフォーマンス測定ログをクリアする
+     * 蓄積された全ての実行時間統計をリセット
+     *
+     * @returns {void}
+     * @since 1.0.0
+     * @example
+     * // Vim scriptからパフォーマンスログをクリア
+     * call denops#request('hellshake-yano', 'clearPerformanceLog', [])
      */
     clearPerformanceLog(): void {
       clearDebugInfo();
     },
 
     /**
-     * デバッグモードのトグル
+     * デバッグモードの有効/無効を切り替える
+     * デバッグ出力の表示状態をトグルし、新しい状態を返す
+     *
+     * @returns {boolean} 切り替え後のデバッグモード状態
+     * @since 1.0.0
+     * @example
+     * // Vim scriptからデバッグモードを切り替え
+     * let is_debug = denops#request('hellshake-yano', 'toggleDebugMode', [])
      */
     toggleDebugMode(): boolean {
       config.debug_mode = !config.debug_mode;
@@ -1111,7 +1257,14 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * パフォーマンスログのトグル
+     * パフォーマンスログの記録を切り替える
+     * 実行時間測定の有効/無効をトグルし、無効化時はログをクリア
+     *
+     * @returns {boolean} 切り替え後のパフォーマンスログ記録状態
+     * @since 1.0.0
+     * @example
+     * // Vim scriptからパフォーマンスログを切り替え
+     * let is_logging = denops#request('hellshake-yano', 'togglePerformanceLog', [])
      */
     togglePerformanceLog(): boolean {
       config.performance_log = !config.performance_log;
@@ -1269,8 +1422,21 @@ let _highlightAbortController: AbortController | null = null;
 const HIGHLIGHT_BATCH_SIZE = 15; // 1バッチあたりの処理数（パフォーマンス調整可能）
 
 /**
- * 非同期ヒント表示関数
- * fire-and-forgetパターンで描画を実行し、入力をブロックしない
+ * 非同期でヒントを表示する
+ * Fire-and-forgetパターンで描画処理を実行し、ユーザー入力をブロックしない
+ * パフォーマンス最適化により大量のヒントも効率的に処理
+ *
+ * @param denops Denosランタイムオブジェクト
+ * @param hints 表示するヒントマッピングの配列
+ * @param config 表示設定オブジェクト（モード情報等）
+ * @param onComplete 表示完了時のコールバック関数（オプション）
+ * @returns {void}
+ * @since 1.0.0
+ * @example
+ * // ヒントを非同期で表示
+ * displayHintsAsync(denops, hintMappings, { mode: 'normal' }, () => {
+ *   console.log('ヒント表示完了');
+ * });
  */
 export function displayHintsAsync(
   denops: Denops,
@@ -1318,14 +1484,31 @@ export function displayHintsAsync(
 }
 
 /**
- * 描画中かどうかを取得
+ * ヒントの描画処理中かどうかを取得する
+ * 非同期描画の状態を外部から確認するためのステータス関数
+ *
+ * @returns {boolean} 描画処理中の場合はtrue、そうでなければfalse
+ * @since 1.0.0
+ * @example
+ * // 描画状態を確認してから次の処理を実行
+ * if (!isRenderingHints()) {
+ *   displayHintsAsync(denops, hints, config);
+ * }
  */
 export function isRenderingHints(): boolean {
   return _isRenderingHints;
 }
 
 /**
- * 現在の描画をキャンセル
+ * 現在実行中の描画処理を中断する
+ * 長時間の描画処理をキャンセルし、リソースを解放
+ *
+ * @returns {void}
+ * @since 1.0.0
+ * @example
+ * // ユーザーが別のアクションを実行した際に描画を中断
+ * abortCurrentRendering();
+ * displayHintsAsync(denops, newHints, config);
  */
 export function abortCurrentRendering(): void {
   if (_renderingAbortController) {
@@ -1954,21 +2137,22 @@ async function highlightCandidateHints(
 }
 
 /**
- * 候補のヒントを非同期でハイライト表示（UX改善）
+ * 候補ヒントを非同期でハイライト表示する（UX改善）
+ * Fire-and-forgetパターンで描画を実行し、ユーザー入力をブロックしない
+ * 入力プレフィックスに一致するヒントのみを強調表示
  *
- * @description fire-and-forgetパターンで描画を実行し、入力をブロックしない
- * @param denops - Denops インスタンス
- * @param inputPrefix - ユーザーが入力した文字列のプレフィックス
- * @param onComplete - 描画完了時のコールバック（オプション）
- * @returns void - Promiseを返さない（非ブロッキング）
- *
+ * @param denops Denosランタイムオブジェクト
+ * @param inputPrefix ユーザーが入力した文字列のプレフィックス
+ * @param onComplete 描画完了時のコールバック関数（オプション）
+ * @returns {void} Promiseを返さない（非ブロッキング処理）
+ * @since 1.0.0
  * @example
  * // 1文字目入力後のハイライト更新
  * highlightCandidateHintsAsync(denops, "a");
  *
- * // 完了コールバック付き
+ * // 完了コールバック付き実行
  * highlightCandidateHintsAsync(denops, "ab", () => {
- *   console.log("Highlight rendering completed");
+ *   console.log("ハイライト描画完了");
  * });
  */
 export function highlightCandidateHintsAsync(
@@ -2297,7 +2481,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     // await denops.cmd("echo 'Select hint: '");
 
     // 短い待機時間を入れて、前回の入力が誤って拾われるのを防ぐ
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // タイムアウト付きでユーザー入力を取得
     const inputPromise = denops.call("getchar") as Promise<number>;
@@ -2697,9 +2881,18 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 }
 
 /**
- * 設定値を検証する関数（テスト用にエクスポート）
- * @param cfg 検証する設定オブジェクト
- * @returns 検証結果（valid: 成功/失敗、errors: エラーメッセージ配列）
+ * 設定値を検証する
+ * プラグイン設定の妥当性をチェックし、エラー情報を返す
+ *
+ * @param cfg 検証対象の設定オブジェクト（部分的でも可）
+ * @returns {{valid: boolean, errors: string[]}} 検証結果とエラーメッセージのリスト
+ * @since 1.0.0
+ * @example
+ * // 設定を検証
+ * const result = validateConfig({ motion_count: -1 });
+ * if (!result.valid) {
+ *   console.log('設定エラー:', result.errors);
+ * }
  */
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -2846,7 +3039,15 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
 }
 
 /**
- * デフォルト設定を取得（テスト用にエクスポート）
+ * プラグインのデフォルト設定を取得する
+ * 初期化時や設定リセット時に使用される標準設定値を提供
+ *
+ * @returns {Config} すべてのデフォルト設定値を含む設定オブジェクト
+ * @since 1.0.0
+ * @example
+ * // デフォルト設定を取得して一部を変更
+ * const config = getDefaultConfig();
+ * config.motion_count = 5;
  */
 export function getDefaultConfig(): Config {
   return {
@@ -3215,7 +3416,16 @@ async function registerDictionaryCommands(denops: Denops): Promise<void> {
 }
 
 /**
- * Reload dictionary from files
+ * 辞書ファイルから辞書データを再読み込みする
+ * 辞書ファイルが更新された際に最新の単語データを反映
+ *
+ * @param denops Denosランタイムオブジェクト
+ * @returns {Promise<void>} 再読み込み完了のPromise
+ * @since 1.0.0
+ * @throws 辞書ファイルの読み込みに失敗した場合
+ * @example
+ * // 辞書を再読み込み
+ * await reloadDictionary(denops);
  */
 export async function reloadDictionary(denops: Denops): Promise<void> {
   try {
@@ -3240,7 +3450,16 @@ export async function reloadDictionary(denops: Denops): Promise<void> {
 }
 
 /**
- * Edit dictionary file
+ * 辞書ファイルを編集用に開く
+ * ユーザー定義の辞書ファイルをVim/Neovimで編集可能にする
+ *
+ * @param denops Denosランタイムオブジェクト
+ * @returns {Promise<void>} ファイルオープン完了のPromise
+ * @since 1.0.0
+ * @throws ファイルのオープンに失敗した場合
+ * @example
+ * // 辞書ファイルを編集モードで開く
+ * await editDictionary(denops);
  */
 export async function editDictionary(denops: Denops): Promise<void> {
   try {
@@ -3284,7 +3503,16 @@ export async function editDictionary(denops: Denops): Promise<void> {
 }
 
 /**
- * Show current dictionary content
+ * 現在の辞書内容を表示する
+ * 読み込まれている辞書データの一覧をVim/Neovimに表示
+ *
+ * @param denops Denosランタイムオブジェクト
+ * @returns {Promise<void>} 表示完了のPromise
+ * @since 1.0.0
+ * @throws 辞書データの取得に失敗した場合
+ * @example
+ * // 現在の辞書内容を表示
+ * await showDictionary(denops);
  */
 export async function showDictionary(denops: Denops): Promise<void> {
   try {
@@ -3314,7 +3542,16 @@ export async function showDictionary(denops: Denops): Promise<void> {
 }
 
 /**
- * Validate dictionary format
+ * 辞書ファイルの形式を検証する
+ * 辞書データの整合性と形式の正当性を確認し、結果を報告
+ *
+ * @param denops Denosランタイムオブジェクト
+ * @returns {Promise<void>} 検証完了のPromise
+ * @since 1.0.0
+ * @throws 検証処理に失敗した場合
+ * @example
+ * // 辞書ファイルの形式を検証
+ * await validateDictionary(denops);
  */
 export async function validateDictionary(denops: Denops): Promise<void> {
   try {

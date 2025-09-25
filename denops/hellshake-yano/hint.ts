@@ -1,5 +1,15 @@
-import type { Word, HintMapping, HintPosition, HintPositionWithCoordinateSystem, HintKeyConfig } from "./types.ts";
-import { areWordsAdjacent, getWordDisplayEndCol, calculateHintDisplayPosition } from "./hint-utils.ts";
+import type {
+  HintKeyConfig,
+  HintMapping,
+  HintPosition,
+  HintPositionWithCoordinateSystem,
+  Word,
+} from "./types.ts";
+import {
+  areWordsAdjacent,
+  calculateHintDisplayPosition,
+  getWordDisplayEndCol,
+} from "./hint-utils.ts";
 import { getDisplayWidth } from "./utils/display.ts";
 
 // Re-export types for backward compatibility
@@ -20,17 +30,30 @@ const CACHE_MAX_SIZE = 100; // キャッシュの最大サイズ
 
 /**
  * バッチ処理を開始する単語数の閾値
+ * @constant {number}
+ * @default 500
+ * @since 1.0.0
  */
 export const BATCH_PROCESS_THRESHOLD = 500;
 
 /**
  * バッチ処理時のバッチサイズ
+ * @constant {number}
+ * @default 250
+ * @since 1.0.0
  */
 export const BATCH_BATCH_SIZE = 250;
 
 // 統一されたエンコーディングユーティリティを使用
 import { getByteLength } from "./utils/encoding.ts";
 
+/**
+ * モードに応じた割り当てキャッシュを取得
+ * @param mode - 現在のエディタモード（"normal", "visual", その他）
+ * @returns Map<string, Word[]> 指定されたモードのキャッシュマップ
+ * @since 1.0.0
+ * @internal
+ */
 function getAssignmentCacheForMode(mode: string): Map<string, Word[]> {
   if (mode === "visual") {
     return assignmentCacheVisual;
@@ -41,6 +64,18 @@ function getAssignmentCacheForMode(mode: string): Map<string, Word[]> {
   return assignmentCacheOther;
 }
 
+/**
+ * 割り当てキャッシュキーを作成
+ * @param words - キー生成元の単語配列
+ * @param cursorLine - 現在のカーソル行位置
+ * @param cursorCol - 現在のカーソル列位置
+ * @param hintPositionSetting - ヒント位置設定
+ * @param visualHintPositionSetting - Visualモードのヒント位置設定
+ * @param optimizationConfig - オプションの最適化設定
+ * @returns string 割り当てcache用に生成されたキー
+ * @since 1.0.0
+ * @internal
+ */
 function createAssignmentCacheKey(
   words: Word[],
   cursorLine: number,
@@ -56,6 +91,13 @@ function createAssignmentCacheKey(
   return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${visualHintPositionSetting}-${skipOverlap}-${positionSignature}`;
 }
 
+/**
+ * 文字列をハッシュ化
+ * @param value - ハッシュ化する文字列
+ * @returns string base36形式のハッシュ値
+ * @since 1.0.0
+ * @internal
+ */
 function hashString(value: string): string {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -66,11 +108,21 @@ function hashString(value: string): string {
   return hash.toString(36);
 }
 
+/**
+ * 遅延評価でヒントマッピングを作成
+ * @param word - ヒント割り当て対象の単語
+ * @param hint - 割り当てるヒント文字列
+ * @param effectiveHintPosition - 有効なヒント位置（"start", "end", "overlay", "both"）
+ * @param endHint - "both"モード用のオプション終了ヒント
+ * @returns HintMapping | HintMapping[] 単一マッピングまたは"both"モード用の配列
+ * @since 1.0.0
+ * @internal
+ */
 function createLazyHintMapping(
   word: Word,
   hint: string,
   effectiveHintPosition: string,
-  endHint?: string,  // bothモード用の終了位置ヒント
+  endHint?: string, // bothモード用の終了位置ヒント
 ): HintMapping | HintMapping[] {
   // both モードの場合は2つのマッピングを返す
   if (effectiveHintPosition === "both" && endHint) {
@@ -83,6 +135,15 @@ function createLazyHintMapping(
   return createSingleHintMapping(word, hint, effectiveHintPosition);
 }
 
+/**
+ * 単一ヒントマッピングを作成
+ * @param word - ヒント割り当て対象の単語
+ * @param hint - 割り当てるヒント文字列
+ * @param effectiveHintPosition - ヒント位置（"start", "end", "overlay"）
+ * @returns HintMapping 遅延評価による位置プロパティを持つヒントマッピング
+ * @since 1.0.0
+ * @internal
+ */
 function createSingleHintMapping(
   word: Word,
   hint: string,
@@ -137,6 +198,14 @@ function createSingleHintMapping(
   };
 }
 
+/**
+ * 割り当てキャッシュに保存
+ * @param cache - 保存先のcacheマップ
+ * @param cacheKey - cacheエントリのキー
+ * @param sortedWords - cacheする並び替え済み単語配列
+ * @since 1.0.0
+ * @internal
+ */
 function storeAssignmentCache(
   cache: Map<string, Word[]>,
   cacheKey: string,
@@ -308,7 +377,7 @@ export function assignHintsToWords(
     }
 
     // スキップ対象を除外した単語リストを作成
-    filteredWords = words.filter(word => !wordsToSkip.has(word));
+    filteredWords = words.filter((word) => !wordsToSkip.has(word));
   }
 
   // カーソル位置からの距離で最適化されたソート
@@ -361,7 +430,7 @@ export function assignHintsToWords(
  * @description 単一文字ヒントを使い切った後の複数文字ヒントを効率的に生成
  * @param wordCount - 必要な総ヒント数
  * @param markers - ヒント文字として使用するマーカー配列
- * @returns string[] - 生成されたヒント文字列の配列
+ * @returns string[] 生成されたヒント文字列の配列
  * @since 1.0.0
  */
 function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): string[] {
@@ -673,7 +742,7 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
  * @description 単語とヒント位置設定に基づいてヒントの表示位置を計算
  * @param word - 対象の単語
  * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
- * @returns HintPosition - 計算されたヒント表示位置
+ * @returns HintPosition 計算されたヒント表示位置
  * @since 1.0.0
  * @example
  * ```typescript
@@ -763,7 +832,7 @@ export function calculateHintPosition(
  * @param word - 単語情報（1ベース座標で提供されることを前提）
  * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
  * @param enableDebug - デバッグログの有効/無効（デフォルト: false）
- * @returns HintPositionWithCoordinateSystem - Vim/Neovim両方の座標系に対応した位置情報
+ * @returns HintPositionWithCoordinateSystem Vim/Neovim両方の座標系に対応した位置情報
  * @since 1.0.0
  * @example
  * ```typescript
@@ -974,7 +1043,7 @@ export function generateHintsWithGroups(
  * @description 指定されたキーから1文字ヒントを生成
  * @param keys - 使用可能なキーの配列
  * @param count - 生成するヒント数
- * @returns string[] - 生成された1文字ヒントの配列
+ * @returns string[] 生成された1文字ヒントの配列
  * @since 1.0.0
  */
 function generateSingleCharHints(keys: string[], count: number): string[] {
@@ -1132,14 +1201,46 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
 
 /**
  * オーバーラップ検出用のキャッシュ
+ * Cache for adjacent words detection to optimize overlap detection
+ * @type {Map<string, { word: Word; adjacentWords: Word[] }[]>}
+ * @since 1.0.0
+ * @internal
  */
 let adjacencyCache = new Map<string, { word: Word; adjacentWords: Word[] }[]>();
 
 /**
  * 隣接する単語を検出する
+ * Detect adjacent words on the same line for overlap detection
+ *
  * @description 同一行で隣接している単語（1カラム以内の間隔）を特定
+ * Identifies words that are adjacent (within 1 column spacing) on the same line
+ * to prevent hint display overlaps. Uses display width calculation for accurate
+ * positioning with tab characters and multi-byte characters.
+ *
+ * ## Algorithm Details
+ * - **Same-line filtering**: Only checks words on identical line numbers
+ * - **Display width aware**: Considers tab expansion and multi-byte character width
+ * - **Proximity detection**: Uses areWordsAdjacent utility for precise adjacency
+ * - **Performance optimization**: Results are cached for repeated calls
+ *
  * @param words - 検出対象の単語配列
- * @returns 各単語とその隣接単語の配列
+ * @returns {{ word: Word; adjacentWords: Word[] }[]} 各単語とその隣接単語の配列
+ * @complexity O(n²) - nは単語数
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const words = [
+ *   { text: 'hello', line: 1, col: 1 },
+ *   { text: 'world', line: 1, col: 7 },   // Adjacent to 'hello'
+ *   { text: 'test', line: 2, col: 1 }     // Different line, not adjacent
+ * ];
+ * const result = detectAdjacentWords(words);
+ * // Returns: [
+ * //   { word: words[0], adjacentWords: [words[1]] },
+ * //   { word: words[1], adjacentWords: [words[0]] },
+ * //   { word: words[2], adjacentWords: [] }
+ * // ]
+ * ```
  */
 export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords: Word[] }[] {
   if (words.length === 0) {
@@ -1147,7 +1248,7 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
   }
 
   // キャッシュキーを生成
-  const cacheKey = words.map(w => `${w.text}:${w.line}:${w.col}`).join('|');
+  const cacheKey = words.map((w) => `${w.text}:${w.line}:${w.col}`).join("|");
 
   // キャッシュヒットチェック
   if (adjacencyCache.has(cacheKey)) {
@@ -1191,9 +1292,28 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
 
 /**
  * 単語がマークダウン記号かどうかを判定する
+ * Check if a word consists only of markdown symbols or punctuation
+ *
  * @description マークダウン記号やその他の記号文字のみで構成されているかチェック
+ * Determines if a word is composed entirely of markdown symbols or punctuation
+ * characters. Used for prioritization in hint overlap resolution.
+ *
+ * ## Symbol Detection Pattern
+ * - **Markdown symbols**: -, *, #, `, [, ], (, ), {, }
+ * - **Punctuation**: ., ,, ;, :, !, ?
+ * - **Pattern matching**: Uses regex `/^[\-\*#`\[\](){}.,;:!?]+$/`
+ *
  * @param word - 判定対象の単語
- * @returns 記号の場合true
+ * @returns boolean 記号の場合true
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * isSymbolWord({ text: '**', line: 1, col: 5 });     // true (markdown bold)
+ * isSymbolWord({ text: '[]', line: 1, col: 10 });    // true (markdown link)
+ * isSymbolWord({ text: 'hello', line: 1, col: 15 }); // false (text word)
+ * isSymbolWord({ text: '123', line: 1, col: 20 });   // false (numeric word)
+ * isSymbolWord({ text: '', line: 1, col: 25 });      // false (empty)
+ * ```
  */
 export function isSymbolWord(word: Word): boolean {
   if (!word.text || word.text.trim().length === 0) {
@@ -1208,16 +1328,50 @@ export function isSymbolWord(word: Word): boolean {
 
 /**
  * オーバーラップによりヒントをスキップするかどうかを判定する
+ * Determine whether to skip hint display due to overlap conflicts
+ *
  * @description 優先度ルールに基づいてヒント表示の要否を決定
+ * Determines whether to skip hint display based on priority rules when words
+ * are adjacent and would cause hint overlaps. Implements a sophisticated
+ * prioritization system for optimal hint visibility.
+ *
+ * ## Priority Resolution Algorithm
+ * 1. **Type Priority**: Text words > Symbol words (configurable)
+ * 2. **Length Priority**: Longer words > Shorter words (same type)
+ * 3. **Position Priority**: Right position > Left position (same type and length)
+ *
+ * ## Conflict Resolution Examples
+ * - Symbol vs Text: Text word gets hint, symbol is skipped
+ * - Same type, different length: Longer word gets hint
+ * - Same type and length: Right-most word gets hint
+ *
  * @param word - 判定対象の単語
  * @param adjacentWords - 隣接している単語の配列
  * @param priorityRules - 優先度ルール（記号 < 単語）
- * @returns スキップする場合true
+ * @param priorityRules.symbolsPriority - 記号単語の優先度値（低い = 低優先度）
+ * @param priorityRules.wordsPriority - テキスト単語の優先度値（高い = 高優先度）
+ * @returns boolean スキップする場合true
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: '*', line: 1, col: 5 };           // Symbol word
+ * const adjacent = [{ text: 'hello', line: 1, col: 6 }]; // Text word
+ * const rules = { symbolsPriority: 1, wordsPriority: 2 };
+ *
+ * const shouldSkip = shouldSkipHintForOverlap(word, adjacent, rules);
+ * // Returns: true (symbol skipped in favor of text word)
+ *
+ * // Same type comparison
+ * const shortWord = { text: 'a', line: 1, col: 1 };
+ * const longWord = [{ text: 'hello', line: 1, col: 3 }];
+ * const skipShort = shouldSkipHintForOverlap(shortWord, longWord, rules);
+ * // Returns: true (shorter word skipped)
+ * ```
  */
 export function shouldSkipHintForOverlap(
   word: Word,
   adjacentWords: Word[],
-  priorityRules: { symbolsPriority: number; wordsPriority: number }
+  priorityRules: { symbolsPriority: number; wordsPriority: number },
 ): boolean {
   if (adjacentWords.length === 0) {
     return false;
@@ -1254,27 +1408,60 @@ export function shouldSkipHintForOverlap(
 }
 
 /**
+ * ヒントが利用可能なスペースに表示可能かチェック
  * Check if a hint can be displayed in the available space
- * considering adjacent words and minimum hint width requirements
  *
- * @param word - The word to check hint display for
- * @param adjacentWords - Array of adjacent words
- * @param minHintWidth - Minimum width required for hint display (default: 2)
- * @param tabWidth - Tab width for display calculations (default: 8)
- * @returns true if hint can be displayed, false otherwise
+ * @description 隣接する単語と最小ヒント幅要件を考慮してヒント表示可能性を判定
+ * Determines if a hint can be displayed considering adjacent words and minimum
+ * hint width requirements. Performs precise space calculations using display
+ * width for tab characters and multi-byte characters.
+ *
+ * ## Space Calculation Algorithm
+ * 1. **Display width calculation**: Uses getDisplayWidth for accurate character width
+ * 2. **Position analysis**: Calculates word end positions considering display width
+ * 3. **Space availability**: Measures gaps between adjacent words
+ * 4. **Minimum width check**: Ensures sufficient space for minimum hint display
+ *
+ * ## Edge Cases Handled
+ * - **Different lines**: No conflict for words on different lines
+ * - **Overlapping words**: Returns false for overlapping positions
+ * - **Tab characters**: Proper expansion using tabWidth parameter
+ * - **Multi-byte characters**: Accurate width calculation for Unicode
+ *
+ * @param word - ヒント表示をチェックする単語
+ * @param adjacentWords - 競合を引き起こす可能性のある隣接単語の配列
+ * @param minHintWidth - ヒント表示に必要な最小幅（デフォルト: 2）
+ * @param tabWidth - 表示計算用のタブ幅（デフォルト: 8）
+ * @returns boolean ヒントが表示可能な場合true、そうでなければfalse
+ * @complexity O(n) - nは隣接単語数
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: 'hello', line: 1, col: 1 };        // cols 1-5
+ * const adjacent = [{ text: 'world', line: 1, col: 10 }];  // cols 10-14
+ *
+ * const canDisplay = canDisplayHint(word, adjacent, 2, 8);
+ * // Returns: true (4 columns gap: 6,7,8,9 >= minHintWidth of 2)
+ *
+ * // Tight spacing example
+ * const tightWord = { text: 'hi', line: 1, col: 1 };       // cols 1-2
+ * const closeAdj = [{ text: 'there', line: 1, col: 4 }];   // cols 4-8
+ * const canDisplayTight = canDisplayHint(tightWord, closeAdj, 2);
+ * // Returns: false (1 column gap: 3 < minHintWidth of 2)
+ * ```
  */
 export function canDisplayHint(
   word: Word,
   adjacentWords: Word[],
   minHintWidth = 2,
-  tabWidth = 8
+  tabWidth = 8,
 ): boolean {
   if (adjacentWords.length === 0) {
     return true; // No adjacent words, display is possible
   }
 
   const currentWordDisplayWidth = getDisplayWidth(word.text, tabWidth);
-  
+
   // Check available space between adjacent words
   for (const adjacentWord of adjacentWords) {
     // Check if they are on the same line
@@ -1283,55 +1470,80 @@ export function canDisplayHint(
     }
 
     const adjacentWordDisplayWidth = getDisplayWidth(adjacentWord.text, tabWidth);
-    
+
     // Calculate positions
     const currentWordEndPos = word.col + currentWordDisplayWidth - 1;
     const adjacentWordEndPos = adjacentWord.col + adjacentWordDisplayWidth - 1;
-    
+
     let availableSpace = 0;
-    
+
     // Check if current word is to the left of adjacent word
     if (currentWordEndPos < adjacentWord.col) {
       availableSpace = adjacentWord.col - currentWordEndPos - 1;
-    }
-    // Check if current word is to the right of adjacent word
+    } // Check if current word is to the right of adjacent word
     else if (word.col > adjacentWordEndPos) {
       availableSpace = word.col - adjacentWordEndPos - 1;
-    }
-    // Words overlap or are adjacent - no space available
+    } // Words overlap or are adjacent - no space available
     else {
       availableSpace = 0;
     }
-    
+
     // If available space is less than minimum required, display is not possible
     if (availableSpace < minHintWidth) {
       return false;
     }
   }
-  
+
   return true; // Sufficient space available
 }
 
-
 /**
- * Prioritize hints based on predefined rules:
- * 1. Text > Symbols 
- * 2. Longer words > Shorter words (same type)
- * 3. Left position > Right position (same length and type)
+ * 定義済みルールに基づいてヒントを優先順位付け
  *
- * @param words - Array of words with their adjacent word information
- * @param tabWidth - Tab width for display calculations (default: 8)
- * @returns Array of words that should display hints based on priority rules
+ * @description 競合解決のために事前定義されたルールに基づいてヒントの優先順位を決定:
+ * 1. テキスト > 記号 - テキスト単語が記号単語より優先
+ * 2. 長い単語 > 短い単語（同じタイプ） - 長さベースの優先度
+ * 3. 左位置 > 右位置（同じ長さとタイプ） - 位置ベースのタイブレーカー
+ *
+ * ## 処理アルゴリズム
+ * 1. **行グルーピング**: 効率化のため行別に単語を処理
+ * 2. **競合検出**: 隣接単語をスペース競合のために分析
+ * 3. **優先度解決**: 複数単語競合を解決するためにルールを適用
+ * 4. **最終選択**: 各競合グループからの勝者単語のみを返す
+ *
+ * ## 優先度ルールの実装
+ * - **テキストvs記号**: isSymbolWord()分類を使用
+ * - **長さ比較**: 直接的なtext.length比較
+ * - **位置タイブレーカー**: 列ベースの左から右への優先
+ * - **競合解決**: 重複領域に対する勝者総取りアプローチ
+ *
+ * @param words - 隣接単語情報を含む単語の配列
+ * @param tabWidth - 表示計算用のタブ幅（デフォルト: 8）
+ * @returns Word[] 優先度ルールに基づいてヒントを表示すべき単語の配列
+ * @complexity 競合検出にO(n²)、ソートにO(n log n)
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const wordsWithAdjacent = [
+ *   { word: { text: '*', line: 1, col: 1 }, adjacentWords: [{ text: 'hello', line: 1, col: 2 }] },
+ *   { word: { text: 'hello', line: 1, col: 2 }, adjacentWords: [{ text: '*', line: 1, col: 1 }] },
+ *   { word: { text: 'world', line: 1, col: 10 }, adjacentWords: [] }
+ * ];
+ *
+ * const prioritized = prioritizeHints(wordsWithAdjacent, 8);
+ * // 結果: [{ text: 'hello', line: 1, col: 2 }, { text: 'world', line: 1, col: 10 }]
+ * // '*'は'hello'より低優先度のためフィルタリングされる
+ * ```
  */
 export function prioritizeHints(
   words: { word: Word; adjacentWords: Word[] }[],
-  tabWidth = 8
+  tabWidth = 8,
 ): Word[] {
   const prioritizedWords: Word[] = [];
-  
+
   // Group words by line for efficient processing
   const wordsByLine = new Map<number, { word: Word; adjacentWords: Word[] }[]>();
-  
+
   for (const wordInfo of words) {
     const line = wordInfo.word.line;
     if (!wordsByLine.has(line)) {
@@ -1339,46 +1551,56 @@ export function prioritizeHints(
     }
     wordsByLine.get(line)!.push(wordInfo);
   }
-  
+
   // Process each line separately
   for (const [line, lineWords] of wordsByLine) {
     const lineResult = prioritizeWordsOnLine(lineWords, tabWidth);
     prioritizedWords.push(...lineResult);
   }
-  
+
   return prioritizedWords;
 }
 
 /**
- * Prioritize words on a single line
- * Internal helper function for prioritizeHints
+ * 単一行の単語を優先順位付け
+ *
+ * @description prioritizeHints関数の内部ヘルパー関数で、単一行の単語を処理して競合を解決し、優先度ルールを適用する。
+ *
+ * @param lineWords - 単一行の単語情報の配列
+ * @param tabWidth - 表示計算用のタブ幅
+ * @returns Word[] 行の優先順位付けされた単語の配列
+ * @since 1.0.0
+ * @internal
  */
 function prioritizeWordsOnLine(
   lineWords: { word: Word; adjacentWords: Word[] }[],
-  tabWidth: number
+  tabWidth: number,
 ): Word[] {
   const result: Word[] = [];
   const processedWords = new Set<Word>();
-  
+
   // Sort words by column position for left-to-right processing
   const sortedWords = lineWords.sort((a, b) => a.word.col - b.word.col);
-  
+
   for (const wordInfo of sortedWords) {
     if (processedWords.has(wordInfo.word)) {
       continue; // Already processed in a conflict resolution
     }
-    
+
     const conflicts = findConflictingWords(wordInfo, lineWords, tabWidth);
-    
+
     if (conflicts.length === 0) {
       // No conflicts, add the word
       result.push(wordInfo.word);
       processedWords.add(wordInfo.word);
     } else {
       // Resolve conflicts and add the winner
-      const winner = resolveConflict([wordInfo, ...conflicts.map(w => lineWords.find(lw => lw.word === w)!)]);
+      const winner = resolveConflict([
+        wordInfo,
+        ...conflicts.map((w) => lineWords.find((lw) => lw.word === w)!),
+      ]);
       result.push(winner);
-      
+
       // Mark all conflicting words as processed
       processedWords.add(wordInfo.word);
       for (const conflict of conflicts) {
@@ -1386,45 +1608,63 @@ function prioritizeWordsOnLine(
       }
     }
   }
-  
+
   return result;
 }
 
 /**
- * Find words that conflict with the given word (space constraints)
+ * 指定された単語と競合する単語を検出
+ *
+ * @description 指定された単語のヒント表示と競合する単語を、間のスペース不足により特定する。
+ *
+ * @param wordInfo - 隣接単語を含む単語情報
+ * @param allWords - 同じ行のすべての単語
+ * @param tabWidth - 表示計算用のタブ幅
+ * @returns Word[] 競合する単語の配列
+ * @since 1.0.0
+ * @internal
  */
 function findConflictingWords(
   wordInfo: { word: Word; adjacentWords: Word[] },
   allWords: { word: Word; adjacentWords: Word[] }[],
-  tabWidth: number
+  tabWidth: number,
 ): Word[] {
   const conflicts: Word[] = [];
-  
+
   for (const otherWordInfo of allWords) {
     if (otherWordInfo.word === wordInfo.word) continue;
-    
+
     // Check if hints would overlap
-    if (!canDisplayHint(wordInfo.word, [otherWordInfo.word], 2, tabWidth) ||
-        !canDisplayHint(otherWordInfo.word, [wordInfo.word], 2, tabWidth)) {
+    if (
+      !canDisplayHint(wordInfo.word, [otherWordInfo.word], 2, tabWidth) ||
+      !canDisplayHint(otherWordInfo.word, [wordInfo.word], 2, tabWidth)
+    ) {
       conflicts.push(otherWordInfo.word);
     }
   }
-  
+
   return conflicts;
 }
 
 /**
- * Resolve conflict between multiple words using priority rules
+ * 優先順位ルールを使用して複数単語間の競合を解決
+ *
+ * @description 事前定義された優先度ルール（テキスト > 記号 > 長さ > 位置）に基づいて、競合する複数の単語から勝者を選択する。
+ *
+ * @param conflictingWords - 競合する単語情報の配列
+ * @returns Word ヒントを表示すべき勝者単語
+ * @since 1.0.0
+ * @internal
  */
 function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }[]): Word {
   if (conflictingWords.length === 1) {
     return conflictingWords[0].word;
   }
-  
+
   // Rule 1: Text > Symbols
-  const textWords = conflictingWords.filter(w => !isSymbolWord(w.word));
-  const symbolWords = conflictingWords.filter(w => isSymbolWord(w.word));
-  
+  const textWords = conflictingWords.filter((w) => !isSymbolWord(w.word));
+  const symbolWords = conflictingWords.filter((w) => isSymbolWord(w.word));
+
   if (textWords.length > 0) {
     // Prioritize text words
     return resolveSameTypeConflict(textWords);
@@ -1435,21 +1675,28 @@ function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }
 }
 
 /**
- * Resolve conflict between words of the same type (all text or all symbols)
+ * 同じタイプの単語間の競合を解決
+ *
+ * @description タイプベースの優先度付けで勝者を決定できない場合に、長さと位置のルールを使用して同じタイプ（全てテキストまたは全て記号）の単語間の競合を解決する。
+ *
+ * @param words - 同じタイプの単語情報の配列
+ * @returns Word 長さと位置ルールに基づく勝者単語
+ * @since 1.0.0
+ * @internal
  */
 function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[]): Word {
   if (words.length === 1) {
     return words[0].word;
   }
-  
+
   // Rule 2: Longer words > Shorter words
-  const maxLength = Math.max(...words.map(w => w.word.text.length));
-  const longestWords = words.filter(w => w.word.text.length === maxLength);
-  
+  const maxLength = Math.max(...words.map((w) => w.word.text.length));
+  const longestWords = words.filter((w) => w.word.text.length === maxLength);
+
   if (longestWords.length === 1) {
     return longestWords[0].word;
   }
-  
+
   // Rule 3: Left position > Right position
   longestWords.sort((a, b) => a.word.col - b.word.col);
   return longestWords[0].word;
