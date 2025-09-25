@@ -288,15 +288,15 @@ export interface UnifiedConfig {
 
 #### sub4 デフォルト値管理の統一
 @target: denops/hellshake-yano/config.ts
-- [ ] getDefaultUnifiedConfig()関数の実装
-- [ ] 既存のgetDefaultConfig()をgetDefaultUnifiedConfig()へリダイレクト
-- [ ] getDefaultHierarchicalConfig()を@deprecatedマーク
-- [ ] createMinimalConfig()をUnifiedConfigベースに更新
-- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
-- [ ] config_defaults_test.tsを作成
-- [ ] デフォルト値の一致性テスト
-- [ ] `deno test tests/config_defaults_test.ts`でテストがパス
-- [ ] `deno test tests/config_test.ts`でデフォルト値テストがパス
+- [x] getDefaultUnifiedConfig()関数の実装
+- [x] 既存のgetDefaultConfig()をgetDefaultUnifiedConfig()へリダイレクト
+- [x] getDefaultHierarchicalConfig()を@deprecatedマーク
+- [x] createMinimalConfig()をUnifiedConfigベースに更新
+- [x] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [x] config_defaults_test.tsを作成
+- [x] デフォルト値の一致性テスト
+- [x] `deno test tests/config_defaults_test.ts`でテストがパス
+- [x] `deno test tests/config_test.ts`でデフォルト値テストがパス
 
 #### sub5 main.tsの設定処理移行
 @target: denops/hellshake-yano/main.ts

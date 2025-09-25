@@ -579,8 +579,9 @@ export interface Config {
 }
 
 /**
- * デフォルト設定を取得する関数
+ * デフォルト設定を取得する関数 (Process2 Sub4で統一)
  * プラグインの標準的な設定値を返します。既存コードとの互換性を維持しています。
+ * 内部的にはgetDefaultUnifiedConfig()を使用し、デフォルト値管理を統一しています。
  * この設定はパフォーマンス、ユーザビリティ、日本語対応を考慮して最適化されています。
  *
  * @returns {Config} プラグインのデフォルト設定
@@ -594,58 +595,52 @@ export interface Config {
  * ```
  */
 export function getDefaultConfig(): Config {
-  return {
-    markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-    motion_count: 3,
-    motion_timeout: 2000,
-    hint_position: "start",
-    visual_hint_position: "end", // Visual Modeでは単語の末尾にヒント表示
-    trigger_on_hjkl: true,
-    counted_motions: [],
-    enabled: true,
-    maxHints: 336, // Approach A対応: 11単文字 + 225二文字 + 100数字 = 336個
-    debounceDelay: 50, // 50msのデバウンス
-    use_numbers: true, // デフォルトで数字を使用可能
-    highlight_selected: true, // デフォルトで選択中ヒントをハイライト
-    debug_coordinates: false, // デフォルトでデバッグログは無効
-    single_char_keys: [
-      "A",
-      "S",
-      "D",
-      "F",
-      "G",
-      "H",
-      "J",
-      "K",
-      "L",
-      "N",
-      "M",
-      "0",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-    ],
-    multi_char_keys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-    // max_single_char_hints: undefined, // デフォルトは制限なし（single_char_keysの長さ）
-    use_hint_groups: true, // デフォルトで有効
-    // use_japanese: デフォルト値を設定しない（ユーザー設定を優先）
-    word_detection_strategy: "hybrid" as const, // ハイブリッド方式をデフォルトに
-    enable_tinysegmenter: true, // TinySegmenterを有効に
-    segmenter_threshold: 4, // 4文字以上でセグメンテーション
-    japanese_min_word_length: 2, // 2文字以上の単語のみヒント表示
-    japanese_merge_particles: true, // 助詞を前の単語と結合
-    japanese_merge_threshold: 2, // 2文字以下の単語を結合対象とする
-    highlight_hint_marker: "DiffAdd", // ヒントマーカーのハイライト色（後方互換性のため文字列）
-    highlight_hint_marker_current: "DiffText", // 選択中ヒントのハイライト色（後方互換性のため文字列）
-    debug_mode: false, // デバッグモード無効
-    performance_log: false, // パフォーマンスログ無効
-  };
+  // Process2 Sub4: UnifiedConfigベースのデフォルト値管理に統一
+  const unified = getDefaultUnifiedConfig();
+  return fromUnifiedConfig(unified);
+}
+
+/**
+ * 統一デフォルト設定を取得する関数 (Process2 Sub4)
+ * DEFAULT_UNIFIED_CONSTANTの値を返し、デフォルト値管理を統一
+ * TDD Red-Green-Refactor方式で実装された型安全なデフォルト値取得
+ *
+ * @returns {UnifiedConfig} 完全なUnifiedConfigデフォルト値
+ * @example
+ * ```typescript
+ * const config = getDefaultUnifiedConfig();
+ * console.log(config.motionCount);     // 3
+ * console.log(config.hintPosition);    // 'start'
+ * console.log(config.useNumbers);      // true
+ * console.log(config.enabled);         // true
+ * ```
+ */
+export function getDefaultUnifiedConfig(): UnifiedConfig {
+  return DEFAULT_UNIFIED_CONFIG;
+}
+
+/**
+ * 最小設定を作成する関数 (Process2 Sub4対応)
+ * UnifiedConfigベースの部分設定を受け取り、デフォルト値で補完した完全なUnifiedConfigを返す
+ * TDD Red-Green-Refactor方式で実装された型安全な最小設定作成
+ *
+ * @param {Partial<UnifiedConfig>} [partialConfig={}] 部分的な設定値
+ * @returns {UnifiedConfig} デフォルト値で補完された完全なUnifiedConfig
+ * @example
+ * ```typescript
+ * const config = createMinimalConfig({
+ *   motionCount: 5,
+ *   hintPosition: 'end'
+ * });
+ * console.log(config.motionCount);     // 5 (指定値)
+ * console.log(config.hintPosition);    // 'end' (指定値)
+ * console.log(config.useNumbers);      // true (デフォルト値)
+ * console.log(config.enabled);         // true (デフォルト値)
+ * ```
+ */
+export function createMinimalConfig(partialConfig: Partial<UnifiedConfig> = {}): UnifiedConfig {
+  const defaults = getDefaultUnifiedConfig();
+  return { ...defaults, ...partialConfig };
 }
 
 /**
@@ -859,15 +854,22 @@ export function validateConfig(
  * Phase 2で導入された論理的にグループ化された設定構造のデフォルト値を返します。
  * 設定の保守性と理解しやすさを向上させるための構造です。
  *
+ * @deprecated Process2 Sub4でデフォルト値管理が統一されました。新しいコードではgetDefaultUnifiedConfig()を使用してください。
  * @returns {HierarchicalConfig} 階層化されたデフォルト設定
  * @example
  * ```typescript
+ * // 非推奨の使用方法
  * const hierarchical = getDefaultHierarchicalConfig();
  * console.log(hierarchical.core.enabled);        // true
  * console.log(hierarchical.hint.maxHints);       // 336
  * console.log(hierarchical.word.detectionStrategy); // 'hybrid'
  * console.log(hierarchical.performance.debounceDelay); // 50
  * console.log(hierarchical.debug.debugMode);     // false
+ *
+ * // 推奨の使用方法
+ * const unified = getDefaultUnifiedConfig();
+ * console.log(unified.enabled);                  // true
+ * console.log(unified.maxHints);                 // 336
  * ```
  */
 export function getDefaultHierarchicalConfig(): HierarchicalConfig {
@@ -1719,56 +1721,57 @@ export function toUnifiedConfig(config: Partial<Config> | Partial<CamelCaseConfi
  * ```
  */
 export function fromUnifiedConfig(config: Partial<UnifiedConfig> = {}): Config {
-  const defaults = getDefaultConfig();
+  // Process2 Sub4: 循環依存を避けるためDEFAULT_UNIFIED_CONFIGを直接使用
+  const unifiedDefaults = DEFAULT_UNIFIED_CONFIG;
 
   return {
     // Core settings (6 properties)
-    enabled: config.enabled ?? defaults.enabled,
-    markers: config.markers ?? defaults.markers,
-    motion_count: config.motionCount ?? defaults.motion_count,
-    motion_timeout: config.motionTimeout ?? defaults.motion_timeout,
-    hint_position: config.hintPosition ?? defaults.hint_position,
-    visual_hint_position: config.visualHintPosition ?? defaults.visual_hint_position,
+    enabled: config.enabled ?? unifiedDefaults.enabled,
+    markers: config.markers ?? unifiedDefaults.markers,
+    motion_count: config.motionCount ?? unifiedDefaults.motionCount,
+    motion_timeout: config.motionTimeout ?? unifiedDefaults.motionTimeout,
+    hint_position: config.hintPosition ?? unifiedDefaults.hintPosition,
+    visual_hint_position: config.visualHintPosition ?? unifiedDefaults.visualHintPosition,
 
     // Hint settings (8 properties)
-    trigger_on_hjkl: config.triggerOnHjkl ?? defaults.trigger_on_hjkl,
-    counted_motions: config.countedMotions ?? defaults.counted_motions,
-    maxHints: config.maxHints ?? defaults.maxHints,
-    debounceDelay: config.debounceDelay ?? defaults.debounceDelay,
-    use_numbers: config.useNumbers ?? defaults.use_numbers,
-    highlight_selected: config.highlightSelected ?? defaults.highlight_selected,
-    debug_coordinates: config.debugCoordinates ?? defaults.debug_coordinates,
-    single_char_keys: config.singleCharKeys ?? defaults.single_char_keys,
+    trigger_on_hjkl: config.triggerOnHjkl ?? unifiedDefaults.triggerOnHjkl,
+    counted_motions: config.countedMotions ?? unifiedDefaults.countedMotions,
+    maxHints: config.maxHints ?? unifiedDefaults.maxHints,
+    debounceDelay: config.debounceDelay ?? unifiedDefaults.debounceDelay,
+    use_numbers: config.useNumbers ?? unifiedDefaults.useNumbers,
+    highlight_selected: config.highlightSelected ?? unifiedDefaults.highlightSelected,
+    debug_coordinates: config.debugCoordinates ?? unifiedDefaults.debugCoordinates,
+    single_char_keys: config.singleCharKeys ?? unifiedDefaults.singleCharKeys,
 
     // Extended hint settings (4 properties)
-    multi_char_keys: config.multiCharKeys ?? defaults.multi_char_keys,
-    max_single_char_hints: config.maxSingleCharHints ?? defaults.max_single_char_hints,
-    use_hint_groups: config.useHintGroups ?? defaults.use_hint_groups,
-    highlight_hint_marker: config.highlightHintMarker ?? defaults.highlight_hint_marker,
+    multi_char_keys: config.multiCharKeys ?? unifiedDefaults.multiCharKeys,
+    max_single_char_hints: config.maxSingleCharHints ?? unifiedDefaults.maxSingleCharHints,
+    use_hint_groups: config.useHintGroups ?? unifiedDefaults.useHintGroups,
+    highlight_hint_marker: config.highlightHintMarker ?? unifiedDefaults.highlightHintMarker,
 
     // Word detection settings (7 properties)
-    highlight_hint_marker_current: config.highlightHintMarkerCurrent ?? defaults.highlight_hint_marker_current,
-    suppress_on_key_repeat: config.suppressOnKeyRepeat ?? defaults.suppress_on_key_repeat,
-    key_repeat_threshold: config.keyRepeatThreshold ?? defaults.key_repeat_threshold,
-    use_japanese: config.useJapanese ?? defaults.use_japanese,
-    word_detection_strategy: config.wordDetectionStrategy ?? defaults.word_detection_strategy,
-    enable_tinysegmenter: config.enableTinySegmenter ?? defaults.enable_tinysegmenter,
-    segmenter_threshold: config.segmenterThreshold ?? defaults.segmenter_threshold,
+    highlight_hint_marker_current: config.highlightHintMarkerCurrent ?? unifiedDefaults.highlightHintMarkerCurrent,
+    suppress_on_key_repeat: config.suppressOnKeyRepeat ?? unifiedDefaults.suppressOnKeyRepeat,
+    key_repeat_threshold: config.keyRepeatThreshold ?? unifiedDefaults.keyRepeatThreshold,
+    use_japanese: config.useJapanese ?? unifiedDefaults.useJapanese,
+    word_detection_strategy: config.wordDetectionStrategy ?? unifiedDefaults.wordDetectionStrategy,
+    enable_tinysegmenter: config.enableTinySegmenter ?? unifiedDefaults.enableTinySegmenter,
+    segmenter_threshold: config.segmenterThreshold ?? unifiedDefaults.segmenterThreshold,
 
     // Japanese word settings (7 properties)
-    japanese_min_word_length: config.japaneseMinWordLength ?? defaults.japanese_min_word_length,
-    japanese_merge_particles: config.japaneseMergeParticles ?? defaults.japanese_merge_particles,
-    japanese_merge_threshold: config.japaneseMergeThreshold ?? defaults.japanese_merge_threshold,
-    per_key_min_length: config.perKeyMinLength ?? defaults.per_key_min_length,
-    default_min_word_length: config.defaultMinWordLength ?? defaults.default_min_word_length,
-    per_key_motion_count: config.perKeyMotionCount ?? defaults.per_key_motion_count,
-    default_motion_count: config.defaultMotionCount ?? defaults.default_motion_count,
+    japanese_min_word_length: config.japaneseMinWordLength ?? unifiedDefaults.japaneseMinWordLength,
+    japanese_merge_particles: config.japaneseMergeParticles ?? unifiedDefaults.japaneseMergeParticles,
+    japanese_merge_threshold: config.japaneseMergeThreshold ?? unifiedDefaults.japaneseMergeThreshold,
+    per_key_min_length: config.perKeyMinLength ?? unifiedDefaults.perKeyMinLength,
+    default_min_word_length: config.defaultMinWordLength ?? unifiedDefaults.defaultMinWordLength,
+    per_key_motion_count: config.perKeyMotionCount ?? unifiedDefaults.perKeyMotionCount,
+    default_motion_count: config.defaultMotionCount ?? unifiedDefaults.defaultMotionCount,
 
     // Legacy compatibility (後方互換性のため)
-    min_word_length: config.defaultMinWordLength ?? defaults.min_word_length,
-    enable: config.enabled ?? defaults.enable,
-    key_repeat_reset_delay: defaults.key_repeat_reset_delay,
-    debug_mode: defaults.debug_mode,
-    performance_log: defaults.performance_log,
+    min_word_length: config.defaultMinWordLength ?? unifiedDefaults.defaultMinWordLength,
+    enable: config.enabled ?? unifiedDefaults.enabled,
+    key_repeat_reset_delay: 300, // デフォルト値を直接設定
+    debug_mode: false, // デフォルト値を直接設定
+    performance_log: false, // デフォルト値を直接設定
   };
 }
