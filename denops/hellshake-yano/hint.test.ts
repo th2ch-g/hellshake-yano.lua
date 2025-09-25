@@ -1,8 +1,8 @@
 /**
  * Hint Processing Tests
  *
- * TDD Red Phase: Comprehensive test suite for hint adjacency detection and position calculation
- * Following PLAN.md process2 - Tests for display width based calculations
+ * Comprehensive test suite for hint adjacency detection and position calculation
+ * Tests for display width based calculations
  */
 
 import {
@@ -285,7 +285,7 @@ Deno.test("Hint Adjacency Detection and Position Calculation", async (t) => {
     assertEquals(position.display_mode, "before");
   });
 
-  // ===== Symbol Display Width Tests (8 cases) - process3 implementation =====
+  // ===== Symbol Display Width Tests (8 cases) =====
   await t.step("Symbol Width 1: Circled numbers '①②③④⑤' - each width 2", () => {
     const words: Word[] = [
       createWord("①", 1, 1),   // width 2, positions 1-2

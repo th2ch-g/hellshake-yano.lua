@@ -1,6 +1,5 @@
 /**
  * コマンド処理モジュール
- * Phase 1: モジュール分割でmain.tsから分離
  */
 
 import type { Denops } from "@denops/std";

@@ -1,6 +1,6 @@
 /**
  * @fileoverview コンテキスト認識による分割調整のテストスイート
- * TDD Red Phase - 失敗するテストケースを先に定義
+ * 失敗するテストケースを先に定義
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";

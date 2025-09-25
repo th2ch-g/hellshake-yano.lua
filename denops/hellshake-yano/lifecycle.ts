@@ -1,6 +1,5 @@
 /**
  * 初期化・終了処理モジュール
- * Phase 1: モジュール分割でライフサイクル管理を分離
  */
 
 import type { Denops } from "@denops/std";

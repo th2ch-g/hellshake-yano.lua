@@ -1,6 +1,5 @@
 /**
  * 公開APIモジュール
- * Phase 1: モジュール分割でAPIエンドポイントを整理
  */
 
 import type { Denops } from "@denops/std";

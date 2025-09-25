@@ -1,8 +1,8 @@
 /**
  * Dictionary-based Correction System Tests
  *
- * TDD Red Phase: Comprehensive test suite for dictionary functionality
- * Following PLAN.md process4 sub1 - Dictionary-based word correction
+ * Comprehensive test suite for dictionary functionality
+ * Dictionary-based word correction
  */
 
 import {
@@ -22,7 +22,7 @@ import type {
   DictionaryConfig,
 } from "./dictionary.ts";
 
-// These imports will be implemented in the Green phase
+// These imports will be implemented
 import {
   WordDictionaryImpl,
   applyDictionaryCorrection,

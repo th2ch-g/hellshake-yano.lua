@@ -164,7 +164,7 @@ function recordPerformance(
 }
 
 /**
- * 指定されたキーに対する最小文字数を取得する（process1追加）
+ * 指定されたキーに対する最小文字数を取得する
  *
  * @param config - 設定オブジェクト
  * @param key - 対象のキー文字
@@ -186,7 +186,7 @@ export function getMinLengthForKey(config: Config, key: string): number {
 }
 
 /**
- * キー別motion_count設定を取得する関数（process1実装）
+ * キー別motion_count設定を取得する関数
  *
  * @param key - 対象のキー
  * @param config - 設定オブジェクト
@@ -503,7 +503,7 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // per_key_motion_count の検証と適用（process4追加）
+      // per_key_motion_count の検証と適用
       if (cfg.per_key_motion_count && typeof cfg.per_key_motion_count === "object") {
         const validCounts: Record<string, number> = {};
         for (const [key, count] of Object.entries(cfg.per_key_motion_count)) {
@@ -516,7 +516,7 @@ export async function main(denops: Denops): Promise<void> {
         }
       }
 
-      // default_motion_count の検証と適用（process4追加）
+      // default_motion_count の検証と適用
       if (typeof cfg.default_motion_count === "number") {
         if (cfg.default_motion_count >= 1 && Number.isInteger(cfg.default_motion_count)) {
           config.default_motion_count = cfg.default_motion_count;
@@ -776,9 +776,9 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * キー情報付きヒント表示（Process4 sub2実装）
+     * キー情報付きヒント表示
      * @param key - 押下されたキー文字
-     * @param mode - 現在のVimモード (process2 追加)
+     * @param mode - 現在のVimモード
      */
     async showHintsWithKey(key: unknown, mode?: unknown): Promise<void> {
       try {

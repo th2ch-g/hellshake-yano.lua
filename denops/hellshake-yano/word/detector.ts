@@ -1463,7 +1463,7 @@ export class HybridWordDetector implements WordDetector {
 }
 
 /**
- * Process5 sub2: キー別単語キャッシュ機構（最適化実装）
+ * キー別単語キャッシュ機構（最適化実装）
  *
  * キー別の単語検出結果をキャッシュし、同じキーでの再計算を回避する
  * パフォーマンス向上とUIちらつき軽減のための最適化機能
@@ -1528,5 +1528,5 @@ export class KeyBasedWordCache {
   }
 }
 
-// グローバルキャッシュインスタンス（Process5 sub2実装）
+// グローバルキャッシュインスタンス
 export const globalWordCache = new KeyBasedWordCache();

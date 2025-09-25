@@ -1,8 +1,8 @@
 /**
  * Display Width Calculation Tests
  *
- * TDD Red Phase: Comprehensive test suite for display width calculation functions
- * Following PLAN.md process1 - 26 test cases covering all scenarios
+ * Comprehensive test suite for display width calculation functions
+ * 26 test cases covering all scenarios
  */
 
 import {

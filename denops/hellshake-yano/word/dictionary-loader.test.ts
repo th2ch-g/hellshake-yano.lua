@@ -1,7 +1,6 @@
 /**
  * Dictionary Loader Test Suite (Simplified)
- * TDD Red Phase: Test-first implementation for user-defined dictionary functionality
- * Following PLAN.md process4 sub1.5
+ * Test-first implementation for user-defined dictionary functionality
  */
 
 import { assertEquals } from "https://deno.land/std@0.212.0/assert/mod.ts";

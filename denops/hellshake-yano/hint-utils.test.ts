@@ -1,8 +1,8 @@
 /**
  * Hint Utility Functions Tests
  *
- * TDD Red Phase: Test suite to expose the +1 bug in convertToDisplayColumn
- * Following PLAN.md process2.5 - Fix double conversion issue in convertToDisplayColumn
+ * Test suite to expose the +1 bug in convertToDisplayColumn
+ * Fix double conversion issue in convertToDisplayColumn
  */
 
 import {
@@ -22,7 +22,7 @@ import {
 import type { Word } from "./types.ts";
 
 Deno.test("convertToDisplayColumn function", async (t) => {
-  // ===== Red Phase: Tests that expose the +1 bug =====
+  // ===== Tests that expose the +1 bug =====
 
   await t.step("should return 1 for line start (charIndex=0)", () => {
     // Word.col is 1-based, so position 0 should map to display column 1

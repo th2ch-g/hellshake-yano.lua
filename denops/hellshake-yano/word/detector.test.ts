@@ -1,6 +1,6 @@
 /**
  * Tests for WordDetector - focusing on Word.col display width conversion
- * TDD Red-Green-Refactor for PLAN.md process2.6
+ * Word.col display width conversion tests
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.213.0/assert/mod.ts";

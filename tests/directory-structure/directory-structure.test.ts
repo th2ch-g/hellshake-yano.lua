@@ -3,7 +3,7 @@ import { join } from "https://deno.land/std@0.208.0/path/mod.ts";
 
 /**
  * ディレクトリ構造準備のTDDテスト
- * Process1: main.tsを責務ごとに分割するための基盤構築
+ * main.tsを責務ごとに分割するための基盤構築
  */
 
 const DENOPS_DIR = join(Deno.cwd(), "denops", "hellshake-yano");
@@ -68,8 +68,8 @@ Deno.test("ファイル構造: 各ディレクトリにindex.tsが存在する�
   console.log("✅ 全てのindex.tsファイルが正しく存在することを確認しました");
 });
 
-Deno.test("Green Phase: ディレクトリ作成テスト", async () => {
-  console.log("🟢 Green Phase: ディレクトリを作成してテストをパス");
+Deno.test("ディレクトリ作成テスト", async () => {
+  console.log("🟢 ディレクトリを作成してテストをパス");
 
   for (const dirName of TARGET_DIRECTORIES) {
     const dirPath = join(DENOPS_DIR, dirName);
@@ -84,11 +84,11 @@ Deno.test("Green Phase: ディレクトリ作成テスト", async () => {
     console.log(`✅ ${dirName} ディレクトリの作成を確認`);
   }
 
-  console.log("🟢 Green Phase完了: 全てのディレクトリが正しく作成されました");
+  console.log("🟢 全てのディレクトリが正しく作成されました");
 });
 
-Deno.test("Green Phase: index.ts作成テスト", async () => {
-  console.log("🟢 Green Phase: index.tsファイルを作成してテストをパス");
+Deno.test("index.ts作成テスト", async () => {
+  console.log("🟢 index.tsファイルを作成してテストをパス");
 
   for (const dirName of TARGET_DIRECTORIES) {
     const indexPath = join(DENOPS_DIR, dirName, "index.ts");
@@ -107,11 +107,11 @@ Deno.test("Green Phase: index.ts作成テスト", async () => {
     console.log(`✅ ${dirName}/index.ts の作成を確認`);
   }
 
-  console.log("🟢 Green Phase完了: 全てのindex.tsファイルが正しく作成されました");
+  console.log("🟢 全てのindex.tsファイルが正しく作成されました");
 });
 
-Deno.test("Refactor Phase: 作成された構造の整合性テスト", async () => {
-  console.log("🔄 Refactor Phase: 作成された構造の整合性テスト");
+Deno.test("作成された構造の整合性テスト", async () => {
+  console.log("🔄 作成された構造の整合性テスト");
 
   // ディレクトリ構造の検証
   for (const dirName of TARGET_DIRECTORIES) {
@@ -134,11 +134,11 @@ Deno.test("Refactor Phase: 作成された構造の整合性テスト", async ()
     console.log(`✅ ${dirName} の構造整合性を確認`);
   }
 
-  console.log("🔄 Refactor Phase完了: 全ての構造整合性を確認しました");
+  console.log("🔄 全ての構造整合性を確認しました");
 });
 
-Deno.test("Refactor Phase: ディレクトリ責務のドキュメント生成", async () => {
-  console.log("🔄 Refactor Phase: ディレクトリ責務のドキュメント生成");
+Deno.test("ディレクトリ責務のドキュメント生成", async () => {
+  console.log("🔄 ディレクトリ責務のドキュメント生成");
 
   const documentationPath = join(DENOPS_DIR, "DIRECTORY_STRUCTURE.md");
   const docContent = generateDirectoryDocumentation();
@@ -150,7 +150,7 @@ Deno.test("Refactor Phase: ディレクトリ責務のドキュメント生成",
   const stat = await Deno.stat(documentationPath);
   assertEquals(stat.isFile, true, "ディレクトリ構造ドキュメントが作成されていません");
 
-  console.log("🔄 Refactor Phase完了: ディレクトリ構造ドキュメントを生成しました");
+  console.log("🔄 ディレクトリ構造ドキュメントを生成しました");
 });
 
 /**
@@ -255,13 +255,13 @@ ${info.functions.map(func => `- ${func}`).join('\n')}
 `;
   }
 
-  doc += `## TDD実装プロセス
+  doc += `## TDD実装
 
 このディレクトリ構造は、TDD (Test-Driven Development) のRed-Green-Refactorサイクルに従って実装されました：
 
-1. **Red Phase**: 存在しないディレクトリ/ファイルのテストを作成し、失敗を確認
-2. **Green Phase**: ディレクトリとindex.tsファイルを作成し、テストをパス
-3. **Refactor Phase**: 構造の整合性チェックとドキュメント生成
+1. **Red**: 存在しないディレクトリ/ファイルのテストを作成し、失敗を確認
+2. **Green**: ディレクトリとindex.tsファイルを作成し、テストをパス
+3. **Refactor**: 構造の整合性チェックとドキュメント生成
 
 ## 次のステップ
 

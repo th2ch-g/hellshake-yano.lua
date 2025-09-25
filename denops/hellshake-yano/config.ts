@@ -11,7 +11,6 @@ export type { HighlightColor };
 // HighlightColor interface moved to types.ts for consolidation
 // Use: import type { HighlightColor } from "./types.ts";
 
-// Phase 2: 階層化された設定インターフェース
 
 // 基本設定
 export interface CoreConfig {
@@ -80,7 +79,6 @@ export interface HierarchicalConfig {
   debug: DebugConfig;
 }
 
-// Phase 3: camelCase統一のための新しい型定義
 export interface CamelCaseConfig {
   // Core settings
   enabled: boolean;
@@ -138,7 +136,6 @@ export interface CamelCaseConfig {
   hasDebugCoordinates?: boolean;
 }
 
-// Phase 3: 後方互換性のための型定義
 // snake_caseとcamelCaseの両方をサポート
 export interface ModernConfig extends CamelCaseConfig {
   // snake_case properties for backward compatibility
@@ -637,7 +634,6 @@ export function getPerKeyValue<T>(
   return fallbackValue;
 }
 
-// ===== Phase 3: 命名規則統一の実装 =====
 
 /**
  * snake_caseからcamelCaseへの変換マッピング
