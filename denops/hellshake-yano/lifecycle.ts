@@ -34,8 +34,8 @@
  */
 
 import type { Denops } from "@denops/std";
-import type { Config } from "./config.ts";
-import { getDefaultConfig, mergeConfig } from "./config.ts";
+import type { UnifiedConfig } from "./config.ts";
+import { getDefaultUnifiedConfig } from "./config.ts";
 import { LRUCache } from "./utils/cache.ts";
 import { UnifiedCache, CacheType } from "./cache.ts";
 
@@ -126,7 +126,7 @@ export interface PluginState {
  */
 export interface InitializationOptions {
   /** プラグインの設定オプション（部分的な設定が可能） */
-  config?: Partial<Config>;
+  config?: Partial<UnifiedConfig>;
   /** キャッシュサイズの設定 */
   cacheSizes?: {
     /** 単語検出結果のキャッシュサイズ（デフォルト: 100） */

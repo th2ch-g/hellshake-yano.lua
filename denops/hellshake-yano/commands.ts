@@ -3,7 +3,7 @@
  */
 
 import type { Denops } from "@denops/std";
-import type { Config } from "./config.ts";
+import type { UnifiedConfig } from "./config.ts";
 
 /**
  * プラグインの有効/無効を制御するインターフェース
@@ -77,16 +77,16 @@ export interface ConfigManager {
 
   /**
    * 現在の設定のコピーを取得します
-   * @returns {Config} 現在の設定のディープコピー
+   * @returns {UnifiedConfig} 現在の設定のディープコピー
    */
-  getConfig(): Config;
+  getConfig(): UnifiedConfig;
 
   /**
    * 設定を部分的に更新します
-   * @param {Partial<Config>} newConfig 更新する設定値
+   * @param {Partial<UnifiedConfig>} newConfig 更新する設定値
    * @returns {void}
    */
-  updateConfig(newConfig: Partial<Config>): void;
+  updateConfig(newConfig: Partial<UnifiedConfig>): void;
 }
 
 /**
@@ -97,7 +97,7 @@ export interface ConfigManager {
  * @implements {PluginController}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * const controller = new HellshakeYanoController(config);
  * controller.enable();
  * console.log(controller.isEnabled()); // true
@@ -106,9 +106,9 @@ export interface ConfigManager {
 export class HellshakeYanoController implements PluginController {
   /**
    * HellshakeYanoControllerのコンストラクタ
-   * @param {Config} config プラグインの設定オブジェクト
+   * @param {UnifiedConfig} config プラグインの設定オブジェクト
    */
-  constructor(private config: Config) {}
+  constructor(private config: UnifiedConfig) {}
 
   /**
    * プラグインを有効化します
@@ -180,7 +180,7 @@ export class HellshakeYanoController implements PluginController {
  * @implements {ConfigManager}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * const manager = new HellshakeYanoConfigManager(config);
  * manager.setCount(5);
  * manager.setTimeout(3000);
@@ -189,12 +189,12 @@ export class HellshakeYanoController implements PluginController {
 export class HellshakeYanoConfigManager implements ConfigManager {
   /**
    * HellshakeYanoConfigManagerのコンストラクタ
-   * @param {Config} config プラグインの設定オブジェクト
+   * @param {UnifiedConfig} config プラグインの設定オブジェクト
    */
-  constructor(private config: Config) {}
+  constructor(private config: UnifiedConfig) {}
 
   /**
-   * motion_countを設定します
+   * motionCountを設定します
    * 指定された値が正の整数でない場合はエラーをスローします。
    *
    * @param {number} count 設定するモーション回数（正の整数）
@@ -202,7 +202,7 @@ export class HellshakeYanoConfigManager implements ConfigManager {
    * @returns {void}
    * @example
    * ```typescript
-   * manager.setCount(5); // motion_countが5に設定される
+   * manager.setCount(5); // motionCountが5に設定される
    * manager.setCount(-1); // Error: count must be a positive integer
    * ```
    */
@@ -210,11 +210,11 @@ export class HellshakeYanoConfigManager implements ConfigManager {
     if (!Number.isInteger(count) || count <= 0) {
       throw new Error("count must be a positive integer");
     }
-    this.config.motion_count = count;
+    this.config.motionCount = count;
   }
 
   /**
-   * motion_timeoutを設定します
+   * motionTimeoutを設定します
    * 指定された値が100未満の整数の場合はエラーをスローします。
    *
    * @param {number} timeout 設定するタイムアウト時間（100以上の整数、ミリ秒）
@@ -222,7 +222,7 @@ export class HellshakeYanoConfigManager implements ConfigManager {
    * @returns {void}
    * @example
    * ```typescript
-   * manager.setTimeout(2000); // motion_timeoutが2000msに設定される
+   * manager.setTimeout(2000); // motionTimeoutが2000msに設定される
    * manager.setTimeout(50); // Error: timeout must be an integer >= 100ms
    * ```
    */
@@ -230,21 +230,21 @@ export class HellshakeYanoConfigManager implements ConfigManager {
     if (!Number.isInteger(timeout) || timeout < 100) {
       throw new Error("timeout must be an integer >= 100ms");
     }
-    this.config.motion_timeout = timeout;
+    this.config.motionTimeout = timeout;
   }
 
   /**
    * 現在の設定のコピーを取得します
    * 設定オブジェクトのディープコピーを返すため、返された設定を変更しても元の設定には影響しません。
    *
-   * @returns {Config} 現在の設定のディープコピー
+   * @returns {UnifiedConfig} 現在の設定のディープコピー
    * @example
    * ```typescript
    * const currentConfig = manager.getConfig();
-   * console.log(currentConfig.motion_count); // 現在のモーション回数
+   * console.log(currentConfig.motionCount); // 現在のモーション回数
    * ```
    */
-  getConfig(): Config {
+  getConfig(): UnifiedConfig {
     return { ...this.config };
   }
 
@@ -252,15 +252,15 @@ export class HellshakeYanoConfigManager implements ConfigManager {
    * 設定を部分的に更新します
    * 既存の設定値を保持しながら、指定された設定値のみを更新します。
    *
-   * @param {Partial<Config>} newConfig 更新する設定値のオブジェクト
+   * @param {Partial<UnifiedConfig>} newConfig 更新する設定値のオブジェクト
    * @returns {void}
    * @example
    * ```typescript
-   * manager.updateConfig({ motion_count: 10, enabled: false });
-   * // motion_countが10に、enabledがfalseに更新される
+   * manager.updateConfig({ motionCount: 10, enabled: false });
+   * // motionCountが10に、enabledがfalseに更新される
    * ```
    */
-  updateConfig(newConfig: Partial<Config>): void {
+  updateConfig(newConfig: Partial<UnifiedConfig>): void {
     Object.assign(this.config, newConfig);
   }
 }
@@ -273,7 +273,7 @@ export class HellshakeYanoConfigManager implements ConfigManager {
  * @class DebugController
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * const debugController = new DebugController(config);
  * debugController.toggleDebugMode();
  * ```
@@ -281,9 +281,9 @@ export class HellshakeYanoConfigManager implements ConfigManager {
 export class DebugController {
   /**
    * DebugControllerのコンストラクタ
-   * @param {Config} config プラグインの設定オブジェクト
+   * @param {UnifiedConfig} config プラグインの設定オブジェクト
    */
-  constructor(private config: Config) {}
+  constructor(private config: UnifiedConfig) {}
 
   /**
    * デバッグモードを切り替えます
@@ -297,8 +297,8 @@ export class DebugController {
    * ```
    */
   toggleDebugMode(): boolean {
-    this.config.debug_mode = !this.config.debug_mode;
-    return this.config.debug_mode;
+    this.config.debugMode = !this.config.debugMode;
+    return this.config.debugMode;
   }
 
   /**
@@ -313,8 +313,8 @@ export class DebugController {
    * ```
    */
   togglePerformanceLog(): boolean {
-    this.config.performance_log = !this.config.performance_log;
-    return this.config.performance_log;
+    this.config.performanceLog = !this.config.performanceLog;
+    return this.config.performanceLog;
   }
 
   /**
@@ -329,8 +329,8 @@ export class DebugController {
    * ```
    */
   toggleCoordinateDebug(): boolean {
-    this.config.debug_coordinates = !this.config.debug_coordinates;
-    return this.config.debug_coordinates;
+    this.config.debugCoordinates = !this.config.debugCoordinates;
+    return this.config.debugCoordinates;
   }
 }
 
@@ -342,7 +342,7 @@ export class DebugController {
  * @class CommandFactory
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * const factory = new CommandFactory(config);
  * const controller = factory.getController();
  * const configManager = factory.getConfigManager();
@@ -358,9 +358,9 @@ export class CommandFactory {
    * CommandFactoryのコンストラクタ
    * 指定された設定オブジェクトを使用して各種コントローラーを初期化します。
    *
-   * @param {Config} config プラグインの設定オブジェクト
+   * @param {UnifiedConfig} config プラグインの設定オブジェクト
    */
-  constructor(config: Config) {
+  constructor(config: UnifiedConfig) {
     this.controller = new HellshakeYanoController(config);
     this.configManager = new HellshakeYanoConfigManager(config);
     this.debugController = new DebugController(config);
@@ -398,16 +398,16 @@ export class CommandFactory {
  * 後方互換性のために残された単純なコマンド関数です。
  * 新しい実装では HellshakeYanoController.enable() を使用することを推奨します。
  *
- * @param {Config} config プラグインの設定オブジェクト
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
  * @returns {void}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * enable(config);
  * console.log(config.enabled); // true
  * ```
  */
-export function enable(config: Config): void {
+export function enable(config: UnifiedConfig): void {
   config.enabled = true;
 }
 
@@ -416,16 +416,16 @@ export function enable(config: Config): void {
  * 後方互換性のために残された単純なコマンド関数です。
  * 新しい実装では HellshakeYanoController.disable() を使用することを推奨します。
  *
- * @param {Config} config プラグインの設定オブジェクト
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
  * @returns {void}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * disable(config);
  * console.log(config.enabled); // false
  * ```
  */
-export function disable(config: Config): void {
+export function disable(config: UnifiedConfig): void {
   config.enabled = false;
 }
 
@@ -435,70 +435,70 @@ export function disable(config: Config): void {
  * 後方互換性のために残された単純なコマンド関数です。
  * 新しい実装では HellshakeYanoController.toggle() を使用することを推奨します。
  *
- * @param {Config} config プラグインの設定オブジェクト
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
  * @returns {boolean} 切り替え後の状態（true: 有効, false: 無効）
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * const newState = toggle(config);
  * console.log(`プラグインは${newState ? '有効' : '無効'}です`);
  * ```
  */
-export function toggle(config: Config): boolean {
+export function toggle(config: UnifiedConfig): boolean {
   config.enabled = !config.enabled;
   return config.enabled;
 }
 
 /**
- * motion_countを設定する関数
+ * motionCountを設定する関数
  * 指定された値が正の整数でない場合はエラーをスローします。
  * 後方互換性のために残された単純なコマンド関数です。
  * 新しい実装では HellshakeYanoConfigManager.setCount() を使用することを推奨します。
  *
- * @param {Config} config プラグインの設定オブジェクト
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
  * @param {number} count 設定するモーション回数（正の整数）
  * @throws {Error} countが正の整数でない場合
  * @returns {void}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * setCount(config, 5);
- * console.log(config.motion_count); // 5
+ * console.log(config.motionCount); // 5
  *
  * setCount(config, -1); // Error: count must be a positive integer
  * ```
  */
-export function setCount(config: Config, count: number): void {
+export function setCount(config: UnifiedConfig, count: number): void {
   if (!Number.isInteger(count) || count <= 0) {
     throw new Error("count must be a positive integer");
   }
-  config.motion_count = count;
+  config.motionCount = count;
 }
 
 /**
- * motion_timeoutを設定する関数
+ * motionTimeoutを設定する関数
  * 指定された値が100未満の整数の場合はエラーをスローします。
  * 後方互換性のために残された単純なコマンド関数です。
  * 新しい実装では HellshakeYanoConfigManager.setTimeout() を使用することを推奨します。
  *
- * @param {Config} config プラグインの設定オブジェクト
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
  * @param {number} timeout 設定するタイムアウト時間（100以上の整数、ミリ秒）
  * @throws {Error} timeoutが100未満の整数でない場合
  * @returns {void}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * setTimeout(config, 2000);
- * console.log(config.motion_timeout); // 2000
+ * console.log(config.motionTimeout); // 2000
  *
  * setTimeout(config, 50); // Error: timeout must be an integer >= 100ms
  * ```
  */
-export function setTimeout(config: Config, timeout: number): void {
+export function setTimeout(config: UnifiedConfig, timeout: number): void {
   if (!Number.isInteger(timeout) || timeout < 100) {
     throw new Error("timeout must be an integer >= 100ms");
   }
-  config.motion_timeout = timeout;
+  config.motionTimeout = timeout;
 }
 
 /**
@@ -506,30 +506,30 @@ export function setTimeout(config: Config, timeout: number): void {
  * オプションでバリデーション関数を指定して設定値を検証できます。
  * バリデーションに失敗した場合、元の設定は変更されずにエラーがスローされます。
  *
- * @param {Config} config プラグインの設定オブジェクト
- * @param {Partial<Config>} updates 更新する設定値
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
+ * @param {Partial<UnifiedConfig>} updates 更新する設定値
  * @param {function} [validator] 設定値を検証する関数（オプション）
  * @throws {Error} バリデーションが失敗した場合
  * @returns {void}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  * const validator = (updates) => {
  *   const errors = [];
- *   if (updates.motion_count && updates.motion_count <= 0) {
- *     errors.push('motion_count must be positive');
+ *   if (updates.motionCount && updates.motionCount <= 0) {
+ *     errors.push('motionCount must be positive');
  *   }
  *   return { valid: errors.length === 0, errors };
  * };
  *
- * updateConfigSafely(config, { motion_count: 5 }, validator);
- * updateConfigSafely(config, { motion_count: -1 }, validator); // Error
+ * updateConfigSafely(config, { motionCount: 5 }, validator);
+ * updateConfigSafely(config, { motionCount: -1 }, validator); // Error
  * ```
  */
 export function updateConfigSafely(
-  config: Config,
-  updates: Partial<Config>,
-  validator?: (config: Partial<Config>) => { valid: boolean; errors: string[] }
+  config: UnifiedConfig,
+  updates: Partial<UnifiedConfig>,
+  validator?: (config: Partial<UnifiedConfig>) => { valid: boolean; errors: string[] }
 ): void {
   if (validator) {
     const result = validator(updates);
@@ -546,34 +546,34 @@ export function updateConfigSafely(
  * 設定を更新し、必要に応じて元の値に戻すことができるrollback関数を返します。
  * トランザクション的な設定更新に便利です。
  *
- * @param {Config} config プラグインの設定オブジェクト
- * @param {Partial<Config>} updates 更新する設定値
+ * @param {UnifiedConfig} config プラグインの設定オブジェクト
+ * @param {Partial<UnifiedConfig>} updates 更新する設定値
  * @returns {{ rollback: () => void }} ロールバック関数を含むオブジェクト
  * @example
  * ```typescript
- * const config = getDefaultConfig();
- * const originalCount = config.motion_count;
+ * const config = getDefaultUnifiedConfig();
+ * const originalCount = config.motionCount;
  *
  * const { rollback } = updateConfigWithRollback(config, {
- *   motion_count: 10,
+ *   motionCount: 10,
  *   enabled: false
  * });
  *
- * console.log(config.motion_count); // 10
+ * console.log(config.motionCount); // 10
  * rollback();
- * console.log(config.motion_count); // 元の値に戻る
+ * console.log(config.motionCount); // 元の値に戻る
  * ```
  */
 export function updateConfigWithRollback(
-  config: Config,
-  updates: Partial<Config>
+  config: UnifiedConfig,
+  updates: Partial<UnifiedConfig>
 ): { rollback: () => void } {
-  const originalValues: Partial<Config> = {};
+  const originalValues: Partial<UnifiedConfig> = {};
 
   // 変更される値をバックアップ
   for (const key in updates) {
     if (key in config) {
-      const configKey = key as keyof Config;
+      const configKey = key as keyof UnifiedConfig;
       (originalValues as any)[configKey] = config[configKey];
     }
   }
@@ -595,16 +595,16 @@ export function updateConfigWithRollback(
  * 全ての変更を元に戻します（all-or-nothing 動作）。
  *
  * @param {Config} config プラグインの設定オブジェクト
- * @param {Array<(config: Config) => void>} updateFunctions 設定更新関数の配列
+ * @param {Array<(config: UnifiedConfig) => void>} updateFunctions 設定更新関数の配列
  * @throws {Error} いずれかの更新関数でエラーが発生した場合（この場合設定は元に戻される）
  * @returns {void}
  * @example
  * ```typescript
- * const config = getDefaultConfig();
+ * const config = getDefaultUnifiedConfig();
  *
  * const updateFunctions = [
- *   (cfg) => cfg.motion_count = 5,
- *   (cfg) => cfg.motion_timeout = 3000,
+ *   (cfg) => cfg.motionCount = 5,
+ *   (cfg) => cfg.motionTimeout = 3000,
  *   (cfg) => cfg.enabled = false
  * ];
  *
@@ -612,7 +612,7 @@ export function updateConfigWithRollback(
  * // 全ての更新が成功した場合のみ設定が反映される
  *
  * const errorFunctions = [
- *   (cfg) => cfg.motion_count = 5,
+ *   (cfg) => cfg.motionCount = 5,
  *   (cfg) => { throw new Error('Update failed'); },
  *   (cfg) => cfg.enabled = false // この関数は実行されない
  * ];
@@ -625,8 +625,8 @@ export function updateConfigWithRollback(
  * ```
  */
 export function batchUpdateConfig(
-  config: Config,
-  updateFunctions: Array<(config: Config) => void>
+  config: UnifiedConfig,
+  updateFunctions: Array<(config: UnifiedConfig) => void>
 ): void {
   const backup = { ...config };
 

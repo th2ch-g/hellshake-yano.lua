@@ -58,7 +58,16 @@ import type {
 
 // Re-export types for backward compatibility
 export type { Config, HighlightColor };
-import { getPerKeyValue, mergeConfig, UnifiedConfig, getDefaultUnifiedConfig, validateUnifiedConfig, fromUnifiedConfig, toUnifiedConfig, validateConfig as validateConfigFromConfigModule } from "./config.ts";
+import {
+  fromUnifiedConfig,
+  getDefaultUnifiedConfig,
+  getPerKeyValue,
+  mergeConfig,
+  toUnifiedConfig,
+  UnifiedConfig,
+  validateConfig as validateConfigFromConfigModule,
+  validateUnifiedConfig,
+} from "./config.ts";
 import {
   CommandFactory,
   disable,
@@ -230,7 +239,7 @@ function recordPerformance(
 export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
   // Config型の場合はUnifiedConfigに変換
   // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
-  const unifiedConfig = 'motionCount' in config
+  const unifiedConfig = "motionCount" in config
     ? config as UnifiedConfig
     : toUnifiedConfig(config as Config);
   // キー別設定が存在し、そのキーの設定があれば使用
@@ -262,7 +271,7 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
 export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
   // Config型の場合はUnifiedConfigに変換
   // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
-  const unifiedConfig = 'motionCount' in config
+  const unifiedConfig = "motionCount" in config
     ? config as UnifiedConfig
     : toUnifiedConfig(config as Config);
   // キー別設定が存在し、そのキーの設定があれば使用
@@ -493,8 +502,15 @@ export async function main(denops: Denops): Promise<void> {
 
       // visual_hint_position の検証と適用
       if (typeof cfg.visual_hint_position === "string") {
-        const validPositions: Array<"start" | "end" | "same" | "both"> = ["start", "end", "same", "both"];
-        if (validPositions.includes(cfg.visual_hint_position as "start" | "end" | "same" | "both")) {
+        const validPositions: Array<"start" | "end" | "same" | "both"> = [
+          "start",
+          "end",
+          "same",
+          "both",
+        ];
+        if (
+          validPositions.includes(cfg.visual_hint_position as "start" | "end" | "same" | "both")
+        ) {
           config.visualHintPosition = cfg.visual_hint_position as "start" | "end" | "same" | "both";
         } else {
         }
@@ -3429,4 +3445,12 @@ export async function validateDictionary(denops: Denops): Promise<void> {
 }
 
 // Export necessary functions for dispatcher and testing
-export { collectDebugInfo, clearDebugInfo, detectWordsOptimized, generateHintsOptimized, displayHintsOptimized, hideHints, syncManagerConfig };
+export {
+  clearDebugInfo,
+  collectDebugInfo,
+  detectWordsOptimized,
+  displayHintsOptimized,
+  generateHintsOptimized,
+  hideHints,
+  syncManagerConfig,
+};

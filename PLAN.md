@@ -335,12 +335,12 @@ export interface UnifiedConfig {
 #### sub8 lifecycle.tsとAPI層の更新
 @target: denops/hellshake-yano/lifecycle.ts
 @ref: denops/hellshake-yano/api.ts, denops/hellshake-yano/commands.ts
-- [ ] Config型インポートをUnifiedConfigへ変更
-- [ ] mergeConfig()をUnifiedConfig対応に更新
-- [ ] APIのconfigプロパティをUnifiedConfigへ
-- [ ] `deno check denops/hellshake-yano/{lifecycle,api,commands}.ts`で型チェック
-- [ ] `deno test tests/lifecycle*.ts`でテストがパス
-- [ ] `deno test tests/api*.ts`でテストがパス
+- [x] Config型インポートをUnifiedConfigへ変更
+- [x] mergeConfig()をUnifiedConfig対応に更新
+- [x] APIのconfigプロパティをUnifiedConfigへ
+- [x] `deno check denops/hellshake-yano/{lifecycle,api,commands}.ts`で型チェック
+- [x] `deno test tests/lifecycle*.ts`でテストがパス
+- [x] `deno test tests/api*.ts`でテストがパス
 
 #### sub9 旧インターフェースの削除準備
 @target: denops/hellshake-yano/config.ts

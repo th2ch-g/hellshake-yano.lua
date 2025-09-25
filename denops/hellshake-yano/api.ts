@@ -3,8 +3,8 @@
  */
 
 import type { Denops } from "@denops/std";
-import type { Config, HighlightColor } from "./config.ts";
-import { getDefaultConfig, validateConfig, mergeConfig } from "./config.ts";
+import type { UnifiedConfig, HighlightColor } from "./config.ts";
+import { getDefaultUnifiedConfig, validateUnifiedConfig } from "./config.ts";
 import {
   enable,
   disable,
@@ -80,7 +80,7 @@ export interface HellshakeYanoAPI {
    * console.log(`Timeout: ${config.timeout}ms`);
    * ```
    */
-  getConfig(): Config;
+  getConfig(): UnifiedConfig;
 
   /**
    * 設定を更新します
@@ -94,7 +94,7 @@ export interface HellshakeYanoAPI {
    * });
    * ```
    */
-  updateConfig(config: Partial<Config>): void;
+  updateConfig(config: Partial<UnifiedConfig>): void;
 
   /**
    * 設定をデフォルト値にリセットします
@@ -232,7 +232,7 @@ export interface HellshakeYanoAPI {
  */
 export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
   /** プラグインの設定 */
-  private config: Config;
+  private config: UnifiedConfig;
   /** コマンドファクトリーインスタンス */
   private commandFactory: CommandFactory;
 
@@ -252,7 +252,7 @@ export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
    * });
    * ```
    */
-  constructor(initialConfig: Config = getDefaultConfig()) {
+  constructor(initialConfig: UnifiedConfig = getDefaultUnifiedConfig()) {
     this.config = initialConfig;
     this.commandFactory = new CommandFactory(this.config);
   }
@@ -297,7 +297,7 @@ export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
    * 現在の設定を取得します
    * @returns 現在の設定のコピー（元の設定オブジェクトは変更されません）
    */
-  getConfig(): Config {
+  getConfig(): UnifiedConfig {
     return { ...this.config };
   }
 
@@ -306,13 +306,13 @@ export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
    * @param updates - 更新する設定項目（部分的な更新が可能）
    * @throws {Error} 無効な設定が指定された場合、バリデーションエラーメッセージを含む
    */
-  updateConfig(updates: Partial<Config>): void {
-    const validation = validateConfig(updates);
+  updateConfig(updates: Partial<UnifiedConfig>): void {
+    const validation = validateUnifiedConfig(updates);
     if (!validation.valid) {
       throw new Error(`Invalid configuration: ${validation.errors.join(", ")}`);
     }
 
-    this.config = mergeConfig(this.config, updates);
+    this.config = { ...this.config, ...updates };
   }
 
   /**
@@ -320,7 +320,7 @@ export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
    * CommandFactoryインスタンスも新しい設定で再作成されます
    */
   resetConfig(): void {
-    this.config = getDefaultConfig();
+    this.config = getDefaultUnifiedConfig();
     this.commandFactory = new CommandFactory(this.config);
   }
 
@@ -475,7 +475,7 @@ let apiInstance: HellshakeYanoAPIImpl | null = null;
  * const sameApi = getAPI(); // 初回と同じインスタンス
  * ```
  */
-export function getAPI(config?: Config): HellshakeYanoAPIImpl {
+export function getAPI(config?: UnifiedConfig): HellshakeYanoAPIImpl {
   if (!apiInstance) {
     apiInstance = new HellshakeYanoAPIImpl(config);
   }
@@ -488,7 +488,7 @@ export function getAPI(config?: Config): HellshakeYanoAPIImpl {
  * 他のモジュールから重要な型定義を再エクスポートして、APIの利用者が
  * 必要な型にアクセスしやすくします
  */
-export type { Config, HighlightColor } from "./config.ts";
+export type { UnifiedConfig, HighlightColor } from "./config.ts";
 export type { PluginController, ConfigManager } from "./commands.ts";
 export type { PluginState, InitializationOptions } from "./lifecycle.ts";
 export type { LRUCache, CacheStatistics } from "./utils/cache.ts";
