@@ -410,13 +410,13 @@ export interface UnifiedConfig {
   - [x] `deno check denops/hellshake-yano/core.ts`で型チェック
   - [x] core_test.tsにCoreクラスの存在確認テストを追加
   - [x] `deno test tests/core_test.ts`でテストパス
-- [ ] **Phase2: 状態管理の移行**
-  - [ ] CoreStateインターフェース定義（config、currentHints、hintsVisible等）
-  - [ ] Coreクラスにstate管理メソッド追加（getState、setState）
-  - [ ] 状態初期化メソッド（initializeState）実装
-  - [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-  - [ ] core_test.tsに状態管理テスト追加
-  - [ ] `deno test tests/core_test.ts`でテストパス
+- [x] **Phase2: 状態管理の移行**
+  - [x] CoreStateインターフェース定義（config、currentHints、hintsVisible等）
+  - [x] Coreクラスにstate管理メソッド追加（getState、setState）
+  - [x] 状態初期化メソッド（initializeState）実装
+  - [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+  - [x] core_test.tsに状態管理テスト追加
+  - [x] `deno test tests/core_test.ts`でテストパス
 - [ ] **Phase3: ヒント非表示機能の移行**
   - [ ] core_test.tsにhideHintsのテスト作成（RED）
   - [ ] CoreクラスにhideHintsメソッド実装

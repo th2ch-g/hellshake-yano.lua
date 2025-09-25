@@ -134,3 +134,141 @@ Deno.test("Core class should not show hints when disabled", () => {
   assertEquals(core.isHintsVisible(), false);
   assertEquals(core.getCurrentHints().length, 0);
 });
+
+/**
+ * TDD RED Phase: CoreState interface and state management methods
+ * Phase2: 状態管理の移行 - これらのテストは最初失敗する
+ */
+
+Deno.test("Core class should have getState method", () => {
+  const core = new Core();
+  assertExists(core.getState);
+  const state = core.getState();
+  assertExists(state);
+  assertEquals(typeof state, "object");
+});
+
+Deno.test("Core class should have setState method", () => {
+  const core = new Core();
+  assertExists(core.setState);
+
+  const newState = {
+    config: core.getConfig(),
+    currentHints: [],
+    hintsVisible: false,
+    isActive: false
+  };
+
+  core.setState(newState);
+  const state = core.getState();
+  assertEquals(state.hintsVisible, false);
+  assertEquals(state.isActive, false);
+});
+
+Deno.test("Core class should have initializeState method", () => {
+  const core = new Core();
+  assertExists(core.initializeState);
+
+  core.initializeState();
+  const state = core.getState();
+  assertExists(state.config);
+  assertExists(state.currentHints);
+  assertEquals(Array.isArray(state.currentHints), true);
+  assertEquals(typeof state.hintsVisible, "boolean");
+  assertEquals(typeof state.isActive, "boolean");
+});
+
+Deno.test("Core class state should include all required properties", () => {
+  const core = new Core();
+  core.initializeState();
+  const state = core.getState();
+
+  // CoreState interface properties
+  assertExists(state.config);
+  assertExists(state.currentHints);
+  assertEquals(Array.isArray(state.currentHints), true);
+  assertEquals(typeof state.hintsVisible, "boolean");
+  assertEquals(typeof state.isActive, "boolean");
+
+  // State should reflect current Core state
+  assertEquals(state.config.enabled, core.isEnabled());
+  assertEquals(state.hintsVisible, core.isHintsVisible());
+  assertEquals(state.currentHints.length, core.getCurrentHints().length);
+});
+
+Deno.test("Core class setState should update internal state", () => {
+  const core = new Core({ enabled: true });
+  const mockHints: HintMapping[] = [{
+    word: { text: "test", line: 1, col: 1 },
+    hint: "A",
+    hintCol: 1,
+    hintByteCol: 1
+  }];
+
+  const newState = {
+    config: core.getConfig(),
+    currentHints: mockHints,
+    hintsVisible: true,
+    isActive: true
+  };
+
+  core.setState(newState);
+
+  // State should be updated
+  assertEquals(core.isHintsVisible(), true);
+  assertEquals(core.getCurrentHints().length, 1);
+
+  const state = core.getState();
+  assertEquals(state.hintsVisible, true);
+  assertEquals(state.isActive, true);
+  assertEquals(state.currentHints.length, 1);
+});
+
+/**
+ * TDD REFACTOR Phase: 状態整合性とエッジケースのテスト
+ */
+
+Deno.test("Core class setState should maintain consistency between hintsVisible and currentHints", () => {
+  const core = new Core({ enabled: true });
+
+  // 整合性のないケース: hintsVisible=true but currentHints=[]
+  const inconsistentState = {
+    config: core.getConfig(),
+    currentHints: [],
+    hintsVisible: true,
+    isActive: false
+  };
+
+  core.setState(inconsistentState);
+
+  // 整合性の確保: hintsVisible=trueなのでisActiveはtrueになるべき
+  assertEquals(core.getState().isActive, true);
+});
+
+Deno.test("Core class initializeState should reset to clean state", () => {
+  const core = new Core({ enabled: true });
+
+  // まず何らかの状態にする
+  const mockHints: HintMapping[] = [{
+    word: { text: "test", line: 1, col: 1 },
+    hint: "A",
+    hintCol: 1,
+    hintByteCol: 1
+  }];
+  core.showHints(mockHints);
+
+  // 初期化前の状態確認
+  assertEquals(core.isHintsVisible(), true);
+  assertEquals(core.getCurrentHints().length, 1);
+
+  // 初期化
+  core.initializeState();
+
+  // 初期化後の状態確認
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+  const state = core.getState();
+  assertEquals(state.isActive, false);
+  assertEquals(state.currentHints.length, 0);
+  assertEquals(state.hintsVisible, false);
+});

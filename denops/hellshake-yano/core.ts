@@ -9,7 +9,7 @@
  * @since Process3 Sub1 Phase1
  */
 
-import type { Config, Word, HintMapping, DetectionContext, WordDetectionResult } from "./types.ts";
+import type { Config, Word, HintMapping, DetectionContext, WordDetectionResult, CoreState } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
 
 /**
@@ -143,5 +143,48 @@ export class Core {
   handleMotion(motion: string, context?: DetectionContext): void {
     // TDD Green Phase: 最小限の実装
     // モーション処理ロジックは後で実装
+  }
+
+  /**
+   * Phase2: 状態管理の移行 - 現在の状態を取得
+   *
+   * @returns 現在のCoreState
+   */
+  getState(): CoreState {
+    return {
+      config: { ...this.config },
+      currentHints: [...this.currentHints],
+      hintsVisible: this.isHintsVisible(),
+      isActive: this.isActive
+    };
+  }
+
+  /**
+   * Phase2: 状態管理の移行 - 状態を設定
+   *
+   * @param state 新しいCoreState
+   */
+  setState(state: CoreState): void {
+    // TDD Refactor Phase: 状態整合性の向上
+    this.config = { ...state.config };
+    this.currentHints = [...state.currentHints];
+    this.isActive = state.isActive;
+
+    // hintsVisibleは計算プロパティだが、状態との整合性を確認
+    // state.hintsVisible が true の場合、currentHints が空でないことを確認
+    if (state.hintsVisible && state.currentHints.length === 0) {
+      // 整合性のため、hintsVisible=trueなら最低限activeである必要がある
+      this.isActive = true;
+    }
+  }
+
+  /**
+   * Phase2: 状態管理の移行 - 状態を初期化
+   */
+  initializeState(): void {
+    // 既存の状態を初期値に戻す
+    this.isActive = false;
+    this.currentHints = [];
+    // configは既にコンストラクタで初期化済み
   }
 }

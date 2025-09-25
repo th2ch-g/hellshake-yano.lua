@@ -108,6 +108,31 @@ export interface HintPositionWithCoordinateSystem extends HintPosition {
 }
 
 /**
+ * コア状態管理インターフェース（Phase2: 状態管理の移行）
+ *
+ * @description Coreクラスの内部状態を統合管理するためのインターフェース
+ * getState/setState/initializeStateメソッドで使用される状態構造を定義
+ *
+ * ### 状態項目：
+ * - config: 現在の設定情報
+ * - currentHints: 現在表示中のヒント配列
+ * - hintsVisible: ヒント表示状態のフラグ
+ * - isActive: プラグインのアクティブ状態
+ *
+ * @since Process3 Sub1 Phase2
+ */
+export interface CoreState {
+  /** 現在の設定情報 */
+  config: Config;
+  /** 現在表示中のヒントマッピング配列 */
+  currentHints: HintMapping[];
+  /** ヒント表示状態フラグ */
+  hintsVisible: boolean;
+  /** プラグインのアクティブ状態フラグ */
+  isActive: boolean;
+}
+
+/**
  * 設定情報インターフェース（Phase 5: 型定義の整理で最適化）
  *
  * @description プラグインの動作設定を定義する包括的なインターフェース
