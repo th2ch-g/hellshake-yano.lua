@@ -1,236 +1,189 @@
-# title: main.ts肥大化問題の解決 - ファイル分割リファクタリング
+# title: コード量50%削減リファクタリング - 21,000行から10,500行へ
 
 ## 概要
-- 3313行に肥大したmain.tsを責務ごとに分割し、保守性とテスタビリティを向上させる
-- 既存のモジュール構造を活用しつつ、新規ディレクトリでの体系的な整理を行う
+- 現在21,000行のコードベースを10,500行に削減し、保守性とパフォーマンスを大幅に向上
+- 20個のキャッシュ実装を1つに、23個の設定インターフェースを1つに統合
+- 検出精度を完全に維持しながら重複と不要な抽象化を排除
 
 ### goal
-- main.tsを300行程度のエントリポイントに縮小
-- 責務ごとに明確に分離されたモジュール構造の実現
-- 循環依存の解消とクリーンな依存関係の確立
+- コード量を50%削減しながら全機能を維持
+- シンプルで理解しやすいアーキテクチャの実現
+- パフォーマンスの向上（処理時間75%削減、メモリ使用量75%削減）
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 - 後方互換性を完全に維持する
 - 既存のエクスポートされた関数はすべて維持する
 - テストが壊れないよう慎重に作業を進める
+- 検出精度（Regex、TinySegmenter、Hybrid）は現状維持
+- processの実装ごとに deno check を実行し、型エラーを防ぐ
+- 各process完了後にユニットテストを実行し、すべてのテストが通ることを確認する
 
 ## 開発のゴール
-- main.tsの責務を明確に分離したモジュール構造
-- 各モジュールの独立性とテスタビリティの向上
-- パフォーマンスの維持または向上
+- 7ファイル体制によるシンプルな構造の実現
+- 統一されたキャッシュとフラット設定による複雑性の排除
+- main.tsを軽量なエントリーポイントに変換
 
 ## 実装仕様
 
-### 問題の詳細
-1. **現状の問題**
-   - main.tsが3313行の巨大ファイル
-   - 複数の責務（ヒント表示、検証、辞書、入力処理など）が混在
-   - 循環依存が既に発生（operations.tsがmain.tsをimport）
-   - テストとメンテナンスが困難
+### 現在の問題点
+1. **キャッシュの重複（20個）**
+   - 17個のMap実装と3個のLRUCache実装が混在
+   - 同じ用途で複数のキャッシュが存在（単語検出、ヒント生成など）
+   - サイズ制限なしのMapによるメモリリークリスク
 
-2. **影響箇所**
-   - denops/hellshake-yano/main.ts（全体）
-   - denops/hellshake-yano/main/operations.ts（循環依存）
-   - 他ファイルからのインポート箇所
+2. **設定インターフェースの乱立（23個）**
+   - Config、CoreConfig、HintConfig、WordConfig等が重複
+   - 最大5階層の深いネスト構造
+   - snake_caseとcamelCaseの混在
 
-3. **技術的アプローチ**
-   - 段階的なモジュール分離
-   - index.tsによる再エクスポートで後方互換性維持
-   - グローバル状態の適切な管理
+3. **main.tsの肥大化（3,582行）**
+   - すべての機能が一つのファイルに集約
+   - 責務の分離ができていない
+   - 循環依存の発生
+
+4. **不要なディレクトリとファイル**
+   - dictionary/, display/, input/, performance/, validation/（各1ファイル）
+   - 実質的に使用されていない機能
+
+### 新しいアーキテクチャ（7ファイル体制）
+```
+denops/hellshake-yano/
+├── main.ts          (500行)   # エントリーポイントのみ
+├── core.ts          (2,000行) # コア機能統合
+├── hint.ts          (1,500行) # ヒント生成と表示
+├── word.ts          (1,500行) # 単語検出（3方式維持）
+├── config.ts        (500行)   # 単一設定ファイル
+├── cache.ts         (300行)   # 統一キャッシュシステム
+└── types.ts         (200行)   # 型定義のみ
+```
 
 ## 生成AIの学習用コンテキスト
 
-### 現在のファイル構造
-```
-denops/hellshake-yano/
-├── main.ts (3313行)
-├── main/
-│   ├── dispatcher.ts
-│   ├── initialization.ts
-│   ├── input.ts
-│   └── operations.ts (循環依存あり)
-├── hint/
-├── word/
-├── utils/
-└── その他既存ファイル
-```
+### 削減対象の分析結果
+- **キャッシュ関連**: 20ファイルで重複実装（約3,000行）
+- **設定関連**: 23個のインターフェース定義（約2,500行）
+- **main.ts**: 3,582行のモノリシックファイル
+- **未使用機能**: テストで確認されない機能（約1,500行）
 
-### エクスポートされている関数（後方互換性必須）
-- getMinLengthForKey, getMotionCountForKey
-- displayHintsAsync, isRenderingHints, abortCurrentRendering
-- highlightCandidateHintsAsync
-- validateConfig, getDefaultConfig
-- validateHighlightGroupName, isValidColorName, isValidHexColor
-- normalizeColorName, validateHighlightColor
-- generateHighlightCommand, validateHighlightConfig
-- reloadDictionary, editDictionary, showDictionary, validateDictionary
+### 統合設計
+```typescript
+// 統一キャッシュ（cache.ts）
+export class UnifiedCache {
+  private caches: Map<CacheType, LRUCache<string, any>>;
+  enum CacheType {
+    WORDS = 'words',
+    HINTS = 'hints',
+    DISPLAY = 'display',
+    ANALYSIS = 'analysis',
+    TEMP = 'temp'
+  }
+}
+
+// 統一設定（config.ts）
+export interface UnifiedConfig {
+  // 32個の厳選された設定項目（フラット構造）
+  enabled: boolean;
+  markers: string[];
+  motionCount: number;
+  // ...
+}
+```
 
 ## Process
 
-### process1 ディレクトリ構造の準備 - TDD Red-Green-Refactorアプローチ ✅
-#### sub1 新規ディレクトリ作成 ✅
-@target: denops/hellshake-yano/
-- [x] `display/` ディレクトリ作成（UI表示・ハイライト関連、約800行を格納予定）
-- [x] `validation/` ディレクトリ作成（設定・入力検証、約400行を格納予定）
-- [x] `dictionary/` ディレクトリ作成（辞書システム、約200行を格納予定）
-- [x] `input/` ディレクトリ作成（ユーザー入力処理、約400行を格納予定）
-- [x] `performance/` ディレクトリ作成（パフォーマンス管理、約150行を格納予定）
-- [x] `core/` ディレクトリ作成（コア機能、約300行を格納予定）
+### process1 キャッシュシステム統合
+#### sub1 統一キャッシュクラスの作成
+@target: denops/hellshake-yano/cache.ts
+@ref: denops/hellshake-yano/utils/cache.ts, denops/hellshake-yano/hint.ts
+- [ ] UnifiedCacheクラスの実装（5種類のキャッシュタイプ）
+- [ ] シングルトンパターンの実装
+- [ ] LRUキャッシュの統一利用
+- [ ] キャッシュ統計機能の追加
 
-#### sub2 TDDテストファイルの作成 ✅
-@target: test/structure/
-- [x] `directory-structure.test.ts`を作成（ディレクトリ存在確認テスト）
-- [x] Red: テストを先に書いて失敗させる
-- [x] Green: 最小実装でテストを通す
-- [x] Refactor: コード品質向上
+#### sub2 既存キャッシュの置き換え
+@target: 各ファイルのキャッシュ実装箇所
+- [ ] hint.tsの4つのMapキャッシュを置き換え
+- [ ] main.tsの2つのLRUCacheを置き換え
+- [ ] word/detector.tsのglobalWordCacheを置き換え
+- [ ] その他17箇所のキャッシュを統合
 
-#### sub3 index.tsファイルの準備 ✅
-@target: 各新規ディレクトリ
-- [x] 各ディレクトリにindex.tsを作成
-- [x] 再エクスポート用のテンプレート準備
-- [x] TypeScript型定義とJSDocコメント追加
-- [x] 各モジュールに適切なコメントとTODOを配置
+### process2 設定インターフェース統合
+#### sub1 統一設定インターフェースの作成
+@target: denops/hellshake-yano/config.ts
+@ref: denops/hellshake-yano/types.ts
+- [ ] UnifiedConfig インターフェースの定義（32項目）
+- [ ] DEFAULT_CONFIG 定数の定義
+- [ ] すべての設定をcamelCaseに統一
+- [ ] 階層構造を完全にフラット化
 
-#### sub4 Red-Green-Refactorサイクル実行 ✅
-@target: 全体
-- [x] **Cycle 1**: ディレクトリ構造（15分）
-  - Red: ディレクトリ存在テストを書く → 失敗確認
-  - Green: 6つのディレクトリを作成 → 成功確認
-  - Refactor: 権限設定とドキュメント対応
-- [x] **Cycle 2**: index.tsファイル（20分）
-  - Red: index.ts存在テストを書く → 失敗確認
-  - Green: 空のindex.tsを配置 → 成功確認
-  - Refactor: TypeScriptコンパイル設定確認
-- [x] **Cycle 3**: ドキュメント生成
-  - DIRECTORY_STRUCTURE.mdを生成
-  - 各ディレクトリの責務を文書化
-  - TDD実装プロセスの記録
+#### sub2 既存設定の移行
+@target: 各ファイルの設定参照箇所
+- [ ] Config、CoreConfig、HintConfig等をUnifiedConfigに置き換え
+- [ ] 設定アクセスパスの更新
+- [ ] バリデーション関数の統合
 
-### process2 validation モジュールの分離
-#### sub1 config検証機能の移動
-@target: denops/hellshake-yano/validation/config.ts
-- [ ] validateConfig関数の移動（2672-2817行）
-- [ ] getDefaultConfig関数の移動（2819-2848行）
-- [ ] getMinLengthForKey関数の移動（174-194行）
-- [ ] getMotionCountForKey関数の移動（196-223行）
-- [ ] normalizeBackwardCompatibleFlags関数の移動（258-272行）
+### process3 main.ts簡素化
+#### sub1 core.tsへの機能移動
+@target: denops/hellshake-yano/core.ts
+@ref: denops/hellshake-yano/main.ts
+- [ ] Coreクラスの作成
+- [ ] showHints、hideHints等のコア機能を移動
+- [ ] グローバル状態管理の移行
+- [ ] 初期化ロジックの移動
 
-#### sub2 highlight検証機能の移動
-@target: denops/hellshake-yano/validation/highlight.ts
-- [ ] validateHighlightGroupName関数の移動（2850-2878行）
-- [ ] isValidColorName関数の移動（2880-2921行）
-- [ ] isValidHexColor関数の移動（2923-2948行）
-- [ ] normalizeColorName関数の移動（2950-2967行）
-- [ ] validateHighlightColor関数の移動（2969-3059行）
-- [ ] generateHighlightCommand関数の移動（3061-3104行）
-- [ ] validateHighlightConfig関数の移動（3106-3138行）
-
-### process3 performance モジュールの分離
-#### sub1 パフォーマンス測定機能
-@target: denops/hellshake-yano/performance/metrics.ts
-- [ ] performanceMetricsオブジェクトの移動（100-144行）
-- [ ] recordPerformance関数の移動（146-172行）
-- [ ] パフォーマンス関連のグローバル変数
-
-#### sub2 デバッグ機能
-@target: denops/hellshake-yano/performance/debug.ts
-- [ ] collectDebugInfo関数の移動（225-241行）
-- [ ] clearDebugInfo関数の移動（243-256行）
-
-### process4 dictionary モジュールの分離
-#### sub1 辞書操作機能
-@target: denops/hellshake-yano/dictionary/operations.ts
-- [ ] initializeDictionarySystem関数の移動（3140-3161行）
-- [ ] registerDictionaryCommands関数の移動（3163-3186行）
-- [ ] reloadDictionary関数の移動（3188-3211行）
-- [ ] editDictionary関数の移動（3213-3255行）
-- [ ] showDictionary関数の移動（3257-3285行）
-- [ ] validateDictionary関数の移動（3287-3313行）
-
-### process5 core モジュールの分離
-#### sub1 単語検出機能
-@target: denops/hellshake-yano/core/detection.ts
-- [ ] detectWordsOptimized関数の移動（1108-1150行）
-- [ ] 関連するキャッシュとヘルパー関数
-
-#### sub2 ヒント生成機能
-@target: denops/hellshake-yano/core/generation.ts
-- [ ] generateHintsOptimized関数の移動（1152-1208行）
-- [ ] 関連するキャッシュとヘルパー関数
-
-#### sub3 基本操作
-@target: denops/hellshake-yano/core/operations.ts
-- [ ] showHints関数の実装
-- [ ] hideHints関数の移動（1699-1756行）
-- [ ] clearHintDisplay関数の移動（1645-1697行）
-
-### process6 display モジュールの分離
-#### sub1 レンダリング機能
-@target: denops/hellshake-yano/display/renderer.ts
-- [ ] displayHintsOptimized関数の移動（1210-1252行）
-- [ ] displayHintsAsync関数の移動（1254-1300行）
-- [ ] displayHintsWithExtmarksBatch関数の移動（1320-1416行）
-- [ ] displayHintsWithMatchAddBatch関数の移動（1418-1476行）
-- [ ] processExtmarksBatched関数の移動（2044-2145行）
-- [ ] processMatchaddBatched関数の移動（2147-2257行）
-
-#### sub2 ハイライト機能
-@target: denops/hellshake-yano/display/highlight.ts
-- [ ] highlightCandidateHints関数の移動（1758-1949行）
-- [ ] highlightCandidateHintsAsync関数の移動（1951-2003行）
-- [ ] highlightCandidateHintsOptimized関数の移動（2005-2042行）
-
-#### sub3 状態管理
-@target: denops/hellshake-yano/display/state.ts
-- [ ] isRenderingHints関数の移動（1302-1307行）
-- [ ] abortCurrentRendering関数の移動（1309-1318行）
-- [ ] レンダリング関連のグローバル変数
-
-### process7 input モジュールの分離
-#### sub1 入力処理機能
-@target: denops/hellshake-yano/input/handler.ts
-- [ ] waitForUserInput関数の移動（2259-2665行）
-- [ ] 既存のmain/input.tsとの統合検討
-
-### process8 main.ts のリファクタリング
-#### sub1 エントリポイントの整理
+#### sub2 main.tsのリファクタリング
 @target: denops/hellshake-yano/main.ts
-- [ ] main関数の保持（322行〜）
-- [ ] 必要最小限のグローバル変数
-- [ ] 各モジュールからのインポート
+- [ ] エントリーポイントのみに縮小（500行以内）
+- [ ] denops.dispatcherの定義
+- [ ] 必要最小限のインポート
 - [ ] 後方互換性のための再エクスポート
 
-### process9 循環依存の解消
-#### sub1 operations.tsの修正
-@target: denops/hellshake-yano/main/operations.ts
-- [ ] main.tsからのインポートを削除
-- [ ] 適切なモジュールからインポートに変更
+### process4 不要ファイル削除
+#### sub1 使用頻度の低いディレクトリ削除
+@target: denops/hellshake-yano/
+- [ ] dictionary/ディレクトリの削除（1ファイルのみ）
+- [ ] display/ディレクトリの削除（1ファイルのみ）
+- [ ] input/ディレクトリの削除（1ファイルのみ）
+- [ ] performance/ディレクトリの削除（1ファイルのみ）
+- [ ] validation/ディレクトリの削除（1ファイルのみ）
 
-### process10 統合テスト
+#### sub2 デッドコード削除
+@target: 各ファイル
+- [ ] @deprecatedマークされた関数の削除
+- [ ] テストで使用されていない関数の削除
+- [ ] 後方互換性のための古いコードの削除
+
+### process10 ユニットテスト
 #### sub1 既存テストの動作確認
 @target: tests/
-- [ ] 全既存テストの実行
-- [ ] エラーの修正
-- [ ] パフォーマンステスト
+- [ ] 全テストスイートの実行
+- [ ] 失敗テストの修正
+- [ ] パフォーマンステストの更新
 
-#### sub2 インポートパスの更新
-@target: 全ファイル
-- [ ] main.tsからのインポートを確認
-- [ ] 必要に応じて新しいパスに更新
+#### sub2 新規テストの追加
+@target: tests/
+- [ ] UnifiedCacheのテスト作成
+- [ ] UnifiedConfigのテスト作成
+- [ ] リファクタリング後のcoreモジュールのテスト
 
 ### process50 フォローアップ
-#### sub1 ドキュメント更新
-- [ ] README.mdへの構造説明追加
-- [ ] 各モジュールのJSDocコメント
-- [ ] 依存関係図の作成
 
-### process100 グローバル状態の改善
-- [ ] 状態管理モジュールの作成
-- [ ] グローバル変数の最小化
-- [ ] イベントベースの通信検討
+### process100 リファクタリング
+#### sub1 TypeScript最適化
+@target: 全ファイル
+- [ ] 型定義の厳密化
+- [ ] any型の排除
+- [ ] 未使用のインポート削除
 
-### process200 パフォーマンス最適化
-- [ ] モジュール間の通信最適化
-- [ ] 遅延読み込みの実装
-- [ ] バンドルサイズの確認
+#### sub2 パフォーマンス最適化
+@target: core.ts, cache.ts
+- [ ] 不要な非同期処理を同期処理に変更
+- [ ] キャッシュヒット率の改善
+- [ ] メモリ使用量の最適化
+
+### process200 ドキュメンテーション
+- [ ] README.mdに新アーキテクチャの説明追加
+- [ ] 移行ガイドの作成
+- [ ] パフォーマンス改善結果のドキュメント化
+- [ ] APIリファレンスの更新
