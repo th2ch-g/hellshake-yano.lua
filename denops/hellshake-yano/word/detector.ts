@@ -8,6 +8,34 @@
 
 import type { Denops } from "@denops/std";
 import type { Word, DetectionContext, WordDetectionResult } from "../types.ts";
+import { UnifiedCache, CacheType } from "../cache.ts";
+
+/**
+ * KeyBasedWordCacheの統計情報インターフェース
+ *
+ * UnifiedCache統合版の統計情報を定義します。
+ * レガシー互換性とUnifiedCacheの高度な統計の両方を提供します。
+ */
+export interface KeyBasedWordCacheStats {
+  /** 現在のキャッシュサイズ（レガシー互換） */
+  size: number;
+  /** キー一覧（レガシー互換、UnifiedCacheでは空配列） */
+  keys: string[];
+  /** キャッシュヒット数 */
+  hits: number;
+  /** キャッシュミス数 */
+  misses: number;
+  /** ヒット率（0.0-1.0） */
+  hitRate: number;
+  /** 最大キャッシュサイズ */
+  maxSize: number;
+  /** 使用しているキャッシュタイプ */
+  cacheType: CacheType;
+  /** キャッシュの説明 */
+  description: string;
+  /** UnifiedCache統合済みフラグ */
+  unified: boolean;
+}
 
 // Re-export types for backward compatibility
 export type { DetectionContext, WordDetectionResult };
@@ -1463,14 +1491,34 @@ export class HybridWordDetector implements WordDetector {
 }
 
 /**
- * キー別単語キャッシュ機構（最適化実装）
+ * キー別単語キャッシュ機構（UnifiedCache統合版）
  *
- * キー別の単語検出結果をキャッシュし、同じキーでの再計算を回避する
- * パフォーマンス向上とUIちらつき軽減のための最適化機能
+ * UnifiedCacheのWORDSタイプを使用して単語検出結果をキャッシュし、
+ * 同じキーでの再計算を回避する。統一されたキャッシュシステムにより
+ * パフォーマンス向上とUIちらつき軽減を実現します。
  */
 export class KeyBasedWordCache {
-  private cache: Map<string, Word[]> = new Map();
-  private maxSize: number = 100; // キャッシュサイズ上限
+  private unifiedCache: UnifiedCache;
+  private wordsCache: ReturnType<UnifiedCache['getCache']>;
+
+  /**
+   * KeyBasedWordCacheのコンストラクタ
+   *
+   * UnifiedCacheのWORDSタイプキャッシュを取得して初期化します。
+   * エラーが発生した場合はログを出力しますが、フォールバック機能は
+   * 提供しません（UnifiedCacheが利用できない環境では動作不能）。
+   */
+  constructor() {
+    try {
+      this.unifiedCache = UnifiedCache.getInstance();
+      this.wordsCache = this.unifiedCache.getCache<string, Word[]>(CacheType.WORDS);
+    } catch (error) {
+      console.error("Failed to initialize KeyBasedWordCache with UnifiedCache:", error);
+      throw new Error(
+        `KeyBasedWordCache initialization failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
 
   /**
    * キーに基づいて単語リストをキャッシュに保存
@@ -1478,16 +1526,8 @@ export class KeyBasedWordCache {
    * @param words - キャッシュする単語リスト
    */
   set(key: string, words: Word[]): void {
-    // キャッシュサイズ制限のチェック
-    if (this.cache.size >= this.maxSize) {
-      // 最も古いエントリを削除（LRU的な動作）
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey) {
-        this.cache.delete(firstKey);
-      }
-    }
-
-    this.cache.set(key, [...words]); // 浅いコピーで保存
+    // UnifiedCache のWORDSキャッシュに保存（浅いコピーで参照汚染防止）
+    this.wordsCache.set(key, [...words]);
   }
 
   /**
@@ -1496,8 +1536,8 @@ export class KeyBasedWordCache {
    * @returns キャッシュされた単語リスト、または undefined
    */
   get(key: string): Word[] | undefined {
-    const cached = this.cache.get(key);
-    if (cached) {
+    const cached = this.wordsCache.get(key) as Word[] | undefined;
+    if (cached && Array.isArray(cached)) {
       // キャッシュヒット: 新しい配列として返す（参照汚染防止）
       return [...cached];
     }
@@ -1506,25 +1546,68 @@ export class KeyBasedWordCache {
 
   /**
    * 特定のキーのキャッシュをクリア
-   * @param key - クリアするキャッシュキー
+   * @param key - クリアするキャッシュキー（省略時は全体クリア）
    */
   clear(key?: string): void {
     if (key) {
-      this.cache.delete(key);
+      this.wordsCache.delete(key);
     } else {
-      this.cache.clear();
+      this.unifiedCache.clearByType(CacheType.WORDS);
     }
   }
 
   /**
-   * キャッシュ統計情報を取得
-   * @returns キャッシュサイズとヒット可能なキー一覧
+   * キャッシュ統計情報を取得（UnifiedCache統合版）
+   *
+   * レガシー互換性を保ちながら、UnifiedCacheの高度な統計情報を提供します。
+   * 将来的な拡張に備えてメタデータも含めて返します。
+   * エラーが発生した場合は、基本的なフォールバック統計を返します。
+   *
+   * @returns 統計情報オブジェクト
    */
-  getStats(): { size: number; keys: string[] } {
-    return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys()),
-    };
+  getStats(): KeyBasedWordCacheStats {
+    try {
+      const unifiedStats = this.unifiedCache.getAllStats();
+      const wordStats = unifiedStats.WORDS;
+
+      if (!wordStats) {
+        throw new Error("WORDS cache statistics not found");
+      }
+
+      const config = this.unifiedCache.getCacheConfig(CacheType.WORDS);
+
+      return {
+        // レガシー互換フィールド
+        size: wordStats.size,
+        keys: [], // UnifiedCacheではキー一覧の取得は提供していないため空配列
+
+        // UnifiedCache統計情報
+        hits: wordStats.hits,
+        misses: wordStats.misses,
+        hitRate: wordStats.hitRate,
+        maxSize: wordStats.maxSize,
+
+        // メタデータ
+        cacheType: CacheType.WORDS,
+        description: config.description,
+        unified: true, // UnifiedCache統合済みであることを示すフラグ
+      };
+    } catch (error) {
+      console.warn("Failed to retrieve UnifiedCache statistics, returning fallback:", error);
+
+      // フォールバック統計情報
+      return {
+        size: 0,
+        keys: [],
+        hits: 0,
+        misses: 0,
+        hitRate: 0,
+        maxSize: 1000, // デフォルトサイズ
+        cacheType: CacheType.WORDS,
+        description: "単語検出結果のキャッシュ（統計取得エラー）",
+        unified: true, // 統合されているが統計取得に失敗
+      };
+    }
   }
 }
 

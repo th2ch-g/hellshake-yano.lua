@@ -170,14 +170,14 @@ export interface UnifiedConfig {
 #### sub5 word/detector.tsのキャッシュ統合（1個）
 @target: denops/hellshake-yano/word/detector.ts
 @ref: denops/hellshake-yano/cache.ts
-- [ ] UnifiedCacheをインポート
-- [ ] KeyBasedWordCacheクラスをUnifiedCache利用に更新
-- [ ] `globalWordCache`をUnifiedCache.WORDSベースに変更
-- [ ] set/getメソッドをUnifiedCacheのインターフェースに合わせる
-- [ ] clearメソッドの実装
-- [ ] getStats関数の実装（UnifiedCacheの統計機能を活用）
-- [ ] `deno check denops/hellshake-yano/word/detector.ts`でコンパイルエラーなし
-- [ ] `deno test tests/word_detector_test.ts`でテストがパス
+- [x] UnifiedCacheをインポート
+- [x] KeyBasedWordCacheクラスをUnifiedCache利用に更新
+- [x] `globalWordCache`をUnifiedCache.WORDSベースに変更
+- [x] set/getメソッドをUnifiedCacheのインターフェースに合わせる
+- [x] clearメソッドの実装
+- [x] getStats関数の実装（UnifiedCacheの統計機能を活用）
+- [x] `deno check denops/hellshake-yano/word/detector.ts`でコンパイルエラーなし
+- [x] `deno test tests/word_detector_test.ts`でテストがパス
 
 #### sub6 word/dictionary.tsのキャッシュ統合（1個）
 @target: denops/hellshake-yano/word/dictionary.ts
