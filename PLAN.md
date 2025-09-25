@@ -300,13 +300,13 @@ export interface UnifiedConfig {
 
 #### sub5 main.tsの設定処理移行
 @target: denops/hellshake-yano/main.ts
-- [ ] config変数をUnifiedConfig型へ変更
-- [ ] getDefaultConfig()の実装をconfig.tsへ委譲
-- [ ] validateConfig()の実装をconfig.tsへ委譲
-- [ ] 設定アクセスをcamelCaseに統一
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/main_test.ts`で既存テストがパス
-- [ ] `deno test tests/integration_test.ts`で統合テストがパス
+- [x] config変数をUnifiedConfig型へ変更
+- [x] getDefaultConfig()の実装をconfig.tsへ委譲
+- [x] validateConfig()の実装をconfig.tsへ委譲
+- [x] 設定アクセスをcamelCaseに統一（50箇所）
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/main_test.ts`で既存テストがパス（6テスト）
+- [x] `deno test tests/integration_test.ts`で統合テストがパス（4テスト）
 
 #### sub6 各モジュールの設定参照更新（hint.ts）
 @target: denops/hellshake-yano/hint.ts
@@ -316,6 +316,24 @@ export interface UnifiedConfig {
 - [ ] hint_position→hintPosition等の変更
 - [ ] `deno check denops/hellshake-yano/hint.ts`で型チェック
 - [ ] `deno test tests/hint*.ts`でhint関連テストがパス
+
+#### sub10 UnifiedConfig統合エラーの修正
+@target: denops/hellshake-yano/config.ts, denops/hellshake-yano/main.ts
+@context: テストエラー12個の解消とUnifiedConfig移行の完了
+- [ ] useJapaneseのデフォルト値をundefinedからfalseに修正
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] `deno test tests/config_conversion_test.ts`でuseJapaneseテストがパス
+- [ ] isValidHighlightGroup()関数の実装（特殊文字、数字開始、長さチェック）
+- [ ] validateUnifiedConfig()にハイライトグループ名検証を追加
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] `deno test tests/highlight_color_test.ts`でハイライトテストがパス
+- [ ] getMinLengthForKey()のデフォルト値を2から3に修正
+- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [ ] `deno test tests/per_key_min_length_test.ts`でmin_lengthテストがパス
+- [ ] getMotionCountForKey()のフォールバック処理を明確化
+- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [ ] `deno test tests/per_key_motion_count_test.ts`でmotion_countテストがパス
+- [ ] `deno test`で全テストがパス（12個のエラー解消確認）
 
 #### sub7 各モジュールの設定参照更新（word関連）
 @target: denops/hellshake-yano/word/detector.ts

@@ -66,15 +66,19 @@ Deno.test("validateUnifiedConfig - motionTimeout バリデーション", () => {
   // 異常系: 負の値
   result = validateUnifiedConfig({ motionTimeout: -100 });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("motionTimeout must be a positive integer"), true);
+  assertEquals(result.errors.includes("motionTimeout must be at least 100ms"), true);
 
   // 異常系: 0
   result = validateUnifiedConfig({ motionTimeout: 0 });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("motionTimeout must be a positive integer"), true);
+  assertEquals(result.errors.includes("motionTimeout must be at least 100ms"), true);
 
-  // 境界値: 最小正数
-  result = validateUnifiedConfig({ motionTimeout: 1 });
+  // 境界値: 100未満は失敗
+  result = validateUnifiedConfig({ motionTimeout: 99 });
+  assertEquals(result.valid, false);
+
+  // 境界値: 100以上は成功
+  result = validateUnifiedConfig({ motionTimeout: 100 });
   assertEquals(result.valid, true);
   assertEquals(result.errors.length, 0);
 });
@@ -115,12 +119,12 @@ Deno.test("validateUnifiedConfig - debounceDelay バリデーション", () => {
   // 異常系: 負の値
   result = validateUnifiedConfig({ debounceDelay: -10 });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("debounceDelay must be a non-negative integer"), true);
+  assertEquals(result.errors.includes("debounceDelay must be a non-negative number"), true);
 
   // 異常系: 小数点
   result = validateUnifiedConfig({ debounceDelay: 50.5 });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("debounceDelay must be a non-negative integer"), true);
+  assertEquals(result.errors.includes("debounceDelay must be a non-negative number"), true);
 });
 
 Deno.test("validateUnifiedConfig - hintPosition バリデーション", () => {
@@ -135,7 +139,7 @@ Deno.test("validateUnifiedConfig - hintPosition バリデーション", () => {
   // 異常系: 無効な値
   const result = validateUnifiedConfig({ hintPosition: "invalid" as any });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("hintPosition must be one of: start, end, same"), true);
+  assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay"), true);
 });
 
 Deno.test("validateUnifiedConfig - visualHintPosition バリデーション", () => {
@@ -182,7 +186,7 @@ Deno.test("validateUnifiedConfig - markers配列バリデーション", () => {
   // 異常系: 空配列
   result = validateUnifiedConfig({ markers: [] });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("markers must be a non-empty array"), true);
+  assertEquals(result.errors.includes("markers must not be empty"), true);
 
   // 異常系: 重複値
   result = validateUnifiedConfig({ markers: ["A", "B", "A"] });
@@ -192,7 +196,7 @@ Deno.test("validateUnifiedConfig - markers配列バリデーション", () => {
   // 異常系: 配列でない
   result = validateUnifiedConfig({ markers: "ABC" as any });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("markers must be a non-empty array"), true);
+  assertEquals(result.errors.includes("markers must be an array"), true);
 });
 
 Deno.test("validateUnifiedConfig - 複数エラーの処理", () => {
@@ -208,17 +212,17 @@ Deno.test("validateUnifiedConfig - 複数エラーの処理", () => {
   assertEquals(result.valid, false);
   assertEquals(result.errors.length, 5);
   assertEquals(result.errors.includes("motionCount must be a positive integer"), true);
-  assertEquals(result.errors.includes("motionTimeout must be a positive integer"), true);
+  assertEquals(result.errors.includes("motionTimeout must be at least 100ms"), true);
   assertEquals(result.errors.includes("maxHints must be a positive integer"), true);
-  assertEquals(result.errors.includes("hintPosition must be one of: start, end, same"), true);
-  assertEquals(result.errors.includes("markers must be a non-empty array"), true);
+  assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay"), true);
+  assertEquals(result.errors.includes("markers must not be empty"), true);
 });
 
 Deno.test("validateUnifiedConfig - 境界値テスト", () => {
   // 最小正数
   let result = validateUnifiedConfig({
     motionCount: 1,
-    motionTimeout: 1,
+    motionTimeout: 100,  // 100ms以上必要
     maxHints: 1,
     debounceDelay: 0
   });

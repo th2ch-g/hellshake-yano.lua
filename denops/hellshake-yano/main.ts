@@ -57,7 +57,7 @@ import type {
 
 // Re-export types for backward compatibility
 export type { Config, HighlightColor };
-import { getPerKeyValue, mergeConfig } from "./config.ts";
+import { getPerKeyValue, mergeConfig, UnifiedConfig, getDefaultUnifiedConfig, validateUnifiedConfig, fromUnifiedConfig, toUnifiedConfig, validateConfig as validateConfigFromConfigModule } from "./config.ts";
 import {
   CommandFactory,
   disable,
@@ -81,11 +81,12 @@ import { validateConfigValue } from "./utils/validation.ts";
 /**
  * プラグインのグローバル設定オブジェクト
  * すべての設定値とオプションを管理します。
- * @type {Config}
+ * Process2 Sub5: UnifiedConfig型に移行（camelCase統一）
+ * @type {UnifiedConfig}
  * @since 1.0.0
  */
 // deno-lint-ignore prefer-const
-let config: Config = getDefaultConfig();
+let config: UnifiedConfig = getDefaultUnifiedConfig();
 
 /**
  * 現在表示中のヒントマッピングの配列
@@ -197,7 +198,7 @@ function recordPerformance(
   startTime: number,
   endTime: number,
 ): void {
-  if (!config.performance_log) return;
+  if (!config.performanceLog) return;
 
   const duration = endTime - startTime;
   performanceMetrics[operation].push(duration);
@@ -208,7 +209,7 @@ function recordPerformance(
   }
 
   // デバッグモードの場合はコンソールにもログ出力
-  if (config.debug_mode) {
+  if (config.debugMode) {
     console.log(`[hellshake-yano:PERF] ${operation}: ${duration}ms`);
   }
 }
@@ -225,19 +226,24 @@ function recordPerformance(
  * const minLength = getMinLengthForKey(config, 'f');
  * // 'f'キーに対する最小文字数を取得（例: 3）
  */
-export function getMinLengthForKey(config: Config, key: string): number {
+export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
+  // Config型の場合はUnifiedConfigに変換
+  // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
+  const unifiedConfig = 'motionCount' in config
+    ? config as UnifiedConfig
+    : toUnifiedConfig(config as Config);
   // キー別設定が存在し、そのキーの設定があれば使用
-  if (config.per_key_min_length && config.per_key_min_length[key] !== undefined) {
-    return config.per_key_min_length[key];
+  if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
+    return unifiedConfig.perKeyMinLength[key];
   }
 
-  // default_min_word_length が設定されていれば使用
-  if (config.default_min_word_length !== undefined) {
-    return config.default_min_word_length;
+  // defaultMinWordLength が設定されていれば使用
+  if (unifiedConfig.defaultMinWordLength !== undefined) {
+    return unifiedConfig.defaultMinWordLength;
   }
 
-  // 後方互換性：旧形式のmin_word_lengthを使用（デフォルト: 2）
-  return config.min_word_length ?? 2;
+  // デフォルト値
+  return 2;
 }
 
 /**
@@ -252,24 +258,29 @@ export function getMinLengthForKey(config: Config, key: string): number {
  * const motionCount = getMotionCountForKey('f', config);
  * // 'f'モーションに対する動作回数を取得（例: 5）
  */
-export function getMotionCountForKey(key: string, config: Config): number {
+export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
+  // Config型の場合はUnifiedConfigに変換
+  // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
+  const unifiedConfig = 'motionCount' in config
+    ? config as UnifiedConfig
+    : toUnifiedConfig(config as Config);
   // キー別設定が存在し、そのキーの設定があれば使用
-  if (config.per_key_motion_count && config.per_key_motion_count[key] !== undefined) {
-    const value = config.per_key_motion_count[key];
+  if (unifiedConfig.perKeyMotionCount && unifiedConfig.perKeyMotionCount[key] !== undefined) {
+    const value = unifiedConfig.perKeyMotionCount[key];
     // 1以上の整数値のみ有効とみなす
     if (value >= 1 && Number.isInteger(value)) {
       return value;
     }
   }
 
-  // default_motion_count が設定されていれば使用
-  if (config.default_motion_count !== undefined && config.default_motion_count >= 1) {
-    return config.default_motion_count;
+  // defaultMotionCount が設定されていれば使用
+  if (unifiedConfig.defaultMotionCount !== undefined && unifiedConfig.defaultMotionCount >= 1) {
+    return unifiedConfig.defaultMotionCount;
   }
 
-  // 後方互換性：既存のmotion_countを使用
-  if (config.motion_count !== undefined && config.motion_count >= 1) {
-    return config.motion_count;
+  // 後方互換性：既存のmotionCountを使用
+  if (unifiedConfig.motionCount !== undefined && unifiedConfig.motionCount >= 1) {
+    return unifiedConfig.motionCount;
   }
 
   // 最終的なデフォルト値
@@ -288,7 +299,7 @@ export function getMotionCountForKey(key: string, config: Config): number {
  */
 function collectDebugInfo(): DebugInfo {
   return {
-    config: { ...config },
+    config: fromUnifiedConfig(config),
     hintsVisible,
     currentHints: [...currentHints],
     metrics: {
@@ -343,16 +354,16 @@ function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config>
  * @returns {WordDetectionManagerConfig} 単語検出マネージャー用の設定形式
  * @since 1.0.0
  */
-function convertConfigForManager(config: Config): WordDetectionManagerConfig {
+function convertConfigForManager(config: UnifiedConfig): WordDetectionManagerConfig {
   return {
     // 基本設定
-    strategy: config.word_detection_strategy || "hybrid",
-    use_japanese: config.use_japanese,
-    enable_tinysegmenter: config.enable_tinysegmenter,
-    segmenter_threshold: config.segmenter_threshold,
+    strategy: config.wordDetectionStrategy || "hybrid",
+    use_japanese: config.useJapanese,
+    enable_tinysegmenter: config.enableTinySegmenter,
+    segmenter_threshold: config.segmenterThreshold,
 
     // 日本語分割精度設定
-    min_word_length: config.japanese_min_word_length,
+    min_word_length: config.japaneseMinWordLength,
 
     // パフォーマンス設定
     cache_enabled: true,
@@ -360,10 +371,10 @@ function convertConfigForManager(config: Config): WordDetectionManagerConfig {
     performance_monitoring: false, // デバッグ情報が必要な場合のみ有効
 
     // タイムアウト設定（motion_timeoutから算出）
-    timeout_ms: Math.max(config.motion_timeout || 2000, 1000),
+    timeout_ms: Math.max(config.motionTimeout || 2000, 1000),
 
     // デフォルトストラテジー
-    default_strategy: config.word_detection_strategy || "hybrid",
+    default_strategy: config.wordDetectionStrategy || "hybrid",
   };
 }
 
@@ -376,13 +387,13 @@ function convertConfigForManager(config: Config): WordDetectionManagerConfig {
  * @since 1.0.0
  * @throws 設定の同期に失敗した場合（エラーは内部で処理され、ログ出力される）
  */
-function syncManagerConfig(config: Config): void {
+function syncManagerConfig(config: UnifiedConfig): void {
   try {
     // マネージャー用設定に変換
     const managerConfig = convertConfigForManager(config);
 
     // マネージャーを取得または作成し、設定を更新（globalConfigも渡す）
-    const manager = getWordDetectionManager(managerConfig, config);
+    const manager = getWordDetectionManager(managerConfig, fromUnifiedConfig(config));
 
     // 既存のマネージャーがある場合は設定を更新
     if (manager) {
@@ -457,7 +468,7 @@ export async function main(denops: Denops): Promise<void> {
       // motion_count の検証（1以上の整数）
       if (typeof cfg.motion_count === "number") {
         if (cfg.motion_count >= 1 && Number.isInteger(cfg.motion_count)) {
-          config.motion_count = cfg.motion_count;
+          config.motionCount = cfg.motion_count;
         } else {
         }
       }
@@ -465,32 +476,32 @@ export async function main(denops: Denops): Promise<void> {
       // motion_timeout の検証（100ms以上）
       if (typeof cfg.motion_timeout === "number") {
         if (cfg.motion_timeout >= 100) {
-          config.motion_timeout = cfg.motion_timeout;
+          config.motionTimeout = cfg.motion_timeout;
         } else {
         }
       }
 
       // hint_position の検証（'start', 'end', 'overlay'のみ許可）
       if (typeof cfg.hint_position === "string") {
-        const validPositions = ["start", "end", "overlay"];
-        if (validPositions.includes(cfg.hint_position)) {
-          config.hint_position = cfg.hint_position;
+        const validPositions: Array<"start" | "end" | "same"> = ["start", "end", "same"];
+        if (validPositions.includes(cfg.hint_position as "start" | "end" | "same")) {
+          config.hintPosition = cfg.hint_position as "start" | "end" | "same";
         } else {
         }
       }
 
       // visual_hint_position の検証と適用
       if (typeof cfg.visual_hint_position === "string") {
-        const validPositions = ["start", "end", "same", "both"];
-        if (validPositions.includes(cfg.visual_hint_position)) {
-          config.visual_hint_position = cfg.visual_hint_position;
+        const validPositions: Array<"start" | "end" | "same" | "both"> = ["start", "end", "same", "both"];
+        if (validPositions.includes(cfg.visual_hint_position as "start" | "end" | "same" | "both")) {
+          config.visualHintPosition = cfg.visual_hint_position as "start" | "end" | "same" | "both";
         } else {
         }
       }
 
       // trigger_on_hjkl の適用
       if (typeof cfg.trigger_on_hjkl === "boolean") {
-        config.trigger_on_hjkl = cfg.trigger_on_hjkl;
+        config.triggerOnHjkl = cfg.trigger_on_hjkl;
       }
 
       // counted_motions の適用
@@ -500,12 +511,12 @@ export async function main(denops: Denops): Promise<void> {
           typeof key === "string" && key.length === 1
         );
         if (validKeys.length === cfg.counted_motions.length) {
-          config.counted_motions = [...validKeys];
+          config.countedMotions = [...validKeys];
         } else {
           console.warn(
             `[hellshake-yano] Some keys in counted_motions are invalid, using valid keys only: ${validKeys}`,
           );
-          config.counted_motions = [...validKeys];
+          config.countedMotions = [...validKeys];
         }
       }
 
@@ -516,7 +527,7 @@ export async function main(denops: Denops): Promise<void> {
 
       // use_numbers の適用（数字対応）
       if (typeof cfg.use_numbers === "boolean") {
-        config.use_numbers = cfg.use_numbers;
+        config.useNumbers = cfg.use_numbers;
         // 数字を使用する場合、マーカーを再生成
         if (cfg.use_numbers) {
           const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -529,12 +540,12 @@ export async function main(denops: Denops): Promise<void> {
 
       // highlight_selected の適用（UX改善）
       if (typeof cfg.highlight_selected === "boolean") {
-        config.highlight_selected = cfg.highlight_selected;
+        config.highlightSelected = cfg.highlight_selected;
       }
 
       // debug_coordinates の適用（デバッグ用）
       if (typeof cfg.debug_coordinates === "boolean") {
-        config.debug_coordinates = cfg.debug_coordinates;
+        config.debugCoordinates = cfg.debug_coordinates;
       }
 
       // maxHints の検証（1以上の整数）
@@ -559,7 +570,7 @@ export async function main(denops: Denops): Promise<void> {
           typeof k === "string" && k.length === 1
         );
         if (validKeys.length > 0) {
-          config.single_char_keys = validKeys;
+          config.singleCharKeys = validKeys;
         } else {
         }
       }
@@ -570,7 +581,7 @@ export async function main(denops: Denops): Promise<void> {
           typeof k === "string" && k.length === 1
         );
         if (validKeys.length > 0) {
-          config.multi_char_keys = validKeys;
+          config.multiCharKeys = validKeys;
         } else {
         }
       }
@@ -578,24 +589,24 @@ export async function main(denops: Denops): Promise<void> {
       // max_single_char_hints の検証
       if (typeof cfg.max_single_char_hints === "number") {
         if (cfg.max_single_char_hints >= 0 && Number.isInteger(cfg.max_single_char_hints)) {
-          config.max_single_char_hints = cfg.max_single_char_hints;
+          config.maxSingleCharHints = cfg.max_single_char_hints;
         } else {
         }
       }
 
       // use_hint_groups の適用
       if (typeof cfg.use_hint_groups === "boolean") {
-        config.use_hint_groups = cfg.use_hint_groups;
+        config.useHintGroups = cfg.use_hint_groups;
       } else {
         // Option 2+3: Auto-detect hint groups mode when single_char_keys or multi_char_keys are defined
         // If use_hint_groups is not explicitly set but single/multi char keys are defined,
         // automatically enable hint groups for better user experience
         if (
-          (config.single_char_keys && config.single_char_keys.length > 0) ||
-          (config.multi_char_keys && config.multi_char_keys.length > 0)
+          (config.singleCharKeys && config.singleCharKeys.length > 0) ||
+          (config.multiCharKeys && config.multiCharKeys.length > 0)
         ) {
-          config.use_hint_groups = true;
-          if (config.debug_mode) {
+          config.useHintGroups = true;
+          if (config.debugMode) {
             console.log(
               "[hellshake-yano] Auto-enabled hint groups due to single_char_keys/multi_char_keys presence",
             );
@@ -612,25 +623,25 @@ export async function main(denops: Denops): Promise<void> {
           }
         }
         if (Object.keys(validCounts).length > 0) {
-          config.per_key_motion_count = validCounts;
+          config.perKeyMotionCount = validCounts;
         }
       }
 
       // default_motion_count の検証と適用
       if (typeof cfg.default_motion_count === "number") {
         if (cfg.default_motion_count >= 1 && Number.isInteger(cfg.default_motion_count)) {
-          config.default_motion_count = cfg.default_motion_count;
+          config.defaultMotionCount = cfg.default_motion_count;
         }
       }
 
       if (typeof cfg.use_japanese === "boolean") {
-        config.use_japanese = cfg.use_japanese;
+        config.useJapanese = cfg.use_japanese;
       }
 
       if (typeof cfg.word_detection_strategy === "string") {
         const validStrategies = ["regex", "tinysegmenter", "hybrid"];
         if (validStrategies.includes(cfg.word_detection_strategy)) {
-          config.word_detection_strategy = cfg.word_detection_strategy;
+          config.wordDetectionStrategy = cfg.word_detection_strategy;
 
           // マネージャーをリセットして新しい設定を適用
           resetWordDetectionManager();
@@ -639,13 +650,13 @@ export async function main(denops: Denops): Promise<void> {
       }
 
       if (typeof cfg.enable_tinysegmenter === "boolean") {
-        config.enable_tinysegmenter = cfg.enable_tinysegmenter;
+        config.enableTinySegmenter = cfg.enable_tinysegmenter;
         resetWordDetectionManager();
       }
 
       if (typeof cfg.segmenter_threshold === "number") {
         if (cfg.segmenter_threshold >= 1 && Number.isInteger(cfg.segmenter_threshold)) {
-          config.segmenter_threshold = cfg.segmenter_threshold;
+          config.segmenterThreshold = cfg.segmenter_threshold;
           resetWordDetectionManager();
         } else {
         }
@@ -654,7 +665,7 @@ export async function main(denops: Denops): Promise<void> {
       if (cfg.highlight_hint_marker !== undefined) {
         const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
         if (markerResult.valid) {
-          config.highlight_hint_marker = cfg.highlight_hint_marker;
+          config.highlightHintMarker = cfg.highlight_hint_marker;
           const displayValue = typeof cfg.highlight_hint_marker === "string"
             ? cfg.highlight_hint_marker
             : JSON.stringify(cfg.highlight_hint_marker);
@@ -665,7 +676,7 @@ export async function main(denops: Denops): Promise<void> {
       if (cfg.highlight_hint_marker_current !== undefined) {
         const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
         if (currentResult.valid) {
-          config.highlight_hint_marker_current = cfg.highlight_hint_marker_current;
+          config.highlightHintMarkerCurrent = cfg.highlight_hint_marker_current;
           const displayValue = typeof cfg.highlight_hint_marker_current === "string"
             ? cfg.highlight_hint_marker_current
             : JSON.stringify(cfg.highlight_hint_marker_current);
@@ -674,11 +685,11 @@ export async function main(denops: Denops): Promise<void> {
       }
 
       if (typeof cfg.debug_mode === "boolean") {
-        config.debug_mode = cfg.debug_mode;
+        config.debugMode = cfg.debug_mode;
       }
 
       if (typeof cfg.performance_log === "boolean") {
-        config.performance_log = cfg.performance_log;
+        config.performanceLog = cfg.performance_log;
         // パフォーマンスログが無効化された場合、既存のメトリクスをクリア
         if (!cfg.performance_log) {
           clearDebugInfo();
@@ -787,12 +798,12 @@ export async function main(denops: Denops): Promise<void> {
           let effectiveMaxHints: number;
 
           // hint groups使用時は実際の容量を計算
-          if (config.use_hint_groups && config.single_char_keys && config.multi_char_keys) {
+          if (config.useHintGroups && config.singleCharKeys && config.multiCharKeys) {
             const singleCharCount = Math.min(
-              config.single_char_keys.length,
-              config.max_single_char_hints || config.single_char_keys.length,
+              config.singleCharKeys.length,
+              config.maxSingleCharHints || config.singleCharKeys.length,
             );
-            const multiCharCount = config.multi_char_keys.length * config.multi_char_keys.length;
+            const multiCharCount = config.multiCharKeys.length * config.multiCharKeys.length;
             const numberHintCount = 100; // 2桁数字ヒント
             const totalCapacity = singleCharCount + multiCharCount + numberHintCount;
             effectiveMaxHints = Math.min(config.maxHints, totalCapacity);
@@ -818,7 +829,7 @@ export async function main(denops: Denops): Promise<void> {
 
           // キャッシュを使用してヒントを生成（最適化）
           // bothモードの場合は2倍のヒントを生成
-          const isBothMode = modeString === "visual" && config.visual_hint_position === "both";
+          const isBothMode = modeString === "visual" && config.visualHintPosition === "both";
           const hintsNeeded = isBothMode ? limitedWords.length * 2 : limitedWords.length;
           const hints = generateHintsOptimized(hintsNeeded, config.markers);
           currentHints = assignHintsToWords(
@@ -828,8 +839,8 @@ export async function main(denops: Denops): Promise<void> {
             cursorCol,
             modeString,
             {
-              hint_position: config.hint_position,
-              visual_hint_position: config.visual_hint_position,
+              hint_position: config.hintPosition,
+              visual_hint_position: config.visualHintPosition,
             },
           );
 
@@ -885,7 +896,7 @@ export async function main(denops: Denops): Promise<void> {
         const keyString = String(key);
 
         // グローバル設定のcurrent_key_contextを更新
-        config.current_key_context = keyString;
+        config.currentKeyContext = keyString;
 
         const modeString = mode ? String(mode) : "normal";
         // 既存のshowHintsInternal処理を呼び出し（モード情報付き）
@@ -1234,8 +1245,8 @@ export async function main(denops: Denops): Promise<void> {
      * let is_debug = denops#request('hellshake-yano', 'toggleDebugMode', [])
      */
     toggleDebugMode(): boolean {
-      config.debug_mode = !config.debug_mode;
-      return config.debug_mode;
+      config.debugMode = !config.debugMode;
+      return config.debugMode;
     },
 
     /**
@@ -1249,11 +1260,11 @@ export async function main(denops: Denops): Promise<void> {
      * let is_logging = denops#request('hellshake-yano', 'togglePerformanceLog', [])
      */
     togglePerformanceLog(): boolean {
-      config.performance_log = !config.performance_log;
-      if (!config.performance_log) {
+      config.performanceLog = !config.performanceLog;
+      if (!config.performanceLog) {
         clearDebugInfo();
       }
-      return config.performance_log;
+      return config.performanceLog;
     },
   };
 }
@@ -1267,18 +1278,18 @@ export async function main(denops: Denops): Promise<void> {
 async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[]> {
   try {
     const enhancedConfig: EnhancedWordConfig = {
-      strategy: config.word_detection_strategy,
-      use_japanese: config.use_japanese,
-      enable_tinysegmenter: config.enable_tinysegmenter,
-      segmenter_threshold: config.segmenter_threshold,
+      strategy: config.wordDetectionStrategy,
+      use_japanese: config.useJapanese,
+      enable_tinysegmenter: config.enableTinySegmenter,
+      segmenter_threshold: config.segmenterThreshold,
       cache_enabled: true,
       auto_detect_language: true,
     };
 
     // current_key_contextからコンテキストを作成
-    const context = config.current_key_context
+    const context = config.currentKeyContext
       ? {
-        minWordLength: getMinLengthForKey(config, config.current_key_context),
+        minWordLength: getMinLengthForKey(config, config.currentKeyContext),
       }
       : undefined;
 
@@ -1289,13 +1300,13 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
     } else {
       // フォールバックとしてレガシーメソッドを使用
       return await detectWordsWithConfig(denops, {
-        use_japanese: config.use_japanese,
+        use_japanese: config.useJapanese,
       });
     }
   } catch (error) {
     // 最終フォールバックとしてレガシーメソッドを使用
     return await detectWordsWithConfig(denops, {
-      use_japanese: config.use_japanese,
+      use_japanese: config.useJapanese,
     });
   }
 }
@@ -1309,30 +1320,30 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[
 function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
   // Option 2+3: Auto-detect hint groups mode when single_char_keys or multi_char_keys are defined
   // unless explicitly disabled by use_hint_groups=false
-  const shouldUseHintGroups = config.use_hint_groups !== false &&
-    (config.single_char_keys || config.multi_char_keys);
+  const shouldUseHintGroups = config.useHintGroups !== false &&
+    (config.singleCharKeys || config.multiCharKeys);
 
-  if (shouldUseHintGroups && (config.single_char_keys || config.multi_char_keys)) {
-    if (config.debug_mode) {
+  if (shouldUseHintGroups && (config.singleCharKeys || config.multiCharKeys)) {
+    if (config.debugMode) {
       console.log("[hellshake-yano] Auto-detected hint groups mode:", {
-        use_hint_groups: config.use_hint_groups,
-        has_single_char_keys: !!config.single_char_keys,
-        has_multi_char_keys: !!config.multi_char_keys,
+        use_hint_groups: config.useHintGroups,
+        has_single_char_keys: !!config.singleCharKeys,
+        has_multi_char_keys: !!config.multiCharKeys,
         shouldUseHintGroups,
       });
     }
 
     const hintConfig: HintKeyConfig = {
-      single_char_keys: config.single_char_keys,
-      multi_char_keys: config.multi_char_keys,
-      max_single_char_hints: config.max_single_char_hints,
+      single_char_keys: config.singleCharKeys,
+      multi_char_keys: config.multiCharKeys,
+      max_single_char_hints: config.maxSingleCharHints,
       markers: markers,
     };
 
     // 設定の検証
     const validation = validateHintKeyConfig(hintConfig);
     if (!validation.valid) {
-      if (config.debug_mode) {
+      if (config.debugMode) {
         console.error("[hellshake-yano] Invalid hint key configuration:", validation.errors);
       }
       // フォールバックとして通常のヒント生成を使用
@@ -1693,10 +1704,10 @@ async function displayHints(
 
           const position = calculateHintPositionWithCoordinateSystem(
             word,
-            config.hint_position,
-            config.debug_coordinates,
+            config.hintPosition,
+            config.debugCoordinates,
             mode === "visual",
-            config.visual_hint_position,
+            config.visualHintPosition,
           );
           // デバッグログ追加（パフォーマンスのためコメントアウト）
           const col = position.nvim_col; // Neovim extmark用（既に0ベース変換済み）
@@ -1784,8 +1795,8 @@ async function displayHintsWithMatchAdd(
       try {
         const position = calculateHintPositionWithCoordinateSystem(
           word,
-          config.hint_position,
-          config.debug_coordinates,
+          config.hintPosition,
+          config.debugCoordinates,
         );
         let pattern: string;
 
@@ -1947,7 +1958,7 @@ async function highlightCandidateHints(
   denops: Denops,
   inputPrefix: string,
 ): Promise<void> {
-  if (!config.highlight_selected) return;
+  if (!config.highlightSelected) return;
 
   try {
     // 候補となるヒントを分類
@@ -2044,8 +2055,8 @@ async function highlightCandidateHints(
         try {
           const position = calculateHintPositionWithCoordinateSystem(
             hint.word,
-            config.hint_position,
-            config.debug_coordinates,
+            config.hintPosition,
+            config.debugCoordinates,
           );
 
           let pattern: string;
@@ -2079,8 +2090,8 @@ async function highlightCandidateHints(
         try {
           const position = calculateHintPositionWithCoordinateSystem(
             hint.word,
-            config.hint_position,
-            config.debug_coordinates,
+            config.hintPosition,
+            config.debugCoordinates,
           );
 
           let pattern: string;
@@ -2196,7 +2207,7 @@ async function highlightCandidateHintsOptimized(
   inputPrefix: string,
   signal: AbortSignal,
 ): Promise<void> {
-  if (!config.highlight_selected) return;
+  if (!config.highlightSelected) return;
 
   // 候補となるヒントを分類
   const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputPrefix));
@@ -2355,8 +2366,8 @@ async function processMatchaddBatched(
     try {
       const position = calculateHintPositionWithCoordinateSystem(
         hint.word,
-        config.hint_position,
-        config.debug_coordinates,
+        config.hintPosition,
+        config.debugCoordinates,
       );
 
       let pattern: string;
@@ -2399,8 +2410,8 @@ async function processMatchaddBatched(
     try {
       const position = calculateHintPositionWithCoordinateSystem(
         hint.word,
-        config.hint_position,
-        config.debug_coordinates,
+        config.hintPosition,
+        config.debugCoordinates,
       );
 
       let pattern: string;
@@ -2457,7 +2468,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
   try {
     // 入力タイムアウト設定（設定可能）
-    const inputTimeout = config.motion_timeout || 2000;
+    const inputTimeout = config.motionTimeout || 2000;
 
     // プロンプトを表示
     // await denops.cmd("echo 'Select hint: '");
@@ -2527,12 +2538,12 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     }
 
     // 現在のキー設定に数字が含まれているかチェック
-    const allKeys = [...(config.single_char_keys || []), ...(config.multi_char_keys || [])];
+    const allKeys = [...(config.singleCharKeys || []), ...(config.multiCharKeys || [])];
     const hasNumbers = allKeys.some((k) => /^\d$/.test(k));
 
     // 有効な文字範囲チェック（use_numbersがtrueまたはキー設定に数字が含まれていれば数字を許可）
-    const validPattern = (config.use_numbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
-    const errorMessage = (config.use_numbers || hasNumbers)
+    const validPattern = (config.useNumbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
+    const errorMessage = (config.useNumbers || hasNumbers)
       ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
       : "Please use alphabetic characters only";
 
@@ -2566,9 +2577,9 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
     const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
 
-    if (config.use_hint_groups) {
+    if (config.useHintGroups) {
       // デフォルトのキー設定
-      const singleOnlyKeys = config.single_char_keys ||
+      const singleOnlyKeys = config.singleCharKeys ||
         [
           "A",
           "S",
@@ -2592,7 +2603,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           "8",
           "9",
         ];
-      const multiOnlyKeys = config.multi_char_keys ||
+      const multiOnlyKeys = config.multiCharKeys ||
         ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
       // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
@@ -2603,7 +2614,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
             singleCharTarget.word.byteCol || singleCharTarget.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
-          if (config.debug_mode) {
+          if (config.debugMode) {
             console.log(`[hellshake-yano:DEBUG] Jump to single char hint:`);
             console.log(`  - text: "${singleCharTarget.word.text}"`);
             console.log(`  - line: ${singleCharTarget.word.line}`);
@@ -2638,7 +2649,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
             singleCharTarget.word.byteCol || singleCharTarget.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
-          if (config.debug_mode) {
+          if (config.debugMode) {
             console.log(`[hellshake-yano:DEBUG] Jump to single char target (Option 3):`);
             console.log(`  - text: "${singleCharTarget.word.text}"`);
             console.log(`  - line: ${singleCharTarget.word.line}`);
@@ -2661,7 +2672,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     // 候補のヒントをハイライト表示（UX改善）
     // Option 3: 1文字ヒントが存在する場合はハイライト処理をスキップ
-    const shouldHighlight = config.highlight_selected && !singleCharTarget;
+    const shouldHighlight = config.highlightSelected && !singleCharTarget;
 
     if (shouldHighlight) {
       // 非同期版を使用してメインスレッドをブロックしない
@@ -2674,8 +2685,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     let secondChar: number;
 
-    if (config.use_hint_groups) {
-      const multiOnlyKeys = config.multi_char_keys ||
+    if (config.useHintGroups) {
+      const multiOnlyKeys = config.multiCharKeys ||
         ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
       if (multiOnlyKeys.includes(inputChar)) {
@@ -2721,7 +2732,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
             target.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
-          if (config.debug_mode) {
+          if (config.debugMode) {
             console.log(`[hellshake-yano:DEBUG] Auto-select single candidate:`);
             console.log(`  - text: "${target.word.text}"`);
             console.log(`  - line: ${target.word.line}`);
@@ -2745,7 +2756,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
             singleCharTarget.word.byteCol || singleCharTarget.word.col;
 
           // デバッグログ: ジャンプ位置の詳細
-          if (config.debug_mode) {
+          if (config.debugMode) {
             console.log(`[hellshake-yano:DEBUG] Timeout select single char hint:`);
             console.log(`  - text: "${singleCharTarget.word.text}"`);
             console.log(`  - line: ${singleCharTarget.word.line}`);
@@ -2790,8 +2801,8 @@ async function waitForUserInput(denops: Denops): Promise<void> {
     }
 
     // 有効な文字範囲チェック（数字対応）
-    const secondValidPattern = config.use_numbers ? /[A-Z0-9]/ : /[A-Z]/;
-    const secondErrorMessage = config.use_numbers
+    const secondValidPattern = config.useNumbers ? /[A-Z0-9]/ : /[A-Z]/;
+    const secondErrorMessage = config.useNumbers
       ? "Second character must be alphabetic or numeric"
       : "Second character must be alphabetic";
 
@@ -2814,7 +2825,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
           target.word.col;
 
         // デバッグログ: ジャンプ位置の詳細
-        if (config.debug_mode) {
+        if (config.debugMode) {
           console.log(`[hellshake-yano:DEBUG] Jump to hint "${fullHint}":`);
           console.log(`  - text: "${target.word.text}"`);
           console.log(`  - line: ${target.word.line}`);
@@ -2883,147 +2894,9 @@ async function waitForUserInput(denops: Denops): Promise<void> {
  * const result = validateUnifiedConfig({ motionCount: -1 });
  */
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // motion_count の検証
-  if (cfg.motion_count !== undefined) {
-    if (
-      typeof cfg.motion_count !== "number" || cfg.motion_count < 1 ||
-      !Number.isInteger(cfg.motion_count)
-    ) {
-      errors.push("motion_count must be a positive integer");
-    }
-  }
-
-  // motion_timeout の検証
-  if (cfg.motion_timeout !== undefined) {
-    if (typeof cfg.motion_timeout !== "number" || cfg.motion_timeout < 100) {
-      errors.push("motion_timeout must be at least 100ms");
-    }
-  }
-
-  // hint_position の検証
-  if (cfg.hint_position !== undefined) {
-    const validPositions = ["start", "end", "overlay"];
-    if (!validPositions.includes(cfg.hint_position)) {
-      errors.push(`hint_position must be one of: ${validPositions.join(", ")}`);
-    }
-  }
-
-  // markers の検証
-  if (cfg.markers !== undefined) {
-    if (!Array.isArray(cfg.markers)) {
-      errors.push("markers must be an array");
-    } else if (cfg.markers.length === 0) {
-      errors.push("markers must not be empty");
-    } else if (!cfg.markers.every((m: any) => typeof m === "string" && m.length > 0)) {
-      errors.push("markers must be an array of strings");
-    }
-  }
-
-  // use_numbers の検証
-  if (cfg.use_numbers !== undefined) {
-    if (typeof cfg.use_numbers !== "boolean") {
-      errors.push("use_numbers must be a boolean");
-    }
-  }
-
-  // maxHints の検証
-  if (cfg.maxHints !== undefined) {
-    if (typeof cfg.maxHints !== "number" || cfg.maxHints < 1 || !Number.isInteger(cfg.maxHints)) {
-      errors.push("maxHints must be a positive integer");
-    }
-  }
-
-  // debounceDelay の検証
-  if (cfg.debounceDelay !== undefined) {
-    if (typeof cfg.debounceDelay !== "number" || cfg.debounceDelay < 0) {
-      errors.push("debounceDelay must be a non-negative number");
-    }
-  }
-
-  // highlight_selected の検証
-  if (cfg.highlight_selected !== undefined) {
-    if (typeof cfg.highlight_selected !== "boolean") {
-      errors.push("highlight_selected must be a boolean");
-    }
-  }
-
-  // debug_coordinates の検証
-  if (cfg.debug_coordinates !== undefined) {
-    if (typeof cfg.debug_coordinates !== "boolean") {
-      errors.push("debug_coordinates must be a boolean");
-    }
-  }
-
-  // trigger_on_hjkl の検証
-  if (cfg.trigger_on_hjkl !== undefined) {
-    if (typeof cfg.trigger_on_hjkl !== "boolean") {
-      errors.push("trigger_on_hjkl must be a boolean");
-    }
-  }
-
-  // counted_motions の検証
-  if (cfg.counted_motions !== undefined) {
-    if (!Array.isArray(cfg.counted_motions)) {
-      errors.push("counted_motions must be an array");
-    } else {
-      for (const key of cfg.counted_motions) {
-        if (typeof key !== "string" || key.length !== 1) {
-          errors.push(
-            `counted_motions contains invalid key: ${key} (must be single character strings)`,
-          );
-          break;
-        }
-      }
-    }
-  }
-
-  // enabled の検証
-  if (cfg.enabled !== undefined) {
-    if (typeof cfg.enabled !== "boolean") {
-      errors.push("enabled must be a boolean");
-    }
-  }
-
-  if (cfg.use_japanese !== undefined) {
-    if (typeof cfg.use_japanese !== "boolean") {
-      errors.push("use_japanese must be a boolean");
-    }
-  }
-
-  if (cfg.highlight_hint_marker !== undefined) {
-    // null チェック
-    if (cfg.highlight_hint_marker === null) {
-      errors.push("highlight_hint_marker must be a string");
-    } else {
-      const markerResult = validateHighlightColor(cfg.highlight_hint_marker);
-      if (!markerResult.valid) {
-        errors.push(...markerResult.errors);
-      }
-    }
-  }
-
-  if (cfg.highlight_hint_marker_current !== undefined) {
-    // null チェック
-    if (cfg.highlight_hint_marker_current === null) {
-      errors.push("highlight_hint_marker_current must be a string");
-    } else {
-      const currentResult = validateHighlightColor(cfg.highlight_hint_marker_current);
-      if (!currentResult.valid) {
-        errors.push(
-          ...currentResult.errors.map((e) =>
-            e.replace("highlight_hint_marker", "highlight_hint_marker_current")
-          ),
-        );
-      }
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+  // Process2 Sub5: config.tsのvalidateConfig()に委譲
+  // config.tsのvalidateConfigは型チェックとUnifiedConfig変換を適切に処理する
+  return validateConfigFromConfigModule(cfg);
 }
 
 /**
@@ -3035,28 +2908,12 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
  * @example
  * // デフォルト設定を取得して一部を変更
  * const config = getDefaultConfig();
- * config.motion_count = 5;
+ * config.motionCount = 5;
  */
 export function getDefaultConfig(): Config {
-  return {
-    markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-    motion_count: 3,
-    motion_timeout: 2000,
-    hint_position: "start",
-    trigger_on_hjkl: true,
-    counted_motions: [],
-    enabled: true,
-    maxHints: 336,
-    debounceDelay: 50,
-    use_numbers: false,
-    highlight_selected: false,
-    debug_coordinates: false, // デフォルトでデバッグログは無効
-    highlight_hint_marker: "DiffAdd",
-    highlight_hint_marker_current: "DiffText",
-    // process1追加: キー別motion_count設定のデフォルト値
-    default_motion_count: 3, // グローバルなデフォルト値
-    // per_key_motion_countはデフォルトでは未定義（ユーザーが必要に応じて設定）
-  };
+  // Process2 Sub5: config.tsのgetDefaultUnifiedConfig()に委譲し、Config型に変換
+  const unifiedConfig = getDefaultUnifiedConfig();
+  return fromUnifiedConfig(unifiedConfig);
 }
 
 /**
@@ -3326,25 +3183,25 @@ export function generateHighlightCommand(
  */
 export function validateHighlightConfig(
   config: {
-    highlight_hint_marker?: string | HighlightColor;
-    highlight_hint_marker_current?: string | HighlightColor;
+    highlightHintMarker?: string | HighlightColor;
+    highlightHintMarkerCurrent?: string | HighlightColor;
   },
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // highlight_hint_markerの検証
-  if (config.highlight_hint_marker !== undefined) {
-    const markerResult = validateHighlightColor(config.highlight_hint_marker);
+  // highlightHintMarkerの検証
+  if (config.highlightHintMarker !== undefined) {
+    const markerResult = validateHighlightColor(config.highlightHintMarker);
     if (!markerResult.valid) {
-      errors.push(...markerResult.errors.map((e) => `highlight_hint_marker: ${e}`));
+      errors.push(...markerResult.errors.map((e) => `highlightHintMarker: ${e}`));
     }
   }
 
-  // highlight_hint_marker_currentの検証
-  if (config.highlight_hint_marker_current !== undefined) {
-    const currentResult = validateHighlightColor(config.highlight_hint_marker_current);
+  // highlightHintMarkerCurrentの検証
+  if (config.highlightHintMarkerCurrent !== undefined) {
+    const currentResult = validateHighlightColor(config.highlightHintMarkerCurrent);
     if (!currentResult.valid) {
-      errors.push(...currentResult.errors.map((e) => `highlight_hint_marker_current: ${e}`));
+      errors.push(...currentResult.errors.map((e) => `highlightHintMarkerCurrent: ${e}`));
     }
   }
 
@@ -3370,7 +3227,7 @@ async function initializeDictionarySystem(denops: Denops): Promise<void> {
     const dictConfig = await vimConfigBridge.getConfig(denops);
     await dictionaryLoader.loadUserDictionary(dictConfig);
 
-    if (config.debug_mode) {
+    if (config.debugMode) {
       console.log("[hellshake-yano] Dictionary system initialized");
     }
   } catch (error) {
@@ -3427,7 +3284,7 @@ export async function reloadDictionary(denops: Denops): Promise<void> {
 
     // Update word detection manager with new dictionary
     const manager = getWordDetectionManager({
-      enable_tinysegmenter: config.use_japanese !== false,
+      enable_tinysegmenter: config.useJapanese !== false,
       // Note: dictionary is handled internally by the manager
     });
 

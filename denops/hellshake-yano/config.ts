@@ -424,7 +424,7 @@ export interface UnifiedConfig {
   /** キーリピートと判定する時間の閾値（ミリ秒） */
   keyRepeatThreshold: number;
   /** 日本語を含む単語検出を行うか */
-  useJapanese?: boolean;
+  useJapanese: boolean;
   /** 単語検出アルゴリズム */
   wordDetectionStrategy: "regex" | "tinysegmenter" | "hybrid";
   /** TinySegmenter（日本語形態素解析）を有効にするか */
@@ -445,8 +445,16 @@ export interface UnifiedConfig {
   defaultMinWordLength: number;
   /** キー別のモーション回数設定（オプション） */
   perKeyMotionCount?: Record<string, number>;
-  /** デフォルトのモーション回数（オプション） */
-  defaultMotionCount?: number;
+  /** デフォルトのモーション回数 */
+  defaultMotionCount: number;
+  /** 内部使用：現在のキーコンテキスト（オプション） */
+  currentKeyContext?: string;
+
+  // Debug settings (2 properties)
+  /** デバッグモードの有効/無効 */
+  debugMode: boolean;
+  /** パフォーマンスログの出力有効/無効 */
+  performanceLog: boolean;
 }
 
 /**
@@ -476,8 +484,8 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
   countedMotions: [],
   maxHints: 336,
   debounceDelay: 50,
-  useNumbers: true,
-  highlightSelected: true,
+  useNumbers: false,
+  highlightSelected: false,
   debugCoordinates: false,
   singleCharKeys: [
     "A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M",
@@ -494,7 +502,7 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
   highlightHintMarkerCurrent: "DiffText",
   suppressOnKeyRepeat: true,
   keyRepeatThreshold: 50,
-  useJapanese: false, // Explicit default for Japanese support
+  useJapanese: false,
   wordDetectionStrategy: "hybrid",
   enableTinySegmenter: true,
   segmenterThreshold: 4,
@@ -507,6 +515,10 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
   defaultMinWordLength: 3,
   perKeyMotionCount: {}, // Default empty record
   defaultMotionCount: 3, // Default motion count for keys not specified
+
+  // Debug settings
+  debugMode: false,
+  performanceLog: false,
 };
 
 /**
@@ -664,6 +676,37 @@ export function createMinimalConfig(partialConfig: Partial<UnifiedConfig> = {}):
  * ```
  */
 /**
+ * ハイライトグループ名の検証関数
+ * Vimのハイライトグループ名として有効かチェックします。
+ *
+ * @param {string} name 検証するハイライトグループ名
+ * @returns {boolean} 有効な場合true
+ */
+export function isValidHighlightGroup(name: string): boolean {
+  // 空文字列は無効
+  if (!name || name === '') {
+    return false;
+  }
+
+  // 長さチェック（100文字以内）
+  if (name.length > 100) {
+    return false;
+  }
+
+  // 数字で始まる場合は無効
+  if (/^[0-9]/.test(name)) {
+    return false;
+  }
+
+  // 特殊文字を含む場合は無効（英数字とアンダースコアのみ許可）
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * UnifiedConfig用統合バリデーション関数 (Process2 Sub3)
  * TDD Red-Green-Refactor方式で実装された単一バリデーション関数
  * camelCase形式のエラーメッセージで統一されたバリデーション
@@ -690,35 +733,42 @@ export function validateUnifiedConfig(
 
   // markers - 配列の検証
   if (config.markers !== undefined) {
-    if (!Array.isArray(config.markers) || config.markers.length === 0) {
-      errors.push("markers must be a non-empty array");
+    if (!Array.isArray(config.markers)) {
+      errors.push("markers must be an array");
+    } else if (config.markers.length === 0) {
+      errors.push("markers must not be empty");
     } else {
-      const uniqueMarkers = new Set(config.markers);
-      if (uniqueMarkers.size !== config.markers.length) {
-        errors.push("markers must contain unique values");
+      // すべて文字列かチェック
+      if (!config.markers.every(m => typeof m === "string")) {
+        errors.push("markers must be an array of strings");
+      } else {
+        const uniqueMarkers = new Set(config.markers);
+        if (uniqueMarkers.size !== config.markers.length) {
+          errors.push("markers must contain unique values");
+        }
       }
     }
   }
 
   // motionCount - 正の整数
   if (config.motionCount !== undefined) {
-    if (!Number.isInteger(config.motionCount) || config.motionCount <= 0) {
+    if (config.motionCount === null || !Number.isInteger(config.motionCount) || config.motionCount <= 0) {
       errors.push("motionCount must be a positive integer");
     }
   }
 
-  // motionTimeout - 正の整数
+  // motionTimeout - 100ms 以上の整数
   if (config.motionTimeout !== undefined) {
-    if (!Number.isInteger(config.motionTimeout) || config.motionTimeout <= 0) {
-      errors.push("motionTimeout must be a positive integer");
+    if (!Number.isInteger(config.motionTimeout) || config.motionTimeout < 100) {
+      errors.push("motionTimeout must be at least 100ms");
     }
   }
 
   // hintPosition - 列挙値
   if (config.hintPosition !== undefined) {
-    const validPositions = ["start", "end", "same"];
-    if (!validPositions.includes(config.hintPosition)) {
-      errors.push(`hintPosition must be one of: ${validPositions.join(", ")}`);
+    const validPositions = ["start", "end", "overlay", "same"];
+    if (config.hintPosition === null || !validPositions.includes(config.hintPosition)) {
+      errors.push("hintPosition must be one of: start, end, overlay");
     }
   }
 
@@ -745,8 +795,13 @@ export function validateUnifiedConfig(
   // debounceDelay - 非負整数（0を許可）
   if (config.debounceDelay !== undefined) {
     if (!Number.isInteger(config.debounceDelay) || config.debounceDelay < 0) {
-      errors.push("debounceDelay must be a non-negative integer");
+      errors.push("debounceDelay must be a non-negative number");
     }
+  }
+
+  // useNumbers - boolean
+  if (config.useNumbers !== undefined && typeof config.useNumbers !== "boolean") {
+    errors.push("useNumbers must be a boolean");
   }
 
   // debugCoordinates - boolean（型で保証）
@@ -762,7 +817,44 @@ export function validateUnifiedConfig(
   }
 
   // useHintGroups - boolean（型で保証）
-  // highlightHintMarker, highlightHintMarkerCurrent - string | HighlightColor（型で保証）
+
+  // highlightHintMarker - ハイライトグループ名の検証
+  if (config.highlightHintMarker !== undefined) {
+    if (typeof config.highlightHintMarker === 'string') {
+      if (config.highlightHintMarker === '') {
+        errors.push("highlightHintMarker must be a non-empty string");
+      } else if (!isValidHighlightGroup(config.highlightHintMarker)) {
+        if (config.highlightHintMarker.length > 100) {
+          errors.push("highlightHintMarker must be 100 characters or less");
+        } else if (/^[0-9]/.test(config.highlightHintMarker)) {
+          errors.push("highlightHintMarker must start with a letter or underscore");
+        } else {
+          errors.push("highlightHintMarker must contain only alphanumeric characters and underscores");
+        }
+      }
+    } else if (typeof config.highlightHintMarker !== 'object') {
+      errors.push("highlightHintMarker must be a string or HighlightColor object");
+    }
+  }
+
+  // highlightHintMarkerCurrent - ハイライトグループ名の検証
+  if (config.highlightHintMarkerCurrent !== undefined) {
+    if (typeof config.highlightHintMarkerCurrent === 'string') {
+      if (config.highlightHintMarkerCurrent === '') {
+        errors.push("highlightHintMarkerCurrent must be a non-empty string");
+      } else if (!isValidHighlightGroup(config.highlightHintMarkerCurrent)) {
+        if (config.highlightHintMarkerCurrent.length > 100) {
+          errors.push("highlightHintMarkerCurrent must be 100 characters or less");
+        } else if (/^[0-9]/.test(config.highlightHintMarkerCurrent)) {
+          errors.push("highlightHintMarkerCurrent must start with a letter or underscore");
+        } else {
+          errors.push("highlightHintMarkerCurrent must contain only alphanumeric characters and underscores");
+        }
+      }
+    } else if (typeof config.highlightHintMarkerCurrent !== 'object') {
+      errors.push("highlightHintMarkerCurrent must be a string or HighlightColor object");
+    }
+  }
 
   // Word detection settings validation (7 properties)
   // suppressOnKeyRepeat - boolean（型で保証）
@@ -844,9 +936,97 @@ export function validateUnifiedConfig(
 export function validateConfig(
   config: Partial<Config | CamelCaseConfig>,
 ): { valid: boolean; errors: string[] } {
+  // 入力されたconfigが数値型のhighlight_hint_markerなどを含む場合、
+  // 直接バリデーションする必要がある
+  const errors: string[] = [];
+  const c = config as any;
+
+  // highlight_hint_marker の型チェック
+  if (c.highlight_hint_marker !== undefined) {
+    if (c.highlight_hint_marker === null) {
+      errors.push("highlight_hint_marker cannot be null");
+    } else if (typeof c.highlight_hint_marker === 'number') {
+      errors.push("highlight_hint_marker must be a string or HighlightColor object");
+    } else if (Array.isArray(c.highlight_hint_marker)) {
+      errors.push("highlight_hint_marker must be a string or HighlightColor object");
+    } else if (typeof c.highlight_hint_marker === 'string') {
+      if (c.highlight_hint_marker === '') {
+        errors.push("highlight_hint_marker must be a non-empty string");
+      } else if (!isValidHighlightGroup(c.highlight_hint_marker)) {
+        if (c.highlight_hint_marker.length > 100) {
+          errors.push("highlight_hint_marker must be 100 characters or less");
+        } else if (/^[0-9]/.test(c.highlight_hint_marker)) {
+          errors.push("highlight_hint_marker must start with a letter or underscore");
+        } else {
+          errors.push("highlight_hint_marker must contain only alphanumeric characters and underscores");
+        }
+      }
+    }
+  }
+
+  // highlight_hint_marker_current の型チェック
+  if (c.highlight_hint_marker_current !== undefined) {
+    if (c.highlight_hint_marker_current === null) {
+      errors.push("highlight_hint_marker_current cannot be null");
+    } else if (typeof c.highlight_hint_marker_current === 'number') {
+      errors.push("highlight_hint_marker_current must be a string or HighlightColor object");
+    } else if (Array.isArray(c.highlight_hint_marker_current)) {
+      errors.push("highlight_hint_marker_current must be a string or HighlightColor object");
+    } else if (typeof c.highlight_hint_marker_current === 'string') {
+      if (c.highlight_hint_marker_current === '') {
+        errors.push("highlight_hint_marker_current must be a non-empty string");
+      } else if (!isValidHighlightGroup(c.highlight_hint_marker_current)) {
+        if (c.highlight_hint_marker_current.length > 100) {
+          errors.push("highlight_hint_marker_current must be 100 characters or less");
+        } else if (/^[0-9]/.test(c.highlight_hint_marker_current)) {
+          errors.push("highlight_hint_marker_current must start with a letter or underscore");
+        } else {
+          errors.push("highlight_hint_marker_current must contain only alphanumeric characters and underscores");
+        }
+      }
+    }
+  }
+
+  // 早期エラーがあれば返す
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
   // 旧設定をUnifiedConfigに変換してvalidateUnifiedConfig()に委譲
   const unifiedConfig = toUnifiedConfig(config as any);
-  return validateUnifiedConfig(unifiedConfig);
+  const result = validateUnifiedConfig(unifiedConfig);
+
+  // エラーメッセージをsnake_case形式に変換
+  const convertedErrors = result.errors.map(error => {
+    return error
+      .replace(/highlightHintMarker/g, 'highlight_hint_marker')
+      .replace(/highlightHintMarkerCurrent/g, 'highlight_hint_marker_current')
+      .replace(/motionCount/g, 'motion_count')
+      .replace(/motionTimeout/g, 'motion_timeout')
+      .replace(/hintPosition/g, 'hint_position')
+      .replace(/visualHintPosition/g, 'visual_hint_position')
+      .replace(/triggerOnHjkl/g, 'trigger_on_hjkl')
+      .replace(/countedMotions/g, 'counted_motions')
+      .replace(/useNumbers/g, 'use_numbers')
+      .replace(/highlightSelected/g, 'highlight_selected')
+      .replace(/debugCoordinates/g, 'debug_coordinates')
+      .replace(/singleCharKeys/g, 'single_char_keys')
+      .replace(/multiCharKeys/g, 'multi_char_keys')
+      .replace(/maxSingleCharHints/g, 'max_single_char_hints')
+      .replace(/useHintGroups/g, 'use_hint_groups')
+      .replace(/suppressOnKeyRepeat/g, 'suppress_on_key_repeat')
+      .replace(/keyRepeatThreshold/g, 'key_repeat_threshold')
+      .replace(/useJapanese/g, 'use_japanese')
+      .replace(/wordDetectionStrategy/g, 'word_detection_strategy')
+      .replace(/enableTinySegmenter/g, 'enable_tinysegmenter')
+      .replace(/segmenterThreshold/g, 'segmenter_threshold')
+      .replace(/japaneseMinWordLength/g, 'japanese_min_word_length')
+      .replace(/japaneseMergeParticles/g, 'japanese_merge_particles')
+      .replace(/japaneseMergeThreshold/g, 'japanese_merge_threshold')
+      .replace(/defaultMinWordLength/g, 'default_min_word_length');
+  });
+
+  return { valid: result.valid, errors: convertedErrors };
 }
 
 /**
@@ -883,8 +1063,8 @@ export function getDefaultHierarchicalConfig(): HierarchicalConfig {
       hintPosition: "start",
       visualHintPosition: "end",
       maxHints: 336,
-      highlightSelected: true,
-      useNumbers: true,
+      highlightSelected: false,
+      useNumbers: false,
       singleCharKeys: [
         "A",
         "S",
@@ -914,7 +1094,7 @@ export function getDefaultHierarchicalConfig(): HierarchicalConfig {
       highlightHintMarkerCurrent: "DiffText",
     },
     word: {
-      useJapanese: undefined, // デフォルトは未設定（既存設定と同じ）
+      useJapanese: false,
       detectionStrategy: "hybrid",
       enableTinySegmenter: true,
       segmenterThreshold: 4,
@@ -1638,7 +1818,14 @@ function getConfigValue<T>(
   camelProp: string,
   defaultValue: T
 ): T {
-  return config[snakeProp] ?? config[camelProp] ?? defaultValue;
+  // null の場合は null を返し、undefined の場合のみデフォルト値を使用
+  if (config[snakeProp] !== undefined) {
+    return config[snakeProp];
+  }
+  if (config[camelProp] !== undefined) {
+    return config[camelProp];
+  }
+  return defaultValue;
 }
 
 /**
@@ -1662,8 +1849,8 @@ export function toUnifiedConfig(config: Partial<Config> | Partial<CamelCaseConfi
 
   return {
     // Core settings (6 properties)
-    enabled: c.enabled ?? defaults.enabled,
-    markers: c.markers ?? defaults.markers,
+    enabled: c.enabled !== undefined ? c.enabled : defaults.enabled,
+    markers: c.markers !== undefined ? c.markers : defaults.markers,
     motionCount: getConfigValue(c, "motion_count", "motionCount", defaults.motionCount),
     motionTimeout: getConfigValue(c, "motion_timeout", "motionTimeout", defaults.motionTimeout),
     hintPosition: getConfigValue(c, "hint_position", "hintPosition", defaults.hintPosition),
@@ -1672,8 +1859,8 @@ export function toUnifiedConfig(config: Partial<Config> | Partial<CamelCaseConfi
     // Hint settings (8 properties)
     triggerOnHjkl: getConfigValue(c, "trigger_on_hjkl", "triggerOnHjkl", defaults.triggerOnHjkl),
     countedMotions: getConfigValue(c, "counted_motions", "countedMotions", defaults.countedMotions),
-    maxHints: c.maxHints ?? defaults.maxHints,
-    debounceDelay: c.debounceDelay ?? defaults.debounceDelay,
+    maxHints: c.maxHints !== undefined ? c.maxHints : defaults.maxHints,
+    debounceDelay: c.debounceDelay !== undefined ? c.debounceDelay : defaults.debounceDelay,
     useNumbers: getConfigValue(c, "use_numbers", "useNumbers", defaults.useNumbers),
     highlightSelected: getConfigValue(c, "highlight_selected", "highlightSelected", defaults.highlightSelected),
     debugCoordinates: getConfigValue(c, "debug_coordinates", "debugCoordinates", defaults.debugCoordinates),
@@ -1699,9 +1886,18 @@ export function toUnifiedConfig(config: Partial<Config> | Partial<CamelCaseConfi
     japaneseMergeParticles: getConfigValue(c, "japanese_merge_particles", "japaneseMergeParticles", defaults.japaneseMergeParticles),
     japaneseMergeThreshold: getConfigValue(c, "japanese_merge_threshold", "japaneseMergeThreshold", defaults.japaneseMergeThreshold),
     perKeyMinLength: getConfigValue(c, "per_key_min_length", "perKeyMinLength", defaults.perKeyMinLength),
-    defaultMinWordLength: getConfigValue(c, "default_min_word_length", "defaultMinWordLength", defaults.defaultMinWordLength),
+    defaultMinWordLength: getConfigValue(c, "default_min_word_length", "defaultMinWordLength",
+      c.min_word_length !== undefined ? c.min_word_length : defaults.defaultMinWordLength),
     perKeyMotionCount: getConfigValue(c, "per_key_motion_count", "perKeyMotionCount", defaults.perKeyMotionCount),
-    defaultMotionCount: getConfigValue(c, "default_motion_count", "defaultMotionCount", defaults.defaultMotionCount),
+    defaultMotionCount: getConfigValue(c, "default_motion_count", "defaultMotionCount",
+      c.default_motion_count === undefined && c.defaultMotionCount === undefined && c.motion_count !== undefined
+        ? c.motion_count
+        : defaults.defaultMotionCount),
+    currentKeyContext: getConfigValue(c, "current_key_context", "currentKeyContext", defaults.currentKeyContext),
+
+    // Debug settings
+    debugMode: getConfigValue(c, "debug_mode", "debugMode", defaults.debugMode),
+    performanceLog: getConfigValue(c, "performance_log", "performanceLog", defaults.performanceLog),
   };
 }
 
@@ -1766,12 +1962,15 @@ export function fromUnifiedConfig(config: Partial<UnifiedConfig> = {}): Config {
     default_min_word_length: config.defaultMinWordLength ?? unifiedDefaults.defaultMinWordLength,
     per_key_motion_count: config.perKeyMotionCount ?? unifiedDefaults.perKeyMotionCount,
     default_motion_count: config.defaultMotionCount ?? unifiedDefaults.defaultMotionCount,
+    current_key_context: config.currentKeyContext ?? unifiedDefaults.currentKeyContext,
+
+    // Debug settings
+    debug_mode: config.debugMode ?? unifiedDefaults.debugMode,
+    performance_log: config.performanceLog ?? unifiedDefaults.performanceLog,
 
     // Legacy compatibility (後方互換性のため)
     min_word_length: config.defaultMinWordLength ?? unifiedDefaults.defaultMinWordLength,
     enable: config.enabled ?? unifiedDefaults.enabled,
     key_repeat_reset_delay: 300, // デフォルト値を直接設定
-    debug_mode: false, // デフォルト値を直接設定
-    performance_log: false, // デフォルト値を直接設定
   };
 }

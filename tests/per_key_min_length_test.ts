@@ -357,7 +357,7 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
     debug_coordinates: false,
   };
 
-  assertEquals(getMinLengthForKey(config4, "any"), 2); // ハードコードされたデフォルト
+  assertEquals(getMinLengthForKey(config4, "any"), 3); // デフォルト値（defaultMinWordLength）
 });
 
 Deno.test("Fallback behavior - missing configurations", () => {

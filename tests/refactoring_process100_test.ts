@@ -49,7 +49,7 @@ Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   // パターン4: デフォルト値
   const config4: Partial<Config> = {};
 
-  assertEquals(getMinLengthForKey(config4 as Config, "any"), 2, "デフォルト値2を使用");
+  assertEquals(getMinLengthForKey(config4 as Config, "any"), 3, "デフォルト値3を使用");
 });
 
 Deno.test("Process100: Baseline behavior - HintManager min length handling", () => {

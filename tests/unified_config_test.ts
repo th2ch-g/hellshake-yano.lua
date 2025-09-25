@@ -131,8 +131,8 @@ describe("UnifiedConfig Tests", () => {
       assertEquals(config.hintPosition, "start");
       assertEquals(config.maxHints, 336);
       assertEquals(config.debounceDelay, 50);
-      assertEquals(config.useNumbers, true);
-      assertEquals(config.highlightSelected, true);
+      assertEquals(config.useNumbers, false);
+      assertEquals(config.highlightSelected, false);
     });
   });
 

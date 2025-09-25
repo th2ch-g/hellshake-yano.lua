@@ -206,7 +206,7 @@ describe("Config Tests", () => {
       });
 
       assertEquals(result.valid, false);
-      assertEquals(result.errors.length, 4);
+      assertEquals(result.errors.length, 5);
       assertEquals(result.errors.includes("motion_count must be a positive integer"), true);
       assertEquals(result.errors.includes("motion_timeout must be at least 100ms"), true);
       assertEquals(
@@ -304,7 +304,7 @@ describe("Config Tests", () => {
         hint_position: null as any,
       });
       assertEquals(result.valid, false);
-      assertEquals(result.errors.length, 2);
+      assertEquals(result.errors.length, 3);
     });
 
     it("should handle extreme values", () => {

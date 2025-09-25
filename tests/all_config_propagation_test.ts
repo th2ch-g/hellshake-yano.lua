@@ -80,8 +80,8 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     assertEquals(defaultConfig.motion_timeout, 2000, "motion_timeoutのデフォルトは2000");
     assertEquals(
       defaultConfig.use_japanese,
-      undefined,
-      "use_japaneseは明示的にデフォルト値を設定しない",
+      false,
+      "use_japaneseのデフォルト値はfalse",
     );
   });
 

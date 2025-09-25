@@ -19,8 +19,8 @@ import {
 
 Deno.test("HighlightColor fg/bg - 色名指定のテスト", () => {
   const config = {
-    highlight_hint_marker: { fg: "Red", bg: "Blue" },
-    highlight_hint_marker_current: { fg: "Yellow", bg: "Black" },
+    highlightHintMarker: { fg: "Red", bg: "Blue" },
+    highlightHintMarkerCurrent: { fg: "Yellow", bg: "Black" },
   };
 
   const result = validateHighlightConfig(config);
@@ -30,8 +30,8 @@ Deno.test("HighlightColor fg/bg - 色名指定のテスト", () => {
 
 Deno.test("HighlightColor fg/bg - 16進数色指定のテスト", () => {
   const config = {
-    highlight_hint_marker: { fg: "#ff0000", bg: "#0000ff" },
-    highlight_hint_marker_current: { fg: "#ffff00", bg: "#000000" },
+    highlightHintMarker: { fg: "#ff0000", bg: "#0000ff" },
+    highlightHintMarkerCurrent: { fg: "#ffff00", bg: "#000000" },
   };
 
   const result = validateHighlightConfig(config);
@@ -42,8 +42,8 @@ Deno.test("HighlightColor fg/bg - 16進数色指定のテスト", () => {
 Deno.test("HighlightColor fg/bg - 後方互換性のテスト", () => {
   // 既存のハイライトグループ名指定も動作すべき
   const config = {
-    highlight_hint_marker: "Search",
-    highlight_hint_marker_current: "IncSearch",
+    highlightHintMarker: "Search",
+    highlightHintMarkerCurrent: "IncSearch",
   };
 
   const result = validateHighlightConfig(config);
@@ -54,8 +54,8 @@ Deno.test("HighlightColor fg/bg - 後方互換性のテスト", () => {
 Deno.test("HighlightColor fg/bg - 混在設定のテスト", () => {
   // 一方はオブジェクト、もう一方は文字列
   const config = {
-    highlight_hint_marker: { fg: "Green", bg: "NONE" },
-    highlight_hint_marker_current: "IncSearch",
+    highlightHintMarker: { fg: "Green", bg: "NONE" },
+    highlightHintMarkerCurrent: "IncSearch",
   };
 
   const result = validateHighlightConfig(config);
