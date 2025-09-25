@@ -11,6 +11,7 @@ import {
   getWordDisplayEndCol,
 } from "./hint-utils.ts";
 import { getDisplayWidth } from "./utils/display.ts";
+import { UnifiedCache, CacheType } from "./cache.ts";
 
 // Re-export types for backward compatibility
 export type { HintKeyConfig, HintMapping, HintPosition };
@@ -21,12 +22,40 @@ export type { HintKeyConfig, HintMapping, HintPosition };
 // HintPositionWithCoordinateSystem interface moved to types.ts for consolidation
 // Use: import type { HintPositionWithCoordinateSystem } from "./types.ts";
 
-// パフォーマンス最適化用のキャッシュ
-let hintCache = new Map<string, string[]>();
-let assignmentCacheNormal = new Map<string, Word[]>();
-let assignmentCacheVisual = new Map<string, Word[]>();
-let assignmentCacheOther = new Map<string, Word[]>();
-const CACHE_MAX_SIZE = 100; // キャッシュの最大サイズ
+/**
+ * パフォーマンス最適化用の統一キャッシュシステム
+ *
+ * ## UnifiedCache統合による改善点
+ * - 4つの独立したMapキャッシュを1つのUnifiedCacheに統合
+ * - LRUアルゴリズムによる効率的なメモリ管理
+ * - 型安全なキャッシュアクセスとパフォーマンス監視
+ * - モード別キャッシュ分離機能を完全に保持
+ *
+ * @version 1.0.0 - UnifiedCache統合完了
+ * @see {@link UnifiedCache} - 統一キャッシュシステム
+ * @see {@link CacheType} - キャッシュタイプ一覧
+ */
+const unifiedCache = UnifiedCache.getInstance();
+
+/**
+ * hint.ts専用キャッシュインスタンス
+ * UnifiedCacheから型安全にLRUCacheインスタンスを取得
+ *
+ * 各キャッシュの用途:
+ * - hintCache: ヒント生成結果のキャッシュ（500エントリ上限）
+ * - assignmentCache*: モード別ヒント割り当てキャッシュ（各100エントリ上限）
+ */
+const hintCache = unifiedCache.getCache<string, string[]>(CacheType.HINTS);
+const assignmentCacheNormal = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_NORMAL);
+const assignmentCacheVisual = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
+const assignmentCacheOther = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
+
+/**
+ * レガシー互換性のためのキャッシュサイズ制限
+ * @deprecated UnifiedCacheが自動的にサイズ管理するため不要
+ * @todo 将来のバージョンで削除予定
+ */
+const CACHE_MAX_SIZE = 100;
 
 /**
  * バッチ処理を開始する単語数の閾値
@@ -50,11 +79,11 @@ import { getByteLength } from "./utils/encoding.ts";
 /**
  * モードに応じた割り当てキャッシュを取得
  * @param mode - 現在のエディタモード（"normal", "visual", その他）
- * @returns Map<string, Word[]> 指定されたモードのキャッシュマップ
+ * @returns LRUCache<string, Word[]> 指定されたモードのキャッシュ
  * @since 1.0.0
  * @internal
  */
-function getAssignmentCacheForMode(mode: string): Map<string, Word[]> {
+function getAssignmentCacheForMode(mode: string) {
   if (mode === "visual") {
     return assignmentCacheVisual;
   }
@@ -200,18 +229,20 @@ function createSingleHintMapping(
 
 /**
  * 割り当てキャッシュに保存
- * @param cache - 保存先のcacheマップ
+ * @param cache - 保存先のUnifiedCache LRUCacheインスタンス
  * @param cacheKey - cacheエントリのキー
  * @param sortedWords - cacheする並び替え済み単語配列
  * @since 1.0.0
  * @internal
  */
 function storeAssignmentCache(
-  cache: Map<string, Word[]>,
+  cache: ReturnType<typeof unifiedCache.getCache>,
   cacheKey: string,
   sortedWords: Word[],
 ): void {
-  if (cache.size >= CACHE_MAX_SIZE) {
+  // UnifiedCacheのLRUCacheは自動的にサイズ管理を行うため、手動削除は不要
+  // ただし、互換性のため既存ロジックを保持
+  if (cache.size() >= CACHE_MAX_SIZE) {
     const firstKey = cache.keys().next().value;
     if (firstKey !== undefined) {
       cache.delete(firstKey);
@@ -267,7 +298,7 @@ export function generateHints(wordCount: number, markers?: string[], maxHints?: 
   }
 
   // キャッシュに保存（サイズ制限付き）
-  if (hintCache.size >= CACHE_MAX_SIZE) {
+  if (hintCache.size() >= CACHE_MAX_SIZE) {
     // 最古のエントリを削除
     const firstKey = hintCache.keys().next().value;
     if (firstKey !== undefined) {
@@ -731,9 +762,52 @@ export function clearHintCache(): void {
  */
 export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSize: number } {
   return {
-    hintCacheSize: hintCache.size,
-    assignmentCacheSize: assignmentCacheNormal.size + assignmentCacheVisual.size +
-      assignmentCacheOther.size,
+    hintCacheSize: hintCache.size(),
+    assignmentCacheSize: assignmentCacheNormal.size() + assignmentCacheVisual.size() +
+      assignmentCacheOther.size(),
+  };
+}
+
+/**
+ * UnifiedCacheを使用したhintシステムの詳細統計情報を取得
+ * @returns UnifiedCacheからの詳細な統計情報とパフォーマンス指標
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const stats = getUnifiedCacheStats();
+ * console.log(`HINTS ヒット率: ${stats.HINTS.hitRate}`);
+ * console.log(`キャッシュ総サイズ: ${stats.totalSize}`);
+ * ```
+ */
+export function getUnifiedCacheStats() {
+  const allStats = unifiedCache.getAllStats();
+  const hintRelatedTypes = [
+    'HINTS',
+    'HINT_ASSIGNMENT_NORMAL',
+    'HINT_ASSIGNMENT_VISUAL',
+    'HINT_ASSIGNMENT_OTHER'
+  ];
+
+  const hintStats: Record<string, any> = {};
+  let totalSize = 0;
+  let totalHits = 0;
+  let totalMisses = 0;
+
+  for (const type of hintRelatedTypes) {
+    if (allStats[type]) {
+      hintStats[type] = allStats[type];
+      totalSize += allStats[type].size;
+      totalHits += allStats[type].hits;
+      totalMisses += allStats[type].misses;
+    }
+  }
+
+  return {
+    ...hintStats,
+    totalSize,
+    totalHits,
+    totalMisses,
+    overallHitRate: totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0
   };
 }
 

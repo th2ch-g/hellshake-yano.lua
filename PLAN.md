@@ -110,37 +110,37 @@ export interface UnifiedConfig {
 #### sub1 統一キャッシュクラスの作成と基盤整備
 @target: denops/hellshake-yano/cache.ts
 @ref: denops/hellshake-yano/utils/cache.ts
-- [ ] CacheType列挙型を定義（11種類：WORDS、HINTS、DISPLAY、ANALYSIS、TEMP、HINT_ASSIGNMENT_NORMAL/VISUAL/OTHER、LANGUAGE_RULES、SYNTAX_CONTEXT、DICTIONARY）
-- [ ] UnifiedCacheクラスのスケルトンを作成
-- [ ] シングルトンパターンを実装
-- [ ] 各CacheTypeに対応するLRUCacheインスタンスを初期化（適切なサイズ設定）
-- [ ] `getCache(type: CacheType)`メソッドを実装
-- [ ] 型安全なジェネリックインターフェースを定義
-- [ ] `getAllStats()`メソッドを実装（全キャッシュの統計情報取得）
-- [ ] `clearAll()`メソッドを実装（全キャッシュのクリア）
-- [ ] `clearByType(type: CacheType)`メソッドを実装（特定タイプのクリア）
-- [ ] `deno check denops/hellshake-yano/cache.ts`でコンパイルエラーなし
-- [ ] `tests/unified_cache_test.ts`を作成
-- [ ] 各キャッシュタイプの独立性をテスト
-- [ ] シングルトン動作のテスト
-- [ ] 統計機能のテスト
-- [ ] `deno test tests/unified_cache_test.ts`でテストが全てパス
+- [x] CacheType列挙型を定義（11種類：WORDS、HINTS、DISPLAY、ANALYSIS、TEMP、HINT_ASSIGNMENT_NORMAL/VISUAL/OTHER、LANGUAGE_RULES、SYNTAX_CONTEXT、DICTIONARY）
+- [x] UnifiedCacheクラスのスケルトンを作成
+- [x] シングルトンパターンを実装
+- [x] 各CacheTypeに対応するLRUCacheインスタンスを初期化（適切なサイズ設定）
+- [x] `getCache(type: CacheType)`メソッドを実装
+- [x] 型安全なジェネリックインターフェースを定義
+- [x] `getAllStats()`メソッドを実装（全キャッシュの統計情報取得）
+- [x] `clearAll()`メソッドを実装（全キャッシュのクリア）
+- [x] `clearByType(type: CacheType)`メソッドを実装（特定タイプのクリア）
+- [x] `deno check denops/hellshake-yano/cache.ts`でコンパイルエラーなし
+- [x] `tests/unified_cache_test.ts`を作成
+- [x] 各キャッシュタイプの独立性をテスト
+- [x] シングルトン動作のテスト
+- [x] 統計機能のテスト
+- [x] `deno test tests/unified_cache_test.ts`でテストが全てパス
 
 #### sub2 hint.tsのキャッシュ統合（4個）
 @target: denops/hellshake-yano/hint.ts
 @ref: denops/hellshake-yano/cache.ts
-- [ ] UnifiedCacheをインポート
-- [ ] `hintCache`をUnifiedCache.HINTS に置き換え
-- [ ] `assignmentCacheNormal`をUnifiedCache.HINT_ASSIGNMENT_NORMALに置き換え
-- [ ] `assignmentCacheVisual`をUnifiedCache.HINT_ASSIGNMENT_VISUALに置き換え
-- [ ] `assignmentCacheOther`をUnifiedCache.HINT_ASSIGNMENT_OTHERに置き換え
-- [ ] getAssignmentCacheForMode関数をUnifiedCache利用に更新
-- [ ] Map特有のメソッド（size、clear等）の互換性を確保
-- [ ] `deno check denops/hellshake-yano/hint.ts`でコンパイルエラーなし
-- [ ] `deno test tests/hint.test.ts`で既存テストがパス
-- [ ] `deno test tests/hint_assignment_cache_separation_test.ts`でモード分離テストがパス
-- [ ] `deno test tests/hint_assignment_test.ts`で全テストがパス
-- [ ] `deno test tests/hint*.ts`で全てのhint関連テストがパス
+- [x] UnifiedCacheをインポート
+- [x] `hintCache`をUnifiedCache.HINTS に置き換え
+- [x] `assignmentCacheNormal`をUnifiedCache.HINT_ASSIGNMENT_NORMALに置き換え
+- [x] `assignmentCacheVisual`をUnifiedCache.HINT_ASSIGNMENT_VISUALに置き換え
+- [x] `assignmentCacheOther`をUnifiedCache.HINT_ASSIGNMENT_OTHERに置き換え
+- [x] getAssignmentCacheForMode関数をUnifiedCache利用に更新
+- [x] Map特有のメソッド（size、clear等）の互換性を確保
+- [x] `deno check denops/hellshake-yano/hint.ts`でコンパイルエラーなし
+- [x] `deno test tests/hint.test.ts`で既存テストがパス
+- [x] `deno test tests/hint_assignment_cache_separation_test.ts`でモード分離テストがパス
+- [x] `deno test tests/hint_assignment_test.ts`で全テストがパス
+- [x] `deno test tests/hint*.ts`で全てのhint関連テストがパス
 
 #### sub3 lifecycle.tsのキャッシュ統合（2個）
 @target: denops/hellshake-yano/lifecycle.ts
