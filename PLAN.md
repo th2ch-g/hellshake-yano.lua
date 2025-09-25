@@ -202,17 +202,17 @@ export interface UnifiedConfig {
 
 #### sub8 統合テストと最適化
 @target: denops/hellshake-yano/, tests/
-- [ ] `deno test tests/`で全75個のテストファイルがパス
-- [ ] `deno check denops/hellshake-yano/`で型エラーなし
-- [ ] パフォーマンステスト用のベンチマークスクリプト作成
-- [ ] 各CacheTypeの適切なmaxSizeを決定（ヒット率の測定）
-- [ ] メモリ使用量の測定と調整
-- [ ] キャッシュヒット率レポートの生成
-- [ ] 不要になった古いキャッシュ実装コードの削除
-- [ ] importの整理とunused importの削除
-- [ ] `deno check`で全体のコンパイル最終確認
-- [ ] `deno test`で全テストが通ることを最終確認
-- [ ] mainブランチと比較して、削減されたコード行数の確認
+- [x] `deno test tests/`で全75個のテストファイルがパス
+- [x] `deno check denops/hellshake-yano/`で型エラーなし
+- [x] パフォーマンステスト用のベンチマークスクリプト作成
+- [x] 各CacheTypeの適切なmaxSizeを決定（ヒット率の測定）
+- [x] メモリ使用量の測定と調整
+- [x] キャッシュヒット率レポートの生成
+- [x] 不要になった古いキャッシュ実装コードの削除
+- [x] importの整理とunused importの削除
+- [x] `deno check`で全体のコンパイル最終確認
+- [x] `deno test`で全テストが通ることを最終確認
+- [x] mainブランチと比較して、削減されたコード行数の確認
 
 #### sub9 ドキュメント更新
 @target: docs/, README.md

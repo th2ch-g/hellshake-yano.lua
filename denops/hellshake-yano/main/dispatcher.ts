@@ -7,6 +7,18 @@
 
 import type { Denops } from "@denops/std";
 import { type Config } from "../config.ts";
+import { getDefaultConfig } from "../config.ts";
+import { type DebugInfo } from "../types.ts";
+import {
+  collectDebugInfo,
+  clearDebugInfo,
+  detectWordsOptimized,
+  generateHintsOptimized,
+  displayHintsOptimized,
+  displayHintsAsync,
+  hideHints,
+  syncManagerConfig
+} from "../main.ts";
 
 /**
  * 設定更新系のdispatcher

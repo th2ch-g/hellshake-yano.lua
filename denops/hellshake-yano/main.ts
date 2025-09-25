@@ -47,10 +47,12 @@ import { VimConfigBridge } from "./word/dictionary-loader.ts";
 // Import types from the central types module for consistency
 import type {
   Config,
+  DebugInfo,
   HighlightColor,
   HintKeyConfig,
   HintMapping,
   HintPositionWithCoordinateSystem,
+  PerformanceMetrics,
 } from "./types.ts";
 
 // Re-export types for backward compatibility
@@ -153,16 +155,7 @@ const hintsCache = new LRUCache<string, string[]>(50);
  * @interface
  * @since 1.0.0
  */
-interface PerformanceMetrics {
-  /** ヒント表示処理の実行時間リスト（ミリ秒） */
-  showHints: number[];
-  /** ヒント非表示処理の実行時間リスト（ミリ秒） */
-  hideHints: number[];
-  /** 単語検出処理の実行時間リスト（ミリ秒） */
-  wordDetection: number[];
-  /** ヒント生成処理の実行時間リスト（ミリ秒） */
-  hintGeneration: number[];
-}
+// PerformanceMetrics type moved to types.ts
 
 /**
  * パフォーマンス測定結果を格納するグローバルオブジェクト
@@ -183,18 +176,7 @@ let performanceMetrics: PerformanceMetrics = {
  * @interface
  * @since 1.0.0
  */
-interface DebugInfo {
-  /** 現在の設定情報のスナップショット */
-  config: Config;
-  /** ヒントの表示状態フラグ */
-  hintsVisible: boolean;
-  /** 現在表示中のヒントマッピング配列 */
-  currentHints: HintMapping[];
-  /** パフォーマンス測定結果の集計 */
-  metrics: PerformanceMetrics;
-  /** デバッグ情報取得時刻（Unix timestamp） */
-  timestamp: number;
-}
+// DebugInfo type moved to types.ts
 
 /**
  * パフォーマンス測定結果を記録する内部関数
@@ -2683,6 +2665,7 @@ async function waitForUserInput(denops: Denops): Promise<void> {
 
     if (shouldHighlight) {
       // 非同期版を使用してメインスレッドをブロックしない
+      // awaitを使用せず非同期実行することで、ユーザー入力の応答性を維持
       highlightCandidateHintsAsync(denops, inputChar);
     }
 
@@ -3580,3 +3563,6 @@ export async function validateDictionary(denops: Denops): Promise<void> {
     await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
   }
 }
+
+// Export necessary functions for dispatcher and testing
+export { collectDebugInfo, clearDebugInfo, detectWordsOptimized, generateHintsOptimized, displayHintsOptimized, hideHints, syncManagerConfig };

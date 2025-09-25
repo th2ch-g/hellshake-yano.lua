@@ -3,7 +3,7 @@
  */
 
 // Import consolidated types from types.ts
-import type { Config as BaseConfig, HighlightColor } from "./types.ts";
+import type { Config as BaseConfig, HighlightColor, HintPositionType } from "./types.ts";
 
 // Re-export HighlightColor for backward compatibility
 export type { HighlightColor };
@@ -319,7 +319,7 @@ export interface ModernConfig extends CamelCaseConfig {
   // snake_case properties for backward compatibility
   motion_count?: number;
   motion_timeout?: number;
-  hint_position?: string;
+  hint_position?: HintPositionType;
   visual_hint_position?: "start" | "end" | "same";
   trigger_on_hjkl?: boolean;
   counted_motions?: string[];
@@ -378,7 +378,7 @@ export interface Config {
   markers: string[];
   motion_count: number;
   motion_timeout: number;
-  hint_position: string;
+  hint_position: HintPositionType;
   visual_hint_position?: "start" | "end" | "same" | "both"; // Visual Modeでのヒント位置 (デフォルト: 'end')
   trigger_on_hjkl: boolean;
   counted_motions: string[];

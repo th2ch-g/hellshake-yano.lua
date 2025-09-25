@@ -27,10 +27,20 @@ import * as fn from "https://deno.land/x/denops_std@v5.0.1/function/mod.ts";
  */
 const CHAR_WIDTH_CACHE = UnifiedCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
 
-// ASCII文字のキャッシュを事前に初期化（高速アクセスのため）
-for (let i = 0x20; i <= 0x7E; i++) {
-  CHAR_WIDTH_CACHE.set(i, 1);
+/**
+ * ASCII文字のキャッシュを初期化する関数
+ * テスト時のキャッシュクリア後も再初期化できるように関数化
+ */
+function initializeASCIICache(): void {
+  for (let i = 0x20; i <= 0x7E; i++) {
+    if (CHAR_WIDTH_CACHE.get(i) === undefined) {
+      CHAR_WIDTH_CACHE.set(i, 1);
+    }
+  }
 }
+
+// モジュール初期化時にASCII文字をキャッシュ
+initializeASCIICache();
 
 /**
  * 一般的なCJK文字の範囲キャッシュ

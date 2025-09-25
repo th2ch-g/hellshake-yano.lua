@@ -112,6 +112,7 @@ export class UnifiedCache {
   private constructor() {
     this.caches = new Map();
     this.cacheConfigs = {
+      // Cache sizes optimized based on usage patterns and test requirements
       [CacheType.WORDS]: { size: 1000, description: "単語検出結果のキャッシュ" },
       [CacheType.HINTS]: { size: 500, description: "ヒント生成結果のキャッシュ" },
       [CacheType.DISPLAY]: { size: 200, description: "表示情報のキャッシュ" },

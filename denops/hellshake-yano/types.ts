@@ -223,6 +223,40 @@ export interface HighlightColor {
 }
 
 /**
+ * パフォーマンス測定結果インターフェース
+ *
+ * @description 各操作の実行時間測定結果を保持
+ */
+export interface PerformanceMetrics {
+  /** ヒント表示処理の実行時間リスト（ミリ秒） */
+  showHints: number[];
+  /** ヒント非表示処理の実行時間リスト（ミリ秒） */
+  hideHints: number[];
+  /** 単語検出処理の実行時間リスト（ミリ秒） */
+  wordDetection: number[];
+  /** ヒント生成処理の実行時間リスト（ミリ秒） */
+  hintGeneration: number[];
+}
+
+/**
+ * デバッグ情報インターフェース
+ *
+ * @description システムの現在状態とパフォーマンス情報を包含
+ */
+export interface DebugInfo {
+  /** 現在の設定情報のスナップショット */
+  config: Config;
+  /** ヒントの表示状態フラグ */
+  hintsVisible: boolean;
+  /** 現在表示中のヒントマッピング配列 */
+  currentHints: HintMapping[];
+  /** パフォーマンス測定結果の集計 */
+  metrics: PerformanceMetrics;
+  /** デバッグ情報取得時刻（Unix timestamp） */
+  timestamp: number;
+}
+
+/**
  * 単語検出コンテキストインターフェース
  *
  * @description 単語検出処理に渡されるコンテキスト情報

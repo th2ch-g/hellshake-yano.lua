@@ -3,9 +3,11 @@
  *
  * This module provides Japanese text segmentation capabilities using TinySegmenter.
  * Uses the npm @birchill/tiny-segmenter package for accurate segmentation.
+ * Integrated with UnifiedCache system for optimal performance.
  */
 
 import { TinySegmenter as NpmTinySegmenter } from "@birchill/tiny-segmenter";
+import { UnifiedCache, CacheType } from "./cache.ts";
 
 /**
  * セグメンテーション結果インターフェース
@@ -39,20 +41,17 @@ interface SegmentationResult {
 export class TinySegmenter {
   private static instance: TinySegmenter;
   private segmenter: NpmTinySegmenter;
-  private cache: Map<string, string[]>;
-  private maxCacheSize: number;
+  private unifiedCache: UnifiedCache;
   private enabled: boolean;
 
   /**
    * TinySegmenterのコンストラクタ
-   * @description TinySegmenterインスタンスを初期化し、キャッシュとnpmパッケージの設定を行う
-   * @param maxCacheSize - キャッシュの最大サイズ（デフォルト: 1000）
+   * @description TinySegmenterインスタンスを初期化し、UnifiedCacheとnpmパッケージの設定を行う
    * @since 1.0.0
    */
-  constructor(maxCacheSize: number = 1000) {
+  constructor() {
     this.segmenter = new NpmTinySegmenter();
-    this.cache = new Map();
-    this.maxCacheSize = maxCacheSize;
+    this.unifiedCache = UnifiedCache.getInstance();
     this.enabled = true;
   }
 
@@ -176,10 +175,11 @@ export class TinySegmenter {
       };
     }
 
-    // Check cache first
-    if (this.cache.has(text)) {
+    // Check UnifiedCache first
+    const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+    if (cache.has(text)) {
       return {
-        segments: this.cache.get(text)!,
+        segments: cache.get(text)!,
         success: true,
         source: "tinysegmenter",
       };
@@ -192,15 +192,9 @@ export class TinySegmenter {
       // 後処理を適用
       const segments = this.postProcessSegments(rawSegments);
 
-      // Cache the result (with size limit)
-      if (this.cache.size >= this.maxCacheSize) {
-        // Remove oldest entry
-        const firstKey = this.cache.keys().next().value;
-        if (firstKey !== undefined) {
-          this.cache.delete(firstKey);
-        }
-      }
-      this.cache.set(text, segments);
+      // Cache the result in UnifiedCache (LRU handles size limit automatically)
+      const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+      cache.set(text, segments);
 
       return {
         segments,
@@ -315,7 +309,8 @@ export class TinySegmenter {
    * ```
    */
   clearCache(): void {
-    this.cache.clear();
+    const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+    cache.clear();
   }
 
   /**
@@ -330,10 +325,14 @@ export class TinySegmenter {
    * ```
    */
   getCacheStats(): { size: number; maxSize: number; hitRate: number } {
+    const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+    const stats = cache.getStats();
+    const config = this.unifiedCache.getCacheConfig(CacheType.ANALYSIS);
+
     return {
-      size: this.cache.size,
-      maxSize: this.maxCacheSize,
-      hitRate: 0, // Would need to track hits/misses for accurate rate
+      size: stats.size,
+      maxSize: config.size,
+      hitRate: stats.hitRate,
     };
   }
 

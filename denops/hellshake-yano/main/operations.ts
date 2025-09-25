@@ -42,7 +42,7 @@ export function createHintOperations(
 
       debounceTimeoutId = setTimeout(async () => {
         await showHintsInternal(denops, config);
-      }, config.debounce_delay || 50);
+      }, config.debounceDelay || 50);
     },
 
     /**
