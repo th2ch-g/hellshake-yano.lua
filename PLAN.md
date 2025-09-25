@@ -387,20 +387,125 @@ export interface UnifiedConfig {
 - 保守性とコード可読性の大幅向上
 
 ### process3 main.ts簡素化
-#### sub1 core.tsへの機能移動
+
+#### 現状調査結果
+**main.ts分析（合計3,456行）**
+- **dispatcherメソッド**: updateConfig、showHints、hideHints、clearCache、debug等
+- **ヒント表示系**: showHints、showHintsInternal、showHintsWithKey、hideHints
+- **単語検出系**: detectWordsOptimized
+- **ヒント生成系**: generateHintsOptimized
+- **表示処理系**: displayHints関連（7関数）
+- **グローバル状態**: config、currentHints、hintsVisible、キャッシュ等
+- **ユーティリティ**: パフォーマンス測定、デバッグ、バリデーション等
+- **辞書システム**: initializeDictionarySystem、辞書コマンド等
+- **既存テスト**: main_test.ts（9テスト）、integration_test.ts（4テスト）全パス
+
+#### sub1 core.tsへの機能移動（TDD方式）
 @target: denops/hellshake-yano/core.ts
 @ref: denops/hellshake-yano/main.ts
-- [ ] Coreクラスの作成
-- [ ] showHints、hideHints等のコア機能を移動
-- [ ] グローバル状態管理の移行
-- [ ] 初期化ロジックの移動
+- [ ] **Phase1: 基盤作成**
+  - [ ] denops/hellshake-yano/core.tsを新規作成
+  - [ ] tests/core_test.tsを新規作成
+  - [ ] Coreクラスのスケルトン定義
+  - [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
+  - [ ] core_test.tsにCoreクラスの存在確認テストを追加
+  - [ ] `deno test tests/core_test.ts`でテストパス
+- [ ] **Phase2: 状態管理の移行**
+  - [ ] CoreStateインターフェース定義（config、currentHints、hintsVisible等）
+  - [ ] Coreクラスにstate管理メソッド追加（getState、setState）
+  - [ ] 状態初期化メソッド（initializeState）実装
+  - [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
+  - [ ] core_test.tsに状態管理テスト追加
+  - [ ] `deno test tests/core_test.ts`でテストパス
+- [ ] **Phase3: ヒント非表示機能の移行**
+  - [ ] core_test.tsにhideHintsのテスト作成（RED）
+  - [ ] CoreクラスにhideHintsメソッド実装
+  - [ ] main.tsのhideHints関数からCoreクラスのメソッドを呼び出すよう変更
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [ ] `deno test tests/main_test.ts`で既存テストが通ることを確認
+  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [ ] **Phase4: 単語検出機能の移行**
+  - [ ] core_test.tsにdetectWordsOptimizedのテスト作成（RED）
+  - [ ] CoreクラスにdetectWordsOptimizedメソッド実装
+  - [ ] キャッシュアクセスの依存関係解決
+  - [ ] main.tsから呼び出しを変更
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [ ] `deno test tests/main_test.ts`で既存テストパス
+  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [ ] **Phase5: ヒント生成機能の移行**
+  - [ ] core_test.tsにgenerateHintsOptimizedのテスト作成（RED）
+  - [ ] CoreクラスにgenerateHintsOptimizedメソッド実装
+  - [ ] main.tsから呼び出しを変更
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [ ] `deno test tests/main_test.ts`で既存テストパス
+- [ ] **Phase6: 表示処理系の移行**
+  - [ ] core_test.tsにdisplayHints系のテスト作成（RED）
+  - [ ] displayHintsOptimizedメソッド実装
+  - [ ] displayHintsAsyncメソッド実装
+  - [ ] displayHintsWithExtmarksBatchメソッド実装
+  - [ ] displayHintsWithMatchAddBatchメソッド実装
+  - [ ] main.tsから呼び出しを変更
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [ ] `deno test tests/main_test.ts`で既存テストパス
+  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [ ] **Phase7: showHints系の移行**
+  - [ ] core_test.tsにshowHints系のテスト作成（RED）
+  - [ ] CoreクラスにshowHintsメソッド実装
+  - [ ] showHintsInternalメソッド実装
+  - [ ] showHintsWithKeyメソッド実装
+  - [ ] デバウンス処理の移行
+  - [ ] main.tsのdispatcher.showHintsから呼び出し
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [ ] `deno test tests/main_test.ts`で既存テストパス
+  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [ ] **Phase8: ユーティリティ機能の移行**
+  - [ ] core_test.tsにパフォーマンス測定のテスト作成（RED）
+  - [ ] recordPerformanceメソッド実装
+  - [ ] collectDebugInfoメソッド実装
+  - [ ] clearDebugInfoメソッド実装
+  - [ ] waitForUserInputメソッド実装
+  - [ ] main.tsから呼び出しを変更
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+- [ ] **Phase9: 辞書システムの移行**
+  - [ ] core_test.tsに辞書システムのテスト作成（RED）
+  - [ ] initializeDictionarySystemメソッド実装
+  - [ ] 辞書コマンドメソッドの実装
+  - [ ] main.tsから呼び出しを変更
+  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+- [ ] **Phase10: 最終統合とクリーンアップ**
+  - [ ] Coreクラスのシングルトンインスタンス作成
+  - [ ] dispatcherをCoreクラスのメソッド呼び出しに変更
+  - [ ] 不要になったローカル関数を削除
+  - [ ] importの整理
+  - [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
+  - [ ] `deno test tests/*.ts`で全テストパス（75ファイル）
+  - [ ] 後方互換性の確認（エクスポート関数の再エクスポート）
+  - [ ] APIの互換性テスト作成
+  - [ ] ドキュメントの更新
 
-#### sub2 main.tsのリファクタリング
+#### sub2 main.tsの最終リファクタリング
 @target: denops/hellshake-yano/main.ts
 - [ ] エントリーポイントのみに縮小（500行以内）
-- [ ] denops.dispatcherの定義
+- [ ] denops.dispatcherの定義（Coreクラスへの委譲）
 - [ ] 必要最小限のインポート
 - [ ] 後方互換性のための再エクスポート
+- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [ ] `deno test tests/*.ts`で全テストパス確認
+
+#### 成果物と期待される改善
+- main.ts: 3,456行 → 約500行（85%削減）
+- core.ts: 約2,000行（新規作成）
+- 完全な後方互換性の維持
+- 全75個のテストファイルがパス
+- 責務の明確な分離による保守性向上
+- TDD実装による品質保証
 
 ### process4 不要ファイル削除
 #### sub1 使用頻度の低いディレクトリ削除
