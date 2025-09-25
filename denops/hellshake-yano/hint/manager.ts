@@ -1,6 +1,5 @@
 /**
  * HintManagerクラス - ヒント管理システム
- * Process2の実装: キー別最小文字数設定に基づくヒント管理
  */
 
 import type { Config } from "../main.ts";
@@ -13,11 +12,6 @@ import { getMinLengthForKey } from "../main.ts";
  * - キー別最小文字数設定の管理
  * - キーコンテキストの変更時のヒントクリア
  * - 設定値の委譲とアクセス
- *
- * Process2の要件を満たす実装:
- * - onKeyPressでヒントクリアと再生成トリガー
- * - getMinLengthForKeyでキー別閾値取得
- * - clearCurrentHintsで即座のヒントクリア
  */
 export class HintManager {
   private config: Config;
@@ -70,15 +64,6 @@ export class HintManager {
 
   /**
    * 現在のヒントを即座にクリア
-   *
-   * Process2での基本実装:
-   * - 状態の初期化
-   * - 統合フェーズでの拡張を想定した設計
-   *
-   * 将来の拡張ポイント:
-   * - 実際のVim/Neovim表示クリア
-   * - ハイライトの削除
-   * - 内部ヒント状態のリセット
    */
   clearCurrentHints(): void {
     // Process5 sub1: 即座のヒントクリア機能の基本実装
