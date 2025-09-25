@@ -2,8 +2,10 @@
  * Dictionary-based Word Correction System
  *
  * TDD Green Phase Stage 1: Interface definitions and basic implementation
- * Following PLAN.md process4 sub1 - Dictionary-based correction system
+ * Following PLAN.md process1 sub6 - Dictionary cache integration with UnifiedCache
  */
+
+import { CacheType, UnifiedCache } from "../cache.ts";
 
 /**
  * 辞書の設定オプション
@@ -92,6 +94,9 @@ export interface WordDictionary {
 
 /**
  * 単語辞書の実装クラス
+ *
+ * UnifiedCache.DICTIONARYを使用して効率的なキャッシュ管理を行います。
+ * キャッシュが有効な場合、hasCustomWord()の結果をLRUアルゴリズムで管理します。
  */
 export class WordDictionaryImpl implements WordDictionary {
   public customWords: Set<string> = new Set();
@@ -100,7 +105,7 @@ export class WordDictionaryImpl implements WordDictionary {
   public mergeRules: Map<string, number> = new Map();
 
   private config: DictionaryConfig;
-  private cache?: Map<string, boolean>;
+  private unifiedCache?: UnifiedCache;
   private cacheStats?: CacheStats;
 
   constructor(config: DictionaryConfig = {}) {
@@ -118,7 +123,8 @@ export class WordDictionaryImpl implements WordDictionary {
   }
 
   private initializeCache(): void {
-    this.cache = new Map();
+    // UnifiedCache.DICTIONARYを使用してキャッシュを初期化
+    this.unifiedCache = UnifiedCache.getInstance();
     this.cacheStats = {
       hits: 0,
       misses: 0,
@@ -141,40 +147,41 @@ export class WordDictionaryImpl implements WordDictionary {
 
   addCustomWord(word: string): void {
     this.customWords.add(word);
-    // キャッシュをクリア
-    if (this.cache) {
-      this.cache.clear();
+    // DICTIONARYキャッシュをクリア（新しい単語の追加により既存キャッシュが無効になる）
+    if (this.unifiedCache) {
+      this.unifiedCache.clearByType(CacheType.DICTIONARY);
     }
   }
 
   hasCustomWord(word: string): boolean {
-    if (this.cache && this.cache.has(word)) {
-      this.updateCacheStats(true);
-      return this.cache.get(word)!;
-    }
+    if (this.unifiedCache) {
+      const dictionaryCache = this.unifiedCache.getCache<string, boolean>(CacheType.DICTIONARY);
 
-    const result = this.customWords.has(word);
-
-    if (this.cache) {
-      this.updateCacheStats(false);
-      // キャッシュサイズ制限
-      if (this.cache.size >= (this.config.cacheSize || 1000)) {
-        const firstKey = this.cache.keys().next().value;
-        if (firstKey !== undefined) {
-          this.cache.delete(firstKey);
-        }
+      // キャッシュヒットの場合
+      if (dictionaryCache.has(word)) {
+        this.updateCacheStats(true);
+        return dictionaryCache.get(word)!;
       }
-      this.cache.set(word, result);
+
+      // キャッシュミスの場合、実際の検索を実行
+      const result = this.customWords.has(word);
+
+      this.updateCacheStats(false);
+      dictionaryCache.set(word, result);
+
+      return result;
     }
 
-    return result;
+    // キャッシュが無効な場合は直接検索
+    return this.customWords.has(word);
   }
 
   removeCustomWord(word: string): void {
     this.customWords.delete(word);
-    // キャッシュからも削除
-    if (this.cache) {
-      this.cache.delete(word);
+    // DICTIONARYキャッシュから該当単語を削除
+    if (this.unifiedCache) {
+      const dictionaryCache = this.unifiedCache.getCache<string, boolean>(CacheType.DICTIONARY);
+      dictionaryCache.delete(word);
     }
   }
 
@@ -276,7 +283,7 @@ export class WordDictionaryImpl implements WordDictionary {
 
       if (data.compoundPatterns) {
         for (const pattern of data.compoundPatterns) {
-          this.addCompoundPattern(new RegExp(pattern, 'g'));
+          this.addCompoundPattern(new RegExp(pattern, "g"));
         }
       }
     } catch (error) {
@@ -285,7 +292,23 @@ export class WordDictionaryImpl implements WordDictionary {
   }
 
   getCacheStats(): CacheStats | null {
-    return this.cacheStats ? { ...this.cacheStats } : null;
+    if (!this.cacheStats) return null;
+
+    // UnifiedCacheの統計も含める
+    if (this.unifiedCache) {
+      const unifiedStats = this.unifiedCache.getAllStats();
+      const dictionaryStats = unifiedStats.DICTIONARY;
+
+      // UnifiedCacheとローカル統計をマージして返す
+      // 既存APIの互換性を維持しつつ、UnifiedCacheの正確な統計を活用
+      return {
+        hits: Math.max(this.cacheStats.hits, dictionaryStats.hits),
+        misses: Math.max(this.cacheStats.misses, dictionaryStats.misses),
+        hitRate: dictionaryStats.hitRate || this.cacheStats.hitRate,
+      };
+    }
+
+    return { ...this.cacheStats };
   }
 
   /**
@@ -400,7 +423,10 @@ export function createBuiltinDictionary(): WordDictionaryImpl {
 /**
  * セグメントに辞書補正を適用
  */
-export function applyDictionaryCorrection(segments: string[], dictionary?: WordDictionaryImpl): string[] {
+export function applyDictionaryCorrection(
+  segments: string[],
+  dictionary?: WordDictionaryImpl,
+): string[] {
   const dict = dictionary || createBuiltinDictionary();
   return dict.applyMergeRules(segments);
 }

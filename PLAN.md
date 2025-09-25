@@ -182,12 +182,12 @@ export interface UnifiedConfig {
 #### sub6 word/dictionary.tsのキャッシュ統合（1個）
 @target: denops/hellshake-yano/word/dictionary.ts
 @ref: denops/hellshake-yano/cache.ts
-- [ ] UnifiedCacheをインポート
-- [ ] dictionary内のLRUCacheをUnifiedCache.DICTIONARYに置き換え
-- [ ] checkWord関数のキャッシュアクセス更新
-- [ ] キャッシュ統計の取得メソッド更新
-- [ ] `deno check denops/hellshake-yano/word/dictionary.ts`でコンパイルエラーなし
-- [ ] `deno test tests/*dictionary*.ts`で辞書関連テストがパス
+- [x] UnifiedCacheをインポート
+- [x] dictionary内のLRUCacheをUnifiedCache.DICTIONARYに置き換え
+- [x] checkWord関数のキャッシュアクセス更新
+- [x] キャッシュ統計の取得メソッド更新
+- [x] `deno check denops/hellshake-yano/word/dictionary.ts`でコンパイルエラーなし
+- [x] `deno test tests/*dictionary*.ts`で辞書関連テストがパス
 
 #### sub7 その他のMapキャッシュの統合（残り約9個）
 @target: denops/hellshake-yano/

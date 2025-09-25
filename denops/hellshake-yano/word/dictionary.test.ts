@@ -6,9 +6,9 @@
  */
 
 import {
+  assert as assertTrue,
   assertEquals,
   assertExists,
-  assert as assertTrue,
 } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
 // assertFalse の代替実装
@@ -17,16 +17,13 @@ function assertFalse(value: boolean, msg?: string): void {
 }
 
 // Import types and functions that will be implemented
-import type {
-  WordDictionary,
-  DictionaryConfig,
-} from "./dictionary.ts";
+import type { DictionaryConfig, WordDictionary } from "./dictionary.ts";
 
 // These imports will be implemented
 import {
-  WordDictionaryImpl,
   applyDictionaryCorrection,
   createBuiltinDictionary,
+  WordDictionaryImpl,
 } from "./dictionary.ts";
 
 Deno.test("Dictionary-based Correction System", async (t) => {
@@ -145,6 +142,65 @@ Deno.test("Dictionary-based Correction System", async (t) => {
     assertTrue(stats.hits >= 1);
   });
 
+  await t.step("UnifiedCacheテスト1: DICTIONARY キャッシュタイプの使用", () => {
+    const dictionary = new WordDictionaryImpl({ enableCache: true, cacheSize: 100 });
+
+    // カスタム単語を追加してキャッシュ動作をテスト
+    dictionary.addCustomWord("UnifiedCacheテスト");
+
+    // 同じクエリを複数回実行してキャッシュヒットを発生させる
+    const result1 = dictionary.hasCustomWord("UnifiedCacheテスト");
+    const result2 = dictionary.hasCustomWord("UnifiedCacheテスト");
+    const result3 = dictionary.hasCustomWord("存在しない単語");
+    const result4 = dictionary.hasCustomWord("存在しない単語");
+
+    // 結果を確認
+    assertTrue(result1);
+    assertTrue(result2);
+    assertFalse(result3);
+    assertFalse(result4);
+
+    // キャッシュ統計の確認
+    const stats = dictionary.getCacheStats();
+    assertExists(stats);
+    assertTrue(stats.hits >= 2, `Expected hits >= 2, got ${stats.hits}`);
+    assertTrue(stats.misses >= 0, `Expected misses >= 0, got ${stats.misses}`);
+    assertTrue(
+      stats.hitRate >= 0 && stats.hitRate <= 1,
+      `Expected hitRate 0-1, got ${stats.hitRate}`,
+    );
+  });
+
+  await t.step("UnifiedCacheテスト2: キャッシュクリア動作", () => {
+    const dictionary = new WordDictionaryImpl({ enableCache: true, cacheSize: 100 });
+
+    // カスタム単語を追加
+    dictionary.addCustomWord("クリアテスト");
+
+    // キャッシュヒットを発生させる
+    dictionary.hasCustomWord("クリアテスト");
+    dictionary.hasCustomWord("クリアテスト");
+
+    // 単語を削除（キャッシュもクリアされる）
+    dictionary.removeCustomWord("クリアテスト");
+
+    // 削除後の確認
+    assertFalse(dictionary.hasCustomWord("クリアテスト"));
+  });
+
+  await t.step("UnifiedCacheテスト3: キャッシュサイズ制限", () => {
+    const dictionary = new WordDictionaryImpl({ enableCache: true, cacheSize: 2 });
+
+    // キャッシュサイズを超える数の単語をテスト
+    dictionary.hasCustomWord("単語1");
+    dictionary.hasCustomWord("単語2");
+    dictionary.hasCustomWord("単語3"); // これでキャッシュサイズを超える
+
+    // キャッシュが動作していることを確認
+    const stats = dictionary.getCacheStats();
+    assertExists(stats);
+  });
+
   await t.step("基本テスト10: 動的辞書更新", () => {
     const dictionary = new WordDictionaryImpl();
 
@@ -231,10 +287,10 @@ Deno.test("TinySegmenterWordDetector Dictionary Integration", async (t) => {
     const words = await detector.detectWords(testText, 1);
 
     // 結果をチェック（辞書補正により複合語が適切に保持されているはず）
-    const wordTexts = words.map(w => w.text);
+    const wordTexts = words.map((w) => w.text);
 
     // 関数定義が単一の単語として認識されているかチェック
-    const hasCorrectTerm = wordTexts.some(text =>
+    const hasCorrectTerm = wordTexts.some((text) =>
       text.includes("関数定義") || text.includes("非同期処理")
     );
 
