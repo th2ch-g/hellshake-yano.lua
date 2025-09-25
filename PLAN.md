@@ -191,14 +191,14 @@ export interface UnifiedConfig {
 
 #### sub7 その他のMapキャッシュの統合（残り約9個）
 @target: denops/hellshake-yano/
-- [ ] `grep -r "new Map<" denops/`で残りのMapキャッシュを特定
-- [ ] 特定された各ファイルをリスト化
-- [ ] 各Mapキャッシュに対してUnifiedCacheの適切なタイプを決定
-- [ ] 必要に応じて新しいCacheTypeを追加
-- [ ] 各ファイルのキャッシュを順次UnifiedCacheに移行
-- [ ] 各ファイルで`deno check`実行
-- [ ] 各ファイルの関連テスト実行
-- [ ] `deno test tests/`で全体の回帰テスト実行
+- [x] `grep -r "new Map<" denops/`で残りのMapキャッシュを特定
+- [x] 特定された各ファイルをリスト化
+- [x] 各Mapキャッシュに対してUnifiedCacheの適切なタイプを決定
+- [x] 必要に応じて新しいCacheTypeを追加
+- [x] 各ファイルのキャッシュを順次UnifiedCacheに移行
+- [x] 各ファイルで`deno check`実行
+- [x] 各ファイルの関連テスト実行
+- [x] `deno test tests/`で全体の回帰テスト実行
 
 #### sub8 統合テストと最適化
 @target: denops/hellshake-yano/, tests/
@@ -212,6 +212,7 @@ export interface UnifiedConfig {
 - [ ] importの整理とunused importの削除
 - [ ] `deno check`で全体のコンパイル最終確認
 - [ ] `deno test`で全テストが通ることを最終確認
+- [ ] mainブランチと比較して、削減されたコード行数の確認
 
 #### sub9 ドキュメント更新
 @target: docs/, README.md

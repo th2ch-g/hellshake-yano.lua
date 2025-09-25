@@ -50,12 +50,6 @@ const assignmentCacheNormal = unifiedCache.getCache<string, Word[]>(CacheType.HI
 const assignmentCacheVisual = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
 const assignmentCacheOther = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
 
-/**
- * レガシー互換性のためのキャッシュサイズ制限
- * @deprecated UnifiedCacheが自動的にサイズ管理するため不要
- * @todo 将来のバージョンで削除予定
- */
-const CACHE_MAX_SIZE = 100;
 
 /**
  * バッチ処理を開始する単語数の閾値
@@ -240,14 +234,7 @@ function storeAssignmentCache(
   cacheKey: string,
   sortedWords: Word[],
 ): void {
-  // UnifiedCacheのLRUCacheは自動的にサイズ管理を行うため、手動削除は不要
-  // ただし、互換性のため既存ロジックを保持
-  if (cache.size() >= CACHE_MAX_SIZE) {
-    const firstKey = cache.keys().next().value;
-    if (firstKey !== undefined) {
-      cache.delete(firstKey);
-    }
-  }
+  // UnifiedCacheのLRUアルゴリズムが自動的にサイズ管理を行う
   cache.set(cacheKey, sortedWords.slice());
 }
 
@@ -297,14 +284,7 @@ export function generateHints(wordCount: number, markers?: string[], maxHints?: 
     hints.push(...generateMultiCharHintsOptimized(effectiveWordCount, defaultMarkers));
   }
 
-  // キャッシュに保存（サイズ制限付き）
-  if (hintCache.size() >= CACHE_MAX_SIZE) {
-    // 最古のエントリを削除
-    const firstKey = hintCache.keys().next().value;
-    if (firstKey !== undefined) {
-      hintCache.delete(firstKey);
-    }
-  }
+  // キャッシュに保存（統一キャッシュのLRUアルゴリズムが自動管理）
   hintCache.set(cacheKey, hints);
 
   return hints;
@@ -1274,13 +1254,12 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
 // ===== Hint Overlap Detection Functions =====
 
 /**
- * オーバーラップ検出用のキャッシュ
+ * オーバーラップ検出用のキャッシュ（統一キャッシュ）
  * Cache for adjacent words detection to optimize overlap detection
- * @type {Map<string, { word: Word; adjacentWords: Word[] }[]>}
  * @since 1.0.0
  * @internal
  */
-let adjacencyCache = new Map<string, { word: Word; adjacentWords: Word[] }[]>();
+let adjacencyCache = UnifiedCache.getInstance().getCache<string, { word: Word; adjacentWords: Word[] }[]>(CacheType.ADJACENCY);
 
 /**
  * 隣接する単語を検出する
@@ -1352,13 +1331,7 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
     result.push({ word, adjacentWords });
   }
 
-  // キャッシュに保存（サイズ制限付き）
-  if (adjacencyCache.size >= CACHE_MAX_SIZE) {
-    const firstKey = adjacencyCache.keys().next().value;
-    if (firstKey !== undefined) {
-      adjacencyCache.delete(firstKey);
-    }
-  }
+  // キャッシュに保存（統一キャッシュがサイズ制限を自動管理）
   adjacencyCache.set(cacheKey, result);
 
   return result;

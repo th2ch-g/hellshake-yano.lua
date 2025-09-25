@@ -3,6 +3,8 @@
  * Unicode範囲に基づく文字種の分類と境界検出を提供
  */
 
+import { UnifiedCache, CacheType } from "../cache.ts";
+
 /**
  * 文字種別を表すenum
  *
@@ -36,17 +38,10 @@ export enum CharType {
  * パフォーマンス最適化: 文字種判定キャッシュ
  *
  * @description 文字種判定結果をキャッシュしてパフォーマンスを向上させます。
- * LRU（Least Recently Used）的な動作でサイズ制限を管理します。
+ * 統一キャッシュシステムのLRU（Least Recently Used）アルゴリズムでサイズ制限を管理します。
  */
-const charTypeCache = new Map<string, CharType>();
+const charTypeCache = UnifiedCache.getInstance().getCache<string, CharType>(CacheType.CHAR_TYPE);
 
-/**
- * キャッシュサイズの上限
- *
- * @description メモリ使用量を制限するため、キャッシュサイズを1000エントリに制限します。
- * この値を超えると古いエントリから削除されます。
- */
-const CACHE_SIZE_LIMIT = 1000;
 
 /**
  * 隣接文字解析結果を表すインターフェース
@@ -94,14 +89,7 @@ export function getCharType(char: string): CharType {
     return cached;
   }
 
-  // キャッシュサイズ制限チェック（LRU的な管理）
-  if (charTypeCache.size >= CACHE_SIZE_LIMIT) {
-    // 古いエントリから削除してメモリ使用量を制限
-    const firstKey = charTypeCache.keys().next().value;
-    if (firstKey) {
-      charTypeCache.delete(firstKey);
-    }
-  }
+  // 統一キャッシュシステムが自動的にLRUアルゴリズムでサイズ制限を管理
 
   const code = char.codePointAt(0);
   if (code === undefined) {

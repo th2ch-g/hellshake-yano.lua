@@ -42,11 +42,12 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
 // Word interface moved to types.ts for consolidation
 // Use: import type { Word } from "./types.ts";
 
-// キャッシュとパフォーマンス設定
-const CACHE_MAX_SIZE = 100;
+import { UnifiedCache, CacheType } from "./cache.ts";
+
+// パフォーマンス設定
 const LARGE_FILE_THRESHOLD = 1000;
 const MAX_WORDS_PER_FILE = 1000;
-const wordDetectionCache = new Map<string, Word[]>();
+const wordDetectionCache = UnifiedCache.getInstance().getCache<string, Word[]>(CacheType.WORD_DETECTION);
 
 /**
  * 画面内の単語を検出する（レガシー版、後方互換性のため保持）
@@ -765,9 +766,9 @@ export function getWordDetectionCacheStats(): {
   maxWordsPerFile: number;
 } {
   return {
-    cacheSize: wordDetectionCache.size,
+    cacheSize: wordDetectionCache.size(),
     cacheKeys: Array.from(wordDetectionCache.keys()),
-    maxCacheSize: CACHE_MAX_SIZE,
+    maxCacheSize: UnifiedCache.getInstance().getCacheConfig(CacheType.WORD_DETECTION).size,
     largeFileThreshold: LARGE_FILE_THRESHOLD,
     maxWordsPerFile: MAX_WORDS_PER_FILE,
   };

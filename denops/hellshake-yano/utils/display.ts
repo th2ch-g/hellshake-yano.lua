@@ -17,14 +17,15 @@
  */
 
 import { LRUCache } from "./cache.ts";
+import { UnifiedCache, CacheType } from "../cache.ts";
 import type { Denops } from "https://deno.land/x/denops_std@v5.0.1/mod.ts";
 import * as fn from "https://deno.land/x/denops_std@v5.0.1/function/mod.ts";
 
 /**
- * 一般的な文字の幅ルックアップテーブル（性能最適化）
+ * 統一キャッシュから文字幅キャッシュのインスタンスを取得
  * 頻繁に使用される文字の幅をキャッシュして高速化
  */
-const CHAR_WIDTH_CACHE = new Map<number, number>();
+const CHAR_WIDTH_CACHE = UnifiedCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
 
 // ASCII文字のキャッシュを事前に初期化（高速アクセスのため）
 for (let i = 0x20; i <= 0x7E; i++) {

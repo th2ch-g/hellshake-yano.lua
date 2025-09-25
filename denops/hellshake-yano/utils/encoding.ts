@@ -11,6 +11,8 @@
  * @version 1.0.0
  */
 
+import { UnifiedCache, CacheType } from "../cache.ts";
+
 /**
  * TextEncoderの共有インスタンス
  * インスタンス生成コストを削減し、メモリ使用量を最小化
@@ -19,9 +21,10 @@ const sharedTextEncoder = new TextEncoder();
 
 /**
  * マルチバイト文字のバイト長キャッシュ
- * 頑繁に使用される文字列のバイト長をキャッシュして性能を向上
+ * 頻繁に使用される文字列のバイト長をキャッシュして性能を向上
+ * 統一キャッシュシステムによるLRUアルゴリズムで効率的にメモリ管理
  */
-const byteLengthCache = new Map<string, number>();
+const byteLengthCache = UnifiedCache.getInstance().getCache<string, number>(CacheType.BYTE_LENGTH);
 
 /**
  * ASCII文字のみかどうかを高速チェック

@@ -7,7 +7,7 @@
  *
  * ## 特徴
  * - シングルトンパターンによる統一管理
- * - 11種類のキャッシュタイプをサポート
+ * - 16種類のキャッシュタイプをサポート
  * - 型安全なジェネリックインターフェース
  * - LRUアルゴリズムによる効率的なメモリ管理
  * - 統計情報とパフォーマンス監視機能
@@ -25,7 +25,7 @@ import { LRUCache, CacheStatistics } from "./utils/cache.ts";
 
 /**
  * キャッシュタイプの列挙型
- * 11種類のキャッシュタイプを定義し、それぞれの用途を明確に区別します。
+ * 16種類のキャッシュタイプを定義し、それぞれの用途を明確に区別します。
  *
  * @enum {string}
  */
@@ -51,7 +51,17 @@ export enum CacheType {
   /** シンタックスコンテキストのキャッシュ */
   SYNTAX_CONTEXT = "SYNTAX_CONTEXT",
   /** 辞書データのキャッシュ */
-  DICTIONARY = "DICTIONARY"
+  DICTIONARY = "DICTIONARY",
+  /** 文字幅計算のキャッシュ */
+  CHAR_WIDTH = "CHAR_WIDTH",
+  /** 文字種判定のキャッシュ */
+  CHAR_TYPE = "CHAR_TYPE",
+  /** バイト長計算のキャッシュ */
+  BYTE_LENGTH = "BYTE_LENGTH",
+  /** 隣接単語のキャッシュ */
+  ADJACENCY = "ADJACENCY",
+  /** 単語検出のキャッシュ */
+  WORD_DETECTION = "WORD_DETECTION"
 }
 
 /**
@@ -113,6 +123,11 @@ export class UnifiedCache {
       [CacheType.LANGUAGE_RULES]: { size: 50, description: "言語ルールのキャッシュ" },
       [CacheType.SYNTAX_CONTEXT]: { size: 200, description: "シンタックスコンテキストのキャッシュ" },
       [CacheType.DICTIONARY]: { size: 2000, description: "辞書データのキャッシュ" },
+      [CacheType.CHAR_WIDTH]: { size: 500, description: "文字幅計算のキャッシュ" },
+      [CacheType.CHAR_TYPE]: { size: 1000, description: "文字種判定のキャッシュ" },
+      [CacheType.BYTE_LENGTH]: { size: 300, description: "バイト長計算のキャッシュ" },
+      [CacheType.ADJACENCY]: { size: 200, description: "隣接単語のキャッシュ" },
+      [CacheType.WORD_DETECTION]: { size: 100, description: "単語検出のキャッシュ" },
     };
     this.initializeCaches();
   }
