@@ -145,27 +145,27 @@ export interface UnifiedConfig {
 #### sub3 lifecycle.tsのキャッシュ統合（2個）
 @target: denops/hellshake-yano/lifecycle.ts
 @ref: denops/hellshake-yano/cache.ts
-- [ ] UnifiedCacheをインポート
-- [ ] state.caches.wordsをUnifiedCache.WORDSに置き換え
-- [ ] state.caches.hintsをUnifiedCache.HINTSに置き換え
-- [ ] initializeState関数の更新（キャッシュサイズオプションの処理）
-- [ ] resetCaches関数の更新（UnifiedCacheのclearByTypeを使用）
-- [ ] `deno check denops/hellshake-yano/lifecycle.ts`でコンパイルエラーなし
-- [ ] `deno test tests/lifecycle*.ts`で関連テストがパス
-- [ ] `deno test tests/integration_test.ts`で統合テストがパス
+- [x] UnifiedCacheをインポート
+- [x] state.caches.wordsをUnifiedCache.WORDSに置き換え
+- [x] state.caches.hintsをUnifiedCache.HINTSに置き換え
+- [x] initializeState関数の更新（キャッシュサイズオプションの処理）
+- [x] resetCaches関数の更新（UnifiedCacheのclearByTypeを使用）
+- [x] `deno check denops/hellshake-yano/lifecycle.ts`でコンパイルエラーなし
+- [x] `deno test tests/lifecycle*.ts`で関連テストがパス
+- [x] `deno test tests/integration_test.ts`で統合テストがパス
 
 #### sub4 word/context.tsのキャッシュ統合（2個）
 @target: denops/hellshake-yano/word/context.ts
 @ref: denops/hellshake-yano/cache.ts
-- [ ] UnifiedCacheをインポート
-- [ ] `languageRuleCache`をUnifiedCache.LANGUAGE_RULESに置き換え
-- [ ] `contextCache`をUnifiedCache.SYNTAX_CONTEXTに置き換え
-- [ ] getLanguageRule関数のキャッシュアクセス更新
-- [ ] detectContext関数のキャッシュアクセス更新
-- [ ] clearメソッドの実装（UnifiedCacheのclearByTypeを使用）
-- [ ] `deno check denops/hellshake-yano/word/context.ts`でコンパイルエラーなし
-- [ ] `deno test tests/context*.ts`で関連テストがパス
-- [ ] `deno test tests/word*.ts`でword関連テストがパス
+- [x] UnifiedCacheをインポート
+- [x] `languageRuleCache`をUnifiedCache.LANGUAGE_RULESに置き換え
+- [x] `contextCache`をUnifiedCache.SYNTAX_CONTEXTに置き換え
+- [x] getLanguageRule関数のキャッシュアクセス更新
+- [x] detectContext関数のキャッシュアクセス更新
+- [x] clearメソッドの実装（UnifiedCacheのclearByTypeを使用）
+- [x] `deno check denops/hellshake-yano/word/context.ts`でコンパイルエラーなし
+- [x] `deno test tests/context*.ts`で関連テストがパス
+- [x] `deno test tests/word*.ts`でword関連テストがパス
 
 #### sub5 word/detector.tsのキャッシュ統合（1個）
 @target: denops/hellshake-yano/word/detector.ts

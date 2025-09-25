@@ -1,10 +1,14 @@
 /**
- * @fileoverview コンテキスト認識による分割調整機能
+ * @fileoverview コンテキスト認識による分割調整機能 with UnifiedCache統合
  * ファイルタイプと構文コンテキストに基づいて適切な分割ルールを適用
+ *
+ * TDD Red-Green-Refactor サイクルで実装されたUnifiedCacheシステム統合により、
+ * パフォーマンスとメモリ効率の最適化を実現しています。
  */
 
 import type { Denops } from "https://deno.land/x/denops_std@v6.0.1/mod.ts";
 import type { DetectionContext, SyntaxContext, LineContext } from "../types.ts";
+import { UnifiedCache, CacheType } from "../cache.ts";
 
 /** 言語別パターン定義 */
 export interface LanguageRule {
@@ -43,12 +47,36 @@ export interface SplittingRules {
   preserveSpecialChars: boolean;
 }
 
-/** コンテキスト検出器 */
+/**
+ * コンテキスト検出器 - UnifiedCache統合版
+ *
+ * 言語別パターンとシンタックスコンテキストの検出を行い、
+ * UnifiedCacheシステムで効率的なキャッシュ管理を実現します。
+ *
+ * ## 主な機能:
+ * - 言語別パターンのキャッシュ管理 (CacheType.LANGUAGE_RULES)
+ * - シンタックスコンテキストのキャッシュ管理 (CacheType.SYNTAX_CONTEXT)
+ * - 複数インスタンス間でのキャッシュ共有
+ * - 効率的なLRUベースのメモリ管理
+ *
+ * @example
+ * ```typescript
+ * const detector = new ContextDetector();
+ * const context = detector.detectSyntaxContext("function test() {}", 1, "typescript");
+ * console.log(context.inFunction); // true
+ * ```
+ */
 export class ContextDetector {
-  private languageRuleCache = new Map<string, LanguageRule>();
-  private contextCache = new Map<string, SyntaxContext>();
   private readonly defaultRules: SplittingRules;
+  /** UnifiedCacheシステムのインスタンス（シングルトン） */
+  private readonly unifiedCache: UnifiedCache;
 
+  /**
+   * ContextDetectorのコンストラクタ
+   *
+   * デフォルトの分割ルールを設定し、UnifiedCacheシステムのインスタンスを取得します。
+   * 複数のContextDetectorインスタンスが作成されても、キャッシュは共有されます。
+   */
   constructor() {
     this.defaultRules = {
       splitCamelCase: true,
@@ -57,6 +85,8 @@ export class ContextDetector {
       minWordLength: 2,
       preserveSpecialChars: false,
     };
+    // シングルトンパターンによりアプリケーション全体で同一インスタンスを共有
+    this.unifiedCache = UnifiedCache.getInstance();
   }
 
   /**
@@ -74,11 +104,21 @@ export class ContextDetector {
   }
 
   /**
-   * 構文コンテキストの検出（キャッシュ付き）
+   * 構文コンテキストの検出（UnifiedCache統合）
+   *
+   * テキスト、行番号、ファイルタイプを元にシンタックスコンテキストを検出し、
+   * 結果をUnifiedCache.SYNTAX_CONTEXTにキャッシュします。
+   *
    * @param text 対象テキスト
    * @param line 行番号
    * @param fileType ファイルタイプ
-   * @returns 構文コンテキスト
+   * @returns 構文コンテキスト（キャッシュからの取得も含む）
+   *
+   * @example
+   * ```typescript
+   * const context = detector.detectSyntaxContext("// コメント", 1, "javascript");
+   * console.log(context.inComment); // true
+   * ```
    */
   detectSyntaxContext(
     text: string,
@@ -88,9 +128,11 @@ export class ContextDetector {
     // キャッシュキーを生成
     const cacheKey = `${fileType}:${line}:${text}`;
 
-    // キャッシュから取得を試行
-    if (this.contextCache.has(cacheKey)) {
-      return this.contextCache.get(cacheKey)!;
+    // UnifiedCacheから取得を試行
+    const syntaxContextCache = this.unifiedCache.getCache<string, SyntaxContext>(CacheType.SYNTAX_CONTEXT);
+    const cachedContext = syntaxContextCache.get(cacheKey);
+    if (cachedContext !== undefined) {
+      return cachedContext;
     }
 
     const language = this.mapFileTypeToLanguage(fileType);
@@ -104,14 +146,8 @@ export class ContextDetector {
       language
     };
 
-    // キャッシュに保存（LRU的な制限を追加）
-    if (this.contextCache.size > 1000) {
-      const firstKey = this.contextCache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.contextCache.delete(firstKey);
-      }
-    }
-    this.contextCache.set(cacheKey, context);
+    // UnifiedCacheに保存（LRU制限は自動で管理される）
+    syntaxContextCache.set(cacheKey, context);
 
     return context;
   }
@@ -183,17 +219,29 @@ export class ContextDetector {
   }
 
   /**
-   * 言語別パターンの取得（キャッシュ付き）
-   * @param language 言語名
-   * @returns 言語パターン
+   * 言語別パターンの取得（UnifiedCache統合）
+   *
+   * 指定された言語のパターンをUnifiedCache.LANGUAGE_RULESから取得し、
+   * キャッシュにない場合は新規作成してキャッシュします。
+   *
+   * @param language 言語名 (例: 'typescript', 'python', 'markdown')
+   * @returns 言語パターン（コメント、文字列、関数などのパターンを含む）
+   *
+   * @example
+   * ```typescript
+   * const patterns = detector.getLanguagePatterns('typescript');
+   * console.log(patterns.commentPatterns); // [/\/\/.*$/, /\/\*[\s\S]*?\*\//]
+   * ```
    */
   private getLanguagePatterns(language: string): LanguageRule {
-    if (this.languageRuleCache.has(language)) {
-      return this.languageRuleCache.get(language)!;
+    const languageRulesCache = this.unifiedCache.getCache<string, LanguageRule>(CacheType.LANGUAGE_RULES);
+    const cachedRule = languageRulesCache.get(language);
+    if (cachedRule !== undefined) {
+      return cachedRule;
     }
 
     const patterns = this.createLanguagePatterns(language);
-    this.languageRuleCache.set(language, patterns);
+    languageRulesCache.set(language, patterns);
     return patterns;
   }
 
@@ -513,19 +561,41 @@ export class ContextDetector {
 
   /**
    * キャッシュクリア（メモリ最適化用）
+   *
+   * UnifiedCacheシステムでSYNTAX_CONTEXTキャッシュをクリアします。
+   * 言語ルールキャッシュは静的データのため保持されます。
+   *
+   * @example
+   * ```typescript
+   * detector.clearCache(); // シンタックスコンテキストキャッシュをクリア
+   * ```
    */
   clearCache(): void {
-    this.contextCache.clear();
+    this.unifiedCache.clearByType(CacheType.SYNTAX_CONTEXT);
     // 言語ルールキャッシュは保持（静的データのため）
   }
 
   /**
    * キャッシュ統計の取得（デバッグ用）
+   *
+   * UnifiedCacheシステムからSYNTAX_CONTEXTとLANGUAGE_RULESの
+   * キャッシュ統計情報を取得し、従来のインターフェースと互換性を保ちます。
+   *
+   * @returns キャッシュ統計情報（従来のインターフェースと互換）
+   *
+   * @example
+   * ```typescript
+   * const stats = detector.getCacheStats();
+   * console.log(`Context cache: ${stats.contextCacheSize}, Language rules: ${stats.languageRuleCacheSize}`);
+   * ```
    */
   getCacheStats(): { contextCacheSize: number; languageRuleCacheSize: number } {
+    const syntaxContextStats = this.unifiedCache.getCache(CacheType.SYNTAX_CONTEXT).getStats();
+    const languageRulesStats = this.unifiedCache.getCache(CacheType.LANGUAGE_RULES).getStats();
+
     return {
-      contextCacheSize: this.contextCache.size,
-      languageRuleCacheSize: this.languageRuleCache.size,
+      contextCacheSize: syntaxContextStats.size,
+      languageRuleCacheSize: languageRulesStats.size,
     };
   }
 

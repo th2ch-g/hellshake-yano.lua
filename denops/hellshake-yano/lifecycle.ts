@@ -37,6 +37,7 @@ import type { Denops } from "@denops/std";
 import type { Config } from "./config.ts";
 import { getDefaultConfig, mergeConfig } from "./config.ts";
 import { LRUCache } from "./utils/cache.ts";
+import { UnifiedCache, CacheType } from "./cache.ts";
 
 /**
  * プラグインの初期化状態を管理するインターフェース
@@ -81,11 +82,11 @@ export interface PluginState {
   debounceTimeoutId?: number;
   /** 最後にヒントを表示した時刻（ミリ秒単位のタイムスタンプ） */
   lastShowHintsTime: number;
-  /** パフォーマンス向上のためのキャッシュ群 */
+  /** パフォーマンス向上のためのキャッシュ群 (UnifiedCache統合) */
   caches: {
-    /** 単語検出結果のキャッシュ */
+    /** 単語検出結果のキャッシュ (UnifiedCache.WORDS) */
     words: LRUCache<string, any>;
-    /** ヒント生成結果のキャッシュ */
+    /** ヒント生成結果のキャッシュ (UnifiedCache.HINTS) */
     hints: LRUCache<string, string[]>;
   };
   /** 各機能の実行時間を記録するパフォーマンスメトリクス */
@@ -192,8 +193,8 @@ export class PluginStateManager {
       hintsVisible: false,
       lastShowHintsTime: 0,
       caches: {
-        words: new LRUCache<string, any>(100),
-        hints: new LRUCache<string, string[]>(50),
+        words: unifiedCacheInstance.getCache<string, any>(CacheType.WORDS),
+        hints: unifiedCacheInstance.getCache<string, string[]>(CacheType.HINTS),
       },
       performanceMetrics: {
         showHints: [],
@@ -271,6 +272,14 @@ export class PluginStateManager {
 }
 
 /**
+ * UnifiedCacheインスタンスのキャッシュ (REFACTOR: パフォーマンス最適化)
+ *
+ * @description 頻繁なUnifiedCache.getInstance()呼び出しを最適化するため、
+ * モジュールレベルでインスタンスをキャッシュします。
+ */
+const unifiedCacheInstance = UnifiedCache.getInstance();
+
+/**
  * グローバルプラグイン状態マネージャーのインスタンス
  *
  * @description アプリケーション全体で共有される唯一のプラグイン状態管理インスタンス。
@@ -330,11 +339,12 @@ export async function initializePlugin(
       globalStateManager.updateState({ extmarkNamespace });
     }
 
-    // キャッシュサイズの設定
-    if (options.cacheSizes) {
-      const { words: wordsSize = 100, hints: hintsSize = 50 } = options.cacheSizes;
-      state.caches.words = new LRUCache<string, any>(wordsSize);
-      state.caches.hints = new LRUCache<string, string[]>(hintsSize);
+    // キャッシュサイズの設定 (UnifiedCache統合)
+    // 注意: UnifiedCacheはシングルトンで初期化時にサイズが決まるため、
+    // 現在の統合段階では動的サイズ変更をサポートしていない。
+    // 必要に応じて将来のUnifiedCache機能拡張で対応予定。
+    if (options.cacheSizes && (options.cacheSizes.words !== 1000 || options.cacheSizes.hints !== 500)) {
+      console.warn("[lifecycle] Custom cache sizes will be supported in future UnifiedCache updates. Using configured defaults for now.");
     }
 
     // パフォーマンスメトリクスの初期化
@@ -399,9 +409,9 @@ export async function cleanupPlugin(denops: Denops): Promise<void> {
       await hideAllHints(denops);
     }
 
-    // キャッシュをクリア
-    state.caches.words.clear();
-    state.caches.hints.clear();
+    // キャッシュをクリア (UnifiedCache統合)
+    unifiedCacheInstance.clearByType(CacheType.WORDS);
+    unifiedCacheInstance.clearByType(CacheType.HINTS);
 
     // 状態をリセット
     globalStateManager.resetState();
@@ -513,6 +523,35 @@ export function updatePluginState(updates: Partial<PluginState>): void {
 }
 
 /**
+ * 指定されたキャッシュタイプをリセットする
+ *
+ * @param {CacheType[]} cacheTypes - リセットするキャッシュタイプの配列
+ *
+ * @description UnifiedCacheのclearByTypeメソッドを使用して、
+ * 指定されたキャッシュタイプのみをクリアします。
+ *
+ * @example
+ * ```typescript
+ * // 単語キャッシュとヒントキャッシュをリセット
+ * resetCaches([CacheType.WORDS, CacheType.HINTS]);
+ *
+ * // 全キャッシュをリセット
+ * resetCaches([
+ *   CacheType.WORDS,
+ *   CacheType.HINTS,
+ *   CacheType.DISPLAY,
+ *   CacheType.ANALYSIS,
+ *   CacheType.TEMP
+ * ]);
+ * ```
+ */
+export function resetCaches(cacheTypes: CacheType[]): void {
+  for (const cacheType of cacheTypes) {
+    unifiedCacheInstance.clearByType(cacheType);
+  }
+}
+
+/**
  * プラグインの健全性チェックを実行する
  *
  * @param {Denops} denops - Denopsインスタンス（Vim/Neovimとの通信用）
@@ -562,9 +601,11 @@ export async function healthCheck(denops: Denops): Promise<{
       }
     }
 
-    // キャッシュ統計をチェック
-    const wordsStats = state.caches.words.getStatistics();
-    const hintsStats = state.caches.hints.getStatistics();
+    // キャッシュ統計をチェック (UnifiedCache統合)
+    const unifiedStats = unifiedCacheInstance.getAllStats();
+
+    const wordsStats = unifiedStats[CacheType.WORDS] || state.caches.words.getStatistics();
+    const hintsStats = unifiedStats[CacheType.HINTS] || state.caches.hints.getStatistics();
 
     if (wordsStats.hitRate < 0.3 && wordsStats.hits + wordsStats.misses > 100) {
       recommendations.push("Word detection cache hit rate is low, consider increasing cache size");
@@ -689,10 +730,14 @@ export function getPluginStatistics(): {
     };
   };
 
+  // UnifiedCache統合: 統計情報をUnifiedCacheから取得
+  const unifiedStats = unifiedCacheInstance.getAllStats();
+
   return {
     cacheStats: {
-      words: state.caches.words.getStatistics(),
-      hints: state.caches.hints.getStatistics(),
+      // UnifiedCacheの統計情報を使用し、後方互換性を保持
+      words: unifiedStats[CacheType.WORDS] || state.caches.words.getStatistics(),
+      hints: unifiedStats[CacheType.HINTS] || state.caches.hints.getStatistics(),
     },
     performanceStats: {
       showHints: calculateStats(state.performanceMetrics.showHints),
