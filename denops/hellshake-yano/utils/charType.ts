@@ -3,29 +3,85 @@
  * Unicode範囲に基づく文字種の分類と境界検出を提供
  */
 
+/**
+ * 文字種別を表すenum
+ *
+ * @description Unicode範囲に基づいて文字を分類するための定数
+ * @example
+ * ```typescript
+ * const type = getCharType('あ');
+ * if (type === CharType.Hiragana) {
+ *   console.log('ひらがなです');
+ * }
+ * ```
+ */
 export enum CharType {
+  /** ひらがな文字 (U+3040-U+309F) */
   Hiragana = "hiragana",
+  /** カタカナ文字 (U+30A0-U+30FF) */
   Katakana = "katakana",
+  /** 漢字 (CJK統合漢字：U+4E00-U+9FFF) */
   Kanji = "kanji",
+  /** 英数字 (ASCII 0-9, A-Z, a-z) */
   Alphanumeric = "alphanumeric",
+  /** 記号類 (各種記号文字) */
   Symbol = "symbol",
+  /** 空白文字 (半角・全角スペース、タブ等) */
   Space = "space",
+  /** その他の文字 */
   Other = "other"
 }
 
-// パフォーマンス最適化: 文字種判定キャッシュ
+/**
+ * パフォーマンス最適化: 文字種判定キャッシュ
+ *
+ * @description 文字種判定結果をキャッシュしてパフォーマンスを向上させます。
+ * LRU（Least Recently Used）的な動作でサイズ制限を管理します。
+ */
 const charTypeCache = new Map<string, CharType>();
+
+/**
+ * キャッシュサイズの上限
+ *
+ * @description メモリ使用量を制限するため、キャッシュサイズを1000エントリに制限します。
+ * この値を超えると古いエントリから削除されます。
+ */
 const CACHE_SIZE_LIMIT = 1000;
 
+/**
+ * 隣接文字解析結果を表すインターフェース
+ *
+ * @description 連続する同じ文字種の範囲を示すデータ構造
+ */
 export interface AdjacentAnalysis {
+  /** この範囲の文字種 */
   type: CharType;
+  /** 範囲の開始位置（0ベース） */
   start: number;
+  /** 範囲の終了位置（exclusive、0ベース） */
   end: number;
+  /** 範囲内の実際のテキスト */
   text: string;
 }
 
 /**
  * 単一文字の種類を判定する（キャッシュ付き）
+ *
+ * @description Unicode範囲に基づいて文字の種別を判定します。
+ * パフォーマンス向上のため、結果をキャッシュします。
+ *
+ * @param char - 判定対象の文字（単一文字）
+ * @returns 文字種別
+ *
+ * @example
+ * ```typescript
+ * getCharType('あ'); // CharType.Hiragana
+ * getCharType('ア'); // CharType.Katakana
+ * getCharType('漢'); // CharType.Kanji
+ * getCharType('A');  // CharType.Alphanumeric
+ * getCharType('!');  // CharType.Symbol
+ * getCharType(' ');  // CharType.Space
+ * ```
  */
 export function getCharType(char: string): CharType {
   if (!char || char.length === 0) {
@@ -38,9 +94,9 @@ export function getCharType(char: string): CharType {
     return cached;
   }
 
-  // キャッシュサイズ制限チェック
+  // キャッシュサイズ制限チェック（LRU的な管理）
   if (charTypeCache.size >= CACHE_SIZE_LIMIT) {
-    // LRU的にキャッシュをクリア（古いエントリから削除）
+    // 古いエントリから削除してメモリ使用量を制限
     const firstKey = charTypeCache.keys().next().value;
     if (firstKey) {
       charTypeCache.delete(firstKey);
@@ -55,37 +111,39 @@ export function getCharType(char: string): CharType {
 
   let result: CharType;
 
-  // スペース文字（半角・全角・タブ）
+  // Unicode範囲による文字種判定
+  // スペース文字（半角・全角スペース、タブ、改行文字）
   if (char === ' ' || char === '　' || char === '\t' || char === '\n' || char === '\r') {
     result = CharType.Space;
   }
-  // ひらがな（U+3040-U+309F）
+  // ひらがな文字（あいうえお等、U+3040-U+309F）
   else if (code >= 0x3040 && code <= 0x309F) {
     result = CharType.Hiragana;
   }
-  // カタカナ（U+30A0-U+30FF）
+  // カタカナ文字（アイウエオ等、U+30A0-U+30FF）
   else if (code >= 0x30A0 && code <= 0x30FF) {
     result = CharType.Katakana;
   }
-  // 漢字（CJK統合漢字：U+4E00-U+9FFF）
+  // CJK統合漢字（日中韓の漢字、U+4E00-U+9FFF）
   else if (code >= 0x4E00 && code <= 0x9FFF) {
     result = CharType.Kanji;
   }
-  // 英数字（ASCII英数字）
-  else if ((code >= 0x0030 && code <= 0x0039) || // 0-9
-      (code >= 0x0041 && code <= 0x005A) || // A-Z
-      (code >= 0x0061 && code <= 0x007A)) { // a-z
+  // ASCII英数字（半角の0-9、A-Z、a-z）
+  else if ((code >= 0x0030 && code <= 0x0039) || // 数字0-9
+      (code >= 0x0041 && code <= 0x005A) || // 大文字A-Z
+      (code >= 0x0061 && code <= 0x007A)) { // 小文字a-z
     result = CharType.Alphanumeric;
   }
-  // 記号類（その他ASCII記号、日本語記号等）
-  else if ((code >= 0x0020 && code <= 0x002F) || // スペース～/
-      (code >= 0x003A && code <= 0x0040) || // :～@
-      (code >= 0x005B && code <= 0x0060) || // [～`
-      (code >= 0x007B && code <= 0x007E) || // {～~
-      (code >= 0x3000 && code <= 0x303F) || // CJK記号
-      (code >= 0xFF00 && code <= 0xFFEF)) { // 全角英数・記号
+  // 記号文字（句読点、算術記号、CJK記号、全角記号等）
+  else if ((code >= 0x0020 && code <= 0x002F) || // ASCII記号 !"#$%&'()*+,-./
+      (code >= 0x003A && code <= 0x0040) || // ASCII記号 :;<=>?@
+      (code >= 0x005B && code <= 0x0060) || // ASCII記号 [\]^_`
+      (code >= 0x007B && code <= 0x007E) || // ASCII記号 {|}~
+      (code >= 0x3000 && code <= 0x303F) || // CJK記号及び句読点
+      (code >= 0xFF00 && code <= 0xFFEF)) { // 全角英数字・記号
     result = CharType.Symbol;
   }
+  // 上記以外の文字（特殊文字、絵文字等）
   else {
     result = CharType.Other;
   }
@@ -97,6 +155,22 @@ export function getCharType(char: string): CharType {
 
 /**
  * 文字列を文字種別に解析する
+ *
+ * @description 入力文字列を連続する同じ文字種のセグメントに分割し、
+ * それぞれの範囲と文字種を解析します。
+ *
+ * @param text - 解析対象の文字列
+ * @returns 文字種別解析結果の配列。各要素は連続する同じ文字種の範囲を表す
+ *
+ * @example
+ * ```typescript
+ * const result = analyzeString('こんにちはWorld123');
+ * // [
+ * //   { type: 'hiragana', start: 0, end: 5, text: 'こんにちは' },
+ * //   { type: 'alphanumeric', start: 5, end: 10, text: 'World' },
+ * //   { type: 'alphanumeric', start: 10, end: 13, text: '123' }
+ * // ]
+ * ```
  */
 export function analyzeString(text: string): AdjacentAnalysis[] {
   if (!text || text.length === 0) {
@@ -130,6 +204,21 @@ export function analyzeString(text: string): AdjacentAnalysis[] {
 
 /**
  * 文字種境界とCamelCase境界を検出する
+ *
+ * @description 文字列内で文字種が変わる位置とCamelCase記法での
+ * 単語境界を検出し、境界位置のリストを返します。
+ *
+ * @param text - 境界検出対象の文字列
+ * @returns ソートされた境界位置の配列（0ベースインデックス）
+ *
+ * @example
+ * ```typescript
+ * findBoundaries('helloWorld漢字');
+ * // [0, 5, 10, 12] (hello|World|漢字|の境界)
+ *
+ * findBoundaries('camelCaseExample');
+ * // [0, 5, 9, 16] (camel|Case|Example|の境界)
+ * ```
  */
 export function findBoundaries(text: string): number[] {
   if (!text || text.length === 0) {
@@ -171,35 +260,72 @@ export function findBoundaries(text: string): number[] {
   return Array.from(boundaries).sort((a, b) => a - b);
 }
 
-// パフォーマンス最適化: パターンマッチングのセット
+/**
+ * パフォーマンス最適化: 日本語助詞の高速検索セット
+ *
+ * @description 日本語の助詞パターンをSetで管理して高速検索を実現します。
+ * 前の語と結合すべき助詞を定義しています。
+ */
 const particleSet = new Set(['の', 'が', 'を', 'に', 'で', 'と', 'は', 'も', 'から', 'まで', 'より']);
+
+/**
+ * パフォーマンス最適化: 接続詞の高速検索セット
+ *
+ * @description 日本語の接続詞パターンをSetで管理して高速検索を実現します。
+ * 前の語と結合すべき接続詞を定義しています。
+ */
 const connectorSet = new Set(['そして', 'また', 'しかし', 'だから', 'それで', 'ところで']);
+
+/**
+ * パフォーマンス最適化: 動詞語尾の高速検索セット
+ *
+ * @description 日本語の動詞活用語尾をSetで管理して高速検索を実現します。
+ * 漢字の後に続く動詞活用パターンを定義しています。
+ */
 const verbEndingSet = new Set(['する', 'され', 'でき', 'れる', 'られ']);
 
 /**
  * 文字種に基づく結合判定（最適化版）
+ *
+ * @description 前のセグメントと現在のセグメントを結合すべきかどうかを
+ * 言語学的ルールに基づいて判定します。助詞、接続詞、動詞活用、
+ * 複合語などのパターンを考慮します。
+ *
+ * @param prevSegment - 前のセグメント文字列
+ * @param currentSegment - 現在のセグメント文字列
+ * @param nextSegment - 次のセグメント文字列（オプション、将来の拡張用）
+ * @returns 結合すべき場合はtrue、そうでなければfalse
+ *
+ * @example
+ * ```typescript
+ * shouldMerge('私', 'は');     // true (助詞パターン)
+ * shouldMerge('勉強', 'する'); // true (動詞活用)
+ * shouldMerge('コンピュータ', 'システム'); // true (複合語)
+ * shouldMerge('hello', 'world'); // false (結合不要)
+ * ```
  */
 export function shouldMerge(
   prevSegment: string,
   currentSegment: string,
   nextSegment?: string
 ): boolean {
-  // 助詞パターン（前の語と結合） - セット検索で高速化
+  // 日本語の助詞（は、が、を等）は前の単語と結合する
   if (particleSet.has(currentSegment)) {
     return true;
   }
 
-  // 接続詞パターン（前の語と結合） - セット検索で高速化
+  // 接続詞（そして、また等）は前の文と結合する
   if (connectorSet.has(currentSegment)) {
     return true;
   }
 
-  // 動詞活用（漢字＋ひらがな）
+  // 文字種を取得して動詞活用と複合語を判定
   const prevType = prevSegment.length > 0 ? getCharType(prevSegment[prevSegment.length - 1]) : null;
   const currentType = currentSegment.length > 0 ? getCharType(currentSegment[0]) : null;
 
+  // 動詞活用パターン（漢字の語幹＋ひらがなの活用語尾）
   if (prevType === CharType.Kanji && currentType === CharType.Hiragana) {
-    // 「する」「される」等の典型的な活用 - セット検索で高速化
+    // 「勉強する」「作成される」等の動詞活用を検出
     for (const ending of verbEndingSet) {
       if (currentSegment.startsWith(ending)) {
         return true;
@@ -207,7 +333,8 @@ export function shouldMerge(
     }
   }
 
-  // 複合語パターン（カタカナ同士）
+  // 複合語パターン（カタカナ同士の連結）
+  // 例：「コンピュータ + システム」→「コンピュータシステム」
   if (prevType === CharType.Katakana && currentType === CharType.Katakana) {
     return true;
   }
@@ -217,6 +344,22 @@ export function shouldMerge(
 
 /**
  * キャッシュクリア（テスト時やメモリ使用量が気になる場合に使用）
+ *
+ * @description 文字種判定のキャッシュをクリアします。
+ * 主にテスト時のクリーンアップやメモリ使用量の最適化時に使用します。
+ *
+ * @returns なし（void）
+ *
+ * @example
+ * ```typescript
+ * // テスト前のクリーンアップ
+ * clearCharTypeCache();
+ *
+ * // メモリ使用量を抑えたい場合
+ * if (memoryPressure) {
+ *   clearCharTypeCache();
+ * }
+ * ```
  */
 export function clearCharTypeCache(): void {
   charTypeCache.clear();
