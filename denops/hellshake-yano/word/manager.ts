@@ -16,7 +16,20 @@ import {
   type WordDetectionResult,
   type WordDetector,
 } from "./detector.ts";
+import type { UnifiedConfig } from "../config.ts";
 import type { Config } from "../main.ts";
+
+/**
+ * UnifiedConfigかConfigかを判定するヘルパー関数
+ * @param config - 判定対象の設定
+ * @returns [unifiedConfig, legacyConfig] のタプル
+ */
+function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | undefined, Config | undefined] {
+  if (config && 'useJapanese' in config) {
+    return [config as UnifiedConfig, undefined];
+  }
+  return [undefined, config as Config];
+}
 
 /**
  * 単語検出マネージャー設定インターフェース
@@ -110,6 +123,7 @@ export class WordDetectionManager {
   private initialized = false;
   private sessionContext: DetectionContext | null = null;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
 
   /**
    * WordDetectionManagerのコンストラクタ
@@ -118,9 +132,9 @@ export class WordDetectionManager {
    * @param globalConfig - グローバル設定（統一的なmin_length処理のため）
    * @since 1.0.0
    */
-  constructor(config: WordDetectionManagerConfig = {}, globalConfig?: Config) {
+  constructor(config: WordDetectionManagerConfig = {}, globalConfig?: Config | UnifiedConfig) {
     this.config = this.mergeWithDefaults(config);
-    this.globalConfig = globalConfig;
+    [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
     this.stats = this.initializeStats();
   }
 
@@ -140,10 +154,11 @@ export class WordDetectionManager {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Register default detectors with globalConfig
-    const regexDetector = new RegexWordDetector(this.config, this.globalConfig);
-    const segmenterDetector = new TinySegmenterWordDetector(this.config, this.globalConfig);
-    const hybridDetector = new HybridWordDetector(this.config, this.globalConfig);
+    // Register default detectors with globalConfig (UnifiedConfig takes precedence)
+    const configToUse = this.unifiedConfig || this.globalConfig;
+    const regexDetector = new RegexWordDetector(this.config, configToUse);
+    const segmenterDetector = new TinySegmenterWordDetector(this.config, configToUse);
+    const hybridDetector = new HybridWordDetector(this.config, configToUse);
 
     this.registerDetector(regexDetector);
     this.registerDetector(segmenterDetector);
@@ -897,7 +912,7 @@ let globalManager: WordDetectionManager | null = null;
  */
 export function getWordDetectionManager(
   config?: WordDetectionManagerConfig,
-  globalConfig?: Config,
+  globalConfig?: Config | UnifiedConfig,
 ): WordDetectionManager {
   if (!globalManager) {
     globalManager = new WordDetectionManager(config, globalConfig);

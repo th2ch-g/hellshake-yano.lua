@@ -326,11 +326,11 @@ export interface UnifiedConfig {
 #### sub7 各モジュールの設定参照更新（word関連）
 @target: denops/hellshake-yano/word/detector.ts
 @ref: denops/hellshake-yano/word/manager.ts, denops/hellshake-yano/word/context.ts
-- [ ] Config型インポートをUnifiedConfigへ変更
-- [ ] 設定アクセスをcamelCaseプロパティへ更新
-- [ ] use_japanese→useJapanese等の変更
-- [ ] `deno check denops/hellshake-yano/word/*.ts`で型チェック
-- [ ] `deno test tests/word*.ts`でword関連テストがパス
+- [x] Config型インポートをUnifiedConfigへ変更
+- [x] 設定アクセスをcamelCaseプロパティへ更新
+- [x] use_japanese→useJapanese等の変更
+- [x] `deno check denops/hellshake-yano/word/*.ts`で型チェック
+- [x] `deno test tests/word*.ts`でword関連テストがパス
 
 #### sub8 lifecycle.tsとAPI層の更新
 @target: denops/hellshake-yano/lifecycle.ts

@@ -42,7 +42,20 @@ export type { DetectionContext, WordDetectionResult };
 import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
 import { charIndexToByteIndex } from "../utils/encoding.ts";
 import { ContextDetector, type SplittingRules } from "./context.ts";
+import type { UnifiedConfig } from "../config.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
+
+/**
+ * UnifiedConfigかConfigかを判定するヘルパー関数
+ * @param config - 判定対象の設定
+ * @returns [unifiedConfig, legacyConfig] のタプル
+ */
+function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | undefined, Config | undefined] {
+  if (config && 'useJapanese' in config) {
+    return [config as UnifiedConfig, undefined];
+  }
+  return [undefined, config as Config];
+}
 import { convertToDisplayColumn } from "../hint-utils.ts";
 import { WordDictionaryImpl, createBuiltinDictionary, applyDictionaryCorrection } from "./dictionary.ts";
 import { DictionaryLoader, DictionaryMerger, VimConfigBridge, type UserDictionary } from "./dictionary-loader.ts";
@@ -167,6 +180,7 @@ export class RegexWordDetector implements WordDetector {
 
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
 
   /**
    * RegexWordDetectorのコンストラクタ
@@ -197,9 +211,9 @@ export class RegexWordDetector implements WordDetector {
    *
    * @since 1.0.0
    */
-  constructor(config: WordDetectionConfig = {}, globalConfig?: Config) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | UnifiedConfig) {
     this.config = this.mergeWithDefaults(config);
-    this.globalConfig = globalConfig;
+    [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
   }
 
   /**
@@ -215,7 +229,10 @@ export class RegexWordDetector implements WordDetector {
       return context.minWordLength;
     }
 
-    // 2. グローバル設定のper_key_min_length
+    // 2. UnifiedConfig/グローバル設定のper_key_min_length
+    if (this.unifiedConfig && key) {
+      return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
+    }
     if (this.globalConfig && key) {
       return getMinLengthForKey(this.globalConfig, key);
     }
@@ -548,6 +565,7 @@ export class TinySegmenterWordDetector implements WordDetector {
   private segmenter: TinySegmenter;
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
   private dictionary: WordDictionaryImpl; // 辞書ベースの補正システム
   private dictionaryLoader: DictionaryLoader; // ユーザー定義辞書ローダー
   private dictionaryMerger: DictionaryMerger; // 辞書マージャー
@@ -581,9 +599,9 @@ export class TinySegmenterWordDetector implements WordDetector {
    *
    * @since 1.0.0
    */
-  constructor(config: WordDetectionConfig = {}, globalConfig?: Config) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | UnifiedConfig) {
     this.config = this.mergeWithDefaults(config);
-    this.globalConfig = globalConfig;
+    [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
     this.segmenter = TinySegmenter.getInstance();
     this.dictionary = createBuiltinDictionary(); // ビルトイン辞書で初期化
 
@@ -606,7 +624,10 @@ export class TinySegmenterWordDetector implements WordDetector {
       return context.minWordLength;
     }
 
-    // 2. グローバル設定のper_key_min_length
+    // 2. UnifiedConfig/グローバル設定のper_key_min_length
+    if (this.unifiedConfig && key) {
+      return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
+    }
     if (this.globalConfig && key) {
       return getMinLengthForKey(this.globalConfig, key);
     }
@@ -1206,6 +1227,7 @@ export class HybridWordDetector implements WordDetector {
   private segmenterDetector: TinySegmenterWordDetector;
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
   private contextDetector: ContextDetector; // コンテキスト認識による分割調整
 
   /**
@@ -1238,9 +1260,9 @@ export class HybridWordDetector implements WordDetector {
    *
    * @since 1.0.0
    */
-  constructor(config: WordDetectionConfig = {}, globalConfig?: Config) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | UnifiedConfig) {
     this.config = this.mergeWithDefaults(config);
-    this.globalConfig = globalConfig;
+    [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
     // 子Detectorにも同じマージされた設定とグローバル設定を渡す
     this.regexDetector = new RegexWordDetector(this.config, globalConfig);
     this.segmenterDetector = new TinySegmenterWordDetector(this.config, globalConfig);
@@ -1260,7 +1282,10 @@ export class HybridWordDetector implements WordDetector {
       return context.minWordLength;
     }
 
-    // 2. グローバル設定のper_key_min_length
+    // 2. UnifiedConfig/グローバル設定のper_key_min_length
+    if (this.unifiedConfig && key) {
+      return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
+    }
     if (this.globalConfig && key) {
       return getMinLengthForKey(this.globalConfig, key);
     }
