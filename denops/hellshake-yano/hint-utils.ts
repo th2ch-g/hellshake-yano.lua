@@ -38,7 +38,7 @@ export function convertToDisplayColumn(line: string, charIndex: number, tabWidth
 
   // Get substring from start to charIndex
   const substring = line.slice(0, charIndex);
-  return getDisplayWidth(substring, tabWidth) + 1; // +1 for 1-based column position
+  return getDisplayWidth(substring, tabWidth);
 }
 
 /**
