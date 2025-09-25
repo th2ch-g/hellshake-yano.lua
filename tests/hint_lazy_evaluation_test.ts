@@ -7,7 +7,7 @@ Deno.test({
     let encodeCount = 0;
 
     class CountingTextEncoder extends OriginalTextEncoder {
-      override encode(input?: string): Uint8Array<ArrayBuffer> {
+      override encode(input?: string): Uint8Array {
         encodeCount++;
         return super.encode(input);
       }

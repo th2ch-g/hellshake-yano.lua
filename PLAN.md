@@ -403,13 +403,13 @@ export interface UnifiedConfig {
 #### sub1 core.tsへの機能移動（TDD方式）
 @target: denops/hellshake-yano/core.ts
 @ref: denops/hellshake-yano/main.ts
-- [ ] **Phase1: 基盤作成**
-  - [ ] denops/hellshake-yano/core.tsを新規作成
-  - [ ] tests/core_test.tsを新規作成
-  - [ ] Coreクラスのスケルトン定義
-  - [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-  - [ ] core_test.tsにCoreクラスの存在確認テストを追加
-  - [ ] `deno test tests/core_test.ts`でテストパス
+- [x] **Phase1: 基盤作成**
+  - [x] denops/hellshake-yano/core.tsを新規作成
+  - [x] tests/core_test.tsを新規作成
+  - [x] Coreクラスのスケルトン定義
+  - [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+  - [x] core_test.tsにCoreクラスの存在確認テストを追加
+  - [x] `deno test tests/core_test.ts`でテストパス
 - [ ] **Phase2: 状態管理の移行**
   - [ ] CoreStateインターフェース定義（config、currentHints、hintsVisible等）
   - [ ] Coreクラスにstate管理メソッド追加（getState、setState）

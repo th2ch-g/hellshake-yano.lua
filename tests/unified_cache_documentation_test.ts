@@ -6,7 +6,7 @@
 import { assertEquals, assert } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { exists } from "https://deno.land/std@0.203.0/fs/mod.ts";
 
-const BASE_PATH = "/home/takets/.config/nvim/plugged/hellshake-yano.vim";
+const BASE_PATH = ".";
 
 Deno.test("Documentation - docs directory exists", async () => {
   const docsExists = await exists(`${BASE_PATH}/docs`);
