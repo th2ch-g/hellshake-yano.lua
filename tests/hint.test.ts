@@ -12,8 +12,8 @@ import {
 import {
   detectAdjacentWords,
   calculateHintPosition,
-} from "./hint.ts";
-import type { Word, HintPosition } from "./types.ts";
+} from "../denops/hellshake-yano/hint.ts";
+import type { Word, HintPosition } from "../denops/hellshake-yano/types.ts";
 
 // Helper function to create test words
 function createWord(text: string, line: number, col: number, byteCol?: number): Word {
