@@ -203,6 +203,125 @@ In Visual mode, you typically:
 With `visual_hint_position: 'end'`, hints appear where your cursor will land, making word selection
 more intuitive and reducing cognitive load.
 
+## UnifiedConfig System (New in v3.x)
+
+hellshake-yano.vim v3.x introduces a revolutionary configuration system that unifies all settings into a single, flat structure with camelCase naming conventions. This replaces the previous hierarchical snake_case configuration approach.
+
+### Key Benefits
+
+- **Simplified Structure**: Single flat configuration interface (32 properties)
+- **camelCase Convention**: Consistent naming throughout all settings
+- **Type Safety**: Full TypeScript support with strict validation
+- **Performance**: Direct property access without nested lookups
+- **Migration Support**: Automatic conversion from legacy configurations
+
+### UnifiedConfig Interface
+
+The new configuration system consolidates all settings into a single `UnifiedConfig` interface:
+
+```typescript
+interface UnifiedConfig {
+  // Core settings
+  enabled: boolean;
+  markers: string[];
+  motionCount: number;
+  motionTimeout: number;
+  hintPosition: "start" | "end" | "same";
+
+  // Advanced settings
+  useJapanese: boolean;
+  minWordLength: number;
+  perKeyMinLength: Record<string, number>;
+  defaultMinWordLength: number;
+
+  // Performance settings
+  cacheSize: number;
+  enableHighlight: boolean;
+  useTinySegmenter: boolean;
+
+  // ... and 21 more settings
+}
+```
+
+### Modern Configuration Example
+
+**New v3.x camelCase Style:**
+```vim
+let g:hellshake_yano = #{
+\   enabled: v:true,
+\   markers: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+\   motionCount: 3,
+\   hintPosition: 'start',
+\   useJapanese: v:true,
+\   minWordLength: 3,
+\   perKeyMinLength: #{ 'v': 1, 'f': 1, 'w': 3 },
+\   defaultMinWordLength: 3,
+\   enableHighlight: v:true,
+\   cacheSize: 1000
+\ }
+```
+
+**Legacy snake_case (still supported):**
+```vim
+let g:hellshake_yano = {
+  \ 'core': { 'enabled': v:true },
+  \ 'hint': { 'hint_position': 'start' },
+  \ 'word': { 'min_word_length': 3, 'use_japanese': v:true }
+  \ }
+```
+
+### Migration Guide
+
+The plugin provides seamless migration from v2.x configurations:
+
+1. **Automatic Detection**: Legacy configurations are automatically converted
+2. **Gradual Migration**: Both formats work during transition period
+3. **Validation**: Built-in validation ensures configuration correctness
+4. **Helper Functions**: `toUnifiedConfig()` for manual conversion
+
+### Configuration Examples
+
+**Optimal for Japanese Development:**
+```vim
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   useTinySegmenter: v:true,
+\   minWordLength: 2,
+\   perKeyMinLength: #{
+\     'v': 1,    " Visual selection - all characters
+\     'f': 1,    " Find character - all characters
+\     'w': 3,    " Word movement - meaningful words only
+\     'e': 2     " Word end - balanced precision
+\   },
+\   enableHighlight: v:true,
+\   cacheSize: 2000
+\ }
+```
+
+**Performance Optimized:**
+```vim
+let g:hellshake_yano = #{
+\   maxHints: 50,
+\   cacheSize: 3000,
+\   debounceDelay: 30,
+\   suppressOnKeyRepeat: v:true,
+\   keyRepeatThreshold: 80,
+\   enableDebug: v:false
+\ }
+```
+
+### API Documentation
+
+For comprehensive configuration documentation:
+- [UnifiedConfig API Reference](docs/unified-config-api.md) - Complete API documentation
+- [Configuration Examples](docs/unified-config-api.md#usage-examples) - Real-world usage patterns
+- [Migration Guide](MIGRATION.md) - Step-by-step migration from v2.x
+- [Type Definitions](docs/unified-config-api.md#type-definitions) - TypeScript interfaces
+
+### backward compatibility
+
+The plugin maintains full backward compatibility with v2.x configurations while providing deprecation warnings to guide users toward the new system. Legacy configurations will continue to work until v4.0.0.
+
 ### Per-Key Minimum Word Length Configuration
 
 **Enhanced Feature**: Configure different minimum word lengths for different keys to optimize hint

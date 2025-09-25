@@ -345,19 +345,20 @@ export interface UnifiedConfig {
 #### sub9 旧インターフェースの削除準備
 @target: denops/hellshake-yano/config.ts
 @ref: denops/hellshake-yano/types.ts
-- [ ] CoreConfig, HintConfig, WordConfig等に@deprecatedマーク
-- [ ] 移行ガイドコメントの追加
-- [ ] 削除予定バージョンの明記
-- [ ] `deno check denops/hellshake-yano/`で全体の型チェック
-- [ ] `deno test tests/`で全75個のテストファイルがパス
+- [x] CoreConfig, HintConfig, WordConfig等に@deprecatedマーク
+- [x] 移行ガイドコメントの追加
+- [x] 削除予定バージョンの明記
+- [x] `deno check denops/hellshake-yano/`で全体の型チェック
+- [x] `deno test tests/`で全75個のテストファイルがパス
 
 #### sub10 ドキュメント更新
 @target: docs/, README.md
-- [ ] UnifiedConfigのAPIドキュメント作成
-- [ ] 設定項目一覧（32項目）の説明書作成
-- [ ] snake_case→camelCase移行ガイド作成
-- [ ] 設定例とベストプラクティスの記載
-- [ ] MIGRATION.mdに移行手順を追加
+- [x] UnifiedConfigのAPIドキュメント作成
+- [x] 設定項目一覧（32項目）の説明書作成
+- [x] snake_case→camelCase移行ガイド作成
+- [x] 設定例とベストプラクティスの記載
+- [x] MIGRATION.mdに移行手順を追加
+- [x] 削除対象となるファイルコードの一覧作成
 
 #### sub11 UnifiedConfig統合エラーの修正
 @target: denops/hellshake-yano/config.ts, denops/hellshake-yano/main.ts
@@ -415,6 +416,8 @@ export interface UnifiedConfig {
 - [ ] @deprecatedマークされた関数の削除
 - [ ] テストで使用されていない関数の削除
 - [ ] 後方互換性のための古いコードの削除
+- [ ] v2移行のためのコードの削除
+- [ ] v2移行のためのユニットテストの削除
 
 ### process10 ユニットテスト
 #### sub1 既存テストの動作確認

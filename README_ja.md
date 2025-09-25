@@ -98,6 +98,125 @@ let g:hellshake_yano = {
 | `debug_mode`                    | 真偽値      | v:false         | デバッグモードを有効化                            |
 | `performance_log`               | 真偽値      | v:false         | パフォーマンスログを有効化                        |
 
+## UnifiedConfig システム（v3.x の新機能）
+
+hellshake-yano.vim v3.xでは、すべての設定を単一のフラット構造でcamelCase命名規則により統一する革新的な設定システムを導入しました。これは従来の階層化されたsnake_case設定アプローチに代わるものです。
+
+### 主な利点
+
+- **シンプルな構造**: 単一のフラット設定インターフェース（32項目）
+- **camelCase統一**: すべての設定で一貫した命名規則
+- **型安全性**: TypeScriptによる厳密なバリデーションサポート
+- **パフォーマンス**: ネストなしの直接プロパティアクセス
+- **移行サポート**: レガシー設定からの自動変換
+
+### UnifiedConfig インターフェース
+
+新しい設定システムは、すべての設定を単一の`UnifiedConfig`インターフェースに統合します：
+
+```typescript
+interface UnifiedConfig {
+  // コア設定
+  enabled: boolean;
+  markers: string[];
+  motionCount: number;
+  motionTimeout: number;
+  hintPosition: "start" | "end" | "same";
+
+  // 高度な設定
+  useJapanese: boolean;
+  minWordLength: number;
+  perKeyMinLength: Record<string, number>;
+  defaultMinWordLength: number;
+
+  // パフォーマンス設定
+  cacheSize: number;
+  enableHighlight: boolean;
+  useTinySegmenter: boolean;
+
+  // ... さらに21個の設定項目
+}
+```
+
+### モダン設定例
+
+**新しいv3.x camelCaseスタイル：**
+```vim
+let g:hellshake_yano = #{
+\   enabled: v:true,
+\   markers: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+\   motionCount: 3,
+\   hintPosition: 'start',
+\   useJapanese: v:true,
+\   minWordLength: 3,
+\   perKeyMinLength: #{ 'v': 1, 'f': 1, 'w': 3 },
+\   defaultMinWordLength: 3,
+\   enableHighlight: v:true,
+\   cacheSize: 1000
+\ }
+```
+
+**レガシーsnake_case（まだサポートされています）：**
+```vim
+let g:hellshake_yano = {
+  \ 'core': { 'enabled': v:true },
+  \ 'hint': { 'hint_position': 'start' },
+  \ 'word': { 'min_word_length': 3, 'use_japanese': v:true }
+  \ }
+```
+
+### 移行ガイド
+
+プラグインはv2.x設定からのシームレスな移行を提供します：
+
+1. **自動検出**: レガシー設定は自動的に変換されます
+2. **段階的移行**: 移行期間中は両方のフォーマットが動作します
+3. **バリデーション**: 設定の正確性を保証する組み込みバリデーション
+4. **ヘルパー関数**: 手動変換のための`toUnifiedConfig()`
+
+### 設定例
+
+**日本語開発に最適：**
+```vim
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   useTinySegmenter: v:true,
+\   minWordLength: 2,
+\   perKeyMinLength: #{
+\     'v': 1,    " ビジュアル選択 - 全文字
+\     'f': 1,    " 文字検索 - 全文字
+\     'w': 3,    " 単語移動 - 意味のある単語のみ
+\     'e': 2     " 単語末尾 - バランス重視
+\   },
+\   enableHighlight: v:true,
+\   cacheSize: 2000
+\ }
+```
+
+**パフォーマンス最適化：**
+```vim
+let g:hellshake_yano = #{
+\   maxHints: 50,
+\   cacheSize: 3000,
+\   debounceDelay: 30,
+\   suppressOnKeyRepeat: v:true,
+\   keyRepeatThreshold: 80,
+\   enableDebug: v:false
+\ }
+```
+
+### APIドキュメント
+
+包括的な設定ドキュメント：
+- [UnifiedConfig APIリファレンス](docs/unified-config-api.md) - 完全なAPIドキュメント
+- [設定例](docs/unified-config-api.md#usage-examples) - 実用的な使用パターン
+- [移行ガイド](MIGRATION.md) - v2.xからのステップバイステップ移行
+- [型定義](docs/unified-config-api.md#type-definitions) - TypeScriptインターフェース
+
+### 後方互換性
+
+プラグインはv2.x設定との完全な後方互換性を維持しながら、新しいシステムへのユーザーガイドとして非推奨警告を提供します。レガシー設定はv4.0.0まで動作し続けます。
+
 ### キー別最小文字数設定
 
 **強化機能**:
