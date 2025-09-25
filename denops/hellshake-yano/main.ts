@@ -53,6 +53,7 @@ import type {
   HintMapping,
   HintPositionWithCoordinateSystem,
   PerformanceMetrics,
+  Word,
 } from "./types.ts";
 
 // Re-export types for backward compatibility
@@ -137,10 +138,10 @@ let lastShowHintsTime = 0;
 /**
  * 単語検出結果のキャッシュ
  * 検出済みの単語情報を保存し、パフォーマンスを向上
- * @type {LRUCache<string, any[]>}
+ * @type {LRUCache<string, Word[]>}
  * @since 1.0.0
  */
-const wordsCache = new LRUCache<string, any[]>(100);
+const wordsCache = new LRUCache<string, Word[]>(100);
 
 /**
  * ヒント生成結果のキャッシュ
@@ -506,8 +507,9 @@ export async function main(denops: Denops): Promise<void> {
 
       // counted_motions の適用
       if (Array.isArray(cfg.counted_motions)) {
-        // 各要素が1文字の文字列か検証
-        const validKeys = cfg.counted_motions.filter((key: any) =>
+        // 各要素が1文字の文字列か検証（型安全性向上：Process2 Sub6）
+        // unknown型からstring型へのtype guard使用でany型を排除
+        const validKeys = cfg.counted_motions.filter((key: unknown): key is string =>
           typeof key === "string" && key.length === 1
         );
         if (validKeys.length === cfg.counted_motions.length) {
@@ -849,8 +851,8 @@ export async function main(denops: Denops): Promise<void> {
             return;
           }
 
-          // バッチ処理でヒントを非同期表示（最適化）（モード情報付き）
-          displayHintsAsync(denops, currentHints, { mode: modeString });
+          // バッチ処理でヒントを非同期表示（最適化）
+          displayHintsAsync(denops, currentHints, config);
 
           // ヒント表示状態を確実に設定
           hintsVisible = true;
@@ -1152,7 +1154,7 @@ export async function main(denops: Denops): Promise<void> {
         const totalTime = Date.now() - startTime;
 
         // 統計情報を表示
-        const debugInfo = await denops.dispatcher.debug?.() as any;
+        const debugInfo = await denops.dispatcher.debug?.() as DebugInfo;
 
         // キャッシュ統計
         try {
@@ -1191,14 +1193,14 @@ export async function main(denops: Denops): Promise<void> {
         const executionTime = endTime - startTime;
 
         // 結果を取得
-        const debugInfo = await denops.dispatcher.debug?.() as any;
+        const debugInfo = await denops.dispatcher.debug?.() as DebugInfo;
 
         // 設定を元に戻す
         config.maxHints = originalMaxHints;
 
         await denops.cmd(
           `echo 'Stress test completed in ${executionTime}ms with ${
-            debugInfo?.currentHintsCount || 0
+            debugInfo?.currentHints?.length || 0
           } hints'`,
         );
       } catch (error) {
@@ -1275,7 +1277,7 @@ export async function main(denops: Denops): Promise<void> {
  * @param bufnr - バッファ番号
  * @returns 検出された単語の配列
  */
-async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<any[]> {
+async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<Word[]> {
   try {
     const enhancedConfig: EnhancedWordConfig = {
       strategy: config.wordDetectionStrategy,
@@ -1434,7 +1436,7 @@ const HIGHLIGHT_BATCH_SIZE = 15; // 1バッチあたりの処理数（パフォ�
 export function displayHintsAsync(
   denops: Denops,
   hints: HintMapping[],
-  config: any,
+  config: UnifiedConfig,
   onComplete?: () => void,
 ): void {
   // 前の描画をキャンセル
@@ -1457,7 +1459,7 @@ export function displayHintsAsync(
         return;
       }
 
-      await displayHintsOptimized(denops, hints, config.mode || "normal", currentController.signal);
+      await displayHintsOptimized(denops, hints, "normal", currentController.signal);
 
       // 完了コールバックを実行
       if (onComplete && !currentController.signal.aborted) {

@@ -307,15 +307,20 @@ export interface UnifiedConfig {
 - [x] `deno check denops/hellshake-yano/main.ts`で型チェック
 - [x] `deno test tests/main_test.ts`で既存テストがパス（6テスト）
 - [x] `deno test tests/integration_test.ts`で統合テストがパス（4テスト）
+- [x] any型の完全排除とStrict TypeScript対応
+- [x] counted_motions変数の型ガード実装（Map<string, number>）
+- [x] LRUCacheの型定義改善（ジェネリクス型の適切な使用）
+- [x] DebugInfo型の適切な使用（デバッグ情報の型安全性確保）
+- [x] 型エラーの完全解消とコードの型安全性向上
 
 #### sub6 各モジュールの設定参照更新（hint.ts）
 @target: denops/hellshake-yano/hint.ts
 @ref: denops/hellshake-yano/hint/manager.ts
-- [ ] Config型インポートをUnifiedConfigへ変更
-- [ ] 設定アクセスをcamelCaseプロパティへ更新
-- [ ] hint_position→hintPosition等の変更
-- [ ] `deno check denops/hellshake-yano/hint.ts`で型チェック
-- [ ] `deno test tests/hint*.ts`でhint関連テストがパス
+- [x] Config型インポートをUnifiedConfigへ変更
+- [x] 設定アクセスをcamelCaseプロパティへ更新
+- [x] hint_position→hintPosition等の変更
+- [x] `deno check denops/hellshake-yano/hint.ts`で型チェック
+- [x] `deno test tests/hint*.ts`でhint関連テストがパス
 
 
 #### sub7 各モジュールの設定参照更新（word関連）
