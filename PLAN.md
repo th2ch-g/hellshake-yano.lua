@@ -93,20 +93,141 @@ export interface UnifiedConfig {
 ## Process
 
 ### process1 キャッシュシステム統合
-#### sub1 統一キャッシュクラスの作成
-@target: denops/hellshake-yano/cache.ts
-@ref: denops/hellshake-yano/utils/cache.ts, denops/hellshake-yano/hint.ts
-- [ ] UnifiedCacheクラスの実装（5種類のキャッシュタイプ）
-- [ ] シングルトンパターンの実装
-- [ ] LRUキャッシュの統一利用
-- [ ] キャッシュ統計機能の追加
 
-#### sub2 既存キャッシュの置き換え
-@target: 各ファイルのキャッシュ実装箇所
-- [ ] hint.tsの4つのMapキャッシュを置き換え
-- [ ] main.tsの2つのLRUCacheを置き換え
-- [ ] word/detector.tsのglobalWordCacheを置き換え
-- [ ] その他17箇所のキャッシュを統合
+#### 現状調査結果
+**キャッシュ実装の詳細分析（合計20個）**
+- **LRUCache実装（3個）**
+  - `lifecycle.ts`: wordsキャッシュ、hintsキャッシュ（各100/50サイズ）
+  - `word/dictionary.ts`: 辞書キャッシュ
+- **Map実装（17個）**
+  - `hint.ts`: hintCache、assignmentCacheNormal/Visual/Other（4個）
+  - `word/context.ts`: languageRuleCache、contextCache（2個）
+  - `word/detector.ts`: globalWordCache（KeyBasedWordCache内部）
+  - その他散在するMapキャッシュ
+- **既存基盤**: `utils/cache.ts`に完全な統一キャッシュ基盤が実装済み
+- **テスト環境**: 75個のテストファイル、キャッシュ分離テスト等が存在
+
+#### sub1 統一キャッシュクラスの作成と基盤整備
+@target: denops/hellshake-yano/cache.ts
+@ref: denops/hellshake-yano/utils/cache.ts
+- [ ] CacheType列挙型を定義（11種類：WORDS、HINTS、DISPLAY、ANALYSIS、TEMP、HINT_ASSIGNMENT_NORMAL/VISUAL/OTHER、LANGUAGE_RULES、SYNTAX_CONTEXT、DICTIONARY）
+- [ ] UnifiedCacheクラスのスケルトンを作成
+- [ ] シングルトンパターンを実装
+- [ ] 各CacheTypeに対応するLRUCacheインスタンスを初期化（適切なサイズ設定）
+- [ ] `getCache(type: CacheType)`メソッドを実装
+- [ ] 型安全なジェネリックインターフェースを定義
+- [ ] `getAllStats()`メソッドを実装（全キャッシュの統計情報取得）
+- [ ] `clearAll()`メソッドを実装（全キャッシュのクリア）
+- [ ] `clearByType(type: CacheType)`メソッドを実装（特定タイプのクリア）
+- [ ] `deno check denops/hellshake-yano/cache.ts`でコンパイルエラーなし
+- [ ] `tests/unified_cache_test.ts`を作成
+- [ ] 各キャッシュタイプの独立性をテスト
+- [ ] シングルトン動作のテスト
+- [ ] 統計機能のテスト
+- [ ] `deno test tests/unified_cache_test.ts`でテストが全てパス
+
+#### sub2 hint.tsのキャッシュ統合（4個）
+@target: denops/hellshake-yano/hint.ts
+@ref: denops/hellshake-yano/cache.ts
+- [ ] UnifiedCacheをインポート
+- [ ] `hintCache`をUnifiedCache.HINTS に置き換え
+- [ ] `assignmentCacheNormal`をUnifiedCache.HINT_ASSIGNMENT_NORMALに置き換え
+- [ ] `assignmentCacheVisual`をUnifiedCache.HINT_ASSIGNMENT_VISUALに置き換え
+- [ ] `assignmentCacheOther`をUnifiedCache.HINT_ASSIGNMENT_OTHERに置き換え
+- [ ] getAssignmentCacheForMode関数をUnifiedCache利用に更新
+- [ ] Map特有のメソッド（size、clear等）の互換性を確保
+- [ ] `deno check denops/hellshake-yano/hint.ts`でコンパイルエラーなし
+- [ ] `deno test tests/hint.test.ts`で既存テストがパス
+- [ ] `deno test tests/hint_assignment_cache_separation_test.ts`でモード分離テストがパス
+- [ ] `deno test tests/hint_assignment_test.ts`で全テストがパス
+- [ ] `deno test tests/hint*.ts`で全てのhint関連テストがパス
+
+#### sub3 lifecycle.tsのキャッシュ統合（2個）
+@target: denops/hellshake-yano/lifecycle.ts
+@ref: denops/hellshake-yano/cache.ts
+- [ ] UnifiedCacheをインポート
+- [ ] state.caches.wordsをUnifiedCache.WORDSに置き換え
+- [ ] state.caches.hintsをUnifiedCache.HINTSに置き換え
+- [ ] initializeState関数の更新（キャッシュサイズオプションの処理）
+- [ ] resetCaches関数の更新（UnifiedCacheのclearByTypeを使用）
+- [ ] `deno check denops/hellshake-yano/lifecycle.ts`でコンパイルエラーなし
+- [ ] `deno test tests/lifecycle*.ts`で関連テストがパス
+- [ ] `deno test tests/integration_test.ts`で統合テストがパス
+
+#### sub4 word/context.tsのキャッシュ統合（2個）
+@target: denops/hellshake-yano/word/context.ts
+@ref: denops/hellshake-yano/cache.ts
+- [ ] UnifiedCacheをインポート
+- [ ] `languageRuleCache`をUnifiedCache.LANGUAGE_RULESに置き換え
+- [ ] `contextCache`をUnifiedCache.SYNTAX_CONTEXTに置き換え
+- [ ] getLanguageRule関数のキャッシュアクセス更新
+- [ ] detectContext関数のキャッシュアクセス更新
+- [ ] clearメソッドの実装（UnifiedCacheのclearByTypeを使用）
+- [ ] `deno check denops/hellshake-yano/word/context.ts`でコンパイルエラーなし
+- [ ] `deno test tests/context*.ts`で関連テストがパス
+- [ ] `deno test tests/word*.ts`でword関連テストがパス
+
+#### sub5 word/detector.tsのキャッシュ統合（1個）
+@target: denops/hellshake-yano/word/detector.ts
+@ref: denops/hellshake-yano/cache.ts
+- [ ] UnifiedCacheをインポート
+- [ ] KeyBasedWordCacheクラスをUnifiedCache利用に更新
+- [ ] `globalWordCache`をUnifiedCache.WORDSベースに変更
+- [ ] set/getメソッドをUnifiedCacheのインターフェースに合わせる
+- [ ] clearメソッドの実装
+- [ ] getStats関数の実装（UnifiedCacheの統計機能を活用）
+- [ ] `deno check denops/hellshake-yano/word/detector.ts`でコンパイルエラーなし
+- [ ] `deno test tests/word_detector_test.ts`でテストがパス
+
+#### sub6 word/dictionary.tsのキャッシュ統合（1個）
+@target: denops/hellshake-yano/word/dictionary.ts
+@ref: denops/hellshake-yano/cache.ts
+- [ ] UnifiedCacheをインポート
+- [ ] dictionary内のLRUCacheをUnifiedCache.DICTIONARYに置き換え
+- [ ] checkWord関数のキャッシュアクセス更新
+- [ ] キャッシュ統計の取得メソッド更新
+- [ ] `deno check denops/hellshake-yano/word/dictionary.ts`でコンパイルエラーなし
+- [ ] `deno test tests/*dictionary*.ts`で辞書関連テストがパス
+
+#### sub7 その他のMapキャッシュの統合（残り約9個）
+@target: denops/hellshake-yano/
+- [ ] `grep -r "new Map<" denops/`で残りのMapキャッシュを特定
+- [ ] 特定された各ファイルをリスト化
+- [ ] 各Mapキャッシュに対してUnifiedCacheの適切なタイプを決定
+- [ ] 必要に応じて新しいCacheTypeを追加
+- [ ] 各ファイルのキャッシュを順次UnifiedCacheに移行
+- [ ] 各ファイルで`deno check`実行
+- [ ] 各ファイルの関連テスト実行
+- [ ] `deno test tests/`で全体の回帰テスト実行
+
+#### sub8 統合テストと最適化
+@target: denops/hellshake-yano/, tests/
+- [ ] `deno test tests/`で全75個のテストファイルがパス
+- [ ] `deno check denops/hellshake-yano/`で型エラーなし
+- [ ] パフォーマンステスト用のベンチマークスクリプト作成
+- [ ] 各CacheTypeの適切なmaxSizeを決定（ヒット率の測定）
+- [ ] メモリ使用量の測定と調整
+- [ ] キャッシュヒット率レポートの生成
+- [ ] 不要になった古いキャッシュ実装コードの削除
+- [ ] importの整理とunused importの削除
+- [ ] `deno check`で全体のコンパイル最終確認
+- [ ] `deno test`で全テストが通ることを最終確認
+
+#### sub9 ドキュメント更新
+@target: docs/, README.md
+- [ ] UnifiedCacheのAPIドキュメント作成
+- [ ] キャッシュタイプ一覧と用途の説明書作成
+- [ ] 移行ガイドの作成（旧実装から新実装への移行手順）
+- [ ] パフォーマンス改善の数値をドキュメント化
+- [ ] キャッシュ統計の取得方法と活用例の記載
+- [ ] README.mdに新キャッシュシステムの概要を追加
+
+#### 成果物と期待される改善
+- キャッシュ実装が20個から1つに統合
+- メモリリークリスクの排除（全てLRUCache化）
+- 統一された統計情報取得とデバッグの容易化
+- キャッシュヒット率の向上とメモリ使用量の最適化
+- 保守性の大幅な向上
 
 ### process2 設定インターフェース統合
 #### sub1 統一設定インターフェースの作成
