@@ -18,8 +18,8 @@ import {
   getByteLength,
   isPositionWithinWord,
   calculateWordGap,
-} from "./hint-utils.ts";
-import type { Word } from "./types.ts";
+} from "../denops/hellshake-yano/hint-utils.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("convertToDisplayColumn function", async (t) => {
   // ===== Red Phase: Tests that expose the +1 bug =====
