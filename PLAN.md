@@ -992,13 +992,14 @@ export interface UnifiedConfig {
 - [x] **全652テストがパス - 2025-09-26確認済み**
 - [ ] **移行完了後、word/dictionary.tsとword/dictionary-loader.tsを削除**
 
-##### sub1-5 segmenter.ts統合（422行）
-- [ ] TinySegmenterクラスをword.tsへ移行
-- [ ] SegmentationResult型を移行
-- [ ] 日本語処理関連定数を統合
-- [ ] `deno check denops/hellshake-yano/word.ts`で型チェック
-- [ ] `deno test tests/word*.ts`で全10個のword関連テストパス
-- [ ] **移行完了後、segmenter.tsを削除**
+##### sub1-5 segmenter.ts統合（422行）【完了】
+- [x] TinySegmenterクラスをword.tsへ移行（re-export: 1529行）
+- [x] SegmentationResult型を移行（re-export形式）
+- [x] 日本語処理関連定数を統合（segmenter.ts内に維持、word.ts経由でアクセス）
+- [x] `deno check denops/hellshake-yano/word.ts`で型チェック
+- [x] `deno test tests/word*.ts`で全62個のword関連テストパス
+- [x] **全652テストがパス - 2025-09-26確認済み**
+- [ ] **移行完了後、segmenter.tsを削除**（re-export戦略により保持）
 
 ##### sub1-6 重複コード削除と最適化
 - [ ] 重複している検出ロジックを統合

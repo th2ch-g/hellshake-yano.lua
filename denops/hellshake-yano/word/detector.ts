@@ -29,7 +29,7 @@ export type { DetectionContext, WordDetectionResult } from "../types.ts";
 
 import type { Denops } from "@denops/std";
 import type { Word, DetectionContext, WordDetectionResult } from "../types.ts";
-import { type SegmentationResult, TinySegmenter } from "../segmenter.ts";
+import { type SegmentationResult, TinySegmenter } from "../word.ts";
 import { ContextDetector, type SplittingRules } from "./context.ts";
 import type { UnifiedConfig } from "../config.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";

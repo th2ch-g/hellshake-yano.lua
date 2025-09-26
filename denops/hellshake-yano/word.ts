@@ -1524,3 +1524,6 @@ export {
   type MergeStrategy,
   type DictionaryLoaderConfig,
 } from "./word/dictionary-loader.ts";
+
+// Re-export segmenter types and classes for integrated access
+export { type SegmentationResult, TinySegmenter } from "./segmenter.ts";

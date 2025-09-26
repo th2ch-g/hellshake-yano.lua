@@ -1,5 +1,5 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
-import { TinySegmenter } from "../denops/hellshake-yano/segmenter.ts";
+import { TinySegmenter } from "../denops/hellshake-yano/word.ts";
 import {
   HybridWordDetector,
   RegexWordDetector,
