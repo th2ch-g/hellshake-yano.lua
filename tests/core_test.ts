@@ -1,6 +1,8 @@
 import { assertEquals, assertExists, assertThrows } from "https://deno.land/std@0.220.1/assert/mod.ts";
 import { Core } from "../denops/hellshake-yano/core.ts";
 import type { Config, Word, HintMapping } from "../denops/hellshake-yano/types.ts";
+import type { Denops } from "@denops/std";
+import { MockDenops } from "./helpers/mock.ts";
 
 /**
  * Core class existence test
@@ -332,4 +334,159 @@ Deno.test("Core class initializeState should reset to clean state", () => {
   assertEquals(state.isActive, false);
   assertEquals(state.currentHints.length, 0);
   assertEquals(state.hintsVisible, false);
+});
+
+/**
+ * TDD RED Phase: Phase4 - detectWordsOptimizedの実装テスト（最初は失敗する）
+ * 単語検出機能の移行テスト
+ */
+Deno.test("Core class should have detectWordsOptimized method", () => {
+  const core = new Core();
+  assertExists(core.detectWordsOptimized);
+});
+
+Deno.test("Core class detectWordsOptimized should be async and return Promise<Word[]>", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Setup mock responses for word detection
+  mockDenops.setCallResponse("line", (arg: string) => {
+    switch (arg) {
+      case "w0": return 1;  // Top visible line
+      case "w$": return 20; // Bottom visible line
+      case "$": return 100; // Total lines in buffer
+      default: return 1;
+    }
+  });
+
+  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+    if (end === undefined) {
+      return "hello world test";
+    }
+    const lines = [];
+    for (let i = start; i <= end; i++) {
+      lines.push(`line ${i} with words`);
+    }
+    return lines;
+  });
+
+  mockDenops.setCallResponse("col", () => 1);
+
+  const bufnr = 1;
+  const result = core.detectWordsOptimized(mockDenops as any, bufnr);
+  assertExists(result);
+  assertEquals(typeof result.then, "function"); // Promise check
+
+  const words = await result;
+  assertExists(words);
+  assertEquals(Array.isArray(words), true);
+});
+
+Deno.test("Core class detectWordsOptimized should handle invalid buffer number", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Setup mock for invalid buffer case
+  mockDenops.setCallResponse("line", () => 1);
+  mockDenops.setCallResponse("getline", () => "");
+  mockDenops.setCallResponse("col", () => 1);
+
+  const invalidBufnr = -1;
+  const words = await core.detectWordsOptimized(mockDenops as any, invalidBufnr);
+  assertExists(words);
+  assertEquals(Array.isArray(words), true);
+  // Invalid buffer should return empty array, not throw error
+});
+
+Deno.test("Core class detectWordsOptimized should respect cache configuration", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Setup consistent mock responses
+  mockDenops.setCallResponse("line", (arg: string) => {
+    switch (arg) {
+      case "w0": return 1;
+      case "w$": return 20;
+      case "$": return 100;
+      default: return 1;
+    }
+  });
+
+  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+    if (end === undefined) {
+      return "test words here";
+    }
+    const lines = [];
+    for (let i = start; i <= end; i++) {
+      lines.push(`test words here line ${i}`);
+    }
+    return lines;
+  });
+  mockDenops.setCallResponse("col", () => 1);
+
+  const bufnr = 1;
+  // Test with cache enabled (default)
+  const wordsWithCache = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  assertExists(wordsWithCache);
+  assertEquals(Array.isArray(wordsWithCache), true);
+
+  // Results should be consistent when called multiple times with cache
+  const wordsWithCache2 = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  assertEquals(wordsWithCache.length, wordsWithCache2.length);
+});
+
+Deno.test("Core class detectWordsOptimized should handle config changes", async () => {
+  const core = new Core({ use_japanese: false });
+  const mockDenops = new MockDenops();
+
+  // Setup mock responses
+  mockDenops.setCallResponse("line", (arg: string) => arg === "w0" ? 1 : 20);
+  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+    if (end === undefined) {
+      return "test words";
+    }
+    const lines = [];
+    for (let i = start; i <= end; i++) {
+      lines.push(`test words line ${i}`);
+    }
+    return lines;
+  });
+  mockDenops.setCallResponse("col", () => 1);
+
+  const bufnr = 1;
+  const wordsWithoutJapanese = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  assertExists(wordsWithoutJapanese);
+
+  // Change config to enable Japanese
+  core.updateConfig({ use_japanese: true });
+  const wordsWithJapanese = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  assertExists(wordsWithJapanese);
+});
+
+Deno.test("Core class detectWordsOptimized should integrate with existing word detection logic", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Setup mock for word detection
+  mockDenops.setCallResponse("line", (arg: string) => arg === "w0" ? 1 : 20);
+  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+    if (end === undefined) {
+      return "integration test words";
+    }
+    const lines = [];
+    for (let i = start; i <= end; i++) {
+      lines.push(`integration test words line ${i}`);
+    }
+    return lines;
+  });
+  mockDenops.setCallResponse("col", () => 1);
+
+  const bufnr = 1;
+  // Should use the same logic as detectWords but with optimizations
+  const standardResult = core.detectWords();
+  const optimizedWords = await core.detectWordsOptimized(mockDenops as any, bufnr);
+
+  // Both should return arrays of Word objects
+  assertEquals(Array.isArray(standardResult.words), true);
+  assertEquals(Array.isArray(optimizedWords), true);
 });

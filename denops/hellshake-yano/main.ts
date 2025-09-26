@@ -106,7 +106,7 @@ let config: UnifiedConfig = getDefaultUnifiedConfig();
  * @type {Core}
  * @since 2.0.0
  */
-let coreInstance: Core = new Core(fromUnifiedConfig(config));
+let coreInstance: Core | null = null;
 
 /**
  * 現在表示中のヒントマッピングの配列
@@ -816,7 +816,11 @@ export async function main(denops: Denops): Promise<void> {
           }
 
           // キャッシュを使用して単語を検出（最適化）
-          const words = await detectWordsOptimized(denops, bufnr);
+          // Phase4: CoreクラスのdetectWordsOptimizedメソッドを使用
+          if (!coreInstance) {
+            coreInstance = new Core(config);
+          }
+          const words = await coreInstance.detectWordsOptimized(denops, bufnr);
           if (words.length === 0) {
             await denops.cmd("echo 'No words found for hints'");
             return;
@@ -1922,6 +1926,9 @@ async function clearHintDisplay(denops: Denops): Promise<void> {
  */
 async function hideHints(denops: Denops): Promise<void> {
   // Phase3: Process3 Sub1 - Core class delegation for state management
+  if (!coreInstance) {
+    coreInstance = new Core(config);
+  }
   coreInstance.hideHints();
 
   // 既にヒントが非表示で、currentHintsも空の場合は早期リターン

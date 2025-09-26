@@ -425,15 +425,15 @@ export interface UnifiedConfig {
   - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
   - [x] `deno test tests/main_test.ts`で既存テストが通ることを確認
   - [x] `deno test tests/integration_test.ts`で統合テストパス
-- [ ] **Phase4: 単語検出機能の移行**
-  - [ ] core_test.tsにdetectWordsOptimizedのテスト作成（RED）
-  - [ ] CoreクラスにdetectWordsOptimizedメソッド実装
-  - [ ] キャッシュアクセスの依存関係解決
-  - [ ] main.tsから呼び出しを変更
-  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
-  - [ ] `deno test tests/main_test.ts`で既存テストパス
-  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [x] **Phase4: 単語検出機能の移行**
+  - [x] core_test.tsにdetectWordsOptimizedのテスト作成（RED）
+  - [x] CoreクラスにdetectWordsOptimizedメソッド実装
+  - [x] キャッシュアクセスの依存関係解決
+  - [x] main.tsから呼び出しを変更
+  - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [x] `deno test tests/main_test.ts`で既存テストパス
+  - [x] `deno test tests/integration_test.ts`で統合テストパス
 - [ ] **Phase5: ヒント生成機能の移行**
   - [ ] core_test.tsにgenerateHintsOptimizedのテスト作成（RED）
   - [ ] CoreクラスにgenerateHintsOptimizedメソッド実装

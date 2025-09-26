@@ -26,11 +26,11 @@ Deno.test("Integration: awaitが使用されていない", () => {
   // 呼び出し箇所でawaitが使われていないことを確認
   const lines = sourceCode.split("\n");
 
-  // Line 2711付近を探す（Phase3の変更後）
+  // Line 2718付近を探す（Phase4の変更後）
   let foundCall = false;
   let hasAwait = false;
 
-  for (let i = 2705; i < 2715 && i < lines.length; i++) {
+  for (let i = 2710; i < 2725 && i < lines.length; i++) {
     const line = lines[i];
     if (line.includes("highlightCandidateHintsAsync")) {
       foundCall = true;
@@ -64,7 +64,7 @@ Deno.test("Integration: コメントが適切に記載されている", () => {
 
   let foundComment = false;
 
-  for (let i = 2700; i < 2715 && i < lines.length; i++) {
+  for (let i = 2710; i < 2720 && i < lines.length; i++) {
     const line = lines[i];
     if (line.includes("非同期") || line.includes("ブロック") || line.includes("async")) {
       foundComment = true;

@@ -9,6 +9,7 @@
  * @since Process3 Sub1 Phase1
  */
 
+import type { Denops } from "@denops/std";
 import type {
   Config,
   CoreState,
@@ -18,6 +19,13 @@ import type {
   WordDetectionResult,
 } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
+import type { EnhancedWordConfig } from "./word.ts";
+import {
+  detectWordsWithManager,
+  detectWordsWithConfig,
+} from "./word.ts";
+import type { UnifiedConfig } from "./config.ts";
+import { toUnifiedConfig } from "./config.ts";
 
 /**
  * Hellshake-Yano プラグインの中核クラス
@@ -193,5 +201,87 @@ export class Core {
     this.isActive = false;
     this.currentHints = [];
     // configは既にコンストラクタで初期化済み
+  }
+
+  /**
+   * 指定されたキーの最小文字数を取得
+   *
+   * @param key - 対象のキー
+   * @returns 最小文字数
+   */
+  private getMinLengthForKey(key: string): number {
+    // Config型をUnifiedConfigに変換
+    const unifiedConfig = toUnifiedConfig(this.config);
+
+    // キー別設定が存在し、そのキーの設定があれば使用
+    if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
+      return unifiedConfig.perKeyMinLength[key];
+    }
+
+    // デフォルト値を使用
+    return unifiedConfig.defaultMinWordLength || 1;
+  }
+
+  /**
+   * 単語検出用のEnhancedWordConfigを作成
+   *
+   * @returns 単語検出に最適化された設定オブジェクト
+   */
+  private createEnhancedWordConfig(): EnhancedWordConfig {
+    return {
+      strategy: this.config.word_detection_strategy,
+      use_japanese: this.config.use_japanese,
+      enable_tinysegmenter: this.config.enable_tinysegmenter,
+      segmenter_threshold: this.config.segmenter_threshold,
+      cache_enabled: true,
+      auto_detect_language: true,
+    };
+  }
+
+  /**
+   * Phase4: 単語検出機能の移行 - 最適化された単語検出
+   *
+   * キャッシュを使用して高速に単語を検出する
+   * main.tsのdetectWordsOptimized関数と同等の機能を提供
+   *
+   * @param denops - Denopsインスタンス
+   * @param bufnr - バッファ番号
+   * @returns 検出された単語の配列
+   */
+  async detectWordsOptimized(denops: Denops, bufnr: number): Promise<Word[]> {
+    try {
+      const enhancedConfig = this.createEnhancedWordConfig();
+
+      // current_key_contextからコンテキストを作成
+      const context = this.config.current_key_context
+        ? {
+            minWordLength: this.getMinLengthForKey(this.config.current_key_context),
+          }
+        : undefined;
+
+      const result = await detectWordsWithManager(denops, enhancedConfig, context);
+
+      if (result.success) {
+        return result.words;
+      } else {
+        // フォールバックとしてレガシーメソッドを使用
+        return await this.fallbackWordDetection(denops);
+      }
+    } catch (error) {
+      // 最終フォールバックとしてレガシーメソッドを使用
+      return await this.fallbackWordDetection(denops);
+    }
+  }
+
+  /**
+   * フォールバック用の単語検出
+   *
+   * @param denops - Denopsインスタンス
+   * @returns 検出された単語の配列
+   */
+  private async fallbackWordDetection(denops: Denops): Promise<Word[]> {
+    return await detectWordsWithConfig(denops, {
+      use_japanese: this.config.use_japanese,
+    });
   }
 }
