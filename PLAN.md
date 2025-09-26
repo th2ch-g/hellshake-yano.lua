@@ -9,15 +9,25 @@
 - コード量を50%削減しながら全機能を維持
 - シンプルで理解しやすいアーキテクチャの実現
 - パフォーマンスの向上（処理時間75%削減、メモリ使用量75%削減）
+- **機能の簡易化は一切行わない（重複・未使用コードの削除のみ）**
+- **すべての検出精度（Regex、TinySegmenter、Hybrid）を完全維持**
+- **277個のエクスポートと96個のテストファイルがすべてパス**
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 - 後方互換性を完全に維持する
-- 既存のエクスポートされた関数はすべて維持する
-- テストが壊れないよう慎重に作業を進める
+- 既存のエクスポートされた関数はすべて維持する（277個すべて）
+- テストが壊れないよう慎重に作業を進める（96個のテストファイル）
 - 検出精度（Regex、TinySegmenter、Hybrid）は現状維持
 - processの実装ごとに deno check を実行し、型エラーを防ぐ
 - 各process完了後にユニットテストを実行し、すべてのテストが通ることを確認する
+- **削除対象は以下に限定する**：
+  - 重複コード（同じ処理が複数箇所にある）
+  - 未使用コード（テストで確認されない機能）
+  - 過剰な抽象化（1回しか使われないインターフェース）
+  - 空のindex.tsファイル
+  - コメントアウトされたコード
+  - @deprecatedマークされた関数
 
 ## 開発のゴール
 - 7ファイル体制によるシンプルな構造の実現
@@ -60,11 +70,13 @@ denops/hellshake-yano/
 
 ## 生成AIの学習用コンテキスト
 
-### 削減対象の分析結果
-- **キャッシュ関連**: 20ファイルで重複実装（約3,000行）
-- **設定関連**: 23個のインターフェース定義（約2,500行）
-- **main.ts**: 3,582行のモノリシックファイル
-- **未使用機能**: テストで確認されない機能（約1,500行）
+### 削減対象の分析結果（機能削除なし）
+- **キャッシュ関連**: 20個の重複実装を1つに統合（約3,000行削減、機能は維持）
+- **設定関連**: 23個のインターフェースを1つに統合（約2,500行削減、全設定項目維持）
+- **main.ts**: 3,582行を500行に（機能はcore.tsへ移動、削除なし）
+- **未使用コード**: テストで確認されない機能のみ削除（約1,500行）
+- **重複コード**: 同一処理の重複実装を統合（機能維持）
+- **過剰な抽象化**: 1回しか使われないインターフェースを削除
 
 ### 統合設計
 ```typescript
@@ -813,22 +825,166 @@ export interface UnifiedConfig {
 - 責務の明確な分離による保守性向上
 - TDD実装による品質保証
 
-### process4 不要ファイル削除
-#### sub1 使用頻度の低いディレクトリ削除
-@target: denops/hellshake-yano/
-- [ ] dictionary/ディレクトリの削除（1ファイルのみ）
-- [ ] display/ディレクトリの削除（1ファイルのみ）
-- [ ] input/ディレクトリの削除（1ファイルのみ）
-- [ ] performance/ディレクトリの削除（1ファイルのみ）
-- [ ] validation/ディレクトリの削除（1ファイルのみ）
+### process4 7ファイル体制への統合と不要ファイル削除
 
-#### sub2 デッドコード削除
+#### 現状と目標
+**現状:** 38ファイル、21,896行
+**目標:** 7ファイル、10,500行以内
+**削減:** 31ファイル削除、約11,400行削減
+
+#### sub1 word関連ファイル統合（5ファイル→1ファイル）
+@target: denops/hellshake-yano/word.ts
+@context: 4,652行を1,500行に圧縮
+- [ ] word/detector.ts (1,640行) をword.tsに統合
+  - [ ] KeyBasedWordCacheクラスを移行
+  - [ ] detectWords関連関数を統合
+  - [ ] テストがパスすることを確認
+- [ ] word/manager.ts (938行) をword.tsに統合
+  - [ ] WordDetectionManagerクラスを移行
+  - [ ] マネージャー関連機能を統合
+- [ ] word/context.ts (645行) をword.tsに統合
+  - [ ] コンテキスト検出ロジックを移行
+  - [ ] 言語ルールを統合
+- [ ] word/dictionary-loader.ts (575行) をword.tsに統合
+  - [ ] DictionaryLoaderクラスを移行
+  - [ ] VimConfigBridgeを統合
+- [ ] word/dictionary.ts (432行) をword.tsに統合
+  - [ ] 辞書機能を統合
+- [ ] segmenter.ts (422行) をword.tsに統合
+  - [ ] TinySegmenter関連を移行
+- [ ] 重複コードの削除と最適化
+- [ ] `deno check denops/hellshake-yano/word.ts`で型チェック
+- [ ] `deno test tests/word*.ts`でテストパス
+
+#### sub2 config.ts最適化（2,075行→500行）
+@target: denops/hellshake-yano/config.ts
+@context: UnifiedConfig一本化と重複削除
+- [ ] 旧設定インターフェースの削除
+  - [ ] CoreConfig, HintConfig, WordConfig等を削除
+  - [ ] HierarchicalConfig, CamelCaseConfig, ModernConfigを削除
+- [ ] 変換関数の簡素化
+  - [ ] toUnifiedConfig/fromUnifiedConfigの最小化
+  - [ ] 不要なマッピング関数を削除
+- [ ] デフォルト値管理の簡素化
+  - [ ] DEFAULT_UNIFIED_CONFIGのみ保持
+  - [ ] getDefaultHierarchicalConfig等を削除
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] `deno test tests/config*.ts`でテストパス
+
+#### sub3 types.ts最小化（902行→200行）
+@target: denops/hellshake-yano/types.ts
+@context: 必要最小限の型定義のみ保持
+- [ ] 未使用型定義の削除
+  - [ ] 参照されていないinterface/typeを特定
+  - [ ] 削除後のコンパイルチェック
+- [ ] 重複型定義の統合
+  - [ ] 似た型定義を統一
+  - [ ] エイリアスの整理
+- [ ] コア型定義のみ保持
+  - [ ] Config, Word, HintMapping等の必須型
+  - [ ] その他は各ファイルに移動
+- [ ] `deno check denops/hellshake-yano/`で全体の型チェック
+- [ ] `deno test tests/*.ts`でテストパス
+
+#### sub4 core.ts統合（1,166行→2,000行）
+@target: denops/hellshake-yano/core.ts
+@context: コア機能を集約
+- [ ] api.ts (515行) をcore.tsに統合
+  - [ ] API関連関数をCoreクラスに統合
+  - [ ] エクスポートの整理
+- [ ] lifecycle.ts (754行) をcore.tsに統合
+  - [ ] プラグインライフサイクル管理をCoreに移行
+  - [ ] ステート管理の統合
+- [ ] commands.ts (639行) をcore.tsに統合
+  - [ ] コマンド関連機能をCoreに移行
+  - [ ] CommandFactoryの統合
+- [ ] motion.ts (514行) をcore.tsに統合
+  - [ ] モーション関連ロジックを移行
+- [ ] main/ディレクトリの4ファイルを統合
+  - [ ] dispatcher.ts (217行) を統合
+  - [ ] operations.ts (293行) を統合
+  - [ ] input.ts (281行) を統合
+  - [ ] initialization.ts (42行) を統合
+- [ ] core/ディレクトリの4ファイルを統合
+  - [ ] detection.ts (31行) を統合
+  - [ ] generation.ts (35行) を統合
+  - [ ] operations.ts (102行) を統合
+  - [ ] index.ts (12行) を削除
+- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [ ] `deno test tests/core*.ts`でテストパス
+
+#### sub5 hint.ts整理（1,750行→1,500行）
+@target: denops/hellshake-yano/hint.ts
+@context: ヒント関連機能の統合
+- [ ] hint-utils.ts (288行) をhint.tsに統合
+  - [ ] ユーティリティ関数を移行
+  - [ ] 重複を除去
+- [ ] hint/manager.ts (102行) をhint.tsに統合
+  - [ ] HintManagerクラスを移行
+- [ ] utils/display.ts (526行) の必要部分をhint.tsに統合
+  - [ ] 表示関連ユーティリティを移行
+- [ ] 重複コードの削除
+- [ ] `deno check denops/hellshake-yano/hint.ts`で型チェック
+- [ ] `deno test tests/hint*.ts`でテストパス
+
+#### sub6 utils/ディレクトリ統合（5ファイル削除）
+@target: 各対応ファイル
+@context: ユーティリティを適切なファイルに分散
+- [ ] utils/cache.ts (544行) の必要部分をcache.tsに統合
+  - [ ] LRUCacheクラスは既にUnifiedCacheで使用中
+  - [ ] 不要部分を削除
+- [ ] utils/validation.ts (558行) を分散
+  - [ ] 設定検証をconfig.tsへ
+  - [ ] その他検証をcore.tsへ
+- [ ] utils/display.ts (526行) をhint.tsに統合（sub5で実施済み）
+- [ ] utils/encoding.ts (445行) をword.tsに統合
+  - [ ] エンコーディング関連を移行
+- [ ] utils/charType.ts (353行) をword.tsに統合
+  - [ ] 文字種判定ロジックを移行
+- [ ] utils/sort.ts (275行) の処理を使用箇所に直接実装
+  - [ ] ソート関数をインライン化
+- [ ] `deno check denops/hellshake-yano/`で全体チェック
+- [ ] `deno test tests/*.ts`でテストパス
+
+#### sub7 単一ファイルディレクトリ削除
+@target: denops/hellshake-yano/
+@context: 単一ファイルのみのディレクトリを削除
+- [ ] dictionary/index.ts (12行) とディレクトリを削除
+- [ ] display/index.ts (12行) とディレクトリを削除
+- [ ] input/index.ts (12行) とディレクトリを削除
+- [ ] performance/index.ts (12行) とディレクトリを削除
+- [ ] validation/index.ts (12行) とディレクトリを削除
+- [ ] 空になったディレクトリの削除
+  - [ ] core/ディレクトリ
+  - [ ] main/ディレクトリ
+  - [ ] utils/ディレクトリ
+  - [ ] word/ディレクトリ
+  - [ ] hint/ディレクトリ
+- [ ] `deno check denops/hellshake-yano/`で最終確認
+- [ ] `deno test tests/*.ts`で全テストパス
+
+#### sub8 デッドコード削除と最終最適化
 @target: 各ファイル
+@context: 未使用コードの削除と最終調整
 - [ ] @deprecatedマークされた関数の削除
 - [ ] テストで使用されていない関数の削除
 - [ ] 後方互換性のための古いコードの削除
 - [ ] v2移行のための一時的コードの削除
-- [ ] v2移行のための一時的ユニットテストの削除
+- [ ] コメントアウトされたコードの削除
+- [ ] 最終ファイル構成の確認（7ファイル）
+- [ ] 最終コード行数の確認（10,500行以内）
+- [ ] `deno check denops/hellshake-yano/`で型チェック
+- [ ] `deno test tests/*.ts`で全75個のテストファイルがパス
+
+#### 成果物と期待される改善
+- ファイル数: 38 → 7（82%削減）
+- コード行数: 21,896 → 10,500以内（52%削減）
+- 保守性: 大幅向上（ファイル間の依存関係簡素化）
+- パフォーマンス: ファイルI/O削減による高速化
+- **機能: 100%維持（簡易化なし）**
+- **API互換性: 277個のエクスポートすべて維持**
+- **テスト: 96個のテストファイルすべてパス**
+- **検出精度: 3方式（Regex、TinySegmenter、Hybrid）完全維持**
 
 ### process10 ユニットテスト
 #### sub1 既存テストの動作確認
