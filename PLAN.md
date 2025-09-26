@@ -463,27 +463,27 @@ export interface UnifiedConfig {
   - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
   - [x] `deno test tests/main_test.ts`で既存テストパス
   - [x] `deno test tests/integration_test.ts`で統合テストパス
-- [ ] **Phase7.5: Promise pendingエラーの根本的修正**
-  - [ ] 問題の分析と原因特定
-  - [ ] Coreクラスの不要なデバウンス処理を削除（main.tsに既存実装あり）
-  - [ ] showHintsメソッドからデバウンス処理を削除
-  - [ ] debounceTimeoutIdプロパティを削除
-  - [ ] cleanupメソッドからタイマークリア処理を削除（または簡素化）
-  - [ ] displayHintsWithExtmarksBatchのsetTimeout遅延を削除
-  - [ ] displayHintsWithMatchAddBatchのsetTimeout遅延を削除
-  - [ ] テストからsanitizeOps/sanitizeResourcesオプションを削除
-  - [ ] `deno test tests/core_test.ts`でPromise pendingエラーなし確認
-  - [ ] `deno test tests/main_test.ts`で既存テストパス確認
-  - [ ] `deno test tests/integration_test.ts`で統合テストパス確認
-- [ ] **Phase8: ユーティリティ機能の移行**
-  - [ ] core_test.tsにパフォーマンス測定のテスト作成（RED）
-  - [ ] recordPerformanceメソッド実装
-  - [ ] collectDebugInfoメソッド実装
-  - [ ] clearDebugInfoメソッド実装
-  - [ ] waitForUserInputメソッド実装
-  - [ ] main.tsから呼び出しを変更
-  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+- [x] **Phase7.5: Promise pendingエラーの根本的修正**
+  - [x] 問題の分析と原因特定
+  - [x] Coreクラスの不要なデバウンス処理を削除（main.tsに既存実装あり）
+  - [x] showHintsメソッドからデバウンス処理を削除
+  - [x] debounceTimeoutIdプロパティを削除
+  - [x] cleanupメソッドからタイマークリア処理を削除（または簡素化）
+  - [x] displayHintsWithExtmarksBatchのsetTimeout遅延を削除
+  - [x] displayHintsWithMatchAddBatchのsetTimeout遅延を削除
+  - [x] テストからsanitizeOps/sanitizeResourcesオプションを削除
+  - [x] `deno test tests/core_test.ts`でPromise pendingエラーなし確認
+  - [x] `deno test tests/main_test.ts`で既存テストパス確認
+  - [x] `deno test tests/integration_test.ts`で統合テストパス確認
+- [x] **Phase8: ユーティリティ機能の移行**
+  - [x] core_test.tsにパフォーマンス測定のテスト作成（RED）
+  - [x] recordPerformanceメソッド実装
+  - [x] collectDebugInfoメソッド実装
+  - [x] clearDebugInfoメソッド実装
+  - [x] waitForUserInputメソッド実装
+  - [x] main.tsから呼び出しを変更
+  - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
 - [ ] **Phase9: 辞書システムの移行**
   - [ ] core_test.tsに辞書システムのテスト作成（RED）
   - [ ] initializeDictionarySystemメソッド実装

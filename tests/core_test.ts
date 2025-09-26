@@ -1,4 +1,4 @@
-import { assertEquals, assertExists, assertThrows } from "https://deno.land/std@0.220.1/assert/mod.ts";
+import { assert, assertEquals, assertExists, assertThrows } from "https://deno.land/std@0.220.1/assert/mod.ts";
 import { Core } from "../denops/hellshake-yano/core.ts";
 import type { Config, Word, HintMapping } from "../denops/hellshake-yano/types.ts";
 import type { Denops } from "@denops/std";
@@ -755,11 +755,7 @@ Deno.test("Core class should have showHints method", () => {
   assertExists(core.showHints);
 });
 
-Deno.test({
-  name: "Core class showHints should be async and integrate full workflow",
-  sanitizeOps: false,
-  sanitizeResources: false,
-  fn: async () => {
+Deno.test("Core class showHints should be async and integrate full workflow", async () => {
   const core = new Core({ enabled: true });
   const mockDenops = new MockDenops();
 
@@ -789,7 +785,6 @@ Deno.test({
 
   // Cleanup
   core.cleanup();
-  }
 });
 
 Deno.test("Core class should have showHintsInternal method", () => {
@@ -797,11 +792,7 @@ Deno.test("Core class should have showHintsInternal method", () => {
   assertExists(core.showHintsInternal);
 });
 
-Deno.test({
-  name: "Core class showHintsInternal should handle mode parameter",
-  sanitizeOps: false,
-  sanitizeResources: false,
-  fn: async () => {
+Deno.test("Core class showHintsInternal should handle mode parameter", async () => {
   const core = new Core({ enabled: true });
   const mockDenops = new MockDenops();
 
@@ -820,7 +811,6 @@ Deno.test({
 
   // Cleanup
   core.cleanup();
-  }
 });
 
 Deno.test("Core class should have showHintsWithKey method", () => {
@@ -828,11 +818,7 @@ Deno.test("Core class should have showHintsWithKey method", () => {
   assertExists(core.showHintsWithKey);
 });
 
-Deno.test({
-  name: "Core class showHintsWithKey should handle key context",
-  sanitizeOps: false,
-  sanitizeResources: false,
-  fn: async () => {
+Deno.test("Core class showHintsWithKey should handle key context", async () => {
   const core = new Core({ enabled: true });
   const mockDenops = new MockDenops();
 
@@ -855,17 +841,12 @@ Deno.test({
 
   // Cleanup
   core.cleanup();
-  }
 });
 
-Deno.test({
-  name: "Core class showHints should handle debouncing",
-  sanitizeOps: false,
-  sanitizeResources: false,
-  fn: async () => {
+Deno.test("Core class showHints should handle multiple calls", async () => {
   const core = new Core({
     enabled: true,
-    debounceDelay: 10  // Shorter delay for testing
+    debounceDelay: 10  // Shorter delay for testing (handled by main.ts)
   });
   const mockDenops = new MockDenops();
 
@@ -877,28 +858,20 @@ Deno.test({
   mockDenops.setCallResponse("col", () => 1);
   mockDenops.setCallResponse("matchadd", () => 1);
 
-  // Multiple rapid calls should be debounced
+  // Multiple rapid calls (debouncing handled at main.ts level)
   const promise1 = core.showHints(mockDenops as any);
   const promise2 = core.showHints(mockDenops as any);
   const promise3 = core.showHints(mockDenops as any);
 
   await Promise.all([promise1, promise2, promise3]);
 
-  // Wait a bit to ensure all debounced calls complete
-  await new Promise<void>(resolve => setTimeout(resolve, 50));
-
-  // Clean up timers
+  // Clean up
   core.cleanup();
 
   // Should complete without error
-  }
 });
 
-Deno.test({
-  name: "Core class showHints should be disabled when config.enabled is false",
-  sanitizeOps: false,
-  sanitizeResources: false,
-  fn: async () => {
+Deno.test("Core class showHints should be disabled when config.enabled is false", async () => {
   const core = new Core({ enabled: false });
   const mockDenops = new MockDenops();
 
@@ -910,14 +883,9 @@ Deno.test({
 
   // Cleanup
   core.cleanup();
-  }
 });
 
-Deno.test({
-  name: "Core class showHints should handle errors gracefully",
-  sanitizeOps: false,
-  sanitizeResources: false,
-  fn: async () => {
+Deno.test("Core class showHints should handle errors gracefully", async () => {
   const core = new Core({ enabled: true });
   const mockDenops = new MockDenops();
 
@@ -930,5 +898,201 @@ Deno.test({
 
   // Cleanup
   core.cleanup();
+});
+
+// Phase 8: Utility Functions Tests (TDD RED phase)
+Deno.test("Core class recordPerformance should track operation metrics", () => {
+  const core = new Core({ performance_log: true });
+
+  // Record performance for various operations
+  (core as any).recordPerformance("showHints", 100, 150);
+  (core as any).recordPerformance("hideHints", 50, 60);
+  (core as any).recordPerformance("wordDetection", 20, 45);
+  (core as any).recordPerformance("hintGeneration", 30, 50);
+
+  const debugInfo = (core as any).collectDebugInfo();
+
+  // Verify metrics were recorded
+  assertEquals(debugInfo.metrics.showHints.length, 1);
+  assertEquals(debugInfo.metrics.showHints[0], 50); // 150 - 100
+  assertEquals(debugInfo.metrics.hideHints.length, 1);
+  assertEquals(debugInfo.metrics.hideHints[0], 10); // 60 - 50
+  assertEquals(debugInfo.metrics.wordDetection.length, 1);
+  assertEquals(debugInfo.metrics.wordDetection[0], 25); // 45 - 20
+  assertEquals(debugInfo.metrics.hintGeneration.length, 1);
+  assertEquals(debugInfo.metrics.hintGeneration[0], 20); // 50 - 30
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class recordPerformance should not record when performanceLog is disabled", () => {
+  const core = new Core({ performance_log: false });
+
+  // Try to record performance
+  (core as any).recordPerformance("showHints", 100, 150);
+
+  const debugInfo = (core as any).collectDebugInfo();
+
+  // Metrics should be empty
+  assertEquals(debugInfo.metrics.showHints.length, 0);
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class recordPerformance should limit metrics to 50 entries", () => {
+  const core = new Core({ performance_log: true });
+
+  // Record more than 50 entries
+  for (let i = 0; i < 60; i++) {
+    (core as any).recordPerformance("showHints", i, i + 10);
   }
+
+  const debugInfo = (core as any).collectDebugInfo();
+
+  // Should only keep last 50 entries
+  assertEquals(debugInfo.metrics.showHints.length, 50);
+  // Check that we have the last 50 values (10ms each)
+  debugInfo.metrics.showHints.forEach((duration: number) => {
+    assertEquals(duration, 10);
+  });
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class collectDebugInfo should return complete debug information", () => {
+  const core = new Core({
+    enabled: true,
+    performance_log: true,
+    markers: ["w", "e", "b"]
+  });
+
+  // Record some performance metrics
+  (core as any).recordPerformance("showHints", 100, 150);
+
+  // Set some hints
+  (core as any).setCurrentHints([
+    { hint: "A", word: { text: "test", line: 1, col: 1, byteCol: 1 } }
+  ]);
+
+  const debugInfo = (core as any).collectDebugInfo();
+
+  // Verify debug info structure
+  assertExists(debugInfo.config);
+  assertEquals(debugInfo.config.enabled, true);
+  assertEquals(debugInfo.config.markers, ["w", "e", "b"]);
+  assertEquals(typeof debugInfo.hintsVisible, "boolean");
+  assertEquals(Array.isArray(debugInfo.currentHints), true);
+  assertEquals(debugInfo.currentHints.length, 1);
+  assertExists(debugInfo.metrics);
+  assertEquals(debugInfo.metrics.showHints.length, 1);
+  assertEquals(typeof debugInfo.timestamp, "number");
+  assert(debugInfo.timestamp > 0);
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class clearDebugInfo should reset all performance metrics", () => {
+  const core = new Core({ performance_log: true });
+
+  // Record some metrics
+  (core as any).recordPerformance("showHints", 100, 150);
+  (core as any).recordPerformance("hideHints", 50, 60);
+  (core as any).recordPerformance("wordDetection", 20, 45);
+  (core as any).recordPerformance("hintGeneration", 30, 50);
+
+  // Clear debug info
+  (core as any).clearDebugInfo();
+
+  const debugInfo = (core as any).collectDebugInfo();
+
+  // All metrics should be empty
+  assertEquals(debugInfo.metrics.showHints.length, 0);
+  assertEquals(debugInfo.metrics.hideHints.length, 0);
+  assertEquals(debugInfo.metrics.wordDetection.length, 0);
+  assertEquals(debugInfo.metrics.hintGeneration.length, 0);
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class waitForUserInput should handle user input for hints", async () => {
+  const core = new Core({ enabled: true, motion_count: 2 });
+  const mockDenops = new MockDenops();
+
+  // Setup hints
+  (core as any).setCurrentHints([
+    { hint: "AA", word: { text: "test1", line: 1, col: 1, byteCol: 1 } },
+    { hint: "AB", word: { text: "test2", line: 1, col: 5, byteCol: 5 } },
+    { hint: "A", word: { text: "test3", line: 2, col: 1, byteCol: 1 } }
+  ]);
+
+  // Mock getchar to return 'A' (65)
+  let getcharCallCount = 0;
+  mockDenops.setCallResponse("getchar", () => {
+    getcharCallCount++;
+    if (getcharCallCount === 1) return 65; // First char: 'A'
+    if (getcharCallCount === 2) return 66; // Second char: 'B'
+    return 27; // ESC
+  });
+
+  // Mock cursor movement
+  mockDenops.setCallResponse("cursor", () => {});
+
+  // Execute waitForUserInput
+  await (core as any).waitForUserInput(mockDenops as any);
+
+  // Verify getchar was called
+  assert(getcharCallCount > 0);
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class waitForUserInput should handle ESC to cancel", async () => {
+  const core = new Core({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup hints
+  (core as any).setCurrentHints([
+    { hint: "A", word: { text: "test", line: 1, col: 1, byteCol: 1 } }
+  ]);
+
+  // Mock getchar to return ESC (27)
+  mockDenops.setCallResponse("getchar", () => 27);
+
+  // Execute waitForUserInput
+  await (core as any).waitForUserInput(mockDenops as any);
+
+  // Should handle ESC gracefully without error
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core class waitForUserInput should handle timeout", async () => {
+  const core = new Core({ enabled: true, timeout: 100 } as any); // 100ms timeout
+  const mockDenops = new MockDenops();
+
+  // Setup hints
+  (core as any).setCurrentHints([
+    { hint: "A", word: { text: "test", line: 1, col: 1, byteCol: 1 } }
+  ]);
+
+  // Mock getchar with timeout simulation
+  mockDenops.setCallResponse("getchar", () => {
+    // Simulate timeout by returning 0
+    return 0;
+  });
+
+  // Execute waitForUserInput
+  await (core as any).waitForUserInput(mockDenops as any);
+
+  // Should handle timeout gracefully
+
+  // Cleanup
+  core.cleanup();
 });

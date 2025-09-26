@@ -13,9 +13,11 @@ import type { Denops } from "@denops/std";
 import type {
   Config,
   CoreState,
+  DebugInfo,
   DetectionContext,
   HintMapping,
   HintKeyConfig,
+  PerformanceMetrics,
   Word,
   WordDetectionResult,
 } from "./types.ts";
@@ -43,6 +45,12 @@ export class Core {
   private config: Config;
   private isActive: boolean = false;
   private currentHints: HintMapping[] = [];
+  private performanceMetrics: PerformanceMetrics = {
+    showHints: [],
+    hideHints: [],
+    wordDetection: [],
+    hintGeneration: [],
+  };
 
   /**
    * Coreクラスのコンストラクタ
@@ -55,13 +63,11 @@ export class Core {
 
   /**
    * クリーンアップメソッド（テスト用）
-   * タイマーをクリアして、適切にリソースを解放する
+   * リソースを解放する（デバウンス処理はmain.tsで管理）
    */
   cleanup(): void {
-    if (this.debounceTimeoutId) {
-      clearTimeout(this.debounceTimeoutId);
-      this.debounceTimeoutId = undefined;
-    }
+    // デバウンス処理はmain.tsで管理するためCoreクラス内では不要
+    // 必要に応じて他のクリーンアップ処理をここに追加
   }
 
   /**
@@ -553,10 +559,8 @@ export class Core {
           }
         }));
 
-        // バッチ間の小さな遅延（CPU負荷を減らす）
-        if (i + batchSize < hints.length && hints.length > 100) {
-          await new Promise((resolve) => setTimeout(resolve, 1));
-        }
+        // バッチ間の遅延は削除（Promise pendingエラー対策）
+        // CPU負荷軽減が必要な場合はmain.tsレベルで制御
       } catch (batchError) {
         // バッチエラーの場合は次のバッチに続く
         console.error("[Core] displayHintsWithExtmarksBatch batch error:", batchError);
@@ -622,10 +626,8 @@ export class Core {
 
         await Promise.all(matchPromises);
 
-        // バッチ間の小さな遅延（CPU負荷を減らす）
-        if (i + batchSize < hints.length && hints.length > 200) {
-          await new Promise((resolve) => setTimeout(resolve, 1));
-        }
+        // バッチ間の遅延は削除（Promise pendingエラー対策）
+        // CPU負荷軽減が必要な場合はmain.tsレベルで制御
       } catch (batchError) {
         // バッチエラーの場合は次のバッチに続く
         console.error("[Core] displayHintsWithMatchAddBatch batch error:", batchError);
@@ -633,16 +635,13 @@ export class Core {
     }
   }
 
-  // Phase7: showHints系の移行 - デバウンス処理とヒント表示統合
-
-  private debounceTimeoutId?: number;
-  private lastShowHintsTime: number = 0;
+  // Phase7: showHints系の移行 - ヒント表示統合（デバウンス処理はmain.tsで管理）
 
   /**
-   * Phase7: showHints系の移行 - ヒントを表示（デバウンス機能付き）
+   * Phase7: showHints系の移行 - ヒントを表示
    *
    * main.tsのshowHints関数の機能をCoreクラスに統合した実装。
-   * デバウンス処理により連続した呼び出しを効率化し、完全なヒント表示ワークフローを提供します。
+   * デバウンス処理はmain.tsで管理し、Coreクラスは純粋なヒント表示ワークフローを提供します。
    *
    * @param denops - Denopsインスタンス
    * @returns Promise<void> - 非同期で完了
@@ -652,29 +651,7 @@ export class Core {
       return;
     }
 
-    // 既存のデバウンスタイマーをクリア
-    if (this.debounceTimeoutId) {
-      clearTimeout(this.debounceTimeoutId);
-      this.debounceTimeoutId = undefined;
-    }
-
-    // Config型をUnifiedConfigに変換してデバウンス遅延を取得
-    const unifiedConfig = toUnifiedConfig(this.config);
-    const debounceDelay = unifiedConfig.debounceDelay || 50;
-
-    // デバウンス処理
-    const now = Date.now();
-    if (now - this.lastShowHintsTime < debounceDelay) {
-      // デバウンス期間内の場合は、タイマーをセットして遅延実行
-      return new Promise<void>((resolve) => {
-        this.debounceTimeoutId = setTimeout(() => {
-          this.debounceTimeoutId = undefined;
-          this.showHintsInternal(denops).then(() => resolve()).catch(() => resolve());
-        }, debounceDelay) as unknown as number;
-      });
-    }
-
-    // デバウンス期間外の場合は即座に実行
+    // デバウンス処理はmain.tsで管理するため、直接内部処理を呼び出し
     await this.showHintsInternal(denops);
   }
 
@@ -690,13 +667,6 @@ export class Core {
    */
   async showHintsInternal(denops: Denops, mode?: string): Promise<void> {
     const modeString = mode || "normal";
-    this.lastShowHintsTime = Date.now();
-
-    // デバウンスタイムアウトをクリア
-    if (this.debounceTimeoutId) {
-      clearTimeout(this.debounceTimeoutId);
-      this.debounceTimeoutId = undefined;
-    }
 
     try {
       if (!this.isEnabled()) {
@@ -773,6 +743,189 @@ export class Core {
       console.error("[Core] showHintsWithKey error:", error);
       // フォールバック: 通常のshowHintsを呼び出し
       await this.showHints(denops);
+    }
+  }
+
+  /**
+   * Phase 8: ユーティリティ機能 - パフォーマンス測定を記録
+   *
+   * @param operation 測定対象の操作名
+   * @param startTime 開始時刻（performance.now()の値）
+   * @param endTime 終了時刻（performance.now()の値）
+   */
+  recordPerformance(
+    operation: keyof PerformanceMetrics,
+    startTime: number,
+    endTime: number
+  ): void {
+    if (!this.config.performance_log) return;
+
+    const duration = endTime - startTime;
+    this.performanceMetrics[operation].push(duration);
+
+    // 最新50件のみ保持（メモリ使用量制限）
+    if (this.performanceMetrics[operation].length > 50) {
+      this.performanceMetrics[operation] = this.performanceMetrics[operation].slice(-50);
+    }
+
+    // デバッグモードの場合はコンソールにもログ出力
+    if (this.config.debug_mode) {
+      console.log(`[Core:PERF] ${operation}: ${duration}ms`);
+    }
+  }
+
+  /**
+   * Phase 8: ユーティリティ機能 - デバッグ情報を収集
+   *
+   * @returns デバッグ情報オブジェクト
+   */
+  collectDebugInfo(): DebugInfo {
+    return {
+      config: { ...this.config },
+      hintsVisible: this.isActive,
+      currentHints: [...this.currentHints],
+      metrics: {
+        showHints: [...this.performanceMetrics.showHints],
+        hideHints: [...this.performanceMetrics.hideHints],
+        wordDetection: [...this.performanceMetrics.wordDetection],
+        hintGeneration: [...this.performanceMetrics.hintGeneration],
+      },
+      timestamp: Date.now(),
+    };
+  }
+
+  /**
+   * Phase 8: ユーティリティ機能 - デバッグ情報をクリア
+   */
+  clearDebugInfo(): void {
+    this.performanceMetrics = {
+      showHints: [],
+      hideHints: [],
+      wordDetection: [],
+      hintGeneration: [],
+    };
+  }
+
+  /**
+   * Phase 8: ユーティリティ機能 - 現在のヒントを設定（テスト用）
+   *
+   * @param hints ヒントマッピングの配列
+   */
+  setCurrentHints(hints: HintMapping[]): void {
+    this.currentHints = hints;
+    this.isActive = hints.length > 0;
+  }
+
+  /**
+   * Phase 8: ユーティリティ機能 - ユーザー入力を待機
+   *
+   * ヒント表示後にユーザーの文字入力を待ち、対応するヒントの位置へジャンプする。
+   * main.tsのwaitForUserInput関数から移行した実装。
+   *
+   * @param denops Denopsインスタンス
+   */
+  async waitForUserInput(denops: Denops): Promise<void> {
+    const config = this.config;
+    const currentHints = this.currentHints;
+
+    if (currentHints.length === 0) return;
+
+    let timeoutId: number | undefined;
+
+    try {
+      // タイムアウト設定（motionCount === 1 の場合のみ有効）
+      const shouldTimeout = config.motion_count === 1 && (config as any).timeout;
+      const timeoutMs = shouldTimeout ? ((config as any).timeout || 1000) : 0;
+
+      // 第1文字の入力を待つ
+      const firstChar = await new Promise<number>((resolve) => {
+        if (shouldTimeout && timeoutMs > 0) {
+          timeoutId = setTimeout(() => {
+            resolve(0); // タイムアウトを0で表現
+          }, timeoutMs);
+        }
+
+        denops.call("getchar").then((char) => {
+          if (timeoutId) clearTimeout(timeoutId);
+          resolve(char as number);
+        });
+      });
+
+      // タイムアウトまたはESCの場合
+      if (firstChar === 0 || firstChar === 27) {
+        if (firstChar === 0 && config.motion_count === 1) {
+          // タイムアウト時、単一文字ヒントがある場合は選択
+          const singleCharHints = currentHints.filter(h => h.hint.length === 1);
+          if (singleCharHints.length === 1) {
+            const target = singleCharHints[0];
+            const jumpCol = target.hintByteCol || target.hintCol ||
+                          target.word.byteCol || target.word.col;
+            await denops.call("cursor", target.word.line, jumpCol);
+          }
+        }
+        this.hideHints();
+        return;
+      }
+
+      // 文字に変換して大文字化
+      let inputChar = String.fromCharCode(firstChar);
+      if (/[a-zA-Z]/.test(inputChar)) {
+        inputChar = inputChar.toUpperCase();
+      }
+
+      // motion_count が 1の場合は1文字で決定
+      if (config.motion_count === 1) {
+        const target = currentHints.find(h => h.hint === inputChar);
+        if (target) {
+          const jumpCol = target.hintByteCol || target.hintCol ||
+                        target.word.byteCol || target.word.col;
+          await denops.call("cursor", target.word.line, jumpCol);
+        }
+        this.hideHints();
+        return;
+      }
+
+      // motion_count が 2以上の場合、第2文字を待つ
+      const matchingHints = currentHints.filter(h => h.hint.startsWith(inputChar));
+
+      // 第2文字の入力を待つ（短いタイムアウト付き）
+      let secondTimeoutId: number | undefined;
+      const secondChar = await Promise.race([
+        denops.call("getchar") as Promise<number>,
+        new Promise<number>((resolve) => {
+          secondTimeoutId = setTimeout(() => resolve(0), 500);
+        })
+      ]);
+      if (secondTimeoutId) clearTimeout(secondTimeoutId);
+
+      if (secondChar === 0) {
+        // タイムアウト時、単一候補なら選択
+        if (matchingHints.length === 1) {
+          const target = matchingHints[0];
+          const jumpCol = target.hintByteCol || target.hintCol ||
+                        target.word.byteCol || target.word.col;
+          await denops.call("cursor", target.word.line, jumpCol);
+        }
+      } else if (secondChar !== 27) { // ESC以外
+        let secondInputChar = String.fromCharCode(secondChar);
+        if (/[a-zA-Z]/.test(secondInputChar)) {
+          secondInputChar = secondInputChar.toUpperCase();
+        }
+
+        const fullHint = inputChar + secondInputChar;
+        const target = currentHints.find(h => h.hint === fullHint);
+
+        if (target) {
+          const jumpCol = target.hintByteCol || target.hintCol ||
+                        target.word.byteCol || target.word.col;
+          await denops.call("cursor", target.word.line, jumpCol);
+        }
+      }
+
+      this.hideHints();
+    } catch (error) {
+      console.error("[Core] waitForUserInput error:", error);
+      this.hideHints();
     }
   }
 }

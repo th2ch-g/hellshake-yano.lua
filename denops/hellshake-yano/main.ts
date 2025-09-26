@@ -205,6 +205,8 @@ let performanceMetrics: PerformanceMetrics = {
  * パフォーマンス測定結果を記録する内部関数
  * 操作の実行時間を測定し、統計情報として蓄積
  *
+ * Phase8: Coreクラスに移行済み
+ *
  * @param operation 測定対象の操作名（PerformanceMetricsのキー）
  * @param startTime 操作開始時刻（ミリ秒、performance.now()の戻り値）
  * @param endTime 操作終了時刻（ミリ秒、performance.now()の戻り値）
@@ -220,20 +222,11 @@ function recordPerformance(
   startTime: number,
   endTime: number,
 ): void {
-  if (!config.performanceLog) return;
-
-  const duration = endTime - startTime;
-  performanceMetrics[operation].push(duration);
-
-  // 最新50件のみ保持（メモリ使用量制限）
-  if (performanceMetrics[operation].length > 50) {
-    performanceMetrics[operation] = performanceMetrics[operation].slice(-50);
+  // Phase8: Coreクラスのメソッドに委譲
+  if (!coreInstance) {
+    coreInstance = new Core(config);
   }
-
-  // デバッグモードの場合はコンソールにもログ出力
-  if (config.debugMode) {
-    console.log(`[hellshake-yano:PERF] ${operation}: ${duration}ms`);
-  }
+  coreInstance.recordPerformance(operation, startTime, endTime);
 }
 
 /**
@@ -320,34 +313,28 @@ export function getMotionCountForKey(key: string, config: UnifiedConfig | Config
  * console.log(`現在のヒント数: ${debugInfo.currentHints.length}`);
  */
 function collectDebugInfo(): DebugInfo {
-  return {
-    config: fromUnifiedConfig(config),
-    hintsVisible,
-    currentHints: [...currentHints],
-    metrics: {
-      showHints: [...performanceMetrics.showHints],
-      hideHints: [...performanceMetrics.hideHints],
-      wordDetection: [...performanceMetrics.wordDetection],
-      hintGeneration: [...performanceMetrics.hintGeneration],
-    },
-    timestamp: Date.now(),
-  };
+  // Phase8: Coreクラスのメソッドに委譲
+  if (!coreInstance) {
+    coreInstance = new Core(config);
+  }
+  return coreInstance.collectDebugInfo();
 }
 
 /**
  * デバッグ情報をクリアする内部関数
  * 蓄積されたパフォーマンス測定データを初期化
  *
+ * Phase8: Coreクラスに移行済み
+ *
  * @returns {void}
  * @since 1.0.0
  */
 function clearDebugInfo(): void {
-  performanceMetrics = {
-    showHints: [],
-    hideHints: [],
-    wordDetection: [],
-    hintGeneration: [],
-  };
+  // Phase8: Coreクラスのメソッドに委譲
+  if (!coreInstance) {
+    coreInstance = new Core(config);
+  }
+  coreInstance.clearDebugInfo();
 }
 
 /**
