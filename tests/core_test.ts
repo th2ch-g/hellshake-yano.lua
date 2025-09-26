@@ -600,3 +600,147 @@ Deno.test("Core class generateHintsOptimized should validate input parameters", 
   const emptyHints = core.generateHintsOptimized(0, markers);
   assertEquals(emptyHints, []);
 });
+
+/**
+ * TDD RED Phase: Phase6 - 表示処理系の移行テスト（最初は失敗する）
+ * displayHints系メソッドのCoreクラスへの移行
+ */
+
+Deno.test("Core class should have displayHintsOptimized method", () => {
+  const core = new Core();
+  assertExists(core.displayHintsOptimized);
+});
+
+Deno.test("Core class displayHintsOptimized should be async and accept proper parameters", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 }
+  ];
+  const mode = "normal";
+
+  // Mock required Vim/Neovim functions for display
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_set_extmark", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  const result = core.displayHintsOptimized(mockDenops as any, mockHints, mode);
+  assertExists(result);
+  assertEquals(typeof result.then, "function"); // Promise check
+
+  await result; // Should not throw
+});
+
+Deno.test("Core class should have displayHintsAsync method", () => {
+  const core = new Core();
+  assertExists(core.displayHintsAsync);
+});
+
+Deno.test("Core class displayHintsAsync should handle hints display asynchronously", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 },
+    { word: { text: "word", line: 2, col: 1 }, hint: "B", hintCol: 1, hintByteCol: 1 }
+  ];
+
+  // Mock required functions
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_set_extmark", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  const config = { mode: "normal" };
+  const result = core.displayHintsAsync(mockDenops as any, mockHints, config);
+  assertExists(result);
+  assertEquals(typeof result.then, "function"); // Promise check
+
+  await result; // Should complete without error
+});
+
+Deno.test("Core class should have displayHintsWithExtmarksBatch method", () => {
+  const core = new Core();
+  assertExists(core.displayHintsWithExtmarksBatch);
+});
+
+Deno.test("Core class displayHintsWithExtmarksBatch should handle extmarks batch display", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+  const bufnr = 1;
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 }
+  ];
+  const mode = "normal";
+  const signal = new AbortController().signal;
+
+  // Mock extmarks functions
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_set_extmark", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
+
+  const result = core.displayHintsWithExtmarksBatch(mockDenops as any, bufnr, mockHints, mode, signal);
+  assertExists(result);
+  assertEquals(typeof result.then, "function"); // Promise check
+
+  await result; // Should not throw
+});
+
+Deno.test("Core class should have displayHintsWithMatchAddBatch method", () => {
+  const core = new Core();
+  assertExists(core.displayHintsWithMatchAddBatch);
+});
+
+Deno.test("Core class displayHintsWithMatchAddBatch should handle matchadd batch display", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 },
+    { word: { text: "word", line: 2, col: 1 }, hint: "B", hintCol: 1, hintByteCol: 1 }
+  ];
+  const mode = "normal";
+  const signal = new AbortController().signal;
+
+  // Mock matchadd functions
+  mockDenops.setCallResponse("matchadd", () => 1);
+  mockDenops.setCallResponse("hlexists", () => 1);
+
+  const result = core.displayHintsWithMatchAddBatch(mockDenops as any, mockHints, mode, signal);
+  assertExists(result);
+  assertEquals(typeof result.then, "function"); // Promise check
+
+  await result; // Should not throw
+});
+
+Deno.test("Core class displayHints methods should handle empty hints array", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+  const emptyHints: HintMapping[] = [];
+
+  // Mock basic functions
+  mockDenops.setCallResponse("bufnr", () => 1);
+
+  // All display methods should handle empty arrays gracefully
+  await core.displayHintsOptimized(mockDenops as any, emptyHints, "normal");
+  await core.displayHintsAsync(mockDenops as any, emptyHints, { mode: "normal" });
+  await core.displayHintsWithExtmarksBatch(mockDenops as any, 1, emptyHints, "normal", new AbortController().signal);
+  await core.displayHintsWithMatchAddBatch(mockDenops as any, emptyHints, "normal", new AbortController().signal);
+});
+
+Deno.test("Core class displayHints methods should handle AbortSignal cancellation", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 }
+  ];
+
+  // Mock functions
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_set_extmark", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  const controller = new AbortController();
+  controller.abort(); // Abort immediately
+
+  // Methods should handle aborted signals gracefully
+  await core.displayHintsWithExtmarksBatch(mockDenops as any, 1, mockHints, "normal", controller.signal);
+  await core.displayHintsWithMatchAddBatch(mockDenops as any, mockHints, "normal", controller.signal);
+});

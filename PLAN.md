@@ -441,17 +441,17 @@ export interface UnifiedConfig {
   - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
   - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
   - [x] `deno test tests/main_test.ts`で既存テストパス
-- [ ] **Phase6: 表示処理系の移行**
-  - [ ] core_test.tsにdisplayHints系のテスト作成（RED）
-  - [ ] displayHintsOptimizedメソッド実装
-  - [ ] displayHintsAsyncメソッド実装
-  - [ ] displayHintsWithExtmarksBatchメソッド実装
-  - [ ] displayHintsWithMatchAddBatchメソッド実装
-  - [ ] main.tsから呼び出しを変更
-  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
-  - [ ] `deno test tests/main_test.ts`で既存テストパス
-  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [x] **Phase6: 表示処理系の移行**
+  - [x] core_test.tsにdisplayHints系のテスト作成（RED）
+  - [x] displayHintsOptimizedメソッド実装
+  - [x] displayHintsAsyncメソッド実装
+  - [x] displayHintsWithExtmarksBatchメソッド実装
+  - [x] displayHintsWithMatchAddBatchメソッド実装
+  - [x] main.tsから呼び出しを変更
+  - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [x] `deno test tests/main_test.ts`で既存テストパス
+  - [x] `deno test tests/integration_test.ts`で統合テストパス
 - [ ] **Phase7: showHints系の移行**
   - [ ] core_test.tsにshowHints系のテスト作成（RED）
   - [ ] CoreクラスにshowHintsメソッド実装

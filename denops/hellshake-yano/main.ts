@@ -886,8 +886,12 @@ export async function main(denops: Denops): Promise<void> {
             return;
           }
 
+          // Phase6: Coreクラスの displayHintsAsync メソッドを使用
+          if (!coreInstance) {
+            coreInstance = new Core(config);
+          }
           // バッチ処理でヒントを非同期表示（最適化）
-          displayHintsAsync(denops, currentHints, config);
+          coreInstance.displayHintsAsync(denops, currentHints, { mode: "normal" });
 
           // ヒント表示状態を確実に設定
           hintsVisible = true;
@@ -3480,7 +3484,7 @@ export {
   clearDebugInfo,
   collectDebugInfo,
   detectWordsOptimized,
-  displayHintsOptimized,
+  // displayHintsOptimized, // Phase6: Coreクラスに移行済み、廃止予定
   // generateHintsOptimized, // Phase5: Coreクラスに移行済み、廃止予定
   hideHints,
   syncManagerConfig,
