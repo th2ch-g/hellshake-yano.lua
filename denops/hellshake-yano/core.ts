@@ -9,7 +9,14 @@
  * @since Process3 Sub1 Phase1
  */
 
-import type { Config, Word, HintMapping, DetectionContext, WordDetectionResult, CoreState } from "./types.ts";
+import type {
+  Config,
+  CoreState,
+  DetectionContext,
+  HintMapping,
+  Word,
+  WordDetectionResult,
+} from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
 
 /**
@@ -83,8 +90,8 @@ export class Core {
       performance: {
         duration: 0,
         wordCount: 0,
-        linesProcessed: 0
-      }
+        linesProcessed: 0,
+      },
     };
   }
 
@@ -155,7 +162,7 @@ export class Core {
       config: { ...this.config },
       currentHints: [...this.currentHints],
       hintsVisible: this.isHintsVisible(),
-      isActive: this.isActive
+      isActive: this.isActive,
     };
   }
 

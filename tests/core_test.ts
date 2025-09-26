@@ -228,6 +228,67 @@ Deno.test("Core class setState should update internal state", () => {
  * TDD REFACTOR Phase: 状態整合性とエッジケースのテスト
  */
 
+/**
+ * TDD RED Phase: Phase3 - hideHints専用テスト（最初は失敗する）
+ */
+Deno.test("Core class hideHints should clear hints and update state properly", () => {
+  const core = new Core({ enabled: true });
+
+  // まずヒントを表示する
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 },
+    { word: { text: "word", line: 2, col: 1 }, hint: "B", hintCol: 1, hintByteCol: 1 }
+  ];
+
+  core.showHints(mockHints);
+  assertEquals(core.isHintsVisible(), true);
+  assertEquals(core.getCurrentHints().length, 2);
+
+  // hideHintsを呼び出し
+  core.hideHints();
+
+  // ヒントがクリアされ、状態が適切に更新されることを確認
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+
+  const state = core.getState();
+  assertEquals(state.hintsVisible, false);
+  assertEquals(state.isActive, false);
+  assertEquals(state.currentHints.length, 0);
+});
+
+Deno.test("Core class hideHints should work even when no hints are shown", () => {
+  const core = new Core({ enabled: true });
+
+  // ヒントが表示されていない状態でhideHintsを呼び出し
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+
+  // hideHintsを呼び出してもエラーが発生しないことを確認
+  core.hideHints();
+
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+});
+
+Deno.test("Core class hideHints should work when disabled", () => {
+  const core = new Core({ enabled: false });
+
+  // 無効状態でもhideHintsは機能することを確認
+  const mockHints: HintMapping[] = [
+    { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 }
+  ];
+
+  // 無効状態なのでshowHintsは何もしない
+  core.showHints(mockHints);
+  assertEquals(core.isHintsVisible(), false);
+
+  // hideHintsは無効状態でも動作する
+  core.hideHints();
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+});
+
 Deno.test("Core class setState should maintain consistency between hintsVisible and currentHints", () => {
   const core = new Core({ enabled: true });
 

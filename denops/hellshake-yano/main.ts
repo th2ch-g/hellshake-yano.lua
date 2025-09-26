@@ -44,6 +44,8 @@ import {
 // Dictionary system imports
 import { DictionaryLoader } from "./word/dictionary-loader.ts";
 import { VimConfigBridge } from "./word/dictionary-loader.ts";
+// Core class import for Phase3 migration
+import { Core } from "./core.ts";
 // Import types from the central types module for consistency
 import type {
   Config,
@@ -97,6 +99,14 @@ import { validateConfigValue } from "./utils/validation.ts";
  */
 // deno-lint-ignore prefer-const
 let config: UnifiedConfig = getDefaultUnifiedConfig();
+
+/**
+ * Phase3: Core class instance for unified functionality
+ * Process3 Sub1 Phase3: hideHints機能のCoreクラス移行
+ * @type {Core}
+ * @since 2.0.0
+ */
+let coreInstance: Core = new Core(fromUnifiedConfig(config));
 
 /**
  * 現在表示中のヒントマッピングの配列
@@ -1911,6 +1921,9 @@ async function clearHintDisplay(denops: Denops): Promise<void> {
  * @throws Vim/Neovim APIエラーが発生した場合（ただし内部でキャッチして継続）
  */
 async function hideHints(denops: Denops): Promise<void> {
+  // Phase3: Process3 Sub1 - Core class delegation for state management
+  coreInstance.hideHints();
+
   // 既にヒントが非表示で、currentHintsも空の場合は早期リターン
   if (!hintsVisible && currentHints.length === 0 && fallbackMatchIds.length === 0) {
     return;

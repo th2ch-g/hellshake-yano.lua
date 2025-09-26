@@ -417,14 +417,14 @@ export interface UnifiedConfig {
   - [x] `deno check denops/hellshake-yano/core.ts`で型チェック
   - [x] core_test.tsに状態管理テスト追加
   - [x] `deno test tests/core_test.ts`でテストパス
-- [ ] **Phase3: ヒント非表示機能の移行**
-  - [ ] core_test.tsにhideHintsのテスト作成（RED）
-  - [ ] CoreクラスにhideHintsメソッド実装
-  - [ ] main.tsのhideHints関数からCoreクラスのメソッドを呼び出すよう変更
-  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
-  - [ ] `deno test tests/main_test.ts`で既存テストが通ることを確認
-  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [x] **Phase3: ヒント非表示機能の移行**
+  - [x] core_test.tsにhideHintsのテスト作成（RED）
+  - [x] CoreクラスにhideHintsメソッド実装
+  - [x] main.tsのhideHints関数からCoreクラスのメソッドを呼び出すよう変更
+  - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [x] `deno test tests/main_test.ts`で既存テストが通ることを確認
+  - [x] `deno test tests/integration_test.ts`で統合テストパス
 - [ ] **Phase4: 単語検出機能の移行**
   - [ ] core_test.tsにdetectWordsOptimizedのテスト作成（RED）
   - [ ] CoreクラスにdetectWordsOptimizedメソッド実装
