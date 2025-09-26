@@ -397,6 +397,9 @@ export async function main(denops: Denops): Promise<void> {
   // プラグイン初期化時にマネージャーに初期設定を同期
   syncManagerConfig(config);
 
+  // sub2-5: Coreクラスのインスタンスを取得
+  const core = Core.getInstance(config);
+
   // dispatcherの設定
   denops.dispatcher = {
     /**
@@ -670,6 +673,9 @@ export async function main(denops: Denops): Promise<void> {
 
       // 設定更新後、マネージャーに設定を伝播
       syncManagerConfig(config);
+
+      // sub2-5-1: Coreクラスの設定も同期更新
+      core.updateConfig(config);
     },
 
     /**
@@ -875,7 +881,7 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     /**
-     * ヒントを非表示
+     * ヒントを非表示 - sub2-5-3: Coreクラスの統合メソッドを使用
      */
     async hideHints(): Promise<void> {
       const startTime = performance.now();
@@ -884,14 +890,16 @@ export async function main(denops: Denops): Promise<void> {
         clearTimeout(debounceTimeoutId);
         debounceTimeoutId = undefined;
       }
-      await hideHints(denops);
+
+      // Coreクラスの統合hideHintsメソッドを呼び出し
+      await core.hideHintsOptimized(denops);
 
       const endTime = performance.now();
-      recordPerformance("hideHints", startTime, endTime);
+      core.recordPerformance("hideHints", startTime, endTime);
     },
 
     /**
-     * 全てのキャッシュをクリアする
+     * 全てのキャッシュをクリアする - sub2-5-4: Coreクラスの統合メソッドを使用
      * 単語検出とヒント生成の結果キャッシュを初期化
      *
      * @returns {void}
@@ -901,12 +909,16 @@ export async function main(denops: Denops): Promise<void> {
      * call denops#request('hellshake-yano', 'clearCache', [])
      */
     clearCache(): void {
+      // レガシーキャッシュをクリア
       wordsCache.clear();
       hintsCache.clear();
+
+      // Coreクラスのキャッシュもクリア
+      core.clearCache();
     },
 
     /**
-     * デバッグ情報を取得（拡充版）
+     * デバッグ情報を取得（拡充版）- sub2-5-5: Coreクラスの統合メソッドを使用
      */
     async debug(): Promise<unknown> {
       try {
@@ -916,7 +928,14 @@ export async function main(denops: Denops): Promise<void> {
         const readonly = await denops.call("getbufvar", bufnr, "&readonly") as number;
         const lineCount = await denops.call("line", "$") as number;
 
+        // Coreクラスからデバッグ情報を収集
+        const coreDebugInfo = core.collectDebugInfo();
+
         return {
+          // Core class debug info (comprehensive)
+          core: coreDebugInfo,
+
+          // Legacy debug info for backward compatibility
           config,
           hintsVisible,
           currentHintsCount: currentHints.length,
@@ -929,6 +948,8 @@ export async function main(denops: Denops): Promise<void> {
           host: denops.meta.host,
           extmarkNamespace,
           fallbackMatchIdsCount: fallbackMatchIds.length,
+
+          // Buffer information
           buffer: {
             number: bufnr,
             name: bufname,
@@ -936,14 +957,20 @@ export async function main(denops: Denops): Promise<void> {
             readonly: readonly === 1,
             lineCount,
           },
+
+          // System capabilities
           capabilities: {
             hasExtmarks: denops.meta.host === "nvim" && extmarkNamespace !== undefined,
             canUseFallback: true,
+            hasCoreIntegration: true,
+            hasDictionarySystem: core.hasDictionarySystem(),
           },
         };
       } catch (error) {
+        const fallbackDebugInfo = core.collectDebugInfo();
         return {
           error: `Failed to gather debug info: ${error}`,
+          core: fallbackDebugInfo,
           config,
           hintsVisible,
           currentHintsCount: currentHints.length,
@@ -1410,41 +1437,21 @@ export function displayHintsAsync(
   config: UnifiedConfig,
   onComplete?: () => void,
 ): void {
-  // 前の描画をキャンセル
-  if (_renderingAbortController) {
-    _renderingAbortController.abort();
-  }
+  // REFACTOR Phase sub2-3-1: Coreクラスへの移行（後方互換性維持）
+  const core = Core.getInstance();
 
-  // 新しいAbortControllerを作成
-  _renderingAbortController = new AbortController();
-  const currentController = _renderingAbortController;
-
-  // 描画状態を設定
-  _isRenderingHints = true;
-
-  // 非同期で描画を実行（awaitしない）
+  // main.tsレベルでのfire-and-forget実行パターンを維持
   (async () => {
     try {
-      // AbortSignalをチェックしながら描画
-      if (currentController.signal.aborted) {
-        return;
-      }
-
-      await displayHintsOptimized(denops, hints, "normal", currentController.signal);
+      await core.displayHintsAsync(denops, hints, { mode: "normal" });
 
       // 完了コールバックを実行
-      if (onComplete && !currentController.signal.aborted) {
+      if (onComplete && !core.isRenderingHints()) {
         onComplete();
       }
     } catch (error) {
       // エラーは内部でキャッチして、外部に投げない
       console.error("[hellshake-yano] Async rendering error:", error);
-    } finally {
-      // この描画が現在のものである場合のみフラグをリセット
-      if (currentController === _renderingAbortController) {
-        _isRenderingHints = false;
-        _renderingAbortController = null;
-      }
     }
   })();
 }
@@ -1462,7 +1469,9 @@ export function displayHintsAsync(
  * }
  */
 export function isRenderingHints(): boolean {
-  return _isRenderingHints;
+  // REFACTOR Phase sub2-3-2: Coreクラスへの移行（後方互換性維持）
+  const core = Core.getInstance();
+  return core.isRenderingHints();
 }
 
 /**
@@ -1477,11 +1486,9 @@ export function isRenderingHints(): boolean {
  * displayHintsAsync(denops, newHints, config);
  */
 export function abortCurrentRendering(): void {
-  if (_renderingAbortController) {
-    _renderingAbortController.abort();
-    _renderingAbortController = null;
-    _isRenderingHints = false;
-  }
+  // REFACTOR Phase sub2-3-3: Coreクラスへの移行（後方互換性維持）
+  const core = Core.getInstance();
+  core.abortCurrentRendering();
 }
 
 /**
@@ -2130,6 +2137,9 @@ export function highlightCandidateHintsAsync(
   inputPrefix: string,
   onComplete?: () => void,
 ): void {
+  // REFACTOR Phase sub2-3-4: Coreクラスへの移行（後方互換性維持）
+  const core = Core.getInstance();
+
   // 前のハイライト描画をキャンセル
   if (_highlightAbortController) {
     _highlightAbortController.abort();
@@ -2147,7 +2157,17 @@ export function highlightCandidateHintsAsync(
         return;
       }
 
-      await highlightCandidateHintsOptimized(denops, inputPrefix, currentController.signal);
+      // 現在のヒントマッピングを取得してCoreクラスに渡す
+      const currentHints = core.getCurrentHints();
+      if (currentHints.length > 0) {
+        await core.highlightCandidateHintsAsync(
+          denops,
+          currentHints,
+          inputPrefix,
+          { mode: "normal" },
+          currentController.signal
+        );
+      }
 
       // 完了コールバックを実行
       if (onComplete && !currentController.signal.aborted) {
@@ -3035,6 +3055,31 @@ export async function reloadDictionary(denops: Denops): Promise<void> {
     await core.reloadDictionary(denops);
   } catch (error) {
     await denops.cmd(`echoerr "Failed to reload dictionary: ${error}"`);
+  }
+}
+
+/**
+ * 辞書に単語を追加する
+ * 指定された単語を辞書に新規追加または更新
+ *
+ * @param denops Denosランタイムオブジェクト
+ * @param word 追加する単語
+ * @param meaning 単語の意味（オプション）
+ * @param type 単語の種類（noun, verb, adjective等、オプション）
+ * @returns Promise<void> 非同期処理の完了を示すPromise
+ * @version 2.0.0
+ * @since 2.0.0
+ * @throws 辞書への追加に失敗した場合
+ * @example
+ * // 単語を辞書に追加
+ * await addToDictionary(denops, "test", "テスト", "noun");
+ */
+export async function addToDictionary(denops: Denops, word: string, meaning?: string, type?: string): Promise<void> {
+  try {
+    const core = await getCoreForDictionary(denops);
+    await core.addToDictionary(denops, word, meaning || "", type || "");
+  } catch (error) {
+    await denops.cmd(`echoerr "Failed to add word to dictionary: ${error}"`);
   }
 }
 

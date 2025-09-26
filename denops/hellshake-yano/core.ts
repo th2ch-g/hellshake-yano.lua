@@ -36,7 +36,7 @@ import {
   validateHintKeyConfig
 } from "./hint.ts";
 // Dictionary system imports
-import { DictionaryLoader } from "./word/dictionary-loader.ts";
+import { DictionaryLoader, type UserDictionary } from "./word/dictionary-loader.ts";
 import { VimConfigBridge } from "./word/dictionary-loader.ts";
 
 /**
@@ -62,6 +62,10 @@ export class Core {
   // Dictionary system variables
   private dictionaryLoader: DictionaryLoader | null = null;
   private vimConfigBridge: VimConfigBridge | null = null;
+
+  // Display rendering state management (sub2-3)
+  private _isRenderingHints: boolean = false;
+  private _renderingAbortController: AbortController | null = null;
 
   /**
    * Coreクラスのプライベートコンストラクタ（シングルトン用）
@@ -101,6 +105,11 @@ export class Core {
    */
   cleanup(): void {
     // デバウンス処理はmain.tsで管理するためCoreクラス内では不要
+    // 表示状態のクリーンアップ (sub2-3)
+    this.abortCurrentRendering();
+    this._isRenderingHints = false;
+    this._renderingAbortController = null;
+
     // 必要に応じて他のクリーンアップ処理をここに追加
   }
 
@@ -195,6 +204,93 @@ export class Core {
     this.isActive = false;
     // TDD Refactor Phase: 状態管理を追加
     // 実際のVim/Neovimとの連携は後で実装
+  }
+
+  /**
+   * sub2-5-3: hideHintsOptimized - Vim/Neovimの実際のヒント表示をクリア
+   *
+   * main.ts の hideHints 関数をCoreクラスに移植
+   * ExtmarksとMatchesの両方をクリアしてヒントを非表示にする
+   *
+   * @param denops Denopsインスタンス
+   * @returns Promise<void> 非同期で完了
+   * @since sub2-5-3
+   */
+  async hideHintsOptimized(denops: Denops): Promise<void> {
+    try {
+      // 状態をクリア
+      this.currentHints = [];
+      this.isActive = false;
+
+      // 現在のレンダリングを中断
+      this.abortCurrentRendering();
+
+      // バッファ番号を取得
+      const bufnr = await denops.call("bufnr", "%") as number;
+      if (bufnr === -1) {
+        return;
+      }
+
+      if (denops.meta.host === "nvim") {
+        // Neovim: extmarkをクリア
+        try {
+          const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+          await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+
+          // 候補ハイライトもクリア
+          const candidateNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_candidate_highlights") as number;
+          await denops.call("nvim_buf_clear_namespace", bufnr, candidateNamespace, 0, -1);
+        } catch (error) {
+          // extmarkのクリアに失敗した場合はログに記録するが処理は続行
+          console.warn("[Core] hideHintsOptimized extmark clear error:", error);
+        }
+      } else {
+        // Vim: matchesをクリア
+        try {
+          const matches = await denops.call("getmatches") as Array<{ id: number; group: string }>;
+          for (const match of matches) {
+            if (match.group === "HellshakeYanoMarker" || match.group.startsWith("HellshakeYano")) {
+              await denops.call("matchdelete", match.id);
+            }
+          }
+        } catch (error) {
+          // matchのクリアに失敗した場合はログに記録するが処理は続行
+          console.warn("[Core] hideHintsOptimized match clear error:", error);
+        }
+      }
+    } catch (error) {
+      console.error("[Core] hideHintsOptimized error:", error);
+    }
+  }
+
+  /**
+   * sub2-5-4: clearCache - キャッシュをクリア
+   *
+   * main.ts のキャッシュクリア機能をCoreクラスに移植
+   * 内部状態とヒントをリセットする
+   *
+   * @since sub2-5-4
+   */
+  clearCache(): void {
+    try {
+      // ヒント関連の状態をクリア
+      this.currentHints = [];
+      this.isActive = false;
+
+      // レンダリング状態をクリア
+      this.abortCurrentRendering();
+
+      // パフォーマンスメトリクスをクリア
+      this.clearDebugInfo();
+
+      // 辞書システムのキャッシュもクリア（存在する場合）
+      if (this.dictionaryLoader) {
+        // 辞書ローダーのキャッシュクリアは内部実装に依存
+        // 現在の実装では特別なキャッシュクリア処理は不要
+      }
+    } catch (error) {
+      console.error("[Core] clearCache error:", error);
+    }
   }
 
   /**
@@ -482,20 +578,50 @@ export class Core {
     denops: Denops,
     hints: HintMapping[],
     config: { mode?: string; [key: string]: any },
-    onComplete?: () => void,
+    signal?: AbortSignal,
   ): Promise<void> {
+    // 現在のレンダリングを中断
+    if (this._renderingAbortController) {
+      this._renderingAbortController.abort();
+    }
+
+    // 新しいコントローラーを作成
+    this._renderingAbortController = new AbortController();
+    const currentController = this._renderingAbortController;
+
+    // 外部からのAbortSignalもリッスンする
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        if (currentController === this._renderingAbortController) {
+          currentController.abort();
+        }
+      });
+    }
+
+    this._isRenderingHints = true;
+
     try {
-      // 中断処理は簡略化（Coreクラス内では基本的な実装）
-      const mode = config.mode || "normal";
-
-      await this.displayHintsOptimized(denops, hints, mode);
-
-      // 完了コールバックを実行
-      if (onComplete) {
-        onComplete();
+      // 中断チェック
+      if (currentController.signal.aborted) {
+        return;
       }
+
+      const mode = config.mode || "normal";
+      const bufnr = await denops.call("bufnr", "%") as number;
+
+      await this.displayHintsWithExtmarksBatch(denops, bufnr, hints, mode, currentController.signal);
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // 中断は正常な動作なので、エラーログは出力しない
+        return;
+      }
       console.error("[Core] displayHintsAsync error:", error);
+    } finally {
+      // この描画が現在のものである場合のみフラグをリセット
+      if (currentController === this._renderingAbortController) {
+        this._isRenderingHints = false;
+        this._renderingAbortController = null;
+      }
     }
   }
 
@@ -747,6 +873,10 @@ export class Core {
       this.currentHints = hintMappings;
       this.isActive = true;
 
+      // sub2-5-2: 重要なバグ修正 - ヒント表示後にユーザー入力を待機
+      // ユーザーがヒントを選択できるようにwaitForUserInputを呼び出す
+      await this.waitForUserInput(denops);
+
     } catch (error) {
       console.error("[Core] showHintsInternal error:", error);
       // エラー時は状態をクリア
@@ -858,6 +988,64 @@ export class Core {
    *
    * @param denops Denopsインスタンス
    */
+  /**
+   * ヒントターゲットへのジャンプ処理を実行（REFACTOR: 重複コードの共通化）
+   *
+   * @param denops - Denopsインスタンス
+   * @param target - ジャンプ対象のヒントマッピング
+   * @param context - ジャンプのコンテキスト情報（デバッグ用）
+   */
+  private async jumpToHintTarget(denops: Denops, target: HintMapping, context: string): Promise<void> {
+    try {
+      // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
+      const jumpCol = target.hintByteCol || target.hintCol ||
+        target.word.byteCol || target.word.col;
+
+      // デバッグログ: ジャンプ位置の詳細
+      if (this.config.debug_mode) {
+        console.log(`[hellshake-yano:DEBUG] Jump to target (${context}):`);
+        console.log(`  - text: "${target.word.text}"`);
+        console.log(`  - line: ${target.word.line}`);
+        console.log(`  - col: ${target.word.col} (display)`);
+        console.log(`  - byteCol: ${target.word.byteCol} (byte)`);
+        console.log(`  - hintCol: ${target.hintCol} (hint display)`);
+        console.log(`  - hintByteCol: ${target.hintByteCol} (hint byte)`);
+        console.log(`  - jumpCol (used): ${jumpCol}`);
+      }
+
+      await denops.call("cursor", target.word.line, jumpCol);
+    } catch (jumpError) {
+      await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
+    }
+  }
+
+  /**
+   * エラーメッセージとフィードバック表示（REFACTOR: 重複コードの共通化）
+   *
+   * @param denops - Denopsインスタンス
+   * @param message - 表示するメッセージ
+   * @param withBell - ベル音を鳴らすかどうか（デフォルト: true）
+   */
+  private async showErrorFeedback(denops: Denops, message: string, withBell = true): Promise<void> {
+    await denops.cmd(`echohl WarningMsg | echo '${message}' | echohl None`);
+    if (withBell) {
+      try {
+        await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
+      } catch {
+        // ベル音が失敗しても続行
+      }
+    }
+  }
+
+  /**
+   * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする
+   *
+   * main.tsから移行された完全版実装。hideHintsOptimizedを使用して
+   * 実際の表示を適切に非表示にする重要なバグ修正を含む。
+   *
+   * @param denops - Denopsインスタンス
+   * @throws ユーザーがESCでキャンセルした場合
+   */
   async waitForUserInput(denops: Denops): Promise<void> {
     const config = this.config;
     const currentHints = this.currentHints;
@@ -867,99 +1055,289 @@ export class Core {
     let timeoutId: number | undefined;
 
     try {
-      // タイムアウト設定（motionCount === 1 の場合のみ有効）
-      const shouldTimeout = config.motion_count === 1 && (config as any).timeout;
-      const timeoutMs = shouldTimeout ? ((config as any).timeout || 1000) : 0;
+      // 入力タイムアウト設定（設定可能）
+      const inputTimeout = config.motion_timeout || 2000;
 
-      // 第1文字の入力を待つ
-      const firstChar = await new Promise<number>((resolve) => {
-        if (shouldTimeout && timeoutMs > 0) {
-          timeoutId = setTimeout(() => {
-            resolve(0); // タイムアウトを0で表現
-          }, timeoutMs);
-        }
+      // 短い待機時間を入れて、前回の入力が誤って拾われるのを防ぐ
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-        denops.call("getchar").then((char) => {
-          if (timeoutId) clearTimeout(timeoutId);
-          resolve(char as number);
-        });
+      // タイムアウト付きでユーザー入力を取得
+      const inputPromise = denops.call("getchar") as Promise<number>;
+      const timeoutPromise = new Promise<number>((resolve) => {
+        timeoutId = setTimeout(() => resolve(-2), inputTimeout) as unknown as number; // -2 = 全体タイムアウト
       });
 
-      // タイムアウトまたはESCの場合
-      if (firstChar === 0 || firstChar === 27) {
-        if (firstChar === 0 && config.motion_count === 1) {
-          // タイムアウト時、単一文字ヒントがある場合は選択
+      const char = await Promise.race([inputPromise, timeoutPromise]);
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+
+      // 全体タイムアウトの場合
+      if (char === -2) {
+        // motion_count === 1の場合、単一文字ヒントがあれば自動選択
+        if (config.motion_count === 1) {
           const singleCharHints = currentHints.filter(h => h.hint.length === 1);
           if (singleCharHints.length === 1) {
-            const target = singleCharHints[0];
-            const jumpCol = target.hintByteCol || target.hintCol ||
-                          target.word.byteCol || target.word.col;
-            await denops.call("cursor", target.word.line, jumpCol);
+            await this.jumpToHintTarget(denops, singleCharHints[0], "timeout auto-select");
           }
         }
-        this.hideHints();
+        await this.hideHintsOptimized(denops);
         return;
       }
 
-      // 文字に変換して大文字化
-      let inputChar = String.fromCharCode(firstChar);
-      if (/[a-zA-Z]/.test(inputChar)) {
-        inputChar = inputChar.toUpperCase();
+      // ESCキーの場合はキャンセル
+      if (char === 27) {
+        await this.hideHintsOptimized(denops);
+        return;
       }
 
-      // motion_count が 1の場合は1文字で決定
-      if (config.motion_count === 1) {
-        const target = currentHints.find(h => h.hint === inputChar);
-        if (target) {
-          const jumpCol = target.hintByteCol || target.hintCol ||
-                        target.word.byteCol || target.word.col;
-          await denops.call("cursor", target.word.line, jumpCol);
+      // Ctrl+C やその他の制御文字の処理
+      if (char < 32 && char !== 13) { // Enter(13)以外の制御文字
+        await this.hideHintsOptimized(denops);
+        return;
+      }
+
+      // 元の入力が大文字かどうかを記録（A-Z: 65-90）
+      const wasUpperCase = char >= 65 && char <= 90;
+      // 元の入力が数字かどうかを記録（0-9: 48-57）
+      const wasNumber = char >= 48 && char <= 57;
+      // 元の入力が小文字かどうかを記録（a-z: 97-122）
+      const wasLowerCase = char >= 97 && char <= 122;
+
+      // 小文字の場合は、ヒントをキャンセルして通常のVim動作を実行
+      if (wasLowerCase) {
+        await this.hideHintsOptimized(denops);
+        // 小文字をそのままVimに渡す
+        const originalChar = String.fromCharCode(char);
+        await denops.call("feedkeys", originalChar, "n");
+        return;
+      }
+
+      // 文字に変換
+      let inputChar: string;
+      try {
+        inputChar = String.fromCharCode(char);
+        // アルファベットの場合は大文字に変換（数字はそのまま）
+        if (/[a-zA-Z]/.test(inputChar)) {
+          inputChar = inputChar.toUpperCase();
         }
-        this.hideHints();
+      } catch (_charError) {
+        await denops.cmd("echohl ErrorMsg | echo 'Invalid character input' | echohl None");
+        await this.hideHintsOptimized(denops);
         return;
       }
 
-      // motion_count が 2以上の場合、第2文字を待つ
-      const matchingHints = currentHints.filter(h => h.hint.startsWith(inputChar));
+      // 現在のキー設定に数字が含まれているかチェック
+      const allKeys = [...(config.single_char_keys || []), ...(config.multi_char_keys || [])];
+      const hasNumbers = allKeys.some((k) => /^\d$/.test(k));
 
-      // 第2文字の入力を待つ（短いタイムアウト付き）
-      let secondTimeoutId: number | undefined;
-      const secondChar = await Promise.race([
-        denops.call("getchar") as Promise<number>,
-        new Promise<number>((resolve) => {
-          secondTimeoutId = setTimeout(() => resolve(0), 500);
-        })
-      ]);
-      if (secondTimeoutId) clearTimeout(secondTimeoutId);
+      // 有効な文字範囲チェック（use_numbersがtrueまたはキー設定に数字が含まれていれば数字を許可）
+      const validPattern = (config.use_numbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
+      const errorMessage = (config.use_numbers || hasNumbers)
+        ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
+        : "Please use alphabetic characters only";
 
-      if (secondChar === 0) {
-        // タイムアウト時、単一候補なら選択
+      if (!validPattern.test(inputChar)) {
+        await this.showErrorFeedback(denops, errorMessage);
+        await this.hideHintsOptimized(denops);
+        return;
+      }
+
+      // 入力文字で始まる全てのヒントを探す（単一文字と複数文字の両方）
+      const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
+
+      if (matchingHints.length === 0) {
+        // 該当するヒントがない場合は終了（視覚・音声フィードバック付き）
+        await this.showErrorFeedback(denops, "No matching hint found");
+        await this.hideHintsOptimized(denops);
+        return;
+      }
+
+      // 単一文字のヒントと複数文字のヒントを分離
+      const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
+      const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
+
+      if (config.use_hint_groups) {
+        // デフォルトのキー設定
+        const singleOnlyKeys = config.single_char_keys ||
+          [
+            "A",
+            "S",
+            "D",
+            "F",
+            "G",
+            "H",
+            "J",
+            "K",
+            "L",
+            "N",
+            "M",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+          ];
+        const multiOnlyKeys = config.multi_char_keys ||
+          ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+
+        // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
+        if (singleOnlyKeys.includes(inputChar) && singleCharTarget) {
+          await this.jumpToHintTarget(denops, singleCharTarget, "single char hint (hint groups)");
+          await this.hideHintsOptimized(denops);
+          return;
+        }
+
+        // 2文字専用キーの場合：必ず2文字目を待つ（タイムアウトなし）
+        if (multiOnlyKeys.includes(inputChar) && multiCharHints.length > 0) {
+          // 2文字目の入力を待つ処理は後続のコードで実行される
+          // ただし、タイムアウト処理をスキップするフラグを設定
+          // この場合は通常の処理フローを続ける
+        }
+      } else {
+        // Option 3: 1文字ヒントが存在する場合は即座にジャンプ（他の条件に関係なく）
+        if (singleCharTarget) {
+          await this.jumpToHintTarget(denops, singleCharTarget, "single char target (Option 3)");
+          await this.hideHintsOptimized(denops);
+          return;
+        }
+      }
+
+      // 候補のヒントをハイライト表示（UX改善）
+      // Option 3: 1文字ヒントが存在する場合はハイライト処理をスキップ
+      const shouldHighlight = config.highlight_selected && !singleCharTarget;
+
+      if (shouldHighlight) {
+        // 非同期版を使用してメインスレッドをブロックしない
+        // awaitを使用せず非同期実行することで、ユーザー入力の応答性を維持
+        this.highlightCandidateHintsAsync(denops, currentHints, inputChar, { mode: "normal" });
+      }
+
+      // 第2文字の入力を待機
+      let secondChar: number;
+
+      if (config.use_hint_groups) {
+        const multiOnlyKeys = config.multi_char_keys ||
+          ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+
+        if (multiOnlyKeys.includes(inputChar)) {
+          // 2文字専用キーの場合：タイムアウトなしで2文字目を待つ
+          secondChar = await denops.call("getchar") as number;
+        } else {
+          // それ以外（従来の動作）：タイムアウトあり
+          const secondInputPromise = denops.call("getchar") as Promise<number>;
+          const secondTimeoutPromise = new Promise<number>((resolve) => {
+            timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
+          });
+
+          secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = undefined;
+          }
+        }
+      } else {
+        // 従来の動作：タイムアウトあり
+        const secondInputPromise = denops.call("getchar") as Promise<number>;
+        const secondTimeoutPromise = new Promise<number>((resolve) => {
+          timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
+        });
+
+        secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
+      }
+
+      if (secondChar === -1) {
+        // タイムアウトの場合
         if (matchingHints.length === 1) {
-          const target = matchingHints[0];
-          const jumpCol = target.hintByteCol || target.hintCol ||
-                        target.word.byteCol || target.word.col;
-          await denops.call("cursor", target.word.line, jumpCol);
+          // 候補が1つの場合は自動選択
+          await this.jumpToHintTarget(denops, matchingHints[0], "auto-select single candidate");
+        } else if (singleCharTarget) {
+          // タイムアウトで単一文字ヒントがある場合はそれを選択
+          await this.jumpToHintTarget(denops, singleCharTarget, "timeout select single char hint");
+        } else {
+          await denops.cmd(`echo 'Timeout - ${matchingHints.length} candidates available'`);
         }
-      } else if (secondChar !== 27) { // ESC以外
-        let secondInputChar = String.fromCharCode(secondChar);
+        await this.hideHintsOptimized(denops);
+        return;
+      }
+
+      // ESCキーの場合はキャンセル
+      if (secondChar === 27) {
+        await denops.cmd("echo 'Cancelled'");
+        await this.hideHintsOptimized(denops);
+        return;
+      }
+
+      // 第2文字を結合
+      let secondInputChar: string;
+      try {
+        secondInputChar = String.fromCharCode(secondChar);
+        // アルファベットの場合は大文字に変換（数字はそのまま）
         if (/[a-zA-Z]/.test(secondInputChar)) {
           secondInputChar = secondInputChar.toUpperCase();
         }
-
-        const fullHint = inputChar + secondInputChar;
-        const target = currentHints.find(h => h.hint === fullHint);
-
-        if (target) {
-          const jumpCol = target.hintByteCol || target.hintCol ||
-                        target.word.byteCol || target.word.col;
-          await denops.call("cursor", target.word.line, jumpCol);
-        }
+      } catch (_charError) {
+        await denops.cmd("echohl ErrorMsg | echo 'Invalid second character' | echohl None");
+        await this.hideHintsOptimized(denops);
+        return;
       }
 
-      this.hideHints();
+      // 有効な文字範囲チェック（数字対応）
+      const secondValidPattern = config.use_numbers ? /[A-Z0-9]/ : /[A-Z]/;
+      const secondErrorMessage = config.use_numbers
+        ? "Second character must be alphabetic or numeric"
+        : "Second character must be alphabetic";
+
+      if (!secondValidPattern.test(secondInputChar)) {
+        await this.showErrorFeedback(denops, secondErrorMessage, false);
+        await this.hideHintsOptimized(denops);
+        return;
+      }
+
+      const fullHint = inputChar + secondInputChar;
+
+      // 完全なヒントを探す
+      const target = currentHints.find((h) => h.hint === fullHint);
+
+      if (target) {
+        // カーソルを移動（byteColが利用可能な場合は使用）
+        await this.jumpToHintTarget(denops, target, `hint "${fullHint}"`);
+      } else {
+        // 無効なヒント組み合わせの場合（視覚・音声フィードバック付き）
+        await this.showErrorFeedback(denops, `Invalid hint combination: ${fullHint}`);
+      }
+
+      // ヒントを非表示
+      await this.hideHintsOptimized(denops);
     } catch (error) {
-      console.error("[Core] waitForUserInput error:", error);
-      this.hideHints();
+      // タイムアウトをクリア
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      // エラー時のユーザーフィードバック
+      try {
+        await denops.cmd("echohl ErrorMsg | echo 'Input error - hints cleared' | echohl None");
+        await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
+      } catch {
+        // フィードバックが失敗しても続行
+      }
+
+      await this.hideHintsOptimized(denops);
+      throw error;
     }
   }
 
@@ -1001,6 +1379,11 @@ export class Core {
    * @returns Promise<void>
    */
   private async registerDictionaryCommands(denops: Denops): Promise<void> {
+    // Add to dictionary command
+    await denops.cmd(
+      `command! -nargs=+ HellshakeYanoAddWord call denops#request("${denops.name}", "addToDictionary", split('<args>'))`
+    );
+
     // Reload dictionary command
     await denops.cmd(
       `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`
@@ -1162,6 +1545,118 @@ export class Core {
       }
     } catch (error) {
       await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
+    }
+  }
+
+  /**
+   * Add word to user dictionary
+   * TDD Green Phase: sub2-4-1 implementation
+   *
+   * @param denops - Denopsインスタンス
+   * @param word - 追加する単語
+   * @param meaning - 単語の意味
+   * @param type - 単語の種類（noun, verb, adjective等）
+   * @returns Promise<void>
+   */
+  async addToDictionary(denops: Denops, word: string, meaning: string, type: string): Promise<void> {
+    try {
+      // Validate input
+      if (!word || !word.trim()) {
+        await denops.cmd('echoerr "Invalid word: word cannot be empty"');
+        return;
+      }
+
+      // Initialize dictionary system if needed
+      if (!this.dictionaryLoader || !this.vimConfigBridge) {
+        await this.initializeDictionarySystem(denops);
+      }
+
+      const dictConfig = await this.vimConfigBridge!.getConfig(denops);
+      const dictionaryPath = dictConfig.dictionaryPath || ".hellshake-yano/dictionary.json";
+
+      // Load existing dictionary or create new one
+      let dictionary: UserDictionary;
+      try {
+        dictionary = await this.dictionaryLoader!.loadUserDictionary(dictConfig);
+      } catch (_) {
+        // Create new dictionary if not exists (using UserDictionary format)
+        dictionary = {
+          customWords: [],
+          preserveWords: [],
+          mergeRules: new Map(),
+          compoundPatterns: [],
+          metadata: {
+            version: "1.0.0",
+            description: "User dictionary for hellshake-yano.vim"
+          }
+        };
+      }
+
+      // Create word entry and add to customWords
+      const wordEntry = word.trim();
+
+      // Check if word already exists
+      const existingIndex = dictionary.customWords.indexOf(wordEntry);
+      if (existingIndex === -1) {
+        // Add new word
+        dictionary.customWords.push(wordEntry);
+      }
+
+      // Also handle the raw JSON format for file storage
+      let jsonDictionary;
+      try {
+        const content = await Deno.readTextFile(dictionaryPath);
+        jsonDictionary = JSON.parse(content);
+      } catch (_) {
+        // Create new JSON dictionary if not exists
+        jsonDictionary = {
+          words: [],
+          patterns: [],
+          meta: {
+            version: "1.0.0",
+            created: new Date().toISOString(),
+            description: "User dictionary for hellshake-yano.vim"
+          }
+        };
+      }
+
+      // Create structured word entry for JSON storage
+      const structuredWordEntry = {
+        word: word.trim(),
+        meaning: meaning.trim() || word.trim(),
+        type: type.trim() || "unknown",
+        added: new Date().toISOString()
+      };
+
+      // Check if word already exists in JSON format
+      if (!jsonDictionary.words) {
+        jsonDictionary.words = [];
+      }
+      const jsonExistingIndex = jsonDictionary.words.findIndex((w: any) => w.word === structuredWordEntry.word);
+      if (jsonExistingIndex !== -1) {
+        // Update existing word
+        jsonDictionary.words[jsonExistingIndex] = structuredWordEntry;
+      } else {
+        // Add new word
+        jsonDictionary.words.push(structuredWordEntry);
+      }
+
+      // Ensure directory exists
+      try {
+        await Deno.mkdir(".hellshake-yano", { recursive: true });
+      } catch (_) {
+        // Directory might already exist
+      }
+
+      // Save updated JSON dictionary
+      await Deno.writeTextFile(dictionaryPath, JSON.stringify(jsonDictionary, null, 2));
+
+      // Reload dictionary to update cache
+      await this.dictionaryLoader!.loadUserDictionary(dictConfig);
+
+      await denops.cmd(`echo "Word added to dictionary: ${word}"`);
+    } catch (error) {
+      await denops.cmd(`echoerr "Failed to add word to dictionary: ${error}"`);
     }
   }
 
@@ -1553,5 +2048,157 @@ export class Core {
 
     // 最終的なデフォルト値
     return 3;
+  }
+
+  // ========================================
+  // sub2-3: Display Functions Implementation
+  // ========================================
+
+  /**
+   * sub2-3-2: isRenderingHints - ヒントの描画処理中かどうかを取得
+   *
+   * 非同期描画の状態を外部から確認するためのステータス関数
+   * main.ts の isRenderingHints 関数をCoreクラスに移植
+   *
+   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse
+   * @since sub2-3-2
+   *
+   * @example
+   * const core = Core.getInstance();
+   * if (!core.isRenderingHints()) {
+   *   await core.displayHintsAsync(denops, hints, config);
+   * }
+   */
+  isRenderingHints(): boolean {
+    return this._isRenderingHints;
+  }
+
+  /**
+   * sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断
+   *
+   * 進行中の非同期描画処理を安全に中断します
+   * main.ts の abortCurrentRendering 関数をCoreクラスに移植
+   *
+   * @since sub2-3-3
+   *
+   * @example
+   * const core = Core.getInstance();
+   * core.abortCurrentRendering();
+   */
+  abortCurrentRendering(): void {
+    if (this._renderingAbortController) {
+      this._renderingAbortController.abort();
+      this._isRenderingHints = false;
+      this._renderingAbortController = null;
+    }
+  }
+
+  /**
+   * sub2-3-4: highlightCandidateHintsAsync - 候補ヒントをハイライト
+   *
+   * 部分入力に基づいて、該当する候補ヒントをハイライト表示します
+   * main.ts の highlightCandidateHintsAsync 関数をCoreクラスに移植
+   *
+   * @param denops Denopsインスタンス
+   * @param hintMappings ヒントマッピング配列
+   * @param partialInput 部分入力文字列
+   * @param config 表示設定
+   * @param signal 中断用のAbortSignal（オプション）
+   * @returns Promise<void> 非同期で完了
+   * @since sub2-3-4
+   *
+   * @example
+   * const core = Core.getInstance();
+   * await core.highlightCandidateHintsAsync(denops, hints, "A", { mode: "normal" });
+   */
+  async highlightCandidateHintsAsync(
+    denops: Denops,
+    hintMappings: HintMapping[],
+    partialInput: string,
+    config: { mode?: string; [key: string]: any },
+    signal?: AbortSignal,
+  ): Promise<void> {
+    try {
+      // 中断チェック
+      if (signal?.aborted) {
+        return;
+      }
+
+      // 空の部分入力の場合は何もしない
+      if (!partialInput) {
+        return;
+      }
+
+      // 候補ヒントをフィルタリング
+      const candidateHints = hintMappings.filter(mapping =>
+        mapping.hint.startsWith(partialInput)
+      );
+
+      // 中断チェック
+      if (signal?.aborted) {
+        return;
+      }
+
+      // 候補がない場合は何もしない
+      if (candidateHints.length === 0) {
+        return;
+      }
+
+      const mode = config.mode || "normal";
+      const bufnr = await denops.call("bufnr", "%") as number;
+
+      // 候補ヒントをハイライト表示
+      // extmarkを使って候補をハイライト
+      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_candidate_highlights") as number;
+
+      // 既存のハイライトをクリア
+      await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+
+      // 中断チェック
+      if (signal?.aborted) {
+        return;
+      }
+
+      // 候補ヒントにハイライトを適用
+      for (const mapping of candidateHints) {
+        // 中断チェック
+        if (signal?.aborted) {
+          return;
+        }
+
+        const { word, hint } = mapping;
+        const hintLine = word.line;
+        const hintCol = mapping.hintCol || word.col;
+        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+        // Neovim用の0ベース座標に変換
+        const nvimLine = hintLine - 1;
+        const nvimCol = hintByteCol - 1;
+
+        try {
+          await denops.call(
+            "nvim_buf_set_extmark",
+            bufnr,
+            extmarkNamespace,
+            nvimLine,
+            nvimCol,
+            {
+              "end_col": nvimCol + hint.length,
+              "hl_group": "HellshakeYanoCandidateHighlight", // 候補用ハイライトグループ
+              "priority": 1001, // 通常のヒントより高い優先度
+            }
+          );
+        } catch (error) {
+          // 個別のextmarkエラーは無視（バッファが変更された可能性）
+          console.warn("[Core] highlightCandidateHintsAsync extmark error:", error);
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // 中断は正常な動作なので、エラーログは出力しない
+        return;
+      }
+      console.error("[Core] highlightCandidateHintsAsync error:", error);
+    }
   }
 }

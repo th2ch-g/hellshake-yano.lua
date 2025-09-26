@@ -164,8 +164,9 @@ export class MockDenops implements Partial<Denops> {
   private cmdHandlers: Array<(cmd: string) => void> = [];
   private callHandlers: Map<string, ((...args: any[]) => any)> = new Map();
   private executedCommands: string[] = [];
+  private callLog: Array<{ fn: string; args: unknown[] }> = [];
 
-  meta = {
+  meta: { host: "nvim" | "vim"; mode: "test"; platform: "linux"; version: string } = {
     host: "nvim" as const,
     mode: "test" as const,
     platform: "linux" as const,
@@ -187,6 +188,9 @@ export class MockDenops implements Partial<Denops> {
   }
 
   async call(fn: string, ...args: unknown[]): Promise<unknown> {
+    // Record the call
+    this.callLog.push({ fn, args });
+
     // カスタムハンドラーがあれば実行
     if (this.callHandlers.has(fn)) {
       const handler = this.callHandlers.get(fn)!;
@@ -196,7 +200,7 @@ export class MockDenops implements Partial<Denops> {
     // 事前設定されたレスポンスを返す
     if (this.callResponses.has(fn)) {
       const response = this.callResponses.get(fn);
-      return typeof response === "function" ? response() : response;
+      return typeof response === "function" ? response(...args) : response;
     }
 
     // デフォルトのレスポンス
@@ -215,6 +219,22 @@ export class MockDenops implements Partial<Denops> {
           return handler(args[0], args[1]);
         }
         return undefined;
+      case "nvim_create_namespace":
+        return 1;
+      case "nvim_buf_clear_namespace":
+        return true;
+      case "nvim_buf_set_extmark":
+        return 1;
+      case "getmatches":
+        return [];
+      case "matchadd":
+        return 1;
+      case "matchdelete":
+        return true;
+      case "getchar":
+        return 27; // ESC key by default
+      case "bufexists":
+        return 1;
       default:
         return undefined;
     }
@@ -239,6 +259,21 @@ export class MockDenops implements Partial<Denops> {
   }
 
   clearExecutedCommands(): void {
+    this.executedCommands = [];
+  }
+
+  /**
+   * Get all recorded function calls for testing
+   */
+  getCalls(): Array<{ fn: string; args: unknown[] }> {
+    return [...this.callLog];
+  }
+
+  /**
+   * Clear call log for clean testing
+   */
+  clearCallLog(): void {
+    this.callLog = [];
     this.executedCommands = [];
   }
 

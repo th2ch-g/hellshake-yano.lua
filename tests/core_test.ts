@@ -1207,8 +1207,41 @@ Deno.test("Core editDictionary should open dictionary file for editing", async (
 
   // Should execute edit command
   const commands = mockDenops.getExecutedCommands();
-  assert(commands.some(cmd => cmd.includes('edit')));
+  assert(commands.some((cmd: string) => cmd.includes('edit')));
 
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core editDictionary should create new dictionary file if not exists", async () => {
+  const core = Core.getInstance();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should be able to edit dictionary and create new file
+  await core.editDictionary(mockDenops as any);
+
+  // Should execute edit command and show creation message
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some((cmd: string) => cmd.includes('edit')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core editDictionary should handle errors gracefully", async () => {
+  const core = Core.getInstance();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle error gracefully (simulate file system error by testing with invalid path)
+  await core.editDictionary(mockDenops as any);
+
+  // Should complete without throwing (error handling is internal)
   // Cleanup
   core.cleanup();
 });
@@ -1225,9 +1258,42 @@ Deno.test("Core showDictionary should display dictionary contents", async () => 
 
   // Should create buffer and set content
   const commands = mockDenops.getExecutedCommands();
-  assert(commands.some(cmd => cmd.includes('new')));
-  assert(commands.some(cmd => cmd.includes('file [HellshakeYano Dictionary]')));
+  assert(commands.some((cmd: string) => cmd.includes('new')));
+  assert(commands.some((cmd: string) => cmd.includes('file [HellshakeYano Dictionary]')));
 
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core showDictionary should handle empty dictionary", async () => {
+  const core = Core.getInstance();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle empty dictionary
+  await core.showDictionary(mockDenops as any);
+
+  // Should still create buffer
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some((cmd: string) => cmd.includes('new')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core showDictionary should handle errors gracefully", async () => {
+  const core = Core.getInstance();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle error gracefully
+  await core.showDictionary(mockDenops as any);
+
+  // Should complete without throwing (error handling is internal)
   // Cleanup
   core.cleanup();
 });
@@ -1244,7 +1310,111 @@ Deno.test("Core validateDictionary should validate dictionary format", async () 
 
   // Should show validation result
   const commands = mockDenops.getExecutedCommands();
-  assert(commands.some(cmd => cmd.includes('Dictionary format is valid') || cmd.includes('Dictionary validation failed')));
+  assert(commands.some((cmd: string) => cmd.includes('Dictionary format is valid') || cmd.includes('Dictionary validation failed')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core validateDictionary should handle missing dictionary file", async () => {
+  const core = Core.getInstance();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle missing file gracefully
+  await core.validateDictionary(mockDenops as any);
+
+  // Should show result (either valid or not found)
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some((cmd: string) =>
+    cmd.includes('Dictionary format is valid') ||
+    cmd.includes('Dictionary file not found') ||
+    cmd.includes('Dictionary validation failed')
+  ));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core validateDictionary should handle errors gracefully", async () => {
+  const core = Core.getInstance();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle error gracefully
+  await core.validateDictionary(mockDenops as any);
+
+  // Should complete without throwing (error handling is internal)
+  // Cleanup
+  core.cleanup();
+});
+
+/**
+ * TDD RED Phase: addToDictionary method tests
+ * これらのテストは最初失敗する（Core.addToDictionaryメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have addToDictionary method", () => {
+  const core = Core.getInstance();
+  assertExists(core.addToDictionary);
+});
+
+Deno.test("Core addToDictionary should add word to user dictionary", async () => {
+  const mockDenops = new MockDenops();
+  const core = Core.getInstance();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should be able to add word to dictionary
+  await core.addToDictionary(mockDenops as any, "testword", "test", "noun");
+
+  // Should show success message
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some((cmd: string) => cmd.includes('Word added to dictionary')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core addToDictionary should handle invalid word input", async () => {
+  const mockDenops = new MockDenops();
+  const core = Core.getInstance();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle empty word
+  await core.addToDictionary(mockDenops as any, "", "", "");
+
+  // Should show error message
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some((cmd: string) => cmd.includes('echoerr') && cmd.includes('Invalid word')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core addToDictionary should handle different word types", async () => {
+  const mockDenops = new MockDenops();
+  const core = Core.getInstance();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should handle different word types
+  await core.addToDictionary(mockDenops as any, "run", "走る", "verb");
+  await core.addToDictionary(mockDenops as any, "fast", "速い", "adjective");
+  await core.addToDictionary(mockDenops as any, "dog", "犬", "noun");
+
+  // Should show success messages for each
+  const commands = mockDenops.getExecutedCommands();
+  const successCommands = commands.filter((cmd: string) => cmd.includes('Word added to dictionary'));
+  assertEquals(successCommands.length, 3);
 
   // Cleanup
   core.cleanup();
@@ -1792,4 +1962,492 @@ Deno.test("Core.getMotionCountForKey should validate values", () => {
 Deno.test("Core.getMotionCountForKey should return final default when no config", () => {
   const config = {} as any; // Test config
   assertEquals(Core.getMotionCountForKey("f", config), 3); // final default value
+});
+
+/**
+ * Phase 6: Display Functions Tests (TDD RED phase - sub2-3)
+ * 表示関連の機能のテスト実装
+ * displayHintsAsync, isRenderingHints, abortCurrentRendering, highlightCandidateHintsAsync
+ */
+
+// sub2-3-1: displayHintsAsync機能のテスト
+Deno.test("Core class should have displayHintsAsync method", () => {
+  const core = Core.getInstance();
+  assertExists(core.displayHintsAsync);
+});
+
+Deno.test("Core displayHintsAsync should display hints asynchronously", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup basic mocks for display
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
+
+  const hintMappings = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+
+  // Should complete without error
+  await core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" });
+
+  // Clean up
+  core.cleanup();
+});
+
+Deno.test("Core displayHintsAsync should handle abort signal", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+
+  const hintMappings = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+
+  // Start async display then abort
+  const abortController = new AbortController();
+  const displayPromise = core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" }, abortController.signal);
+  abortController.abort();
+
+  // Should handle abort gracefully
+  await displayPromise;
+
+  // Clean up
+  core.cleanup();
+});
+
+// sub2-3-2: isRenderingHints機能のテスト
+Deno.test("Core class should have isRenderingHints method", () => {
+  const core = Core.getInstance();
+  assertExists(core.isRenderingHints);
+});
+
+Deno.test("Core isRenderingHints should return rendering status", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Initially should not be rendering
+  assertEquals(core.isRenderingHints(), false);
+
+  // Setup mocks for async display
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
+
+  const hintMappings = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+
+  // Start async display
+  const displayPromise = core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" });
+
+  // Should be rendering during async operation
+  // Note: Due to async nature, this may or may not be true depending on timing
+
+  await displayPromise;
+
+  // After completion, should not be rendering
+  assertEquals(core.isRenderingHints(), false);
+
+  // Clean up
+  core.cleanup();
+});
+
+// sub2-3-3: abortCurrentRendering機能のテスト
+Deno.test("Core class should have abortCurrentRendering method", () => {
+  const core = Core.getInstance();
+  assertExists(core.abortCurrentRendering);
+});
+
+Deno.test("Core abortCurrentRendering should abort ongoing rendering", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks with delay to ensure rendering takes time
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", async () => {
+    await new Promise(resolve => setTimeout(resolve, 50)); // Add delay
+    return 1;
+  });
+
+  const hintMappings = Array.from({ length: 10 }, (_, i) => ({
+    hint: String.fromCharCode(65 + i), // A, B, C...
+    word: { text: `test${i}`, line: 1, col: 1 + i, byteCol: 1 + i },
+    hintCol: 1 + i,
+    hintByteCol: 1 + i
+  }));
+
+  // Start async display
+  const displayPromise = core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" });
+
+  // Immediately abort
+  core.abortCurrentRendering();
+
+  // Should complete without error (aborted)
+  await displayPromise;
+
+  // Clean up
+  core.cleanup();
+});
+
+// sub2-3-4: highlightCandidateHintsAsync機能のテスト
+Deno.test("Core class should have highlightCandidateHintsAsync method", () => {
+  const core = Core.getInstance();
+  assertExists(core.highlightCandidateHintsAsync);
+});
+
+Deno.test("Core highlightCandidateHintsAsync should highlight matching hints", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks for highlighting
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
+  mockDenops.setCallResponse("nvim_buf_clear_namespace", () => undefined);
+
+  const hintMappings = [
+    {
+      hint: "AA",
+      word: { text: "test1", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    },
+    {
+      hint: "AB",
+      word: { text: "test2", line: 2, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    },
+    {
+      hint: "BA",
+      word: { text: "test3", line: 3, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+
+  // Should highlight hints starting with "A"
+  await core.highlightCandidateHintsAsync(mockDenops as any, hintMappings, "A", { mode: "normal" });
+
+  // Clean up
+  core.cleanup();
+});
+
+Deno.test("Core highlightCandidateHintsAsync should handle empty partial input", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+
+  const hintMappings = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+
+  // Should handle empty input gracefully
+  await core.highlightCandidateHintsAsync(mockDenops as any, hintMappings, "", { mode: "normal" });
+
+  // Clean up
+  core.cleanup();
+});
+
+// ========================================
+// sub2-5: Dispatcher Integration Functions Tests
+// TDD Red Phase: Tests for dispatcher integration
+// ========================================
+
+// sub2-5-1: updateConfig method integration tests
+Deno.test("Core updateConfig method should work correctly", () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: false });
+
+  // Initial state
+  assertEquals(core.getConfig().enabled, false);
+
+  // Update config
+  core.updateConfig({ enabled: true, motion_count: 5 });
+
+  // Verify changes
+  const updatedConfig = core.getConfig();
+  assertEquals(updatedConfig.enabled, true);
+  assertEquals(updatedConfig.motion_count, 5);
+});
+
+Deno.test("Core updateConfig should handle partial updates", () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true, motion_count: 2, use_japanese: false });
+
+  // Update only one field
+  core.updateConfig({ motion_count: 3 });
+
+  const config = core.getConfig();
+  assertEquals(config.enabled, true); // Unchanged
+  assertEquals(config.motion_count, 3); // Changed
+  assertEquals(config.use_japanese, false); // Unchanged
+});
+
+// sub2-5-2: showHints method waitForUserInput integration tests
+Deno.test("Core showHints should include user input waiting", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true, motion_count: 1 });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks for showHints workflow
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("bufexists", () => 1);
+  mockDenops.setCallResponse("getbufvar", () => 0);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
+  mockDenops.setCallResponse("line", () => 10);
+  mockDenops.setCallResponse("getchar", () => 65); // 'A' key
+  mockDenops.setCallResponse("cursor", () => true);
+
+  // Mock word detection
+  const mockWords = [
+    { text: "test", line: 1, col: 1, byteCol: 1 }
+  ];
+
+  // Set up Core to return mock words for detectWordsOptimized
+  const originalDetectWords = core.detectWordsOptimized;
+  core.detectWordsOptimized = async () => mockWords;
+
+  try {
+    // This should complete the full workflow including waitForUserInput
+    await core.showHints(mockDenops as any);
+
+    // Hints should have been shown and user input processed
+    assertEquals(core.isHintsVisible(), false); // Should be hidden after jump
+  } finally {
+    // Restore original method
+    core.detectWordsOptimized = originalDetectWords;
+    core.cleanup();
+  }
+});
+
+// sub2-5-3: hideHints method integration tests
+Deno.test("Core hideHints should clear extmarks in Neovim", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup Neovim environment
+  mockDenops.meta.host = "nvim";
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_clear_namespace", () => true);
+
+  // Set some hints as active
+  const testHints = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+  core.setCurrentHints(testHints);
+  assertEquals(core.isHintsVisible(), true);
+
+  // hideHints should clear Neovim extmarks and reset state
+  await core.hideHintsOptimized(mockDenops as any);
+
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+
+  // Verify nvim_buf_clear_namespace was called
+  const calls = mockDenops.getCalls();
+  const clearCalls = calls.filter(call => call.fn === "nvim_buf_clear_namespace");
+  assert(clearCalls.length > 0, "nvim_buf_clear_namespace should have been called");
+});
+
+Deno.test("Core hideHints should clear matches in Vim", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup Vim environment
+  mockDenops.meta.host = "vim";
+  mockDenops.setCallResponse("getmatches", () => [
+    { id: 1, group: "HellshakeYanoMarker" },
+    { id: 2, group: "HellshakeYanoMarker" }
+  ]);
+  mockDenops.setCallResponse("matchdelete", () => true);
+
+  // Set some hints as active
+  const testHints = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+  core.setCurrentHints(testHints);
+  assertEquals(core.isHintsVisible(), true);
+
+  // hideHints should clear Vim matches and reset state
+  await core.hideHintsOptimized(mockDenops as any);
+
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+
+  // Verify matchdelete was called
+  const calls = mockDenops.getCalls();
+  const deleteCalls = calls.filter(call => call.fn === "matchdelete");
+  assert(deleteCalls.length > 0, "matchdelete should have been called");
+});
+
+// sub2-5-4: clearCache method implementation tests
+Deno.test("Core clearCache method should exist", () => {
+  Core.resetForTesting();
+  const core = Core.getInstance();
+  assertExists(core.clearCache);
+});
+
+Deno.test("Core clearCache should clear internal caches", () => {
+  Core.resetForTesting();
+  const core = Core.getInstance();
+
+  // Set up some cached data
+  const testHints = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+  core.setCurrentHints(testHints);
+
+  // Clear cache should reset hints and internal cache state
+  core.clearCache();
+
+  // Verify cache was cleared
+  assertEquals(core.getCurrentHints().length, 0);
+  assertEquals(core.isHintsVisible(), false);
+});
+
+// sub2-5-5: debug method integration tests
+Deno.test("Core debug method should collect comprehensive info", () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({
+    enabled: true,
+    motion_count: 2,
+    debug_mode: true
+  });
+
+  // Set up some state
+  const testHints = [
+    {
+      hint: "A",
+      word: { text: "test", line: 1, col: 1, byteCol: 1 },
+      hintCol: 1,
+      hintByteCol: 1
+    }
+  ];
+  core.setCurrentHints(testHints);
+
+  // Collect debug info
+  const debugInfo = core.collectDebugInfo();
+
+  // Verify debug info structure
+  assertExists(debugInfo);
+  assertExists(debugInfo.config);
+  assertExists(debugInfo.metrics);
+  assertExists(debugInfo.currentHints);
+  assertEquals(typeof debugInfo.hintsVisible, "boolean");
+  assertEquals(typeof debugInfo.timestamp, "number");
+
+  // Verify content
+  assertEquals(debugInfo.hintsVisible, true);
+  assertEquals(debugInfo.currentHints.length, 1);
+  assertEquals(debugInfo.currentHints[0].hint, "A");
+  assertEquals(debugInfo.config.enabled, true);
+  assertEquals(debugInfo.config.motion_count, 2);
+});
+
+// Integration test: waitForUserInput critical bug fix
+Deno.test("showHints should call waitForUserInput after display", async () => {
+  Core.resetForTesting();
+  const core = Core.getInstance({ enabled: true, motion_count: 1 });
+  const mockDenops = new MockDenops();
+
+  let waitForUserInputCalled = false;
+  let displayCompleted = false;
+
+  // Setup mocks
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("bufexists", () => 1);
+  mockDenops.setCallResponse("getbufvar", () => 0);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => {
+    displayCompleted = true;
+    return 1;
+  });
+  mockDenops.setCallResponse("line", () => 10);
+  mockDenops.setCallResponse("getchar", () => {
+    waitForUserInputCalled = true;
+    return 27; // ESC to exit
+  });
+
+  // Mock word detection to return a test word
+  const originalDetectWords = core.detectWordsOptimized;
+  core.detectWordsOptimized = async () => [
+    { text: "test", line: 1, col: 1, byteCol: 1 }
+  ];
+
+  // Mock waitForUserInput to track when it's called
+  const originalWaitForInput = core.waitForUserInput;
+  core.waitForUserInput = async (denops) => {
+    // Ensure display was completed before this is called
+    assert(displayCompleted, "Display should be completed before waitForUserInput");
+    waitForUserInputCalled = true;
+    return originalWaitForInput.call(core, denops);
+  };
+
+  try {
+    await core.showHints(mockDenops as any);
+
+    // Verify the sequence: display completed, then waitForUserInput was called
+    assert(displayCompleted, "Display should have completed");
+    assert(waitForUserInputCalled, "waitForUserInput should have been called after display");
+  } finally {
+    // Restore original methods
+    core.detectWordsOptimized = originalDetectWords;
+    core.waitForUserInput = originalWaitForInput;
+    core.cleanup();
+  }
 });

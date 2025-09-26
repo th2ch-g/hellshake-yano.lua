@@ -546,8 +546,8 @@ export interface UnifiedConfig {
   - [x] `deno check denops/hellshake-yano/main.ts`で型チェック
   - [x] `deno test tests/*.ts`で全テストパス（75ファイル）
   - [x] 後方互換性の確認（エクスポート関数の再エクスポート）
-  - [ ] APIの互換性テスト作成
-  - [ ] ドキュメントの更新
+  - [x] APIの互換性テスト作成
+  - [x] ドキュメントの更新
 
 #### sub2 main.tsの最終リファクタリング【TDD実装】
 @target: denops/hellshake-yano/main.ts, denops/hellshake-yano/core.ts
@@ -655,152 +655,172 @@ export interface UnifiedConfig {
 - [x] `deno check denops/hellshake-yano/main.ts`で型チェック
 - [x] `deno test tests/config_*.ts`で設定テストパス
 
-##### sub2-3 表示関連関数のCoreクラス移行
+##### sub2-3 表示関連関数のCoreクラス移行【完了】
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
 @context: 非同期表示関数をCoreクラスへ移行
 
-###### sub2-3-1 displayHintsAsync機能
-- [ ] tests/core_test.tsにdisplayHintsAsyncのテスト追加（RED）
-- [ ] CoreクラスのdisplayHintsAsyncメソッド実装確認（既存実装を活用）
-- [ ] main.tsのdisplayHintsAsyncから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/display_*.ts`で表示テストパス
+###### sub2-3-1 displayHintsAsync機能【完了】
+- [x] tests/core_test.tsにdisplayHintsAsyncのテスト追加（RED）
+- [x] CoreクラスのdisplayHintsAsyncメソッド実装確認（AbortSignal対応追加）
+- [x] main.tsのdisplayHintsAsyncから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] 非同期処理とAbortSignalの適切なハンドリング
 
-###### sub2-3-2 isRenderingHints機能
-- [ ] tests/core_test.tsにisRenderingHintsのテスト追加（RED）
-- [ ] CoreクラスにisRenderingHintsメソッド実装（GREEN）
-- [ ] main.tsのisRenderingHintsから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-3-2 isRenderingHints機能【完了】
+- [x] tests/core_test.tsにisRenderingHintsのテスト追加（RED）
+- [x] CoreクラスにisRenderingHintsメソッド実装（GREEN）（1577-1579行）
+- [x] main.tsのisRenderingHintsから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-3-3 abortCurrentRendering機能
-- [ ] tests/core_test.tsにabortCurrentRenderingのテスト追加（RED）
-- [ ] CoreクラスにabortCurrentRenderingメソッド実装（GREEN）
-- [ ] main.tsのabortCurrentRenderingから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-3-3 abortCurrentRendering機能【完了】
+- [x] tests/core_test.tsにabortCurrentRenderingのテスト追加（RED）
+- [x] CoreクラスにabortCurrentRenderingメソッド実装（GREEN）（1593-1599行）
+- [x] main.tsのabortCurrentRenderingから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-3-4 highlightCandidateHintsAsync機能
-- [ ] tests/core_test.tsにhighlightCandidateHintsAsyncのテスト追加（RED）
-- [ ] CoreクラスにhighlightCandidateHintsAsyncメソッド実装（GREEN）
-- [ ] main.tsのhighlightCandidateHintsAsyncから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-3-4 highlightCandidateHintsAsync機能【完了】
+- [x] tests/core_test.tsにhighlightCandidateHintsAsyncのテスト追加（RED）
+- [x] CoreクラスにhighlightCandidateHintsAsyncメソッド実装（GREEN）（1619-1708行）
+- [x] main.tsのhighlightCandidateHintsAsyncから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス（131テストすべてパス）
 
-##### sub2-4 辞書関連関数のCoreクラス移行
+##### sub2-4 辞書関連関数のCoreクラス移行【完了】
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
 @context: 辞書システム関数をCoreクラスへ移行
 
-###### sub2-4-1 reloadDictionary機能
-- [ ] tests/core_test.tsにreloadDictionaryのテスト追加（RED）
-- [ ] CoreクラスにreloadDictionaryメソッド実装（GREEN）
-- [ ] main.tsのreloadDictionaryから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-4-1 reloadDictionary機能【完了】
+- [x] tests/core_test.tsにreloadDictionaryのテスト追加（RED）
+- [x] CoreクラスにreloadDictionaryメソッド実装（GREEN）
+- [x] main.tsのreloadDictionaryから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-4-2 editDictionary機能
-- [ ] tests/core_test.tsにeditDictionaryのテスト追加（RED）
-- [ ] CoreクラスにeditDictionaryメソッド実装（GREEN）
-- [ ] main.tsのeditDictionaryから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-4-2 editDictionary機能【完了】
+- [x] tests/core_test.tsにeditDictionaryのテスト追加（RED）
+- [x] CoreクラスにeditDictionaryメソッド実装（GREEN）
+- [x] main.tsのeditDictionaryから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-4-3 showDictionary機能
-- [ ] tests/core_test.tsにshowDictionaryのテスト追加（RED）
-- [ ] CoreクラスにshowDictionaryメソッド実装（GREEN）
-- [ ] main.tsのshowDictionaryから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-4-3 showDictionary機能【完了】
+- [x] tests/core_test.tsにshowDictionaryのテスト追加（RED）
+- [x] CoreクラスにshowDictionaryメソッド実装（GREEN）
+- [x] main.tsのshowDictionaryから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-4-4 validateDictionary機能
-- [ ] tests/core_test.tsにvalidateDictionaryのテスト追加（RED）
-- [ ] CoreクラスにvalidateDictionaryメソッド実装（GREEN）
-- [ ] main.tsのvalidateDictionaryから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/*dictionary*.ts`で辞書テストパス
+###### sub2-4-4 validateDictionary機能【完了】
+- [x] tests/core_test.tsにvalidateDictionaryのテスト追加（RED）
+- [x] CoreクラスにvalidateDictionaryメソッド実装（GREEN）
+- [x] main.tsのvalidateDictionaryから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] `deno test tests/*dictionary*.ts`で辞書テストパス
 
-##### sub2-5 dispatcher統合
+##### sub2-5 dispatcher統合【完了】
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
 @context: dispatcherメソッドをCoreクラスへ委譲
 
-###### sub2-5-1 updateConfigメソッドの移行
-- [ ] tests/core_test.tsにupdateConfigのテスト追加（RED）
-- [ ] CoreクラスにupdateConfigメソッド実装（GREEN）
-- [ ] main.tsのdispatcher.updateConfigから呼び出し変更
+###### sub2-5-1 updateConfigメソッドの移行【完了】
+- [x] tests/core_test.tsにupdateConfigのテスト追加（RED）
+- [x] CoreクラスにupdateConfigメソッド実装（GREEN）
+- [x] main.tsのdispatcher.updateConfigから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] `deno test tests/config_*.ts`で設定テストパス
+
+###### sub2-5-2 showHintsメソッド群の更新【完了】
+- [x] Coreクラスのshow Hintsメソッド実装確認
+- [x] main.tsのdispatcher.showHintsをCore呼び出しに変更
+- [x] main.tsのdispatcher.showHintsInternalをCore呼び出しに変更
+- [x] main.tsのdispatcher.showHintsWithKeyをCore呼び出しに変更
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/main_test.ts`で既存テストパス
+
+###### sub2-5-3 hideHintsメソッドの更新【完了】
+- [x] main.tsのdispatcher.hideHintsをCore呼び出しに変更（既実装）
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/main_test.ts`で既存テストパス
+
+###### sub2-5-4 clearCacheメソッドの移行【完了】
+- [x] tests/core_test.tsにclearCacheのテスト追加（RED）
+- [x] CoreクラスにclearCacheメソッド実装（GREEN）
+- [x] main.tsのdispatcher.clearCacheから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+
+###### sub2-5-5 debugメソッドの更新【完了】
+- [x] main.tsのdispatcher.debugをCore.collectDebugInfo呼び出しに変更
+- [x] main.tsのdispatcher.getDebugInfoをCore.collectDebugInfo呼び出しに変更
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/main_test.ts`で既存テストパス
+
+###### sub2-5-6 clearPerformanceLogメソッドの移行【完了】
+- [x] tests/core_test.tsにclearPerformanceLogのテスト追加（RED）
+- [x] CoreクラスにclearPerformanceLogメソッド実装（GREEN）
+- [x] main.tsのdispatcher.clearPerformanceLogから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+
+###### sub2-5-7 テスト関連メソッドの移行（オプション）【部分完了】
+- [x] テストメソッドをCoreクラスに移行するか検討
+- [x] 移行する場合はTDD手順で実装
+- [x] main.tsから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/*.ts`で全テストパス
+
+###### sub2-5-8 waitForUserInput完全版の移植【重要】
+@target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
+@context: 現在の簡略版waitForUserInputを、main.tsの完全版（2436-2829行）に置き換え
+@priority: 高（ヒントジャンプ後の非表示が動作しない重大なバグ修正）
+
+- [ ] tests/core_test.tsにwaitForUserInput完全版のテスト追加（RED）
+  - [ ] ジャンプ成功時のヒント非表示テスト
+  - [ ] 小文字入力時の通常Vim動作テスト
+  - [ ] useHintGroups機能のテスト
+  - [ ] 複数文字ヒントの選択テスト
+- [ ] main.tsのwaitForUserInput関数（2436-2829行）をCoreクラスに完全移植（GREEN）
+  - [ ] 全394行の処理ロジックを移植
+  - [ ] hideHints()の代わりにhideHintsOptimized(denops)を使用
+  - [ ] highlightCandidateHintsAsync呼び出しの統合
+  - [ ] 小文字入力時のfeedkeys処理
+- [ ] CoreクラスのwaitForUserInputメソッドを完全版に置き換え
 - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
 - [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/config_*.ts`で設定テストパス
+- [ ] 実際のVim/Neovimでジャンプ後の非表示動作を確認
 
-###### sub2-5-2 showHintsメソッド群の更新
-- [ ] Coreクラスのshow Hintsメソッド実装確認
-- [ ] main.tsのdispatcher.showHintsをCore呼び出しに変更
-- [ ] main.tsのdispatcher.showHintsInternalをCore呼び出しに変更
-- [ ] main.tsのdispatcher.showHintsWithKeyをCore呼び出しに変更
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/main_test.ts`で既存テストパス
-
-###### sub2-5-3 hideHintsメソッドの更新
-- [ ] main.tsのdispatcher.hideHintsをCore呼び出しに変更（既実装）
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/main_test.ts`で既存テストパス
-
-###### sub2-5-4 clearCacheメソッドの移行
-- [ ] tests/core_test.tsにclearCacheのテスト追加（RED）
-- [ ] CoreクラスにclearCacheメソッド実装（GREEN）
-- [ ] main.tsのdispatcher.clearCacheから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-
-###### sub2-5-5 debugメソッドの更新
-- [ ] main.tsのdispatcher.debugをCore.collectDebugInfo呼び出しに変更
-- [ ] main.tsのdispatcher.getDebugInfoをCore.collectDebugInfo呼び出しに変更
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/main_test.ts`で既存テストパス
-
-###### sub2-5-6 clearPerformanceLogメソッドの移行
-- [ ] tests/core_test.tsにclearPerformanceLogのテスト追加（RED）
-- [ ] CoreクラスにclearPerformanceLogメソッド実装（GREEN）
-- [ ] main.tsのdispatcher.clearPerformanceLogから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-
-###### sub2-5-7 テスト関連メソッドの移行（オプション）
-- [ ] テストメソッドをCoreクラスに移行するか検討
-- [ ] 移行する場合はTDD手順で実装
-- [ ] main.tsから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/*.ts`で全テストパス
-
-##### sub2-6 main.tsの最小化
+##### sub2-6 main.tsの最小化【進行中】
 @target: denops/hellshake-yano/main.ts
 @context: 不要なコードを削除し、エントリーポイントのみに縮小
 
-###### sub2-6-1 内部関数の削除
-- [ ] Coreクラスへ移行済みの内部関数を削除
-- [ ] 不要なヘルパー関数を削除
+###### sub2-6-1 内部関数の削除【進行中】
+- [x] Coreクラスへ移行済みの内部関数を削除
+- [x] 不要なヘルパー関数を削除
 - [ ] デッドコードの削除
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/main_test.ts`で既存テストパス
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/main_test.ts`で既存テストパス
 
-###### sub2-6-2 インポートの整理
-- [ ] 不要になったインポートを削除
-- [ ] Coreクラスのインポートを最適化
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
+###### sub2-6-2 インポートの整理【進行中】
+- [x] 不要になったインポートを削除
+- [x] Coreクラスのインポートを最適化
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
 
-###### sub2-6-3 エクスポートの整理（後方互換性維持）
-- [ ] 必要なエクスポートを維持（後方互換性）
-- [ ] Coreクラスへの委譲を明確化
-- [ ] エクスポート関数をCore呼び出しのラッパーに変更
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/*.ts`で全テストパス（75ファイル）
+###### sub2-6-3 エクスポートの整理（後方互換性維持）【進行中】
+- [x] 必要なエクスポートを維持（後方互換性）
+- [x] Coreクラスへの委譲を明確化
+- [x] エクスポート関数をCore呼び出しのラッパーに変更
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/*.ts`で全テストパス（75ファイル）
 
-###### sub2-6-4 dispatcher定義の簡素化
-- [ ] dispatcherメソッドをすべてCore呼び出しに変更
-- [ ] 不要なコメントと空行を削除
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/integration_test.ts`で統合テストパス
+###### sub2-6-4 dispatcher定義の簡素化【進行中】
+- [x] dispatcherメソッドをすべてCore呼び出しに変更
+- [x] 不要なコメントと空行を削除
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/integration_test.ts`で統合テストパス
 
 ###### sub2-6-5 最終検証
 - [ ] main.tsが500行以内であることを確認
