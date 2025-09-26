@@ -2949,186 +2949,49 @@ export function validateHighlightGroupName(groupName: string): boolean {
 
 /**
  * 色名が有効なVim色名かどうか検証する
+ * REFACTOR Phase: Core.isValidColorNameメソッドのラッパー関数
  * @param colorName 検証する色名
  * @returns 有効な場合はtrue、無効な場合はfalse
  */
 export function isValidColorName(colorName: string): boolean {
-  if (!colorName || typeof colorName !== "string") {
-    return false;
-  }
-
-  // 標準的なVim色名（大文字小文字不区別）
-  const validColorNames = [
-    "black",
-    "darkblue",
-    "darkgreen",
-    "darkcyan",
-    "darkred",
-    "darkmagenta",
-    "brown",
-    "darkgray",
-    "darkgrey",
-    "lightgray",
-    "lightgrey",
-    "lightblue",
-    "lightgreen",
-    "lightcyan",
-    "lightred",
-    "lightmagenta",
-    "yellow",
-    "white",
-    "red",
-    "green",
-    "blue",
-    "cyan",
-    "magenta",
-    "gray",
-    "grey",
-    "none",
-  ];
-
-  return validColorNames.includes(colorName.toLowerCase());
+  return Core.isValidColorName(colorName);
 }
 
 /**
  * 16進数色表記が有効かどうか検証する
+ * REFACTOR Phase: Core.isValidHexColorメソッドのラッパー関数
  * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
  * @returns 有効な場合はtrue、無効な場合はfalse
  */
 export function isValidHexColor(hexColor: string): boolean {
-  if (!hexColor || typeof hexColor !== "string") {
-    return false;
-  }
-
-  // #で始まること
-  if (!hexColor.startsWith("#")) {
-    return false;
-  }
-
-  // #を除いた部分
-  const hex = hexColor.slice(1);
-
-  // 3桁または6桁の16進数
-  if (hex.length !== 3 && hex.length !== 6) {
-    return false;
-  }
-
-  // 有効な16進数文字のみ
-  return /^[0-9a-fA-F]+$/.test(hex);
+  return Core.isValidHexColor(hexColor);
 }
 
 /**
  * 色値を正規化する（大文字小文字を統一）
+ * REFACTOR Phase: Core.normalizeColorNameメソッドのラッパー関数
  * @param color 正規化する色値
  * @returns 正規化された色値
  */
 export function normalizeColorName(color: string): string {
-  if (!color || typeof color !== "string") {
-    return color;
-  }
-
-  // 16進数色の場合はそのまま返す
-  if (color.startsWith("#")) {
-    return color;
-  }
-
-  // 色名の場合は最初の文字を大文字、残りを小文字にする
-  return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
+  return Core.normalizeColorName(color);
 }
 
 /**
  * ハイライト色設定を検証する
+ * REFACTOR Phase: Core.validateHighlightColorメソッドのラッパー関数
  * @param colorConfig 検証するハイライト色設定
  * @returns 検証結果
  */
 export function validateHighlightColor(
   colorConfig: string | HighlightColor,
 ): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // null と undefined のチェック
-  if (colorConfig === null) {
-    errors.push("highlight_hint_marker must be a string");
-    return { valid: false, errors };
-  }
-
-  // 数値や配列などの無効な型チェック
-  if (typeof colorConfig === "number") {
-    errors.push("highlight_hint_marker must be a string");
-    return { valid: false, errors };
-  }
-
-  if (Array.isArray(colorConfig)) {
-    errors.push("highlight_hint_marker must be a string");
-    return { valid: false, errors };
-  }
-
-  // 文字列の場合（従来のハイライトグループ名）
-  if (typeof colorConfig === "string") {
-    // 空文字列チェック
-    if (colorConfig === "") {
-      errors.push("highlight_hint_marker must be a non-empty string");
-      return { valid: false, errors };
-    }
-
-    // ハイライトグループ名のバリデーション
-    if (!validateHighlightGroupName(colorConfig)) {
-      // より詳細なエラーメッセージを提供
-      if (!/^[a-zA-Z_]/.test(colorConfig)) {
-        errors.push("highlight_hint_marker must start with a letter or underscore");
-      } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
-        errors.push(
-          "highlight_hint_marker must contain only alphanumeric characters and underscores",
-        );
-      } else if (colorConfig.length > 100) {
-        errors.push("highlight_hint_marker must be 100 characters or less");
-      } else {
-        errors.push(`Invalid highlight group name: ${colorConfig}`);
-      }
-    }
-    return { valid: errors.length === 0, errors };
-  }
-
-  // オブジェクトの場合（fg/bg個別指定）
-  if (typeof colorConfig === "object" && colorConfig !== null) {
-    const { fg, bg } = colorConfig;
-
-    // fgの検証
-    if (fg !== undefined) {
-      if (typeof fg !== "string") {
-        errors.push("fg must be a string");
-      } else if (fg === "") {
-        errors.push("fg cannot be empty string");
-      } else if (!isValidColorName(fg) && !isValidHexColor(fg)) {
-        errors.push(`Invalid fg color: ${fg}`);
-      }
-    }
-
-    // bgの検証
-    if (bg !== undefined) {
-      if (typeof bg !== "string") {
-        errors.push("bg must be a string");
-      } else if (bg === "") {
-        errors.push("bg cannot be empty string");
-      } else if (!isValidColorName(bg) && !isValidHexColor(bg)) {
-        errors.push(`Invalid bg color: ${bg}`);
-      }
-    }
-
-    // fgもbgも指定されていない場合
-    if (fg === undefined && bg === undefined) {
-      errors.push("At least one of fg or bg must be specified");
-    }
-
-    return { valid: errors.length === 0, errors };
-  }
-
-  errors.push("Color configuration must be a string or object");
-  return { valid: false, errors };
+  return Core.validateHighlightColor(colorConfig);
 }
 
 /**
  * ハイライトコマンドを生成する
+ * REFACTOR Phase: Core.generateHighlightCommandメソッドのラッパー関数
  * @param hlGroupName ハイライトグループ名
  * @param colorConfig 色設定
  * @returns 生成されたハイライトコマンド
@@ -3137,44 +3000,12 @@ export function generateHighlightCommand(
   hlGroupName: string,
   colorConfig: string | HighlightColor,
 ): string {
-  // 文字列の場合（従来のハイライトグループ名）
-  if (typeof colorConfig === "string") {
-    return `highlight default link ${hlGroupName} ${colorConfig}`;
-  }
-
-  // オブジェクトの場合（fg/bg個別指定）
-  const { fg, bg } = colorConfig;
-  const parts = [`highlight ${hlGroupName}`];
-
-  if (fg !== undefined) {
-    const normalizedFg = normalizeColorName(fg);
-    if (fg.startsWith("#")) {
-      // 16進数色の場合はguifgのみ
-      parts.push(`guifg=${fg}`);
-    } else {
-      // 色名の場合はctermfgとguifgの両方
-      parts.push(`ctermfg=${normalizedFg}`);
-      parts.push(`guifg=${normalizedFg}`);
-    }
-  }
-
-  if (bg !== undefined) {
-    const normalizedBg = normalizeColorName(bg);
-    if (bg.startsWith("#")) {
-      // 16進数色の場合はguibgのみ
-      parts.push(`guibg=${bg}`);
-    } else {
-      // 色名の場合はctermbgとguibgの両方
-      parts.push(`ctermbg=${normalizedBg}`);
-      parts.push(`guibg=${normalizedBg}`);
-    }
-  }
-
-  return parts.join(" ");
+  return Core.generateHighlightCommand(hlGroupName, colorConfig);
 }
 
 /**
  * ハイライト設定を検証する（設定更新時に使用）
+ * REFACTOR Phase: Core.validateHighlightConfigメソッドのラッパー関数
  * @param config 検証する設定オブジェクト
  * @returns 検証結果
  */
@@ -3184,25 +3015,7 @@ export function validateHighlightConfig(
     highlightHintMarkerCurrent?: string | HighlightColor;
   },
 ): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // highlightHintMarkerの検証
-  if (config.highlightHintMarker !== undefined) {
-    const markerResult = validateHighlightColor(config.highlightHintMarker);
-    if (!markerResult.valid) {
-      errors.push(...markerResult.errors.map((e) => `highlightHintMarker: ${e}`));
-    }
-  }
-
-  // highlightHintMarkerCurrentの検証
-  if (config.highlightHintMarkerCurrent !== undefined) {
-    const currentResult = validateHighlightColor(config.highlightHintMarkerCurrent);
-    if (!currentResult.valid) {
-      errors.push(...currentResult.errors.map((e) => `highlightHintMarkerCurrent: ${e}`));
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
+  return Core.validateHighlightConfig(config);
 }
 
 // Dictionary system variables (deprecated - migrated to Core class)

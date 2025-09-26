@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertExists, assertThrows } from "https://deno.land/std@0.220.1/assert/mod.ts";
 import { Core } from "../denops/hellshake-yano/core.ts";
-import type { Config, Word, HintMapping } from "../denops/hellshake-yano/types.ts";
+import type { Config, Word, HintMapping, HighlightColor } from "../denops/hellshake-yano/types.ts";
 import type { Denops } from "@denops/std";
 import { MockDenops } from "./helpers/mock.ts";
 
@@ -1347,4 +1347,373 @@ Deno.test("Core.validateHighlightGroupName should handle edge cases", () => {
   assertEquals(Core.validateHighlightGroupName("Z9"), true);
   assertEquals(Core.validateHighlightGroupName("_0"), true);
   assertEquals(Core.validateHighlightGroupName("a_Z_9"), true);
+});
+
+/**
+ * TDD RED Phase: Core.isValidColorName static method tests
+ * sub2-1-2: これらのテストは最初失敗する（Core.isValidColorNameメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static isValidColorName method", () => {
+  assertExists(Core.isValidColorName);
+  assertEquals(typeof Core.isValidColorName, "function");
+});
+
+Deno.test("Core.isValidColorName should validate standard Vim color names", () => {
+  // 基本色のテスト
+  assertEquals(Core.isValidColorName("black"), true);
+  assertEquals(Core.isValidColorName("white"), true);
+  assertEquals(Core.isValidColorName("red"), true);
+  assertEquals(Core.isValidColorName("green"), true);
+  assertEquals(Core.isValidColorName("blue"), true);
+  assertEquals(Core.isValidColorName("cyan"), true);
+  assertEquals(Core.isValidColorName("magenta"), true);
+  assertEquals(Core.isValidColorName("yellow"), true);
+  assertEquals(Core.isValidColorName("none"), true);
+});
+
+Deno.test("Core.isValidColorName should validate dark color variants", () => {
+  // dark系色のテスト
+  assertEquals(Core.isValidColorName("darkblue"), true);
+  assertEquals(Core.isValidColorName("darkgreen"), true);
+  assertEquals(Core.isValidColorName("darkcyan"), true);
+  assertEquals(Core.isValidColorName("darkred"), true);
+  assertEquals(Core.isValidColorName("darkmagenta"), true);
+  assertEquals(Core.isValidColorName("darkgray"), true);
+  assertEquals(Core.isValidColorName("darkgrey"), true);
+});
+
+Deno.test("Core.isValidColorName should validate light color variants", () => {
+  // light系色のテスト
+  assertEquals(Core.isValidColorName("lightgray"), true);
+  assertEquals(Core.isValidColorName("lightgrey"), true);
+  assertEquals(Core.isValidColorName("lightblue"), true);
+  assertEquals(Core.isValidColorName("lightgreen"), true);
+  assertEquals(Core.isValidColorName("lightcyan"), true);
+  assertEquals(Core.isValidColorName("lightred"), true);
+  assertEquals(Core.isValidColorName("lightmagenta"), true);
+});
+
+Deno.test("Core.isValidColorName should handle case insensitive validation", () => {
+  // 大文字小文字のテスト
+  assertEquals(Core.isValidColorName("BLACK"), true);
+  assertEquals(Core.isValidColorName("White"), true);
+  assertEquals(Core.isValidColorName("ReD"), true);
+  assertEquals(Core.isValidColorName("GREEN"), true);
+  assertEquals(Core.isValidColorName("bLuE"), true);
+  assertEquals(Core.isValidColorName("DARKBLUE"), true);
+  assertEquals(Core.isValidColorName("LightGreen"), true);
+  assertEquals(Core.isValidColorName("NONE"), true);
+});
+
+Deno.test("Core.isValidColorName should validate special colors", () => {
+  // 特殊色のテスト
+  assertEquals(Core.isValidColorName("brown"), true);
+  assertEquals(Core.isValidColorName("gray"), true);
+  assertEquals(Core.isValidColorName("grey"), true);
+  assertEquals(Core.isValidColorName("none"), true);
+});
+
+Deno.test("Core.isValidColorName should reject invalid color names", () => {
+  // 無効な色名のテスト
+  assertEquals(Core.isValidColorName("orange"), false);
+  assertEquals(Core.isValidColorName("purple"), false);
+  assertEquals(Core.isValidColorName("pink"), false);
+  assertEquals(Core.isValidColorName("gold"), false);
+  assertEquals(Core.isValidColorName("silver"), false);
+  assertEquals(Core.isValidColorName("transparent"), false);
+  assertEquals(Core.isValidColorName("invalid"), false);
+  assertEquals(Core.isValidColorName("custom"), false);
+  assertEquals(Core.isValidColorName("color123"), false);
+});
+
+Deno.test("Core.isValidColorName should reject empty or null values", () => {
+  // 空文字列や無効な値のテスト
+  assertEquals(Core.isValidColorName(""), false);
+  assertEquals(Core.isValidColorName("  "), false);
+  assertEquals(Core.isValidColorName("\t"), false);
+  assertEquals(Core.isValidColorName("\n"), false);
+});
+
+Deno.test("Core.isValidColorName should handle type validation", () => {
+  // 型バリデーションのテスト（実際のランタイムでは文字列以外は渡されないが、安全性のため）
+  assertEquals(Core.isValidColorName("black"), true); // 正常な文字列
+  // Note: TypeScriptの型システムにより、実際には文字列以外は渡せない
+  // しかし、実装では安全性のためランタイムチェックを行う
+});
+
+Deno.test("Core.isValidColorName should validate all supported Vim colors", () => {
+  // 全サポート色の網羅テスト
+  const validColors = [
+    "black", "darkblue", "darkgreen", "darkcyan", "darkred", "darkmagenta",
+    "brown", "darkgray", "darkgrey", "lightgray", "lightgrey", "lightblue",
+    "lightgreen", "lightcyan", "lightred", "lightmagenta", "yellow", "white",
+    "red", "green", "blue", "cyan", "magenta", "gray", "grey", "none"
+  ];
+
+  validColors.forEach(color => {
+    assertEquals(Core.isValidColorName(color), true, `Color '${color}' should be valid`);
+  });
+});
+
+Deno.test("Core.isValidColorName should reject hex colors", () => {
+  // 16進数色は別の関数で処理するため、ここでは無効とする
+  assertEquals(Core.isValidColorName("#ffffff"), false);
+  assertEquals(Core.isValidColorName("#000"), false);
+  assertEquals(Core.isValidColorName("#ff0000"), false);
+  assertEquals(Core.isValidColorName("#123456"), false);
+});
+
+/**
+ * TDD RED Phase: Core.isValidHexColor static method tests
+ * sub2-1-3: これらのテストは最初失敗する（Core.isValidHexColorメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static isValidHexColor method", () => {
+  assertExists(Core.isValidHexColor);
+  assertEquals(typeof Core.isValidHexColor, "function");
+});
+
+Deno.test("Core.isValidHexColor should validate valid hex colors", () => {
+  // 6桁16進数のテスト
+  assertEquals(Core.isValidHexColor("#ffffff"), true);
+  assertEquals(Core.isValidHexColor("#000000"), true);
+  assertEquals(Core.isValidHexColor("#ff0000"), true);
+  assertEquals(Core.isValidHexColor("#00ff00"), true);
+  assertEquals(Core.isValidHexColor("#0000ff"), true);
+  assertEquals(Core.isValidHexColor("#123456"), true);
+  assertEquals(Core.isValidHexColor("#abcdef"), true);
+  assertEquals(Core.isValidHexColor("#ABCDEF"), true);
+  assertEquals(Core.isValidHexColor("#789abc"), true);
+});
+
+Deno.test("Core.isValidHexColor should validate 3-digit hex colors", () => {
+  // 3桁16進数のテスト
+  assertEquals(Core.isValidHexColor("#fff"), true);
+  assertEquals(Core.isValidHexColor("#000"), true);
+  assertEquals(Core.isValidHexColor("#f00"), true);
+  assertEquals(Core.isValidHexColor("#0f0"), true);
+  assertEquals(Core.isValidHexColor("#00f"), true);
+  assertEquals(Core.isValidHexColor("#123"), true);
+  assertEquals(Core.isValidHexColor("#abc"), true);
+  assertEquals(Core.isValidHexColor("#ABC"), true);
+  assertEquals(Core.isValidHexColor("#789"), true);
+});
+
+Deno.test("Core.isValidHexColor should handle case sensitivity", () => {
+  // 大文字小文字混在のテスト
+  assertEquals(Core.isValidHexColor("#AaBbCc"), true);
+  assertEquals(Core.isValidHexColor("#1a2B3c"), true);
+  assertEquals(Core.isValidHexColor("#FfFfFf"), true);
+  assertEquals(Core.isValidHexColor("#AbC"), true);
+  assertEquals(Core.isValidHexColor("#9aF"), true);
+});
+
+Deno.test("Core.isValidHexColor should reject colors without hash", () => {
+  // #無しの文字列は無効
+  assertEquals(Core.isValidHexColor("ffffff"), false);
+  assertEquals(Core.isValidHexColor("000"), false);
+  assertEquals(Core.isValidHexColor("ff0000"), false);
+  assertEquals(Core.isValidHexColor("abc"), false);
+  assertEquals(Core.isValidHexColor("123456"), false);
+});
+
+Deno.test("Core.isValidHexColor should reject invalid hex lengths", () => {
+  // 不正な長さのテスト（3桁、6桁以外）
+  assertEquals(Core.isValidHexColor("#ff"), false);        // 2桁
+  assertEquals(Core.isValidHexColor("#ffff"), false);      // 4桁
+  assertEquals(Core.isValidHexColor("#fffff"), false);     // 5桁
+  assertEquals(Core.isValidHexColor("#fffffff"), false);   // 7桁
+  assertEquals(Core.isValidHexColor("#ffffffff"), false);  // 8桁
+  assertEquals(Core.isValidHexColor("#1"), false);         // 1桁
+  assertEquals(Core.isValidHexColor("#"), false);          // 0桁
+});
+
+Deno.test("Core.isValidHexColor should reject invalid hex characters", () => {
+  // 無効な文字を含むテスト
+  assertEquals(Core.isValidHexColor("#gggggg"), false);    // 'g'は無効
+  assertEquals(Core.isValidHexColor("#zzzzzz"), false);    // 'z'は無効
+  assertEquals(Core.isValidHexColor("#12345g"), false);    // 'g'は無効
+  assertEquals(Core.isValidHexColor("#12g"), false);       // 'g'は無効
+  assertEquals(Core.isValidHexColor("#ff ff"), false);     // 空白は無効
+  assertEquals(Core.isValidHexColor("#ff-ff"), false);     // '-'は無効
+  assertEquals(Core.isValidHexColor("#ff.ff"), false);     // '.'は無効
+});
+
+Deno.test("Core.isValidHexColor should reject empty or null values", () => {
+  // 空文字列や無効な値のテスト
+  assertEquals(Core.isValidHexColor(""), false);
+  assertEquals(Core.isValidHexColor("   "), false);
+  assertEquals(Core.isValidHexColor("\t"), false);
+  assertEquals(Core.isValidHexColor("\n"), false);
+});
+
+Deno.test("Core.isValidHexColor should handle type validation", () => {
+  // 型バリデーションのテスト（実際のランタイムでは文字列以外は渡されないが、安全性のため）
+  assertEquals(Core.isValidHexColor("#ff0000"), true);     // 正常な文字列
+  // Note: TypeScriptの型システムにより、実際には文字列以外は渡せない
+  // しかし、実装では安全性のためランタイムチェックを行う
+});
+
+Deno.test("Core.isValidHexColor should reject color names", () => {
+  // 色名は別の関数で処理するため、ここでは無効とする
+  assertEquals(Core.isValidHexColor("red"), false);
+  assertEquals(Core.isValidHexColor("blue"), false);
+  assertEquals(Core.isValidHexColor("green"), false);
+  assertEquals(Core.isValidHexColor("black"), false);
+  assertEquals(Core.isValidHexColor("white"), false);
+  assertEquals(Core.isValidHexColor("none"), false);
+});
+
+Deno.test("Core.isValidHexColor should validate edge cases", () => {
+  // エッジケースのテスト
+  assertEquals(Core.isValidHexColor("#0"), false);         // 最小無効
+  assertEquals(Core.isValidHexColor("#00"), false);        // 最小無効
+  assertEquals(Core.isValidHexColor("#000"), true);        // 最小有効（3桁）
+  assertEquals(Core.isValidHexColor("#000000"), true);     // 最小有効（6桁）
+  assertEquals(Core.isValidHexColor("#FFF"), true);        // 最大有効（3桁）
+  assertEquals(Core.isValidHexColor("#FFFFFF"), true);     // 最大有効（6桁）
+});
+
+/**
+ * TDD RED Phase: Core.normalizeColorName static method tests
+ * sub2-1-4: これらのテストは最初失敗する（Core.normalizeColorNameメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static normalizeColorName method", () => {
+  assertExists(Core.normalizeColorName);
+  assertEquals(typeof Core.normalizeColorName, "function");
+});
+
+Deno.test("Core.normalizeColorName should normalize color names", () => {
+  // 基本的な正規化（最初の文字を大文字、残りを小文字）
+  assertEquals(Core.normalizeColorName("red"), "Red");
+  assertEquals(Core.normalizeColorName("RED"), "Red");
+  assertEquals(Core.normalizeColorName("Red"), "Red");
+  assertEquals(Core.normalizeColorName("blue"), "Blue");
+  assertEquals(Core.normalizeColorName("BLUE"), "Blue");
+  assertEquals(Core.normalizeColorName("green"), "Green");
+});
+
+Deno.test("Core.normalizeColorName should handle compound color names", () => {
+  // 複合色名の正規化
+  assertEquals(Core.normalizeColorName("darkblue"), "Darkblue");
+  assertEquals(Core.normalizeColorName("DARKBLUE"), "Darkblue");
+  assertEquals(Core.normalizeColorName("lightgreen"), "Lightgreen");
+  assertEquals(Core.normalizeColorName("LIGHTGREEN"), "Lightgreen");
+  assertEquals(Core.normalizeColorName("lightgray"), "Lightgray");
+});
+
+Deno.test("Core.normalizeColorName should preserve hex colors", () => {
+  // 16進数色はそのまま返す
+  assertEquals(Core.normalizeColorName("#ff0000"), "#ff0000");
+  assertEquals(Core.normalizeColorName("#FF0000"), "#FF0000");
+  assertEquals(Core.normalizeColorName("#fff"), "#fff");
+  assertEquals(Core.normalizeColorName("#FFF"), "#FFF");
+  assertEquals(Core.normalizeColorName("#123456"), "#123456");
+});
+
+Deno.test("Core.normalizeColorName should handle edge cases", () => {
+  // エッジケースの処理
+  assertEquals(Core.normalizeColorName(""), "");
+  assertEquals(Core.normalizeColorName("a"), "A");
+  assertEquals(Core.normalizeColorName("none"), "None");
+  assertEquals(Core.normalizeColorName("NONE"), "None");
+});
+
+/**
+ * TDD RED Phase: Core.validateHighlightColor static method tests
+ * sub2-1-5: これらのテストは最初失敗する（Core.validateHighlightColorメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static validateHighlightColor method", () => {
+  assertExists(Core.validateHighlightColor);
+  assertEquals(typeof Core.validateHighlightColor, "function");
+});
+
+Deno.test("Core.validateHighlightColor should validate string colors", () => {
+  // 文字列（ハイライトグループ名）の検証
+  const result1 = Core.validateHighlightColor("Normal");
+  assertEquals(result1.valid, true);
+  assertEquals(result1.errors.length, 0);
+
+  const result2 = Core.validateHighlightColor("MyGroup");
+  assertEquals(result2.valid, true);
+  assertEquals(result2.errors.length, 0);
+});
+
+Deno.test("Core.validateHighlightColor should reject invalid string colors", () => {
+  // 無効な文字列の検証
+  const result1 = Core.validateHighlightColor("");
+  assertEquals(result1.valid, false);
+  assert(result1.errors.length > 0);
+
+  const result2 = Core.validateHighlightColor("123Invalid");
+  assertEquals(result2.valid, false);
+  assert(result2.errors.length > 0);
+});
+
+Deno.test("Core.validateHighlightColor should validate object colors", () => {
+  // オブジェクト形式の色設定の検証
+  const result1 = Core.validateHighlightColor({ fg: "red", bg: "blue" });
+  assertEquals(result1.valid, true);
+  assertEquals(result1.errors.length, 0);
+
+  const result2 = Core.validateHighlightColor({ fg: "#ff0000" });
+  assertEquals(result2.valid, true);
+  assertEquals(result2.errors.length, 0);
+});
+
+/**
+ * TDD RED Phase: Core.generateHighlightCommand static method tests
+ * sub2-1-6: これらのテストは最初失敗する（Core.generateHighlightCommandメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static generateHighlightCommand method", () => {
+  assertExists(Core.generateHighlightCommand);
+  assertEquals(typeof Core.generateHighlightCommand, "function");
+});
+
+Deno.test("Core.generateHighlightCommand should generate link commands for strings", () => {
+  // 文字列（ハイライトグループ名）の場合のlinkコマンド生成
+  const result = Core.generateHighlightCommand("MyGroup", "Normal");
+  assertEquals(result, "highlight default link MyGroup Normal");
+});
+
+Deno.test("Core.generateHighlightCommand should generate color commands for objects", () => {
+  // オブジェクト形式の場合の色指定コマンド生成
+  const result1 = Core.generateHighlightCommand("MyGroup", { fg: "red" });
+  assertEquals(result1, "highlight MyGroup ctermfg=Red guifg=Red");
+
+  const result2 = Core.generateHighlightCommand("MyGroup", { fg: "#ff0000" });
+  assertEquals(result2, "highlight MyGroup guifg=#ff0000");
+});
+
+/**
+ * TDD RED Phase: Core.validateHighlightConfig static method tests
+ * sub2-1-7: これらのテストは最初失敗する（Core.validateHighlightConfigメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static validateHighlightConfig method", () => {
+  assertExists(Core.validateHighlightConfig);
+  assertEquals(typeof Core.validateHighlightConfig, "function");
+});
+
+Deno.test("Core.validateHighlightConfig should validate valid configs", () => {
+  // 有効な設定の検証
+  const result1 = Core.validateHighlightConfig({
+    highlightHintMarker: "Search",
+    highlightHintMarkerCurrent: "Visual"
+  });
+  assertEquals(result1.valid, true);
+  assertEquals(result1.errors.length, 0);
+});
+
+Deno.test("Core.validateHighlightConfig should reject invalid configs", () => {
+  // 無効な設定の検証
+  const result1 = Core.validateHighlightConfig({
+    highlightHintMarker: ""
+  });
+  assertEquals(result1.valid, false);
+  assert(result1.errors.length > 0);
 });

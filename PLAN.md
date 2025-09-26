@@ -573,53 +573,53 @@ export interface UnifiedConfig {
 - [x] `deno test tests/core_test.ts`でテストパス（8/8テスト）
 - [x] `deno test tests/highlight_color_test.ts`で既存テストパス（12/12テスト）
 
-###### sub2-1-2 isValidColorName機能
-- [ ] tests/core_test.tsにisValidColorNameのテスト追加（RED）
-  - [ ] 有効なカラー名のテスト（"red", "blue"等）
-  - [ ] 無効なカラー名のテスト
-- [ ] CoreクラスにisValidColorNameメソッド実装（GREEN）
-- [ ] main.tsのisValidColorNameから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-1-2 isValidColorName機能【完了】
+- [x] tests/core_test.tsにisValidColorNameのテスト追加（RED）
+  - [x] 有効なカラー名のテスト（"red", "blue"等）
+  - [x] 無効なカラー名のテスト
+- [x] CoreクラスにisValidColorNameメソッド実装（GREEN）
+- [x] main.tsのisValidColorNameから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-1-3 isValidHexColor機能
-- [ ] tests/core_test.tsにisValidHexColorのテスト追加（RED）
-  - [ ] 有効な16進数カラーのテスト（"#FF0000"等）
-  - [ ] 無効な16進数カラーのテスト
-- [ ] CoreクラスにisValidHexColorメソッド実装（GREEN）
-- [ ] main.tsのisValidHexColorから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-1-3 isValidHexColor機能【完了】
+- [x] tests/core_test.tsにisValidHexColorのテスト追加（RED）
+  - [x] 有効な16進数カラーのテスト（"#FF0000"等）
+  - [x] 無効な16進数カラーのテスト
+- [x] CoreクラスにisValidHexColorメソッド実装（GREEN）
+- [x] main.tsのisValidHexColorから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-1-4 normalizeColorName機能
-- [ ] tests/core_test.tsにnormalizeColorNameのテスト追加（RED）
-- [ ] CoreクラスにnormalizeColorNameメソッド実装（GREEN）
-- [ ] main.tsのnormalizeColorNameから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-1-4 normalizeColorName機能【完了】
+- [x] tests/core_test.tsにnormalizeColorNameのテスト追加（RED）
+- [x] CoreクラスにnormalizeColorNameメソッド実装（GREEN）
+- [x] main.tsのnormalizeColorNameから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-1-5 validateHighlightColor機能
-- [ ] tests/core_test.tsにvalidateHighlightColorのテスト追加（RED）
-- [ ] CoreクラスにvalidateHighlightColorメソッド実装（GREEN）
-- [ ] main.tsのvalidateHighlightColorから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/highlight_color_test.ts`で既存テストパス
+###### sub2-1-5 validateHighlightColor機能【完了】
+- [x] tests/core_test.tsにvalidateHighlightColorのテスト追加（RED）
+- [x] CoreクラスにvalidateHighlightColorメソッド実装（GREEN）
+- [x] main.tsのvalidateHighlightColorから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] `deno test tests/highlight_color_test.ts`で既存テストパス
 
-###### sub2-1-6 generateHighlightCommand機能
-- [ ] tests/core_test.tsにgenerateHighlightCommandのテスト追加（RED）
-- [ ] CoreクラスにgenerateHighlightCommandメソッド実装（GREEN）
-- [ ] main.tsのgenerateHighlightCommandから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
+###### sub2-1-6 generateHighlightCommand機能【完了】
+- [x] tests/core_test.tsにgenerateHighlightCommandのテスト追加（RED）
+- [x] CoreクラスにgenerateHighlightCommandメソッド実装（GREEN）
+- [x] main.tsのgenerateHighlightCommandから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
 
-###### sub2-1-7 validateHighlightConfig機能
-- [ ] tests/core_test.tsにvalidateHighlightConfigのテスト追加（RED）
-- [ ] CoreクラスにvalidateHighlightConfigメソッド実装（GREEN）
-- [ ] main.tsのvalidateHighlightConfigから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/highlight_*.ts`で全ハイライトテストパス
+###### sub2-1-7 validateHighlightConfig機能【完了】
+- [x] tests/core_test.tsにvalidateHighlightConfigのテスト追加（RED）
+- [x] CoreクラスにvalidateHighlightConfigメソッド実装（GREEN）
+- [x] main.tsのvalidateHighlightConfigから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] `deno test tests/highlight_*.ts`で全ハイライトテストパス
 
 ##### sub2-2 設定関連関数のCoreクラス移行
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
