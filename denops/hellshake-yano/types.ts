@@ -270,7 +270,7 @@ export interface PerformanceMetrics {
  */
 export interface DebugInfo {
   /** 現在の設定情報のスナップショット */
-  config: Config;
+  config: Config | any;
   /** ヒントの表示状態フラグ */
   hintsVisible: boolean;
   /** 現在表示中のヒントマッピング配列 */

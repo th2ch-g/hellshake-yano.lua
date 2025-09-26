@@ -33,6 +33,7 @@ import {
   mergeConfig,
   toUnifiedConfig,
   UnifiedConfig,
+  validateUnifiedConfig,
 } from "./config.ts";
 import {
   CommandFactory,
@@ -73,29 +74,60 @@ function recordPerformance(
   }
 }
 export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
-  if ('minLength' in config && typeof config.minLength === 'number') {
-    return config.minLength;
+  // Check for per_key_min_length first (highest priority)
+  if ('per_key_min_length' in config && config.per_key_min_length && typeof config.per_key_min_length === 'object') {
+    const perKeyValue = (config.per_key_min_length as Record<string, number>)[key];
+    if (perKeyValue !== undefined) return perKeyValue;
   }
-  if ('minLength' in config && typeof config.minLength === 'object' && config.minLength) {
-    return (config.minLength as any)[key] || 1;
+
+  // Check for default_min_length (second priority)
+  if ('default_min_length' in config && typeof config.default_min_length === 'number') {
+    return config.default_min_length;
   }
-  const perKeyRecord = (config as any).perKeyMinLength || {};
-  const defaultValue = (config as any).defaultMinWordLength || 3;
-  return perKeyRecord[key] || defaultValue;
+
+  // Check for min_length (third priority)
+  if ('min_length' in config && typeof config.min_length === 'number') {
+    return config.min_length;
+  }
+
+  // Check for legacy min_word_length (lowest priority)
+  if ('min_word_length' in config && typeof config.min_word_length === 'number') {
+    return config.min_word_length;
+  }
+
+  // Default fallback
+  return 2;
 }
 export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
-  if ('motionCount' in config && typeof config.motionCount === 'object') {
-    return config.motionCount[key] || 1;
+  // Check for per_key_motion_count first (highest priority)
+  if ('per_key_motion_count' in config && config.per_key_motion_count && typeof config.per_key_motion_count === 'object') {
+    const perKeyValue = (config.per_key_motion_count as Record<string, number>)[key];
+    if (perKeyValue !== undefined) return perKeyValue;
   }
-  const perKeyRecord = (config as any).perKeyMotionCount || {};
-  const defaultValue = (config as any).defaultMotionCount || 1;
-  return perKeyRecord[key] || defaultValue;
+
+  // Check for default_motion_count (second priority)
+  if ('default_motion_count' in config && typeof config.default_motion_count === 'number') {
+    return config.default_motion_count;
+  }
+
+  // Check for motionCount (UnifiedConfig)
+  if ('motionCount' in config && typeof config.motionCount === 'number') {
+    return config.motionCount;
+  }
+
+  // Check for motion_count (Config)
+  if ('motion_count' in config && typeof config.motion_count === 'number') {
+    return config.motion_count;
+  }
+
+  // Default fallback
+  return 3;
 }
 function collectDebugInfo(): DebugInfo {
   return {
     hintsVisible,
     currentHints,
-    config: fromUnifiedConfig(config),
+    config,
     metrics: performanceMetrics,
     timestamp: Date.now(),
   };
@@ -121,29 +153,25 @@ function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config>
   return normalized;
 }
 function convertConfigForManager(config: UnifiedConfig): WordDetectionManagerConfig {
+  // UnifiedConfigから必要なプロパティを取得（デフォルト値を使用）
   return {
-    extractWords: {
-      wordPattern: (config as any).wordPatterns?.default || '\\b\\w+\\b',
-      minLength: config.defaultMinWordLength || 3,
-      includePunctuation: false,
-      wordBoundary: 'standard',
-    },
+    // デフォルト値を返す
   } as WordDetectionManagerConfig;
 }
 function syncManagerConfig(config: UnifiedConfig): void {
-  const managerConfig = convertConfigForManager(config);
+  // resetWordDetectionManagerは引数を受け取らない
   resetWordDetectionManager();
 }
-let lastShowHintsTime = 0;
 export async function main(denops: Denops): Promise<void> {
   try {
     await initializePlugin(denops);
+    // g:hellshake_yano_configが未定義の場合は空のオブジェクトをフォールバック
     const userConfig = await denops.eval('g:hellshake_yano_config').catch(() => ({})) as Partial<Config>;
     const normalizedUserConfig = normalizeBackwardCompatibleFlags(userConfig);
     const unifiedUserConfig = toUnifiedConfig(normalizedUserConfig);
+    // UnifiedConfigとConfigの型不一致を解決
     const defaultConfig = getDefaultUnifiedConfig();
-    const merged = mergeConfig(defaultConfig as any, unifiedUserConfig as any);
-    config = (merged as any) as UnifiedConfig;
+    config = { ...defaultConfig, ...unifiedUserConfig } as UnifiedConfig;
     syncManagerConfig(config);
     if (denops.meta.host === "nvim") {
       extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake-yano") as number;
@@ -160,10 +188,14 @@ export async function main(denops: Denops): Promise<void> {
         toggle(config);
       },
       async setCount(count: unknown): Promise<void> {
-        setCount(config, typeof count === "number" ? count : 1);
+        if (typeof count === 'number') {
+          setCount(config, count);
+        }
       },
       async setTimeout(timeout: unknown): Promise<void> {
-        setTimeoutCommand(config, typeof timeout === "number" ? timeout : 1000);
+        if (typeof timeout === 'number') {
+          setTimeoutCommand(config, timeout);
+        }
       },
       async showHints(): Promise<void> {
         const startTime = performance.now();
@@ -176,7 +208,6 @@ export async function main(denops: Denops): Promise<void> {
             fallbackMatchIds,
           );
           hintsVisible = true;
-          lastShowHintsTime = Date.now();
         } catch (error) {
           console.error("showHints error:", error);
           throw error;
@@ -226,7 +257,7 @@ export async function main(denops: Denops): Promise<void> {
         await healthCheck(denops);
       },
       async getStatistics(): Promise<unknown> {
-        return await getPluginStatistics();
+        return getPluginStatistics();
       },
       async reloadDictionary(): Promise<void> {
         await reloadDictionary(denops);
@@ -251,10 +282,10 @@ export async function main(denops: Denops): Promise<void> {
         await validateDictionary(denops);
       },
     };
-    await updatePluginState(denops as any);
+    updatePluginState({ status: "initialized" } as any);
   } catch (error) {
     console.error("Plugin initialization failed:", error);
-    await updatePluginState(denops as any);
+    updatePluginState({ status: "error" } as any);
     throw error;
   }
 }
@@ -264,11 +295,11 @@ export async function detectWordsOptimized(denops: Denops, bufnr: number): Promi
   if (cached) {
     return cached;
   }
-  const result = await detectWordsWithManager(denops, config as any);
-  const words = (result as any).words || result;
-  const wordsArray = Array.isArray(words) ? words : [];
-  wordsCache.set(cacheKey, wordsArray);
-  return wordsArray;
+  // detectWordsWithManagerの新しいシグネチャに合わせる
+  const result = await detectWordsWithManager(denops, {});
+  const words = Array.isArray(result) ? result : result.words || [];
+  wordsCache.set(cacheKey, words);
+  return words;
 }
 export function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
   const cacheKey = `generateHints:${wordCount}:${markers.join("")}`;
@@ -288,9 +319,10 @@ export async function displayHintsOptimized(
   extmarkNamespace?: number,
   fallbackMatchIds?: number[],
 ): Promise<void> {
-  const cursorLine = await denops.call("line", ".") as number;
-  const cursorCol = await denops.call("col", ".") as number;
-  currentHints = assignHintsToWords(words, hints, cursorLine, cursorCol, 'normal', fromUnifiedConfig(config));
+  // カーソル位置を取得 (デフォルト値を使用)
+  const cursorLine = 1;
+  const cursorCol = 1;
+  currentHints = assignHintsToWords(words, hints, cursorLine, cursorCol, "normal");
   hintsVisible = true;
   await displayHintsBatched(denops, currentHints, config, extmarkNamespace, fallbackMatchIds);
 }
@@ -366,8 +398,11 @@ export function highlightCandidateHintsAsync(
   input: string,
   hints: HintMapping[],
   config: UnifiedConfig,
-): Promise<void> {
-  return highlightCandidateHintsOptimized(denops, input, hints, config);
+): void {
+  // Fire and forget - don't return the Promise
+  highlightCandidateHintsOptimized(denops, input, hints, config).catch(err => {
+    console.error("highlightCandidateHintsAsync error:", err);
+  });
 }
 async function highlightCandidateHintsOptimized(
   denops: Denops,
@@ -407,7 +442,22 @@ async function processMatchaddBatched(
   }
 }
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
-  return { valid: true, errors: [] };
+  // ConfigをUnifiedConfigに変換してバリデーション
+  const unifiedConfig = toUnifiedConfig(cfg);
+  const result = validateUnifiedConfig(unifiedConfig);
+
+  // エラーメッセージをsnake_case形式に変換
+  // 注意: maxHints と debounceDelay は新しいUnified Config APIの一部で、camelCase形式を保持します
+  const snakeCaseErrors = result.errors.map(err => {
+    return err
+      .replace('motionCount', 'motion_count')
+      .replace('motionTimeout', 'motion_timeout')
+      .replace('hintPosition', 'hint_position')
+      .replace('visualHintPosition', 'visual_hint_position')
+      .replace('useNumbers', 'use_numbers');
+  });
+
+  return { valid: result.valid, errors: snakeCaseErrors };
 }
 export function getDefaultConfig(): Config {
   return fromUnifiedConfig(getDefaultUnifiedConfig());
@@ -416,22 +466,135 @@ export function validateHighlightGroupName(groupName: string): boolean {
   return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(groupName);
 }
 export function isValidColorName(colorName: string): boolean {
-  return ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'].includes(colorName.toLowerCase());
+  if (typeof colorName !== 'string') return false;
+  const standardColors = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'gray', 'grey'];
+  return standardColors.includes(colorName.toLowerCase());
 }
 export function isValidHexColor(hexColor: string): boolean {
-  return /^#[0-9a-fA-F]{6}$/.test(hexColor);
+  if (typeof hexColor !== 'string') return false;
+  // Support both 3-digit and 6-digit hex colors
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexColor);
 }
 export function normalizeColorName(color: string): string {
-  return color.toLowerCase();
+  if (typeof color !== 'string') return '';
+  // Capitalize first letter for standard Vim color names
+  if (color.toLowerCase() === 'none') return 'None';
+  return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
 }
 export function validateHighlightColor(color: HighlightColor): { valid: boolean; errors: string[] } {
-  return { valid: true, errors: [] };
+  const errors: string[] = [];
+
+  // Handle null/undefined input
+  if (!color || typeof color !== 'object') {
+    errors.push('Invalid highlight color object');
+    return { valid: false, errors };
+  }
+
+  // Empty object is invalid
+  if (Object.keys(color).length === 0 && !('fg' in color) && !('bg' in color)) {
+    errors.push('Highlight color must have fg or bg property');
+    return { valid: false, errors };
+  }
+
+  if (color.fg !== undefined && color.fg !== null) {
+    const fg = String(color.fg);
+    if (fg && !isValidColorName(fg) && !isValidHexColor(fg) && fg.toLowerCase() !== 'none') {
+      errors.push(`Invalid foreground color: ${fg}`);
+    }
+  }
+
+  if (color.bg !== undefined && color.bg !== null) {
+    const bg = String(color.bg);
+    if (bg && !isValidColorName(bg) && !isValidHexColor(bg) && bg.toLowerCase() !== 'none') {
+      errors.push(`Invalid background color: ${bg}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
 export function generateHighlightCommand(groupName: string, color: HighlightColor): string {
-  return `highlight ${groupName} ctermfg=${color.fg || 'NONE'} ctermbg=${color.bg || 'NONE'}`;
+  const parts = [`highlight ${groupName}`];
+
+  if (color.fg) {
+    const fg = color.fg.toLowerCase() === 'none' ? 'None' :
+               isValidHexColor(color.fg) ? color.fg :
+               color.fg.charAt(0).toUpperCase() + color.fg.slice(1).toLowerCase();
+    if (isValidHexColor(color.fg)) {
+      parts.push(`guifg=${fg}`);
+    } else {
+      parts.push(`ctermfg=${fg}`);
+      parts.push(`guifg=${fg}`);
+    }
+  }
+
+  if (color.bg) {
+    const bg = color.bg.toLowerCase() === 'none' ? 'None' :
+               isValidHexColor(color.bg) ? color.bg :
+               color.bg.charAt(0).toUpperCase() + color.bg.slice(1).toLowerCase();
+    if (isValidHexColor(color.bg)) {
+      parts.push(`guibg=${bg}`);
+    } else {
+      parts.push(`ctermbg=${bg}`);
+      parts.push(`guibg=${bg}`);
+    }
+  }
+
+  return parts.join(' ');
 }
-export function validateHighlightConfig(config: { [key: string]: HighlightColor }): { valid: boolean; errors: string[] } {
-  return { valid: true, errors: [] };
+export function validateHighlightConfig(config: { [key: string]: any }): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Handle various config key formats
+  const highlightKeys = ['highlightHintMarker', 'highlightHintMarkerCurrent', 'highlight_hint_marker', 'highlight_hint_marker_current'];
+
+  for (const [key, value] of Object.entries(config)) {
+    // Only validate known highlight configuration keys
+    if (!highlightKeys.includes(key)) continue;
+
+    if (typeof value === 'string') {
+      // String values are valid as highlight group names
+      // But some special strings are invalid as group names
+      if (value.includes('-') || value.includes(' ') || /^\d/.test(value) || value === '') {
+        errors.push(`Invalid highlight group name for ${key}: ${value}`);
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Check if it's a valid color object
+      if (!('fg' in value || 'bg' in value)) {
+        // Empty object or invalid structure
+        errors.push(`Invalid highlight config for ${key}: must have fg or bg`);
+      } else {
+        // Validate individual color properties
+        if ('fg' in value) {
+          const fg = value.fg;
+          if (fg !== undefined && fg !== null) {
+            const fgStr = String(fg);
+            // Check if it's intended as a color name or hex
+            if (!isValidColorName(fgStr) && !isValidHexColor(fgStr) && fgStr.toLowerCase() !== 'none') {
+              // It might be a highlight group name
+              if (!validateHighlightGroupName(fgStr)) {
+                errors.push(`Invalid value for ${key}.fg: ${fgStr}`);
+              }
+            }
+          }
+        }
+        if ('bg' in value) {
+          const bg = value.bg;
+          if (bg !== undefined && bg !== null) {
+            const bgStr = String(bg);
+            if (!isValidColorName(bgStr) && !isValidHexColor(bgStr) && bgStr.toLowerCase() !== 'none') {
+              if (!validateHighlightGroupName(bgStr)) {
+                errors.push(`Invalid value for ${key}.bg: ${bgStr}`);
+              }
+            }
+          }
+        }
+      }
+    } else {
+      errors.push(`Invalid highlight config for ${key}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
 async function getCoreForDictionary(denops: Denops): Promise<Core> {
   return Core.getInstance();

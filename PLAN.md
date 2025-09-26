@@ -825,8 +825,72 @@ export interface UnifiedConfig {
 ###### sub2-6-5 最終検証【完了】
 - [x] main.tsが500行以内であることを確認（現在493行）
 - [x] `deno check denops/hellshake-yano/`で全体の型チェック
-- [x] `deno test tests/*.ts`で全75個のテストファイルが実行（595/654テスト通過）
+- [x] `deno test tests/*.ts`で全75個のテストファイルが実行（631/652テスト通過、21個失敗）
 - [x] 後方互換性の最終確認
+
+###### sub2-6-6 テストエラー修正【TDD実装】
+@target: denops/hellshake-yano/core.ts, denops/hellshake-yano/config.ts
+@context: 21個のテスト失敗を修正し、全652個のテストをパスさせる
+@priority: 高（既存機能の動作保証に必須）
+
+**調査結果:**
+- 631個のテストがパス、21個が失敗
+- エラーは4カテゴリに分類：非同期処理(1)、設定バリデーション(2)、ハイライト検証(9)、min_length設定(9)
+
+###### sub2-6-6-1 設定バリデーションメッセージ修正
+- [ ] tests/config_test.ts:171のテスト確認（期待値: "maxHints must be..."）
+- [ ] tests/config_test.ts:194のテスト確認（期待値: "debounceDelay must be..."）
+- [ ] config.tsのvalidateUnifiedConfigでエラーメッセージ修正
+  - [ ] "max_hints" → "maxHints"に変更
+  - [ ] "debounce_delay" → "debounceDelay"に変更
+- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [ ] `deno test tests/config_test.ts`で該当テストがパス
+
+###### sub2-6-6-2 ハイライト検証ロジック修正
+- [ ] validateHighlightGroupNameの修正
+  - [ ] 型チェック追加（string型のみ許可）
+  - [ ] アンダースコア`_`を許可する正規表現に修正
+  - [ ] 長さ制限を200文字に設定
+  - [ ] 数字開始を禁止するチェック追加
+- [ ] isValidColorNameの修正
+  - [ ] null/undefinedチェック追加（falseを返す）
+  - [ ] "NONE"を有効な色名リストに追加
+- [ ] validateHighlightColorの修正
+  - [ ] fg: nullの場合は無効と判定
+- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [ ] `deno test tests/highlight*.ts`で該当テストがパス
+
+###### sub2-6-6-3 min_length設定ロジック修正
+- [ ] getMinLengthForKeyのデフォルト値修正
+  - [ ] デフォルト値を2から3に変更
+  - [ ] per-key → global → defaultの優先順位実装
+  - [ ] snake_caseとcamelCaseの両方をサポート
+- [ ] getMotionCountForKeyの修正
+  - [ ] null/undefinedチェック追加
+  - [ ] デフォルト値2を返す処理追加
+- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [ ] `deno test tests/per_key*.ts tests/main_test.ts`で該当テストがパス
+
+###### sub2-6-6-4 非同期処理修正
+- [ ] tests/async_highlight_test.ts:282のテスト分析
+- [ ] highlightCandidateHintsAsyncのコールバック処理修正
+  - [ ] try-finallyブロックでコールバック実行を保証
+  - [ ] エラー時もコールバックが呼ばれるように修正
+- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [ ] `deno test tests/async_highlight_test.ts`で該当テストがパス
+
+###### sub2-6-6-5 統合確認とクリーンアップ
+- [ ] `deno check denops/hellshake-yano/`で全体の型チェック
+- [ ] `deno test`で全テストスイート実行
+- [ ] 652個すべてのテストがパスすることを確認
+- [ ] 既存の631個のパステストが引き続きパスすることを確認
+- [ ] 後方互換性の完全な維持を検証
+
+**成功基準:**
+- ✅ 652個すべてのテストがパス（631 + 21 = 652）
+- ✅ 型チェックエラーなし
+- ✅ 既存機能の完全な維持
+- ✅ 後方互換性の保証
 
 ##### sub2-7 ドキュメント更新
 @target: docs/, README.md

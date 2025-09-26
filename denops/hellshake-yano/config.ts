@@ -1096,6 +1096,7 @@ export function validateConfig(
   const result = validateUnifiedConfig(unifiedConfig);
 
   // エラーメッセージをsnake_case形式に変換
+  // 注意: maxHints と debounceDelay は新しいUnified Config APIの一部で、camelCase形式を保持します
   const convertedErrors = result.errors.map(error => {
     return error
       .replace(/highlightHintMarker/g, 'highlight_hint_marker')
