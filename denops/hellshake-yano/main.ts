@@ -240,23 +240,8 @@ function recordPerformance(
  * // 'f'キーに対する最小文字数を取得（例: 3）
  */
 export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
-  // Config型の場合はUnifiedConfigに変換
-  // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
-  const unifiedConfig = "motionCount" in config
-    ? config as UnifiedConfig
-    : toUnifiedConfig(config as Config);
-  // キー別設定が存在し、そのキーの設定があれば使用
-  if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
-    return unifiedConfig.perKeyMinLength[key];
-  }
-
-  // defaultMinWordLength が設定されていれば使用
-  if (unifiedConfig.defaultMinWordLength !== undefined) {
-    return unifiedConfig.defaultMinWordLength;
-  }
-
-  // デフォルト値
-  return 2;
+  // REFACTOR Phase: Core.getMinLengthForKeyメソッドに委譲
+  return Core.getMinLengthForKey(config, key);
 }
 
 /**
@@ -272,32 +257,8 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
  * // 'f'モーションに対する動作回数を取得（例: 5）
  */
 export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
-  // Config型の場合はUnifiedConfigに変換
-  // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
-  const unifiedConfig = "motionCount" in config
-    ? config as UnifiedConfig
-    : toUnifiedConfig(config as Config);
-  // キー別設定が存在し、そのキーの設定があれば使用
-  if (unifiedConfig.perKeyMotionCount && unifiedConfig.perKeyMotionCount[key] !== undefined) {
-    const value = unifiedConfig.perKeyMotionCount[key];
-    // 1以上の整数値のみ有効とみなす
-    if (value >= 1 && Number.isInteger(value)) {
-      return value;
-    }
-  }
-
-  // defaultMotionCount が設定されていれば使用
-  if (unifiedConfig.defaultMotionCount !== undefined && unifiedConfig.defaultMotionCount >= 1) {
-    return unifiedConfig.defaultMotionCount;
-  }
-
-  // 後方互換性：既存のmotionCountを使用
-  if (unifiedConfig.motionCount !== undefined && unifiedConfig.motionCount >= 1) {
-    return unifiedConfig.motionCount;
-  }
-
-  // 最終的なデフォルト値
-  return 3;
+  // REFACTOR Phase: Core.getMotionCountForKeyメソッドに委譲
+  return Core.getMotionCountForKey(key, config);
 }
 
 /**

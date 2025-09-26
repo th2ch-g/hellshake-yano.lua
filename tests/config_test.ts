@@ -332,4 +332,27 @@ describe("Config Tests", () => {
       // assertEquals(result3.valid, true);
     });
   });
+
+  // TDD RED Phase: sub2-2-3, sub2-2-4のテスト
+  describe("Config delegation tests", () => {
+    it("should validate config through delegation", () => {
+      // validateConfigの委譲テスト
+      const result1 = validateConfig({ motion_count: 5 });
+      assertEquals(result1.valid, true);
+      assertEquals(result1.errors.length, 0);
+
+      const result2 = validateConfig({ motion_count: -1 });
+      assertEquals(result2.valid, false);
+      assertEquals(result2.errors.length > 0, true);
+    });
+
+    it("should get default config through delegation", () => {
+      // getDefaultConfigの委譲テスト
+      const config = getDefaultConfig();
+      assertExists(config);
+      assertEquals(typeof config.motion_count, "number");
+      assertEquals(typeof config.enabled, "boolean");
+      assertEquals(Array.isArray(config.markers), true);
+    });
+  });
 });

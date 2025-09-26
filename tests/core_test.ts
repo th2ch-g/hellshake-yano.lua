@@ -1717,3 +1717,79 @@ Deno.test("Core.validateHighlightConfig should reject invalid configs", () => {
   assertEquals(result1.valid, false);
   assert(result1.errors.length > 0);
 });
+
+/**
+ * TDD RED Phase: Core.getMinLengthForKey static method tests
+ * sub2-2-1: これらのテストは最初失敗する（Core.getMinLengthForKeyメソッドが未実装のため）
+ */
+Deno.test("Core.getMinLengthForKey should return correct min length for key", () => {
+  const config = {
+    motion_count: 3,
+    per_key_min_length: { f: 4, t: 2, w: 3 }
+  } as any; // Test config
+
+  assertEquals(Core.getMinLengthForKey(config, "f"), 4);
+  assertEquals(Core.getMinLengthForKey(config, "t"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "w"), 3);
+  assertEquals(Core.getMinLengthForKey(config, "x"), 3); // defaultMinWordLength from toUnifiedConfig
+});
+
+Deno.test("Core.getMinLengthForKey should work with UnifiedConfig", () => {
+  const unifiedConfig = {
+    motionCount: 3,
+    perKeyMinLength: { f: 5 },
+    defaultMinWordLength: 3
+  } as any; // Test config
+
+  assertEquals(Core.getMinLengthForKey(unifiedConfig, "f"), 5);
+  assertEquals(Core.getMinLengthForKey(unifiedConfig, "w"), 3); // default min word length
+});
+
+Deno.test("Core.getMinLengthForKey should return default when no config", () => {
+  const config = { motion_count: 3 } as any; // Test config
+  assertEquals(Core.getMinLengthForKey(config, "f"), 3); // default value from toUnifiedConfig
+});
+
+/**
+ * TDD RED Phase: Core.getMotionCountForKey static method tests
+ * sub2-2-2: これらのテストは最初失敗する（Core.getMotionCountForKeyメソッドが未実装のため）
+ */
+Deno.test("Core.getMotionCountForKey should return correct motion count for key", () => {
+  const config = {
+    motion_count: 3,
+    per_key_motion_count: { f: 5, t: 2, w: 4 }
+  } as any; // Test config
+
+  assertEquals(Core.getMotionCountForKey("f", config), 5);
+  assertEquals(Core.getMotionCountForKey("t", config), 2);
+  assertEquals(Core.getMotionCountForKey("w", config), 4);
+  assertEquals(Core.getMotionCountForKey("x", config), 3); // fallback to motion_count
+});
+
+Deno.test("Core.getMotionCountForKey should work with UnifiedConfig", () => {
+  const unifiedConfig = {
+    motionCount: 5,
+    perKeyMotionCount: { f: 7 },
+    defaultMotionCount: 4
+  } as any; // Test config
+
+  assertEquals(Core.getMotionCountForKey("f", unifiedConfig), 7);
+  assertEquals(Core.getMotionCountForKey("w", unifiedConfig), 4); // default motion count
+});
+
+Deno.test("Core.getMotionCountForKey should validate values", () => {
+  const config = {
+    motion_count: 3,
+    per_key_motion_count: { f: 0, t: -1, w: 2.5, x: 4 }
+  } as any; // Test config
+
+  assertEquals(Core.getMotionCountForKey("f", config), 3); // invalid 0, uses fallback
+  assertEquals(Core.getMotionCountForKey("t", config), 3); // invalid negative, uses fallback
+  assertEquals(Core.getMotionCountForKey("w", config), 3); // invalid non-integer, uses fallback
+  assertEquals(Core.getMotionCountForKey("x", config), 4); // valid integer
+});
+
+Deno.test("Core.getMotionCountForKey should return final default when no config", () => {
+  const config = {} as any; // Test config
+  assertEquals(Core.getMotionCountForKey("f", config), 3); // final default value
+});

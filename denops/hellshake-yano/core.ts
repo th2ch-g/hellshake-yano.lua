@@ -1483,4 +1483,75 @@ export class Core {
 
     return { valid: errors.length === 0, errors };
   }
+
+  /**
+   * キー別最小文字数設定を取得する（Process3 Sub2-2-1実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植
+   *
+   * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
+   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+   * @returns そのキーに対する最小文字数値（デフォルト: 2）
+   */
+  public static getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
+    // Config型の場合はUnifiedConfigに変換
+    // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
+    const unifiedConfig = "motionCount" in config
+      ? config as UnifiedConfig
+      : toUnifiedConfig(config as Config);
+
+    // キー別設定が存在し、そのキーの設定があれば使用
+    if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
+      return unifiedConfig.perKeyMinLength[key];
+    }
+
+    // defaultMinWordLength が設定されていれば使用
+    if (unifiedConfig.defaultMinWordLength !== undefined) {
+      return unifiedConfig.defaultMinWordLength;
+    }
+
+    // デフォルト値
+    return 2;
+  }
+
+  /**
+   * キー別motion_count設定を取得する（Process3 Sub2-2-2実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植
+   *
+   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+   * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
+   * @returns そのキーに対するmotion_count値（デフォルト: 3）
+   */
+  public static getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
+    // Config型の場合はUnifiedConfigに変換
+    // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
+    const unifiedConfig = "motionCount" in config
+      ? config as UnifiedConfig
+      : toUnifiedConfig(config as Config);
+
+    // キー別設定が存在し、そのキーの設定があれば使用
+    if (unifiedConfig.perKeyMotionCount && unifiedConfig.perKeyMotionCount[key] !== undefined) {
+      const value = unifiedConfig.perKeyMotionCount[key];
+      // 1以上の整数値のみ有効とみなす
+      if (value >= 1 && Number.isInteger(value)) {
+        return value;
+      }
+    }
+
+    // defaultMotionCount が設定されていれば使用
+    if (unifiedConfig.defaultMotionCount !== undefined && unifiedConfig.defaultMotionCount >= 1) {
+      return unifiedConfig.defaultMotionCount;
+    }
+
+    // 後方互換性：既存のmotionCountを使用
+    if (unifiedConfig.motionCount !== undefined && unifiedConfig.motionCount >= 1) {
+      return unifiedConfig.motionCount;
+    }
+
+    // 最終的なデフォルト値
+    return 3;
+  }
 }

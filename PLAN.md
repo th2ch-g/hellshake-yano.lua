@@ -621,39 +621,39 @@ export interface UnifiedConfig {
 - [x] `deno test tests/core_test.ts`でテストパス
 - [x] `deno test tests/highlight_*.ts`で全ハイライトテストパス
 
-##### sub2-2 設定関連関数のCoreクラス移行
+##### sub2-2 設定関連関数のCoreクラス移行【完了】
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
 @context: 設定検証・取得関数をCoreクラスへ移行
 
-###### sub2-2-1 getMinLengthForKey機能
-- [ ] tests/core_test.tsにgetMinLengthForKeyのテスト追加（RED）
-  - [ ] デフォルト値のテスト
-  - [ ] キー別設定値のテスト
-- [ ] CoreクラスにgetMinLengthForKeyメソッド実装（GREEN）
-- [ ] main.tsのgetMinLengthForKeyから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/per_key_min_length_test.ts`で既存テストパス
+###### sub2-2-1 getMinLengthForKey機能【完了】
+- [x] tests/core_test.tsにgetMinLengthForKeyのテスト追加（RED）
+  - [x] デフォルト値のテスト
+  - [x] キー別設定値のテスト
+- [x] CoreクラスにgetMinLengthForKeyメソッド実装（GREEN）
+- [x] main.tsのgetMinLengthForKeyから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] `deno test tests/per_key_min_length_test.ts`で既存テストパス（18テスト）
 
-###### sub2-2-2 getMotionCountForKey機能
-- [ ] tests/core_test.tsにgetMotionCountForKeyのテスト追加（RED）
-  - [ ] デフォルト値のテスト
-  - [ ] キー別設定値のテスト
-- [ ] CoreクラスにgetMotionCountForKeyメソッド実装（GREEN）
-- [ ] main.tsのgetMotionCountForKeyから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/per_key_motion_count_test.ts`で既存テストパス
+###### sub2-2-2 getMotionCountForKey機能【完了】
+- [x] tests/core_test.tsにgetMotionCountForKeyのテスト追加（RED）
+  - [x] デフォルト値のテスト
+  - [x] キー別設定値のテスト
+- [x] CoreクラスにgetMotionCountForKeyメソッド実装（GREEN）
+- [x] main.tsのgetMotionCountForKeyから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス
+- [x] `deno test tests/per_key_motion_count_test.ts`で既存テストパス（8テスト）
 
-###### sub2-2-3 validateConfig機能（config.tsに委譲）
-- [ ] main.tsのvalidateConfigをconfig.tsの実装へ委譲
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/config_*.ts`で設定テストパス
+###### sub2-2-3 validateConfig機能（config.tsに委譲）【完了】
+- [x] main.tsのvalidateConfigをconfig.tsの実装へ委譲（既存実装活用）
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/config_*.ts`で設定テストパス（32テスト）
 
-###### sub2-2-4 getDefaultConfig機能（config.tsに委譲）
-- [ ] main.tsのgetDefaultConfigをconfig.tsの実装へ委譲
-- [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-- [ ] `deno test tests/config_*.ts`で設定テストパス
+###### sub2-2-4 getDefaultConfig機能（config.tsに委譲）【完了】
+- [x] main.tsのgetDefaultConfigをconfig.tsの実装へ委譲（既存実装活用）
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/config_*.ts`で設定テストパス
 
 ##### sub2-3 表示関連関数のCoreクラス移行
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
