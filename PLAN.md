@@ -1029,24 +1029,52 @@ export interface UnifiedConfig {
   - [x] テスト: 9ファイルで62回使用
 - [x] **分析文書作成: tmp/claude/sub2-1-deprecated-analysis.md**
 
-##### sub2-2 段階的削除（後方互換性維持）
-- [ ] CoreConfig関連（約200行）を削除
-  - [ ] CoreConfigインターフェース削除
+##### sub2-2 段階的削除Phase1（安全な削除）
+@context: sub2-1分析で安全と判定された3インターフェース削除
+@target: CoreConfig, HintConfig, PerformanceConfig（実装コードで未使用）
+
+- [ ] **🟢 CoreConfig関連（3プロパティ）を削除**
+  - [ ] CoreConfigインターフェース削除（enabled, markers, motionCount）
   - [ ] 関連する変換関数削除
   - [ ] `deno check denops/hellshake-yano/`で型エラー確認
   - [ ] `deno test tests/config_test.ts`でテストパス確認
-- [ ] HintConfig、WordConfig等を削除（各約150行）
-  - [ ] インターフェース定義削除
+- [ ] **🟢 HintConfig関連（10プロパティ）を削除**
+  - [ ] HintConfigインターフェース削除
+  - [ ] 注意: HintKeyConfigとは別物（HintKeyConfigは保持）
   - [ ] 関連マッピング削除
   - [ ] `deno check`で型チェック
   - [ ] `deno test tests/config*.ts`でテストパス
-- [ ] 階層設定（HierarchicalConfig等）を削除（約500行）
-  - [ ] HierarchicalConfig削除
-  - [ ] CamelCaseConfig削除
-  - [ ] ModernConfig削除
-  - [ ] `deno test tests/config*.ts`で全32テストパス
+- [ ] **🟢 PerformanceConfig関連（11プロパティ）を削除**
+  - [ ] PerformanceConfigインターフェース削除
+  - [ ] 関連する変換関数削除
+  - [ ] `deno check`で型チェック
+  - [ ] `deno test tests/config*.ts`でテストパス
+- [ ] **削減効果確認**
+  - [ ] 削減行数計測（目標: 200-300行削減）
+  - [ ] 全72テストがパスすることを確認
 
-##### sub2-3 変換関数の簡素化
+##### sub2-3 段階的削除Phase2（WordConfig移行）
+@context: word.tsで使用中のWordConfigを慎重に移行
+@important: 後方互換性を完全に維持しながら段階的に実施
+
+- [ ] **🟡 WordConfig移行準備**
+  - [ ] word.ts内のWordConfig使用箇所をリストアップ
+    - [ ] detectWordsWithConfig()関数
+    - [ ] extractWordsFromLineWithConfig()関数
+    - [ ] convertWordConfigToEnhanced()変換関数
+  - [ ] UnifiedConfigへの移行計画作成
+- [ ] **WordConfigの段階的置換**
+  - [ ] word.ts内の関数をUnifiedConfig対応に修正
+  - [ ] 変換関数を更新（後方互換性維持）
+  - [ ] テストケースを更新
+  - [ ] `deno check`で型チェック
+  - [ ] `deno test tests/word*.ts`でテストパス
+- [ ] **WordConfigインターフェース削除**
+  - [ ] 最終的にWordConfig定義を削除
+  - [ ] 関連するimport/export削除
+  - [ ] 全652テストがパスすることを確認
+
+##### sub2-4 階層設定削除と変換関数簡素化
 - [ ] toUnifiedConfig/fromUnifiedConfig最小化
   - [ ] 不要なマッピングロジック削除
   - [ ] snake_case/camelCase変換の最適化
