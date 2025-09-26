@@ -1,7 +1,6 @@
 import type { Denops } from "@denops/std";
-import type { DetectionContext, WordDetectionResult } from "./types.ts";
+import type { DetectionContext, Word, WordDetectionResult } from "./types.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
-import type { Word } from "./types.ts";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 
 // Re-export Word for backward compatibility
@@ -39,14 +38,8 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   current_key_context?: string;
 }
 
-// Word interface moved to types.ts for consolidation
-// Use: import type { Word } from "./types.ts";
-
 import { CacheType, UnifiedCache } from "./cache.ts";
-
-// Additional imports for detector functionality
 import { type SegmentationResult, TinySegmenter } from "./segmenter.ts";
-// ContextDetector now re-exported at bottom for v2 migration
 import type { UnifiedConfig } from "./config.ts";
 import { type Config, getMinLengthForKey } from "./main.ts";
 
@@ -406,19 +399,7 @@ export class RegexWordDetector implements WordDetector {
   }
 }
 
-/**
- * 画面内の単語を検出する（レガシー版、後方互換性のため保持）
- * @description 現在の表示範囲内の単語を検出するレガシー実装
- * @param denops - Denopsインスタンス
- * @returns Promise<Word[]> - 検出された単語の配列
- * @deprecated 新しいdetectWordsWithManagerを使用してください
- * @since 1.0.0
- * @example
- * ```typescript
- * const words = await detectWords(denops);
- * console.log(`Found ${words.length} words`);
- * ```
- */
+/** @deprecated Use detectWordsWithManager instead */
 export function detectWords(
   text: string,
   startLine: number,
@@ -842,33 +823,7 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
   return displayCol;
 }
 
-/**
- * 1行から単語を抽出する
- *
- * @deprecated Use extractWordsUnified instead for better functionality and unified interface
- *
- * 改善された単語抽出アルゴリズムにより、kebab-case、snake_case、
- * CamelCase、日本語文字種別分割などを適切に処理します。
- * タブ文字を含む行でも正確な表示位置を計算します。
- *
- * @param lineText - 解析する行のテキスト
- * @param lineNumber - 行番号（1ベース）
- * @param useImprovedDetection - 改善版検出を使用するか（デフォルト: false）
- * @param excludeJapanese - 日本語を除外するか（デフォルト: false）
- * @returns 抽出された単語の配列
- * @since 1.0.0
- * @example
- * ```typescript
- * // DEPRECATED: Use extractWordsUnified instead
- * const words = extractWordsFromLine('hello-world snake_case こんにちは', 1, true, false);
- *
- * // NEW: Use unified function
- * const words = extractWordsUnified('hello-world snake_case こんにちは', 1, {
- *   useImprovedDetection: true,
- *   excludeJapanese: false
- * });
- * ```
- */
+/** @deprecated Use extractWordsUnified instead */
 export function extractWordsFromLine(
   lineText: string,
   lineNumber: number,
@@ -1015,30 +970,12 @@ export function extractWordsFromLine(
   return words;
 }
 
-/**
- * 設定に基づいて1行から単語を抽出（統合版）
- * @deprecated Use extractWordsUnified instead for unified interface and better performance
- * @description 設定オブジェクトに基づいて単語抽出を行うラッパー関数
- * @param lineText - 解析する行のテキスト
- * @param lineNumber - 行番号
- * @param config - 単語検出設定（省略時はデフォルト設定）
- * @returns Word[] - 抽出された単語の配列
- * @since 1.0.0
- * @example
- * ```typescript
- * // DEPRECATED:
- * const words = extractWordsFromLineWithConfig('hello こんにちは', 1, { use_japanese: true });
- *
- * // NEW:
- * const words = extractWordsUnified('hello こんにちは', 1, { use_japanese: true });
- * ```
- */
+/** @deprecated Use extractWordsUnified instead */
 export function extractWordsFromLineWithConfig(
   lineText: string,
   lineNumber: number,
   config: WordConfig = {},
 ): Word[] {
-  // 常に改善版を使用し、use_japanese設定に基づいてexcludeJapaneseを決定
   const excludeJapanese = config.use_japanese !== true;
   return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
 }
@@ -1180,30 +1117,12 @@ export async function detectWordsWithEnhancedConfig(
   }
 }
 
-/**
- * EnhancedWordConfigを使用して1行から単語を抽出する（アダプター版）
- * @deprecated Use extractWordsUnified instead for unified interface
- * @description 設定に基づいて1行から単語を抽出するアダプター関数
- * @param lineText - 解析する行のテキスト
- * @param lineNumber - 行番号
- * @param config - EnhancedWordConfig設定
- * @returns Word[] - 抽出された単語の配列
- * @since 1.0.0
- * @example
- * ```typescript
- * // DEPRECATED:
- * const words = extractWordsFromLineWithEnhancedConfig('hello', 1, { strategy: 'hybrid' });
- *
- * // NEW:
- * const words = extractWordsUnified('hello', 1, { strategy: 'hybrid' });
- * ```
- */
+/** @deprecated Use extractWordsUnified instead */
 export function extractWordsFromLineWithEnhancedConfig(
   lineText: string,
   lineNumber: number,
   config: EnhancedWordConfig = {},
 ): Word[] {
-  // 改善版の単語検出を使用し、use_japanese設定に基づいてexcludeJapaneseを決定
   const excludeJapanese = config.use_japanese !== true;
   return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
 }
