@@ -52,6 +52,7 @@ Deno.test("Core class should initialize with default config", () => {
  * TDD Red Phase: シングルトンパターンのテスト（最初は失敗）
  */
 Deno.test("Core should implement singleton pattern", () => {
+  Core.resetForTesting();
   const core1 = Core.getInstance();
   const core2 = Core.getInstance();
   assertEquals(core1, core2, "getInstance should return the same instance");
@@ -92,6 +93,7 @@ Deno.test("Core class should accept custom config", () => {
  * TDD Refactor Phase: 単語検出機能のテスト
  */
 Deno.test("Core class detectWords should return valid result", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   const result = core.detectWords();
   assertExists(result);
@@ -108,6 +110,7 @@ Deno.test("Core class detectWords should return valid result", () => {
  * TDD Refactor Phase: ヒント生成機能のテスト
  */
 Deno.test("Core class generateHints should return array", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   const words: Word[] = [
     { text: "test", line: 1, col: 1 },
@@ -123,6 +126,7 @@ Deno.test("Core class generateHints should return array", () => {
  * TDD Refactor Phase: 状態管理のテスト
  */
 Deno.test("Core class should track enabled state", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
   assertEquals(core.isEnabled(), true);
 
@@ -131,6 +135,7 @@ Deno.test("Core class should track enabled state", () => {
 });
 
 Deno.test("Core class should track hints visibility", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
   assertEquals(core.isHintsVisible(), false);
 
@@ -151,6 +156,7 @@ Deno.test("Core class should track hints visibility", () => {
 });
 
 Deno.test("Core class should not show hints when disabled", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: false });
   const mockHints: HintMapping[] = [{
     word: { text: "test", line: 1, col: 1 },
@@ -170,6 +176,7 @@ Deno.test("Core class should not show hints when disabled", () => {
  */
 
 Deno.test("Core class should have getState method", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   assertExists(core.getState);
   const state = core.getState();
@@ -178,6 +185,7 @@ Deno.test("Core class should have getState method", () => {
 });
 
 Deno.test("Core class should have setState method", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   assertExists(core.setState);
 
@@ -195,6 +203,7 @@ Deno.test("Core class should have setState method", () => {
 });
 
 Deno.test("Core class should have initializeState method", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   assertExists(core.initializeState);
 
@@ -208,6 +217,7 @@ Deno.test("Core class should have initializeState method", () => {
 });
 
 Deno.test("Core class state should include all required properties", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   core.initializeState();
   const state = core.getState();
@@ -226,6 +236,7 @@ Deno.test("Core class state should include all required properties", () => {
 });
 
 Deno.test("Core class setState should update internal state", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
   const mockHints: HintMapping[] = [{
     word: { text: "test", line: 1, col: 1 },
@@ -261,6 +272,7 @@ Deno.test("Core class setState should update internal state", () => {
  * TDD RED Phase: Phase3 - hideHints専用テスト（最初は失敗する）
  */
 Deno.test("Core class hideHints should clear hints and update state properly", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
 
   // まずヒントを表示する
@@ -287,6 +299,7 @@ Deno.test("Core class hideHints should clear hints and update state properly", (
 });
 
 Deno.test("Core class hideHints should work even when no hints are shown", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
 
   // ヒントが表示されていない状態でhideHintsを呼び出し
@@ -301,6 +314,7 @@ Deno.test("Core class hideHints should work even when no hints are shown", () =>
 });
 
 Deno.test("Core class hideHints should work when disabled", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: false });
 
   // 無効状態でもhideHintsは機能することを確認
@@ -319,6 +333,7 @@ Deno.test("Core class hideHints should work when disabled", () => {
 });
 
 Deno.test("Core class setState should maintain consistency between hintsVisible and currentHints", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
 
   // 整合性のないケース: hintsVisible=true but currentHints=[]
@@ -336,6 +351,7 @@ Deno.test("Core class setState should maintain consistency between hintsVisible 
 });
 
 Deno.test("Core class initializeState should reset to clean state", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ enabled: true });
 
   // まず何らかの状態にする
@@ -368,6 +384,7 @@ Deno.test("Core class initializeState should reset to clean state", () => {
  * 単語検出機能の移行テスト
  */
 Deno.test("Core class should have detectWordsOptimized method", () => {
+  Core.resetForTesting();
   const core = Core.getInstance();
   assertExists(core.detectWordsOptimized);
 });
@@ -929,6 +946,7 @@ Deno.test("Core class showHints should handle errors gracefully", async () => {
 
 // Phase 8: Utility Functions Tests (TDD RED phase)
 Deno.test("Core class recordPerformance should track operation metrics", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ performance_log: true });
 
   // Record performance for various operations
@@ -954,6 +972,7 @@ Deno.test("Core class recordPerformance should track operation metrics", () => {
 });
 
 Deno.test("Core class recordPerformance should not record when performanceLog is disabled", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ performance_log: false });
 
   // Try to record performance
@@ -969,6 +988,7 @@ Deno.test("Core class recordPerformance should not record when performanceLog is
 });
 
 Deno.test("Core class recordPerformance should limit metrics to 50 entries", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ performance_log: true });
 
   // Record more than 50 entries
@@ -990,6 +1010,7 @@ Deno.test("Core class recordPerformance should limit metrics to 50 entries", () 
 });
 
 Deno.test("Core class collectDebugInfo should return complete debug information", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({
     enabled: true,
     performance_log: true,
@@ -1023,6 +1044,7 @@ Deno.test("Core class collectDebugInfo should return complete debug information"
 });
 
 Deno.test("Core class clearDebugInfo should reset all performance metrics", () => {
+  Core.resetForTesting();
   const core = Core.getInstance({ performance_log: true });
 
   // Record some metrics

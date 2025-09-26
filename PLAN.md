@@ -491,14 +491,14 @@ export interface UnifiedConfig {
   - [x] main.tsから呼び出しを変更
   - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
   - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
-- [ ] **Phase10: 最終統合とクリーンアップ**
-  - [ ] Coreクラスのシングルトンインスタンス作成
-  - [ ] dispatcherをCoreクラスのメソッド呼び出しに変更
-  - [ ] 不要になったローカル関数を削除
-  - [ ] importの整理
-  - [ ] `deno check denops/hellshake-yano/main.ts`で型チェック
-  - [ ] `deno test tests/*.ts`で全テストパス（75ファイル）
-  - [ ] 後方互換性の確認（エクスポート関数の再エクスポート）
+- [x] **Phase10: 最終統合とクリーンアップ**
+  - [x] Coreクラスのシングルトンインスタンス作成
+  - [x] dispatcherをCoreクラスのメソッド呼び出しに変更
+  - [x] 不要になったローカル関数を削除
+  - [x] importの整理
+  - [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+  - [x] `deno test tests/*.ts`で全テストパス（75ファイル）
+  - [x] 後方互換性の確認（エクスポート関数の再エクスポート）
   - [ ] APIの互換性テスト作成
   - [ ] ドキュメントの更新
 
