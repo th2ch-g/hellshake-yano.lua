@@ -1096,3 +1096,107 @@ Deno.test("Core class waitForUserInput should handle timeout", async () => {
   // Cleanup
   core.cleanup();
 });
+
+/**
+ * Dictionary System Tests - TDD Red Phase
+ * これらのテストは最初は失敗する（辞書システムメソッドがCore class に未実装のため）
+ */
+
+Deno.test("Core class should have dictionary system methods", () => {
+  const core = new Core();
+
+  // Dictionary system methods should exist
+  assertExists(core.initializeDictionarySystem);
+  assertExists(core.reloadDictionary);
+  assertExists(core.editDictionary);
+  assertExists(core.showDictionary);
+  assertExists(core.validateDictionary);
+});
+
+Deno.test("Core initializeDictionarySystem should initialize dictionary loader", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Should be able to initialize dictionary system
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Dictionary system should be initialized
+  const hasDictionarySystem = (core as any).hasDictionarySystem();
+  assertEquals(hasDictionarySystem, true);
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core reloadDictionary should reload user dictionary", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should be able to reload dictionary
+  await core.reloadDictionary(mockDenops as any);
+
+  // Should show success message
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some(cmd => cmd.includes('Dictionary reloaded successfully')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core editDictionary should open dictionary file for editing", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should be able to edit dictionary
+  await core.editDictionary(mockDenops as any);
+
+  // Should execute edit command
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some(cmd => cmd.includes('edit')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core showDictionary should display dictionary contents", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should be able to show dictionary
+  await core.showDictionary(mockDenops as any);
+
+  // Should create buffer and set content
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some(cmd => cmd.includes('new')));
+  assert(commands.some(cmd => cmd.includes('file [HellshakeYano Dictionary]')));
+
+  // Cleanup
+  core.cleanup();
+});
+
+Deno.test("Core validateDictionary should validate dictionary format", async () => {
+  const core = new Core();
+  const mockDenops = new MockDenops();
+
+  // Initialize dictionary system first
+  await core.initializeDictionarySystem(mockDenops as any);
+
+  // Should be able to validate dictionary
+  await core.validateDictionary(mockDenops as any);
+
+  // Should show validation result
+  const commands = mockDenops.getExecutedCommands();
+  assert(commands.some(cmd => cmd.includes('Dictionary format is valid') || cmd.includes('Dictionary validation failed')));
+
+  // Cleanup
+  core.cleanup();
+});

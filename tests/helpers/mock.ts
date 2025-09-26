@@ -163,6 +163,7 @@ export class MockDenops implements Partial<Denops> {
   private callResponses: Map<string, any> = new Map();
   private cmdHandlers: Array<(cmd: string) => void> = [];
   private callHandlers: Map<string, ((...args: any[]) => any)> = new Map();
+  private executedCommands: string[] = [];
 
   meta = {
     host: "nvim" as const,
@@ -224,10 +225,21 @@ export class MockDenops implements Partial<Denops> {
   }
 
   async cmd(command: string, _context?: unknown): Promise<void> {
+    // コマンドを記録
+    this.executedCommands.push(command);
+
     // コマンドハンドラーを実行
     for (const handler of this.cmdHandlers) {
       handler(command);
     }
+  }
+
+  getExecutedCommands(): string[] {
+    return [...this.executedCommands];
+  }
+
+  clearExecutedCommands(): void {
+    this.executedCommands = [];
   }
 
   async eval(expr: string, _context?: unknown): Promise<unknown> {

@@ -3243,56 +3243,44 @@ export function validateHighlightConfig(
   return { valid: errors.length === 0, errors };
 }
 
-// Dictionary system variables
+// Dictionary system variables (deprecated - migrated to Core class)
 let dictionaryLoader: DictionaryLoader | null = null;
 let vimConfigBridge: VimConfigBridge | null = null;
 
 /**
- * Initialize dictionary system
+ * Get or create Core instance for dictionary system operations
+ * Helper function to ensure Core instance is available
  */
-async function initializeDictionarySystem(denops: Denops): Promise<void> {
-  try {
-    dictionaryLoader = new DictionaryLoader();
-    vimConfigBridge = new VimConfigBridge();
-
-    // Register dictionary commands
-    await registerDictionaryCommands(denops);
-
-    // Load initial dictionary
-    const dictConfig = await vimConfigBridge.getConfig(denops);
-    await dictionaryLoader.loadUserDictionary(dictConfig);
-
-    if (config.debugMode) {
-      console.log("[hellshake-yano] Dictionary system initialized");
+async function getCoreForDictionary(denops: Denops): Promise<Core> {
+  if (!coreInstance) {
+    coreInstance = new Core(config);
+    await coreInstance.initializeDictionarySystem(denops);
+  } else {
+    // Ensure dictionary system is initialized
+    if (!coreInstance.hasDictionarySystem()) {
+      await coreInstance.initializeDictionarySystem(denops);
     }
-  } catch (error) {
-    console.error("[hellshake-yano] Failed to initialize dictionary system:", error);
   }
+  return coreInstance;
 }
 
 /**
- * Register dictionary-related Vim commands
+ * Initialize dictionary system (deprecated - migrated to Core class)
+ * @deprecated Use Core.initializeDictionarySystem() instead
+ */
+async function initializeDictionarySystem(denops: Denops): Promise<void> {
+  console.warn("[hellshake-yano] initializeDictionarySystem is deprecated. Using Core class instead.");
+  const core = await getCoreForDictionary(denops);
+  // Initialization handled by getCoreForDictionary
+}
+
+/**
+ * Register dictionary-related Vim commands (deprecated - migrated to Core class)
+ * @deprecated Commands are now registered by Core.initializeDictionarySystem()
  */
 async function registerDictionaryCommands(denops: Denops): Promise<void> {
-  // Reload dictionary command
-  await denops.cmd(
-    `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`,
-  );
-
-  // Edit dictionary command
-  await denops.cmd(
-    `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`,
-  );
-
-  // Show dictionary command
-  await denops.cmd(
-    `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`,
-  );
-
-  // Validate dictionary command
-  await denops.cmd(
-    `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`,
-  );
+  console.warn("[hellshake-yano] registerDictionaryCommands is deprecated. Commands are registered by Core class.");
+  // Commands are now registered in Core.initializeDictionarySystem()
 }
 
 /**
@@ -3309,21 +3297,8 @@ async function registerDictionaryCommands(denops: Denops): Promise<void> {
  */
 export async function reloadDictionary(denops: Denops): Promise<void> {
   try {
-    if (!dictionaryLoader || !vimConfigBridge) {
-      await initializeDictionarySystem(denops);
-      return;
-    }
-
-    const dictConfig = await vimConfigBridge.getConfig(denops);
-    const dictionary = await dictionaryLoader.loadUserDictionary(dictConfig);
-
-    // Update word detection manager with new dictionary
-    const manager = getWordDetectionManager({
-      enable_tinysegmenter: config.useJapanese !== false,
-      // Note: dictionary is handled internally by the manager
-    });
-
-    await denops.cmd('echo "Dictionary reloaded successfully"');
+    const core = await getCoreForDictionary(denops);
+    await core.reloadDictionary(denops);
   } catch (error) {
     await denops.cmd(`echoerr "Failed to reload dictionary: ${error}"`);
   }
@@ -3343,40 +3318,8 @@ export async function reloadDictionary(denops: Denops): Promise<void> {
  */
 export async function editDictionary(denops: Denops): Promise<void> {
   try {
-    if (!dictionaryLoader || !vimConfigBridge) {
-      await initializeDictionarySystem(denops);
-    }
-
-    const dictConfig = await vimConfigBridge!.getConfig(denops);
-    const dictionaryPath = dictConfig.dictionaryPath || ".hellshake-yano/dictionary.json";
-
-    if (dictionaryPath) {
-      await denops.cmd(`edit ${dictionaryPath}`);
-    } else {
-      // Create new dictionary file if not exists
-      const newPath = ".hellshake-yano/dictionary.json";
-      await denops.cmd(`edit ${newPath}`);
-
-      // Insert template
-      const template = {
-        customWords: ["例: 機械学習"],
-        preserveWords: ["例: HelloWorld"],
-        mergeRules: {
-          "の": "always",
-          "を": "always",
-        },
-        hintPatterns: [
-          {
-            pattern: "^-\\s*\\[\\s*\\]\\s*(.)",
-            hintPosition: "capture:1",
-            priority: 100,
-            description: "Checkbox first character",
-          },
-        ],
-      };
-
-      await denops.call("setline", 1, JSON.stringify(template, null, 2).split("\n"));
-    }
+    const core = await getCoreForDictionary(denops);
+    await core.editDictionary(denops);
   } catch (error) {
     await denops.cmd(`echoerr "Failed to edit dictionary: ${error}"`);
   }
@@ -3396,26 +3339,8 @@ export async function editDictionary(denops: Denops): Promise<void> {
  */
 export async function showDictionary(denops: Denops): Promise<void> {
   try {
-    if (!dictionaryLoader || !vimConfigBridge) {
-      await initializeDictionarySystem(denops);
-    }
-
-    const dictConfig = await vimConfigBridge!.getConfig(denops);
-    const dictionary = await dictionaryLoader!.loadUserDictionary(dictConfig);
-
-    // Create a new buffer to show dictionary content
-    await denops.cmd("new");
-    await denops.cmd("setlocal buftype=nofile");
-    await denops.cmd("setlocal bufhidden=wipe");
-    await denops.cmd("setlocal noswapfile");
-    await denops.cmd("file [HellshakeYano Dictionary]");
-
-    const content = JSON.stringify(dictionary, null, 2);
-    await denops.call("setline", 1, content.split("\n"));
-
-    // Set to readonly
-    await denops.cmd("setlocal readonly");
-    await denops.cmd("setlocal nomodifiable");
+    const core = await getCoreForDictionary(denops);
+    await core.showDictionary(denops);
   } catch (error) {
     await denops.cmd(`echoerr "Failed to show dictionary: ${error}"`);
   }
@@ -3435,27 +3360,8 @@ export async function showDictionary(denops: Denops): Promise<void> {
  */
 export async function validateDictionary(denops: Denops): Promise<void> {
   try {
-    if (!dictionaryLoader || !vimConfigBridge) {
-      await initializeDictionarySystem(denops);
-    }
-
-    const dictConfig = await vimConfigBridge!.getConfig(denops);
-    // Simple validation - check if file exists
-    const result = { valid: true, errors: [] as string[] };
-    if (dictConfig.dictionaryPath) {
-      try {
-        await Deno.stat(dictConfig.dictionaryPath);
-      } catch {
-        result.valid = false;
-        result.errors.push("Dictionary file not found");
-      }
-    }
-
-    if (result.valid) {
-      await denops.cmd('echo "Dictionary format is valid"');
-    } else {
-      await denops.cmd(`echoerr "Dictionary validation failed: ${result.errors.join(", ")}"`);
-    }
+    const core = await getCoreForDictionary(denops);
+    await core.validateDictionary(denops);
   } catch (error) {
     await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
   }

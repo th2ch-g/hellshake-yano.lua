@@ -484,13 +484,13 @@ export interface UnifiedConfig {
   - [x] main.tsから呼び出しを変更
   - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
   - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
-- [ ] **Phase9: 辞書システムの移行**
-  - [ ] core_test.tsに辞書システムのテスト作成（RED）
-  - [ ] initializeDictionarySystemメソッド実装
-  - [ ] 辞書コマンドメソッドの実装
-  - [ ] main.tsから呼び出しを変更
-  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
+- [x] **Phase9: 辞書システムの移行**
+  - [x] core_test.tsに辞書システムのテスト作成（RED）
+  - [x] initializeDictionarySystemメソッド実装
+  - [x] 辞書コマンドメソッドの実装
+  - [x] main.tsから呼び出しを変更
+  - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
 - [ ] **Phase10: 最終統合とクリーンアップ**
   - [ ] Coreクラスのシングルトンインスタンス作成
   - [ ] dispatcherをCoreクラスのメソッド呼び出しに変更
