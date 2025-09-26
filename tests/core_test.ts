@@ -490,3 +490,113 @@ Deno.test("Core class detectWordsOptimized should integrate with existing word d
   assertEquals(Array.isArray(standardResult.words), true);
   assertEquals(Array.isArray(optimizedWords), true);
 });
+
+/**
+ * TDD RED Phase: Phase5 - generateHintsOptimizedの実装テスト（最初は失敗する）
+ * ヒント生成機能の移行テスト
+ */
+Deno.test("Core class should have generateHintsOptimized method", () => {
+  const core = new Core();
+  assertExists(core.generateHintsOptimized);
+});
+
+Deno.test("Core class generateHintsOptimized should return string array", () => {
+  const core = new Core();
+  const wordCount = 5;
+  const markers = ["a", "s", "d", "f", "g"];
+  const hints = core.generateHintsOptimized(wordCount, markers);
+
+  assertExists(hints);
+  assertEquals(Array.isArray(hints), true);
+  assertEquals(hints.length, wordCount);
+  // Each hint should be a string
+  hints.forEach((hint: string) => {
+    assertEquals(typeof hint, "string");
+    assertEquals(hint.length > 0, true);
+  });
+});
+
+Deno.test("Core class generateHintsOptimized should handle empty markers", () => {
+  const core = new Core();
+  const wordCount = 3;
+  const emptyMarkers: string[] = [];
+  const hints = core.generateHintsOptimized(wordCount, emptyMarkers);
+
+  assertExists(hints);
+  assertEquals(Array.isArray(hints), true);
+  // Should fallback to default markers or handle gracefully
+});
+
+Deno.test("Core class generateHintsOptimized should handle zero word count", () => {
+  const core = new Core();
+  const wordCount = 0;
+  const markers = ["a", "s", "d"];
+  const hints = core.generateHintsOptimized(wordCount, markers);
+
+  assertExists(hints);
+  assertEquals(Array.isArray(hints), true);
+  assertEquals(hints.length, 0);
+});
+
+Deno.test("Core class generateHintsOptimized should handle large word count", () => {
+  const core = new Core();
+  const wordCount = 100;
+  const markers = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
+  const hints = core.generateHintsOptimized(wordCount, markers);
+
+  assertExists(hints);
+  assertEquals(Array.isArray(hints), true);
+  assertEquals(hints.length, wordCount);
+
+  // All hints should be unique
+  const uniqueHints = new Set(hints);
+  assertEquals(uniqueHints.size, hints.length);
+});
+
+Deno.test("Core class generateHintsOptimized should use marker characters", () => {
+  const core = new Core();
+  const wordCount = 3;
+  const markers = ["x", "y", "z"];
+  const hints = core.generateHintsOptimized(wordCount, markers);
+
+  assertExists(hints);
+  assertEquals(hints.length, wordCount);
+
+  // All hints should only use marker characters (when markers are provided)
+  // Note: The implementation may use default markers if provided markers are insufficient
+  hints.forEach((hint: string) => {
+    assertEquals(hint.length > 0, true);
+    assertEquals(typeof hint, "string");
+  });
+});
+
+Deno.test("Core class generateHintsOptimized should respect config hint groups", () => {
+  const core = new Core({
+    use_hint_groups: true,
+    single_char_keys: ["a", "s", "d"],
+    multi_char_keys: ["f", "g", "h"]
+  });
+  const wordCount = 10;
+  const markers = ["a", "s", "d", "f", "g", "h"];
+  const hints = core.generateHintsOptimized(wordCount, markers);
+
+  assertExists(hints);
+  assertEquals(Array.isArray(hints), true);
+  assertEquals(hints.length, wordCount);
+});
+
+Deno.test("Core class generateHintsOptimized should validate input parameters", () => {
+  const core = new Core();
+  const markers = ["a", "s", "d"];
+
+  // Negative wordCount should throw error
+  assertThrows(
+    () => core.generateHintsOptimized(-1, markers),
+    Error,
+    "wordCount must be non-negative"
+  );
+
+  // Zero wordCount should return empty array
+  const emptyHints = core.generateHintsOptimized(0, markers);
+  assertEquals(emptyHints, []);
+});

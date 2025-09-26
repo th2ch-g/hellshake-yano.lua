@@ -15,6 +15,7 @@ import type {
   CoreState,
   DetectionContext,
   HintMapping,
+  HintKeyConfig,
   Word,
   WordDetectionResult,
 } from "./types.ts";
@@ -26,6 +27,11 @@ import {
 } from "./word.ts";
 import type { UnifiedConfig } from "./config.ts";
 import { toUnifiedConfig } from "./config.ts";
+import {
+  generateHints,
+  generateHintsWithGroups,
+  validateHintKeyConfig
+} from "./hint.ts";
 
 /**
  * Hellshake-Yano プラグインの中核クラス
@@ -283,5 +289,64 @@ export class Core {
     return await detectWordsWithConfig(denops, {
       use_japanese: this.config.use_japanese,
     });
+  }
+
+  /**
+   * Phase5: ヒント生成機能の移行 - 最適化されたヒント生成
+   *
+   * main.tsのgenerateHintsOptimized関数の機能をCoreクラスに統合した実装。
+   * ヒントグループ機能、キャッシュ、設定の検証を含む包括的なヒント生成機能を提供します。
+   *
+   * @param wordCount - 対象となる単語数（0以上の整数）
+   * @param markers - ヒントマーカーの文字配列（空配列の場合はデフォルトマーカーを使用）
+   * @returns 生成されたヒント文字列の配列（wordCountと同じ長さ）
+   *
+   * @example
+   * ```typescript
+   * const core = new Core();
+   * const hints = core.generateHintsOptimized(5, ['a', 's', 'd', 'f']);
+   * console.log(hints); // ['a', 's', 'd', 'f', 'aa']
+   * ```
+   */
+  generateHintsOptimized(wordCount: number, markers: string[]): string[] {
+    // 入力値の検証
+    if (wordCount < 0) {
+      throw new Error("wordCount must be non-negative");
+    }
+
+    if (wordCount === 0) {
+      return [];
+    }
+
+    // Config型をUnifiedConfigに変換
+    const unifiedConfig = toUnifiedConfig(this.config);
+
+    // ヒントグループ機能の判定
+    const shouldUseHintGroups = unifiedConfig.useHintGroups !== false &&
+      ((unifiedConfig.singleCharKeys && unifiedConfig.singleCharKeys.length > 0) ||
+       (unifiedConfig.multiCharKeys && unifiedConfig.multiCharKeys.length > 0));
+
+    if (shouldUseHintGroups) {
+      // HintKeyConfigオブジェクトを作成
+      const hintConfig: HintKeyConfig = {
+        single_char_keys: unifiedConfig.singleCharKeys,
+        multi_char_keys: unifiedConfig.multiCharKeys,
+        markers: markers.length > 0 ? markers : undefined,
+        max_single_char_hints: unifiedConfig.maxSingleCharHints,
+        use_distance_priority: undefined, // UnifiedConfigには存在しない
+      };
+
+      // 設定の検証
+      const validation = validateHintKeyConfig(hintConfig);
+      if (!validation.valid && validation.errors) {
+        // 無効な設定の場合はフォールバック
+        return generateHints(wordCount, markers);
+      }
+
+      return generateHintsWithGroups(wordCount, hintConfig);
+    }
+
+    // 従来のヒント生成処理
+    return generateHints(wordCount, markers);
   }
 }

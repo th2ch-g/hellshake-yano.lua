@@ -859,11 +859,16 @@ export async function main(denops: Denops): Promise<void> {
           const cursorLine = await denops.call("line", ".") as number;
           const cursorCol = await denops.call("col", ".") as number;
 
-          // キャッシュを使用してヒントを生成（最適化）
+          // Phase5: Coreクラスのヒント生成機能を使用（最適化）
           // bothモードの場合は2倍のヒントを生成
           const isBothMode = modeString === "visual" && config.visualHintPosition === "both";
           const hintsNeeded = isBothMode ? limitedWords.length * 2 : limitedWords.length;
-          const hints = generateHintsOptimized(hintsNeeded, config.markers);
+
+          // Coreインスタンスを使用してヒントを生成
+          if (!coreInstance) {
+            coreInstance = new Core(config);
+          }
+          const hints = coreInstance.generateHintsOptimized(hintsNeeded, config.markers);
           currentHints = assignHintsToWords(
             limitedWords,
             hints,
@@ -1345,11 +1350,17 @@ async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<Word
 
 /**
  * キャッシュを使用した最適化済みヒント生成
+ *
+ * @deprecated Phase5以降: Core.generateHintsOptimized()を使用してください
+ * この関数はCore.generateHintsOptimized()に移行済みです。後方互換性のために残されています。
+ *
  * @param wordCount - 単語の数
  * @param markers - ヒントマーカーの文字配列
  * @returns 生成されたヒント文字列の配列
  */
 function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
+  // Phase5: Coreクラスへの移行 - 廃止予定通知
+  console.warn("[hellshake-yano] generateHintsOptimized関数は廃止予定です。Core.generateHintsOptimized()を使用してください。");
   // Option 2+3: Auto-detect hint groups mode when single_char_keys or multi_char_keys are defined
   // unless explicitly disabled by use_hint_groups=false
   const shouldUseHintGroups = config.useHintGroups !== false &&
@@ -3470,7 +3481,7 @@ export {
   collectDebugInfo,
   detectWordsOptimized,
   displayHintsOptimized,
-  generateHintsOptimized,
+  // generateHintsOptimized, // Phase5: Coreクラスに移行済み、廃止予定
   hideHints,
   syncManagerConfig,
 };
