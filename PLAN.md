@@ -977,18 +977,19 @@ export interface UnifiedConfig {
 - [x] **全652テストがパス - 2025-09-26確認済み**
 - [ ] **移行完了後、word/context.tsを削除**
 
-##### sub1-4 辞書関連ファイル移行
-- [ ] dictionary.ts（432行）をword.tsへ移行
-  - [ ] WordDictionaryImplクラス移行
-  - [ ] createBuiltinDictionary関数移行
-  - [ ] applyDictionaryCorrection関数移行
-  - [ ] `deno check denops/hellshake-yano/word.ts`で型チェック
-- [ ] dictionary-loader.ts（575行）をword.tsへ移行
-  - [ ] DictionaryLoaderクラス移行
-  - [ ] DictionaryMergerクラス移行
-  - [ ] VimConfigBridgeクラス移行
-  - [ ] `deno check denops/hellshake-yano/word.ts`で型チェック
-- [ ] `deno test tests/*dictionary*.ts`で辞書関連テストパス
+##### sub1-4 辞書関連ファイル移行【完了】
+- [x] dictionary.ts（432行）をword.tsへ移行
+  - [x] WordDictionaryImplクラス移行（re-export: 1504-1512行）
+  - [x] createBuiltinDictionary関数移行
+  - [x] applyDictionaryCorrection関数移行
+  - [x] `deno check denops/hellshake-yano/word.ts`で型チェック
+- [x] dictionary-loader.ts（575行）をword.tsへ移行
+  - [x] DictionaryLoaderクラス移行（re-export: 1514-1526行）
+  - [x] DictionaryMergerクラス移行
+  - [x] VimConfigBridgeクラス移行
+  - [x] `deno check denops/hellshake-yano/word.ts`で型チェック
+- [x] `deno test tests/*dictionary*.ts`で辞書関連テストパス（10/10）
+- [x] **全652テストがパス - 2025-09-26確認済み**
 - [ ] **移行完了後、word/dictionary.tsとword/dictionary-loader.tsを削除**
 
 ##### sub1-5 segmenter.ts統合（422行）

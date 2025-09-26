@@ -1499,3 +1499,28 @@ export {
 
 // === Context Re-exports for v2 migration compatibility ===
 export { ContextDetector, type LanguageRule, type SplittingRules } from "./word/context.ts";
+
+// === Dictionary Re-exports for process4 sub1-4 migration ===
+export {
+  WordDictionaryImpl,
+  createBuiltinDictionary,
+  applyDictionaryCorrection,
+  type WordDictionary,
+  type DictionaryConfig,
+  type CompoundMatch,
+  type CacheStats,
+} from "./word/dictionary.ts";
+
+export {
+  DictionaryLoader,
+  DictionaryMerger,
+  VimConfigBridge,
+  DictionaryManager,
+  HintPatternProcessor,
+  registerDictionaryCommands,
+  type UserDictionary,
+  type HintPattern,
+  type HintPositionRule,
+  type MergeStrategy,
+  type DictionaryLoaderConfig,
+} from "./word/dictionary-loader.ts";
