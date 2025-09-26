@@ -1,0 +1,34 @@
+{
+  "words": [
+    {
+      "word": "testword",
+      "meaning": "test",
+      "type": "noun",
+      "added": "2025-09-26T10:22:29.177Z"
+    },
+    {
+      "word": "run",
+      "meaning": "走る",
+      "type": "verb",
+      "added": "2025-09-26T10:22:29.179Z"
+    },
+    {
+      "word": "fast",
+      "meaning": "速い",
+      "type": "adjective",
+      "added": "2025-09-26T10:22:29.180Z"
+    },
+    {
+      "word": "dog",
+      "meaning": "犬",
+      "type": "noun",
+      "added": "2025-09-26T10:22:29.180Z"
+    }
+  ],
+  "patterns": [],
+  "meta": {
+    "version": "1.0.0",
+    "created": "2025-09-26T10:22:29.176Z",
+    "description": "User dictionary for hellshake-yano.vim"
+  }
+}
