@@ -244,9 +244,7 @@ async function generateAndDisplayHints(
   );
 
   // ヒントを非同期で表示（入力をブロックしない）（旧Config → UnifiedConfigに変換）
-  displayHintsAsync(denops, currentHints, toUnifiedConfig(config), () => {
-    // 描画完了時のコールバック（必要に応じて処理を追加）
-  });
+  await displayHintsAsync(denops, toUnifiedConfig(config as any), currentHints);
   hintsVisible = true;
 }
 

@@ -880,11 +880,11 @@ export interface UnifiedConfig {
 - [x] `deno test tests/async_highlight_test.ts`で該当テストがパス（1個パス）
 
 ###### sub2-6-6-5 統合確認とクリーンアップ
-- [ ] `deno check denops/hellshake-yano/`で全体の型チェック
-- [ ] `deno test`で全テストスイート実行
-- [ ] 652個すべてのテストがパスすることを確認
-- [ ] 既存の631個のパステストが引き続きパスすることを確認
-- [ ] 後方互換性の完全な維持を検証
+- [x] `deno check denops/hellshake-yano/`で全体の型チェック
+- [x] `deno test`で全テストスイート実行
+- [x] 652個すべてのテストがパスすることを確認
+- [x] 既存の631個のパステストが引き続きパスすることを確認
+- [x] 後方互換性の完全な維持を検証
 
 **成功基準:**
 - ✅ 652個すべてのテストがパス（631 + 21 = 652）
@@ -892,14 +892,22 @@ export interface UnifiedConfig {
 - ✅ 既存機能の完全な維持
 - ✅ 後方互換性の保証
 
-##### sub2-7 ドキュメント更新
+##### sub2-7 ドキュメント更新【完了】
 @target: docs/, README.md
 @context: リファクタリング完了後のドキュメント整備
 
-- [ ] main.tsの新しい構造をドキュメント化
-- [ ] Coreクラスの公開APIリファレンス作成
-- [ ] 移行ガイドの更新
-- [ ] パフォーマンス改善結果の記載
+- [x] main.tsの新しい構造をドキュメント化（docs/architecture-main.md - 6,179 bytes）
+- [x] Coreクラスの公開APIリファレンス作成（docs/core-api-reference.md - 10,301 bytes）
+- [x] 移行ガイドの更新（docs/v2-migration-guide.md - 9,676 bytes）
+- [x] パフォーマンス改善結果の記載（docs/v2-performance-improvements.md - 10,664 bytes）
+- [x] README.md更新（Architecture v2.0セクション追加 - 132行）
+
+**成果:**
+- 5つの包括的なドキュメント作成
+- 合計36,820 bytesの詳細な技術文書
+- TDDアプローチの完全記録
+- 652テスト全パスの品質保証
+- 100%後方互換性の保証
 
 #### 成果物と期待される改善
 - main.ts: 3,456行 → 約500行（85%削減）
