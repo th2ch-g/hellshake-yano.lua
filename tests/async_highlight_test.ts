@@ -290,7 +290,10 @@ Deno.test("highlightCandidateHintsAsync - 完了コールバックテスト", as
     mockDenops as unknown as Denops,
     "a",
     mockHints,
-    mockConfig
+    mockConfig,
+    () => {
+      callbackExecuted = true;
+    }
   );
 
   // 完了まで待機

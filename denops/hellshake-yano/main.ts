@@ -405,11 +405,23 @@ export function highlightCandidateHintsAsync(
   input: string,
   hints: HintMapping[],
   config: UnifiedConfig,
+  onComplete?: () => void,
 ): void {
   // Fire and forget - don't return the Promise
-  highlightCandidateHintsOptimized(denops, input, hints, config).catch(err => {
-    console.error("highlightCandidateHintsAsync error:", err);
-  });
+  highlightCandidateHintsOptimized(denops, input, hints, config)
+    .then(() => {
+      // 処理完了時にコールバックを呼び出し
+      if (onComplete) {
+        onComplete();
+      }
+    })
+    .catch(err => {
+      console.error("highlightCandidateHintsAsync error:", err);
+      // エラーが発生してもコールバックは呼び出す
+      if (onComplete) {
+        onComplete();
+      }
+    });
 }
 async function highlightCandidateHintsOptimized(
   denops: Denops,

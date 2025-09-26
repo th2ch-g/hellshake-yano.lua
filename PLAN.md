@@ -871,13 +871,13 @@ export interface UnifiedConfig {
 - [x] `deno check denops/hellshake-yano/core.ts`で型チェック
 - [x] `deno test tests/per_key*.ts tests/main_test.ts`で該当テストがパス（47個全てパス）
 
-###### sub2-6-6-4 非同期処理修正
-- [ ] tests/async_highlight_test.ts:282のテスト分析
-- [ ] highlightCandidateHintsAsyncのコールバック処理修正
-  - [ ] try-finallyブロックでコールバック実行を保証
-  - [ ] エラー時もコールバックが呼ばれるように修正
-- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-- [ ] `deno test tests/async_highlight_test.ts`で該当テストがパス
+###### sub2-6-6-4 非同期処理修正【完了】
+- [x] tests/async_highlight_test.ts:282のテスト分析
+- [x] highlightCandidateHintsAsyncのコールバック処理修正
+  - [x] onCompleteパラメータを関数シグネチャに追加
+  - [x] エラー時もコールバックが呼ばれるように修正
+- [x] `deno check denops/hellshake-yano/main.ts`で型チェック
+- [x] `deno test tests/async_highlight_test.ts`で該当テストがパス（1個パス）
 
 ###### sub2-6-6-5 統合確認とクリーンアップ
 - [ ] `deno check denops/hellshake-yano/`で全体の型チェック
