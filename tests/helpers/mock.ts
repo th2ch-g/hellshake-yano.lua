@@ -138,6 +138,16 @@ export class MockTimer {
     }
   }
 
+  /**
+   * すべてのタイマーをクリアする（テスト終了時用）
+   */
+  cleanup(): void {
+    for (const [id, timeout] of this.timers) {
+      clearTimeout(timeout);
+    }
+    this.timers.clear();
+  }
+
   clearAll(): void {
     for (const timeout of this.timers.values()) {
       clearTimeout(timeout);

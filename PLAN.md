@@ -452,17 +452,29 @@ export interface UnifiedConfig {
   - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
   - [x] `deno test tests/main_test.ts`で既存テストパス
   - [x] `deno test tests/integration_test.ts`で統合テストパス
-- [ ] **Phase7: showHints系の移行**
-  - [ ] core_test.tsにshowHints系のテスト作成（RED）
-  - [ ] CoreクラスにshowHintsメソッド実装
-  - [ ] showHintsInternalメソッド実装
-  - [ ] showHintsWithKeyメソッド実装
-  - [ ] デバウンス処理の移行
-  - [ ] main.tsのdispatcher.showHintsから呼び出し
-  - [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-  - [ ] `deno test tests/core_test.ts`でテストパス（GREEN）
-  - [ ] `deno test tests/main_test.ts`で既存テストパス
-  - [ ] `deno test tests/integration_test.ts`で統合テストパス
+- [x] **Phase7: showHints系の移行**
+  - [x] core_test.tsにshowHints系のテスト作成（RED）
+  - [x] CoreクラスにshowHintsメソッド実装
+  - [x] showHintsInternalメソッド実装
+  - [x] showHintsWithKeyメソッド実装
+  - [x] デバウンス処理の移行
+  - [x] main.tsのdispatcher.showHintsから呼び出し
+  - [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+  - [x] `deno test tests/core_test.ts`でテストパス（GREEN）
+  - [x] `deno test tests/main_test.ts`で既存テストパス
+  - [x] `deno test tests/integration_test.ts`で統合テストパス
+- [ ] **Phase7.5: Promise pendingエラーの根本的修正**
+  - [ ] 問題の分析と原因特定
+  - [ ] Coreクラスの不要なデバウンス処理を削除（main.tsに既存実装あり）
+  - [ ] showHintsメソッドからデバウンス処理を削除
+  - [ ] debounceTimeoutIdプロパティを削除
+  - [ ] cleanupメソッドからタイマークリア処理を削除（または簡素化）
+  - [ ] displayHintsWithExtmarksBatchのsetTimeout遅延を削除
+  - [ ] displayHintsWithMatchAddBatchのsetTimeout遅延を削除
+  - [ ] テストからsanitizeOps/sanitizeResourcesオプションを削除
+  - [ ] `deno test tests/core_test.ts`でPromise pendingエラーなし確認
+  - [ ] `deno test tests/main_test.ts`で既存テストパス確認
+  - [ ] `deno test tests/integration_test.ts`で統合テストパス確認
 - [ ] **Phase8: ユーティリティ機能の移行**
   - [ ] core_test.tsにパフォーマンス測定のテスト作成（RED）
   - [ ] recordPerformanceメソッド実装

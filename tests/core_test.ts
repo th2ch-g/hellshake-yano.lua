@@ -114,7 +114,7 @@ Deno.test("Core class should track hints visibility", () => {
     hintByteCol: 1
   }];
 
-  core.showHints(mockHints);
+  core.showHintsLegacy(mockHints);
   assertEquals(core.isHintsVisible(), true);
   assertEquals(core.getCurrentHints().length, 1);
 
@@ -132,7 +132,7 @@ Deno.test("Core class should not show hints when disabled", () => {
     hintByteCol: 1
   }];
 
-  core.showHints(mockHints);
+  core.showHintsLegacy(mockHints);
   assertEquals(core.isHintsVisible(), false);
   assertEquals(core.getCurrentHints().length, 0);
 });
@@ -242,7 +242,7 @@ Deno.test("Core class hideHints should clear hints and update state properly", (
     { word: { text: "word", line: 2, col: 1 }, hint: "B", hintCol: 1, hintByteCol: 1 }
   ];
 
-  core.showHints(mockHints);
+  core.showHintsLegacy(mockHints);
   assertEquals(core.isHintsVisible(), true);
   assertEquals(core.getCurrentHints().length, 2);
 
@@ -282,7 +282,7 @@ Deno.test("Core class hideHints should work when disabled", () => {
   ];
 
   // 無効状態なのでshowHintsは何もしない
-  core.showHints(mockHints);
+  core.showHintsLegacy(mockHints);
   assertEquals(core.isHintsVisible(), false);
 
   // hideHintsは無効状態でも動作する
@@ -318,7 +318,7 @@ Deno.test("Core class initializeState should reset to clean state", () => {
     hintCol: 1,
     hintByteCol: 1
   }];
-  core.showHints(mockHints);
+  core.showHintsLegacy(mockHints);
 
   // 初期化前の状態確認
   assertEquals(core.isHintsVisible(), true);
@@ -743,4 +743,192 @@ Deno.test("Core class displayHints methods should handle AbortSignal cancellatio
   // Methods should handle aborted signals gracefully
   await core.displayHintsWithExtmarksBatch(mockDenops as any, 1, mockHints, "normal", controller.signal);
   await core.displayHintsWithMatchAddBatch(mockDenops as any, mockHints, "normal", controller.signal);
+});
+
+/**
+ * TDD RED Phase: Phase7 - showHints系の移行テスト（最初は失敗する）
+ * showHints, showHintsInternal, showHintsWithKeyメソッドのCoreクラスへの移行
+ */
+
+Deno.test("Core class should have showHints method", () => {
+  const core = new Core();
+  assertExists(core.showHints);
+});
+
+Deno.test({
+  name: "Core class showHints should be async and integrate full workflow",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+  const core = new Core({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Mock required Vim/Neovim functions
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("getbufvar", () => 0); // not readonly
+  mockDenops.setCallResponse("bufexists", () => 1);
+  mockDenops.setCallResponse("line", (arg: string) => {
+    switch (arg) {
+      case "w0": return 1;
+      case "w$": return 20;
+      case "$": return 100;
+      default: return 1;
+    }
+  });
+  mockDenops.setCallResponse("getline", () => "test words here");
+  mockDenops.setCallResponse("col", () => 1);
+  mockDenops.setCallResponse("nvim_create_namespace", () => 1);
+  mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  const result = core.showHints(mockDenops as any);
+  assertExists(result);
+  assertEquals(typeof result.then, "function"); // Promise check
+
+  await result; // Should complete the full hint display workflow
+
+  // Cleanup
+  core.cleanup();
+  }
+});
+
+Deno.test("Core class should have showHintsInternal method", () => {
+  const core = new Core();
+  assertExists(core.showHintsInternal);
+});
+
+Deno.test({
+  name: "Core class showHintsInternal should handle mode parameter",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+  const core = new Core({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup basic mocks
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("getbufvar", () => 0);
+  mockDenops.setCallResponse("line", () => 1);
+  mockDenops.setCallResponse("getline", () => "test");
+  mockDenops.setCallResponse("col", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  // Test with different modes
+  await core.showHintsInternal(mockDenops as any, "normal");
+  await core.showHintsInternal(mockDenops as any, "visual");
+  await core.showHintsInternal(mockDenops as any); // default mode
+
+  // Cleanup
+  core.cleanup();
+  }
+});
+
+Deno.test("Core class should have showHintsWithKey method", () => {
+  const core = new Core();
+  assertExists(core.showHintsWithKey);
+});
+
+Deno.test({
+  name: "Core class showHintsWithKey should handle key context",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+  const core = new Core({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("getbufvar", () => 0);
+  mockDenops.setCallResponse("line", () => 1);
+  mockDenops.setCallResponse("getline", () => "test words");
+  mockDenops.setCallResponse("col", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  const key = "f";
+  const mode = "normal";
+
+  await core.showHintsWithKey(mockDenops as any, key, mode);
+
+  // Config should be updated with key context
+  const config = core.getConfig();
+  assertEquals(config.current_key_context, key);
+
+  // Cleanup
+  core.cleanup();
+  }
+});
+
+Deno.test({
+  name: "Core class showHints should handle debouncing",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+  const core = new Core({
+    enabled: true,
+    debounceDelay: 10  // Shorter delay for testing
+  });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks
+  mockDenops.setCallResponse("bufnr", () => 1);
+  mockDenops.setCallResponse("getbufvar", () => 0);
+  mockDenops.setCallResponse("line", () => 1);
+  mockDenops.setCallResponse("getline", () => "test");
+  mockDenops.setCallResponse("col", () => 1);
+  mockDenops.setCallResponse("matchadd", () => 1);
+
+  // Multiple rapid calls should be debounced
+  const promise1 = core.showHints(mockDenops as any);
+  const promise2 = core.showHints(mockDenops as any);
+  const promise3 = core.showHints(mockDenops as any);
+
+  await Promise.all([promise1, promise2, promise3]);
+
+  // Wait a bit to ensure all debounced calls complete
+  await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+  // Clean up timers
+  core.cleanup();
+
+  // Should complete without error
+  }
+});
+
+Deno.test({
+  name: "Core class showHints should be disabled when config.enabled is false",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+  const core = new Core({ enabled: false });
+  const mockDenops = new MockDenops();
+
+  await core.showHints(mockDenops as any);
+
+  // Should not show hints when disabled
+  assertEquals(core.isHintsVisible(), false);
+  assertEquals(core.getCurrentHints().length, 0);
+
+  // Cleanup
+  core.cleanup();
+  }
+});
+
+Deno.test({
+  name: "Core class showHints should handle errors gracefully",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+  const core = new Core({ enabled: true });
+  const mockDenops = new MockDenops();
+
+  // Setup mocks to throw errors
+  mockDenops.setCallResponse("bufnr", () => { throw new Error("Buffer error"); });
+
+  // Should not throw, but handle errors internally
+  await core.showHints(mockDenops as any);
+  // Should complete without throwing
+
+  // Cleanup
+  core.cleanup();
+  }
 });

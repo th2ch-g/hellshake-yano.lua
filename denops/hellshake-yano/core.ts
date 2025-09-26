@@ -54,6 +54,17 @@ export class Core {
   }
 
   /**
+   * クリーンアップメソッド（テスト用）
+   * タイマーをクリアして、適切にリソースを解放する
+   */
+  cleanup(): void {
+    if (this.debounceTimeoutId) {
+      clearTimeout(this.debounceTimeoutId);
+      this.debounceTimeoutId = undefined;
+    }
+  }
+
+  /**
    * 現在の設定を取得
    *
    * @returns 現在のConfig設定
@@ -121,11 +132,11 @@ export class Core {
   }
 
   /**
-   * ヒント表示を実行
+   * ヒント表示を実行（Legacy用）
    *
    * @param hints 表示するヒントマッピング配列
    */
-  showHints(hints: HintMapping[]): void {
+  showHintsLegacy(hints: HintMapping[]): void {
     if (!this.isEnabled()) {
       return;
     }
@@ -619,6 +630,149 @@ export class Core {
         // バッチエラーの場合は次のバッチに続く
         console.error("[Core] displayHintsWithMatchAddBatch batch error:", batchError);
       }
+    }
+  }
+
+  // Phase7: showHints系の移行 - デバウンス処理とヒント表示統合
+
+  private debounceTimeoutId?: number;
+  private lastShowHintsTime: number = 0;
+
+  /**
+   * Phase7: showHints系の移行 - ヒントを表示（デバウンス機能付き）
+   *
+   * main.tsのshowHints関数の機能をCoreクラスに統合した実装。
+   * デバウンス処理により連続した呼び出しを効率化し、完全なヒント表示ワークフローを提供します。
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void> - 非同期で完了
+   */
+  async showHints(denops: Denops): Promise<void> {
+    if (!this.isEnabled()) {
+      return;
+    }
+
+    // 既存のデバウンスタイマーをクリア
+    if (this.debounceTimeoutId) {
+      clearTimeout(this.debounceTimeoutId);
+      this.debounceTimeoutId = undefined;
+    }
+
+    // Config型をUnifiedConfigに変換してデバウンス遅延を取得
+    const unifiedConfig = toUnifiedConfig(this.config);
+    const debounceDelay = unifiedConfig.debounceDelay || 50;
+
+    // デバウンス処理
+    const now = Date.now();
+    if (now - this.lastShowHintsTime < debounceDelay) {
+      // デバウンス期間内の場合は、タイマーをセットして遅延実行
+      return new Promise<void>((resolve) => {
+        this.debounceTimeoutId = setTimeout(() => {
+          this.debounceTimeoutId = undefined;
+          this.showHintsInternal(denops).then(() => resolve()).catch(() => resolve());
+        }, debounceDelay) as unknown as number;
+      });
+    }
+
+    // デバウンス期間外の場合は即座に実行
+    await this.showHintsInternal(denops);
+  }
+
+  /**
+   * Phase7: showHints系の移行 - 内部的なヒント表示処理（最適化版）
+   *
+   * main.tsのshowHintsInternal関数の機能をCoreクラスに統合した実装。
+   * 単語検出、ヒント生成、ヒント表示の完全なワークフローを提供します。
+   *
+   * @param denops - Denopsインスタンス
+   * @param mode - 表示モード（デフォルト: "normal"）
+   * @returns Promise<void> - 非同期で完了
+   */
+  async showHintsInternal(denops: Denops, mode?: string): Promise<void> {
+    const modeString = mode || "normal";
+    this.lastShowHintsTime = Date.now();
+
+    // デバウンスタイムアウトをクリア
+    if (this.debounceTimeoutId) {
+      clearTimeout(this.debounceTimeoutId);
+      this.debounceTimeoutId = undefined;
+    }
+
+    try {
+      if (!this.isEnabled()) {
+        return;
+      }
+
+      // バッファ番号を取得
+      const bufnr = await denops.call("bufnr", "%") as number;
+      if (bufnr === -1) {
+        return;
+      }
+
+      // 既存のヒントを非表示
+      this.hideHints();
+
+      // 単語検出を実行
+      const words = await this.detectWordsOptimized(denops, bufnr);
+
+      if (words.length === 0) {
+        return;
+      }
+
+      // ヒント生成
+      const unifiedConfig = toUnifiedConfig(this.config);
+      const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
+      const hints = this.generateHintsOptimized(words.length, markers);
+
+      if (hints.length === 0) {
+        return;
+      }
+
+      // HintMappingを作成
+      const hintMappings: HintMapping[] = words.map((word, index) => ({
+        word,
+        hint: hints[index] || "",
+        hintCol: word.col,
+        hintByteCol: word.byteCol || word.col,
+      }));
+
+      // ヒント表示
+      await this.displayHintsOptimized(denops, hintMappings, modeString);
+
+      // 状態を更新
+      this.currentHints = hintMappings;
+      this.isActive = true;
+
+    } catch (error) {
+      console.error("[Core] showHintsInternal error:", error);
+      // エラー時は状態をクリア
+      this.hideHints();
+    }
+  }
+
+  /**
+   * Phase7: showHints系の移行 - キー指定でのヒント表示
+   *
+   * main.tsのshowHintsWithKey関数の機能をCoreクラスに統合した実装。
+   * 特定のキーコンテキストでのヒント表示機能を提供します。
+   *
+   * @param denops - Denopsインスタンス
+   * @param key - キー文字列
+   * @param mode - 表示モード（デフォルト: "normal"）
+   * @returns Promise<void> - 非同期で完了
+   */
+  async showHintsWithKey(denops: Denops, key: string, mode?: string): Promise<void> {
+    try {
+      // グローバル設定のcurrent_key_contextを更新
+      this.config.current_key_context = key;
+
+      const modeString = mode || "normal";
+      // 既存のshowHintsInternal処理を呼び出し（モード情報付き）
+      await this.showHintsInternal(denops, modeString);
+    } catch (error) {
+      console.error("[Core] showHintsWithKey error:", error);
+      // フォールバック: 通常のshowHintsを呼び出し
+      await this.showHints(denops);
     }
   }
 }

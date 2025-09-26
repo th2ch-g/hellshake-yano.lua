@@ -46,6 +46,8 @@ import { DictionaryLoader } from "./word/dictionary-loader.ts";
 import { VimConfigBridge } from "./word/dictionary-loader.ts";
 // Core class import for Phase3 migration
 import { Core } from "./core.ts";
+
+// Phase7: 既存のcoreInstanceを使用
 // Import types from the central types module for consistency
 import type {
   Config,
@@ -730,27 +732,19 @@ export async function main(denops: Denops): Promise<void> {
 
     /**
      * ヒントを表示（デバウンス機能付き）
+     * Phase7: CoreクラスのshowHintsメソッドに委譲
      */
     async showHints(): Promise<void> {
-      // 既存のデバウンスタイマーをクリア
-      if (debounceTimeoutId) {
-        clearTimeout(debounceTimeoutId);
-        debounceTimeoutId = undefined;
+      // Coreインスタンスが存在しない場合は作成
+      if (!coreInstance) {
+        coreInstance = new Core(config);
       }
 
-      // デバウンス処理
-      const now = Date.now();
-      if (now - lastShowHintsTime < config.debounceDelay) {
-        // デバウンス期間内の場合は、タイマーをセットして遅延実行
-        debounceTimeoutId = setTimeout(async () => {
-          debounceTimeoutId = undefined;
-          await this.showHintsInternal();
-        }, config.debounceDelay) as unknown as number;
-        return;
-      }
+      // 現在の設定をCoreクラスに反映
+      coreInstance.updateConfig(config);
 
-      // デバウンス期間外の場合は即座に実行
-      await this.showHintsInternal();
+      // CoreクラスのshowHintsメソッドを呼び出し
+      await coreInstance.showHints(denops);
     },
 
     /**
@@ -929,23 +923,24 @@ export async function main(denops: Denops): Promise<void> {
 
     /**
      * キー情報付きヒント表示
+     * Phase7: CoreクラスのshowHintsWithKeyメソッドに委譲
      * @param key - 押下されたキー文字
      * @param mode - 現在のVimモード
      */
     async showHintsWithKey(key: unknown, mode?: unknown): Promise<void> {
-      try {
-        const keyString = String(key);
-
-        // グローバル設定のcurrent_key_contextを更新
-        config.currentKeyContext = keyString;
-
-        const modeString = mode ? String(mode) : "normal";
-        // 既存のshowHintsInternal処理を呼び出し（モード情報付き）
-        await this.showHintsInternal(modeString);
-      } catch (error) {
-        // フォールバック: 通常のshowHintsを呼び出し
-        await this.showHints();
+      // Coreインスタンスが存在しない場合は作成
+      if (!coreInstance) {
+        coreInstance = new Core(config);
       }
+
+      // 現在の設定をCoreクラスに反映
+      coreInstance.updateConfig(config);
+
+      const keyString = String(key);
+      const modeString = mode ? String(mode) : "normal";
+
+      // CoreクラスのshowHintsWithKeyメソッドを呼び出し
+      await coreInstance.showHintsWithKey(denops, keyString, modeString);
     },
 
     /**
