@@ -42,9 +42,12 @@ import { VimConfigBridge } from "./word/dictionary-loader.ts";
  * Hellshake-Yano プラグインの中核クラス
  *
  * すべての主要機能を統合管理し、外部から使いやすいAPIを提供する
+ * Phase 10.1: シングルトンパターンを実装
  * TDD Green Phase: テストをパスする最小限の実装
  */
 export class Core {
+  private static instance: Core | null = null;
+
   private config: Config;
   private isActive: boolean = false;
   private currentHints: HintMapping[] = [];
@@ -60,12 +63,35 @@ export class Core {
   private vimConfigBridge: VimConfigBridge | null = null;
 
   /**
-   * Coreクラスのコンストラクタ
+   * Coreクラスのプライベートコンストラクタ（シングルトン用）
    *
    * @param config 初期設定（省略時はデフォルト設定を使用）
    */
-  constructor(config?: Partial<Config>) {
+  private constructor(config?: Partial<Config>) {
     this.config = { ...createMinimalConfig(), ...config };
+  }
+
+  /**
+   * シングルトンインスタンスを取得
+   * Phase 10.1: TDD Green実装
+   *
+   * @param config 初期設定（初回のみ有効）
+   * @returns Coreクラスのシングルトンインスタンス
+   */
+  public static getInstance(config?: Partial<Config>): Core {
+    if (!Core.instance) {
+      Core.instance = new Core(config);
+    }
+    return Core.instance;
+  }
+
+  /**
+   * テスト用リセットメソッド
+   * テスト間でのインスタンス分離を実現
+   * Phase 10.1: TDD Green実装
+   */
+  public static resetForTesting(): void {
+    Core.instance = null;
   }
 
   /**
