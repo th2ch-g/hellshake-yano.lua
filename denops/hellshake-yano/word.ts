@@ -46,7 +46,7 @@ import { CacheType, UnifiedCache } from "./cache.ts";
 
 // Additional imports for detector functionality
 import { type SegmentationResult, TinySegmenter } from "./segmenter.ts";
-import { ContextDetector, type SplittingRules } from "./word/context.ts";
+// ContextDetector now re-exported at bottom for v2 migration
 import type { UnifiedConfig } from "./config.ts";
 import { type Config, getMinLengthForKey } from "./main.ts";
 
@@ -1496,3 +1496,6 @@ export {
   getWordDetectionManager,
   resetWordDetectionManager,
 } from "./word/manager.ts";
+
+// === Context Re-exports for v2 migration compatibility ===
+export { ContextDetector, type LanguageRule, type SplittingRules } from "./word/context.ts";
