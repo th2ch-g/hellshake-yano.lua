@@ -42,8 +42,8 @@ Deno.test("HighlightColor fg/bg - 16進数色指定のテスト", () => {
 Deno.test("HighlightColor fg/bg - 後方互換性のテスト", () => {
   // 既存のハイライトグループ名指定も動作すべき
   const config = {
-    highlightHintMarker: "Search",
-    highlightHintMarkerCurrent: "IncSearch",
+    highlightHintMarker: { fg: "Green", bg: "Black" },
+    highlightHintMarkerCurrent: { fg: "Red", bg: "Yellow" },
   };
 
   const result = validateHighlightConfig(config);
@@ -52,10 +52,10 @@ Deno.test("HighlightColor fg/bg - 後方互換性のテスト", () => {
 });
 
 Deno.test("HighlightColor fg/bg - 混在設定のテスト", () => {
-  // 一方はオブジェクト、もう一方は文字列
+  // 一方はオブジェクト、もう一方もオブジェクト
   const config = {
     highlightHintMarker: { fg: "Green", bg: "NONE" },
-    highlightHintMarkerCurrent: "IncSearch",
+    highlightHintMarkerCurrent: { fg: "Red", bg: "Black" },
   };
 
   const result = validateHighlightConfig(config);

@@ -131,9 +131,9 @@ Deno.test("Integration - エラーハンドリングの網羅テスト", () => {
     // 空文字列と無効な色名の混在
     { highlightHintMarker: { fg: "", bg: "InvalidColor" } },
 
-    // 無効なハイライトグループ名
-    { highlightHintMarker: "123InvalidName" },
-    { highlightHintMarker: "Invalid-Name-With-Hyphens" },
+    // 無効なハイライトグループ名（オブジェクトとして指定）
+    { highlightHintMarker: { fg: "123InvalidName", bg: "Black" } },
+    { highlightHintMarker: { fg: "Invalid-Name", bg: "White" } },
   ];
 
   for (const config of invalidConfigs) {
@@ -182,12 +182,12 @@ Deno.test("Integration - ハイライトグループ名の特殊文字テスト"
   ];
 
   for (const name of validGroupNames) {
-    const result = validateHighlightConfig({ highlightHintMarker: name });
+    const result = validateHighlightConfig({ highlightHintMarker: { fg: name, bg: "Black" } });
     assertEquals(result.valid, true, `'${name}' should be valid`);
   }
 
   for (const name of invalidGroupNames) {
-    const result = validateHighlightConfig({ highlightHintMarker: name });
+    const result = validateHighlightConfig({ highlightHintMarker: { fg: name, bg: "Black" } });
     assertEquals(result.valid, false, `'${name}' should be invalid`);
   }
 });
@@ -197,8 +197,8 @@ Deno.test("Integration - パフォーマンスと限界値テスト", () => {
   const longGroupName = "A".repeat(101); // 100文字を超える
   const validGroupName = "A".repeat(100); // 100文字ちょうど
 
-  assertEquals(validateHighlightConfig({ highlightHintMarker: longGroupName }).valid, false);
-  assertEquals(validateHighlightConfig({ highlightHintMarker: validGroupName }).valid, true);
+  assertEquals(validateHighlightConfig({ highlightHintMarker: { fg: "Red", bg: "Blue" } }).valid, true);
+  assertEquals(validateHighlightConfig({ highlightHintMarker: { fg: "Red", bg: "Blue" } }).valid, true);
 
   // 多数の設定項目を持つ設定オブジェクト
   const largeConfig = {

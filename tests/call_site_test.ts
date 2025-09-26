@@ -6,9 +6,35 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { delay } from "https://deno.land/std@0.201.0/async/delay.ts";
 import { spy, assertSpyCalls } from "https://deno.land/std@0.201.0/testing/mock.ts";
+import type { HintMapping, Word } from "../denops/hellshake-yano/types.ts";
+import { getDefaultUnifiedConfig, type UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 
 // Import the main module to check the actual implementation
 import * as mainModule from "../denops/hellshake-yano/main.ts";
+
+// Create mock hints and config for testing
+const createMockHints = (): HintMapping[] => [
+  {
+    hint: "a",
+    word: { line: 1, col: 1, text: "test" } as Word,
+    hintCol: 1,
+    hintByteCol: 1,
+  },
+  {
+    hint: "ab",
+    word: { line: 2, col: 1, text: "hello" } as Word,
+    hintCol: 1,
+    hintByteCol: 1,
+  },
+  {
+    hint: "b",
+    word: { line: 3, col: 1, text: "world" } as Word,
+    hintCol: 1,
+    hintByteCol: 1,
+  },
+];
+
+const createMockConfig = (): UnifiedConfig => getDefaultUnifiedConfig();
 
 // Mock setup for testing
 let highlightAsyncSpy: any;
@@ -44,7 +70,9 @@ Deno.test("process2: 非同期版がawaitなしで呼ばれる", async () => {
   const startTime = Date.now();
 
   // 関数を呼び出し
-  const result = mainModule.highlightCandidateHintsAsync(mockDenops, "test");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  const result = mainModule.highlightCandidateHintsAsync(mockDenops, "test", mockHints, mockConfig);
 
   const endTime = Date.now();
   const duration = endTime - startTime;
@@ -88,9 +116,13 @@ Deno.test("process2: 入力処理フローで非同期版が使用される", as
   };
 
   // 非同期版を直接呼び出してシミュレート
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
   mainModule.highlightCandidateHintsAsync(
     mockContext.denops as any,
-    mockContext.inputChar
+    mockContext.inputChar,
+    mockHints,
+    mockConfig
   );
 
   // 非同期処理の開始を確認
@@ -118,11 +150,13 @@ Deno.test("process2: 複数の連続呼び出しで前の処理がキャンセ�
   } as any;
 
   // 連続して呼び出し
-  mainModule.highlightCandidateHintsAsync(mockDenops, "a");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  mainModule.highlightCandidateHintsAsync(mockDenops, "a", mockHints, mockConfig);
   await delay(1);
-  mainModule.highlightCandidateHintsAsync(mockDenops, "ab");
+  mainModule.highlightCandidateHintsAsync(mockDenops, "ab", mockHints, mockConfig);
   await delay(1);
-  mainModule.highlightCandidateHintsAsync(mockDenops, "abc");
+  mainModule.highlightCandidateHintsAsync(mockDenops, "abc", mockHints, mockConfig);
 
   // 最後の呼び出しのみが処理されることを期待
   await delay(50);
@@ -154,7 +188,9 @@ Deno.test("process2: エラーが発生してもメインスレッドに影響�
   const startTime = Date.now();
 
   // この呼び出しは内部でエラーをキャッチする
-  mainModule.highlightCandidateHintsAsync(mockDenops, "error");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  mainModule.highlightCandidateHintsAsync(mockDenops, "error", mockHints, mockConfig);
 
   const endTime = Date.now();
   const duration = endTime - startTime;
@@ -185,7 +221,9 @@ Deno.test("process2: Vim/Neovim両方で動作する", async () => {
     eval: spy(async () => {}),
   } as any;
 
-  mainModule.highlightCandidateHintsAsync(nvimDenops, "test");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  mainModule.highlightCandidateHintsAsync(nvimDenops, "test", mockHints, mockConfig);
 
   // Vimモード
   const vimDenops = {
@@ -195,7 +233,7 @@ Deno.test("process2: Vim/Neovim両方で動作する", async () => {
     eval: spy(async () => {}),
   } as any;
 
-  mainModule.highlightCandidateHintsAsync(vimDenops, "test");
+  mainModule.highlightCandidateHintsAsync(vimDenops, "test", mockHints, mockConfig);
 
   await delay(50);
 

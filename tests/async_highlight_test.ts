@@ -6,6 +6,8 @@
 import { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
 import { assertEquals, assertExists } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { delay } from "https://deno.land/std@0.201.0/async/delay.ts";
+import type { HintMapping, Word } from "../denops/hellshake-yano/types.ts";
+import { getDefaultUnifiedConfig, type UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 
 // Mock Denops interface for testing
 class MockDenops implements Partial<Denops> {
@@ -72,6 +74,30 @@ declare global {
 
 // highlightCandidateHintsAsync関数をインポート
 import { highlightCandidateHintsAsync } from "../denops/hellshake-yano/main.ts";
+
+// Create mock hints and config for testing
+const createMockHints = (): HintMapping[] => [
+  {
+    hint: "a",
+    word: { line: 1, col: 1, text: "test" } as Word,
+    hintCol: 1,
+    hintByteCol: 1,
+  },
+  {
+    hint: "ab",
+    word: { line: 2, col: 1, text: "hello" } as Word,
+    hintCol: 1,
+    hintByteCol: 1,
+  },
+  {
+    hint: "b",
+    word: { line: 3, col: 1, text: "world" } as Word,
+    hintCol: 1,
+    hintByteCol: 1,
+  },
+];
+
+const createMockConfig = (): UnifiedConfig => getDefaultUnifiedConfig();
 
 // テスト用のモック関数
 function setupTestEnvironment() {
@@ -156,7 +182,9 @@ Deno.test("highlightCandidateHintsAsync - 基本的な非同期動作", async ()
   console.log("Before call - extmarkNamespace:", globalThis.extmarkNamespace);
 
   // 関数を呼び出し（Promiseを返さない）
-  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", mockHints, mockConfig);
 
   // 即座にここに到達する（ブロックしない）
   const endTime = Date.now();
@@ -179,11 +207,14 @@ Deno.test("highlightCandidateHintsAsync - 基本的な非同期動作", async ()
 Deno.test("highlightCandidateHintsAsync - AbortController中断テスト", async () => {
   setupTestEnvironment();
 
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+
   // 最初のレンダリングを開始
-  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a");
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", mockHints, mockConfig);
 
   // すぐに別のレンダリングを開始（前のものを中断）
-  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "b");
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "b", mockHints, mockConfig);
 
   await delay(50);
 
@@ -222,7 +253,9 @@ Deno.test("highlightCandidateHintsAsync - バッチ処理テスト", async () =>
   console.log("Before call - currentHints length:", globalThis.currentHints?.length);
   console.log("Before call - extmarkNamespace:", globalThis.extmarkNamespace);
 
-  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a");
+  const mockHints = largeHints as HintMapping[];
+  const mockConfig = createMockConfig();
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", mockHints, mockConfig);
 
   // バッチ処理でも即座に返る
   const endTime = Date.now();
@@ -251,10 +284,13 @@ Deno.test("highlightCandidateHintsAsync - 完了コールバックテスト", as
 
   let callbackExecuted = false;
 
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
   highlightCandidateHintsAsync(
     mockDenops as unknown as Denops,
     "a",
-    () => { callbackExecuted = true; }
+    mockHints,
+    mockConfig
   );
 
   // 完了まで待機
@@ -269,7 +305,9 @@ Deno.test("highlightCandidateHintsAsync - Vim互換性テスト", async () => {
   // Vimモードでのテスト
   const vimMockDenops = new MockDenops("vim");
 
-  highlightCandidateHintsAsync(vimMockDenops as unknown as Denops, "a");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  highlightCandidateHintsAsync(vimMockDenops as unknown as Denops, "a", mockHints, mockConfig);
 
   await delay(50);
 
@@ -286,7 +324,9 @@ Deno.test("highlightCandidateHintsAsync - エラーハンドリングテスト",
   // エラーを発生させる設定
   mockDenops.setResponse("bufnr", -1); // 無効なバッファ
 
-  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a");
+  const mockHints = createMockHints();
+  const mockConfig = createMockConfig();
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", mockHints, mockConfig);
 
   await delay(50);
 
