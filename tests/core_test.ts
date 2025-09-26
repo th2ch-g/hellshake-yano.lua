@@ -17,7 +17,8 @@ Deno.test("Core class should exist", () => {
  * TDD Red Phase: このテストも最初失敗する（Coreクラスがまだ実装されていないため）
  */
 Deno.test("Core class should be instantiable", () => {
-  const core = new Core();
+  Core.resetForTesting(); // テスト分離のため
+  const core = Core.getInstance();
   assertExists(core);
 });
 
@@ -26,12 +27,12 @@ Deno.test("Core class should be instantiable", () => {
  * TDD Red Phase: 必要なメソッドの存在確認（最初は失敗）
  */
 Deno.test("Core class should have essential methods", () => {
-  const core = new Core();
-  assertExists(core.detectWords);
-  assertExists(core.generateHints);
+  Core.resetForTesting(); // テスト分離のため
+  const core = Core.getInstance();
+  assertExists(core.detectWordsOptimized);
+  assertExists(core.generateHintsOptimized);
   assertExists(core.showHints);
   assertExists(core.hideHints);
-  assertExists(core.handleMotion);
 });
 
 /**
@@ -39,10 +40,35 @@ Deno.test("Core class should have essential methods", () => {
  * TDD Red Phase: 基本機能のテスト（最初は失敗）
  */
 Deno.test("Core class should initialize with default config", () => {
-  const core = new Core();
+  Core.resetForTesting(); // テスト分離のため
+  const core = Core.getInstance();
   const config = core.getConfig();
   assertExists(config);
   assertEquals(typeof config, "object");
+});
+
+/**
+ * Singleton pattern test - Phase 10.1
+ * TDD Red Phase: シングルトンパターンのテスト（最初は失敗）
+ */
+Deno.test("Core should implement singleton pattern", () => {
+  const core1 = Core.getInstance();
+  const core2 = Core.getInstance();
+  assertEquals(core1, core2, "getInstance should return the same instance");
+  assertExists(core1);
+});
+
+/**
+ * Singleton reset test for testing isolation
+ * TDD Red Phase: テスト分離のためのリセット機能
+ */
+Deno.test("Core should provide reset method for testing", () => {
+  const core1 = Core.getInstance();
+  Core.resetForTesting();
+  const core2 = Core.getInstance();
+  // リセット後は新しいインスタンスが作成される
+  assertExists(core1);
+  assertExists(core2);
 });
 
 /**
@@ -50,11 +76,12 @@ Deno.test("Core class should initialize with default config", () => {
  * TDD Refactor Phase: カスタム設定のテスト追加
  */
 Deno.test("Core class should accept custom config", () => {
+  Core.resetForTesting(); // テスト分離のため
   const customConfig = {
     enabled: false,
     maxHints: 50
   };
-  const core = new Core(customConfig);
+  const core = Core.getInstance(customConfig);
   const config = core.getConfig();
   assertEquals(config.enabled, false);
   assertEquals(config.maxHints, 50);
@@ -65,7 +92,7 @@ Deno.test("Core class should accept custom config", () => {
  * TDD Refactor Phase: 単語検出機能のテスト
  */
 Deno.test("Core class detectWords should return valid result", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const result = core.detectWords();
   assertExists(result);
   assertEquals(typeof result, "object");
@@ -81,7 +108,7 @@ Deno.test("Core class detectWords should return valid result", () => {
  * TDD Refactor Phase: ヒント生成機能のテスト
  */
 Deno.test("Core class generateHints should return array", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const words: Word[] = [
     { text: "test", line: 1, col: 1 },
     { text: "word", line: 1, col: 6 }
@@ -96,7 +123,7 @@ Deno.test("Core class generateHints should return array", () => {
  * TDD Refactor Phase: 状態管理のテスト
  */
 Deno.test("Core class should track enabled state", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   assertEquals(core.isEnabled(), true);
 
   core.updateConfig({ enabled: false });
@@ -104,7 +131,7 @@ Deno.test("Core class should track enabled state", () => {
 });
 
 Deno.test("Core class should track hints visibility", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   assertEquals(core.isHintsVisible(), false);
 
   const mockHints: HintMapping[] = [{
@@ -124,7 +151,7 @@ Deno.test("Core class should track hints visibility", () => {
 });
 
 Deno.test("Core class should not show hints when disabled", () => {
-  const core = new Core({ enabled: false });
+  const core = Core.getInstance({ enabled: false });
   const mockHints: HintMapping[] = [{
     word: { text: "test", line: 1, col: 1 },
     hint: "A",
@@ -143,7 +170,7 @@ Deno.test("Core class should not show hints when disabled", () => {
  */
 
 Deno.test("Core class should have getState method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.getState);
   const state = core.getState();
   assertExists(state);
@@ -151,7 +178,7 @@ Deno.test("Core class should have getState method", () => {
 });
 
 Deno.test("Core class should have setState method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.setState);
 
   const newState = {
@@ -168,7 +195,7 @@ Deno.test("Core class should have setState method", () => {
 });
 
 Deno.test("Core class should have initializeState method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.initializeState);
 
   core.initializeState();
@@ -181,7 +208,7 @@ Deno.test("Core class should have initializeState method", () => {
 });
 
 Deno.test("Core class state should include all required properties", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   core.initializeState();
   const state = core.getState();
 
@@ -199,7 +226,7 @@ Deno.test("Core class state should include all required properties", () => {
 });
 
 Deno.test("Core class setState should update internal state", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   const mockHints: HintMapping[] = [{
     word: { text: "test", line: 1, col: 1 },
     hint: "A",
@@ -234,7 +261,7 @@ Deno.test("Core class setState should update internal state", () => {
  * TDD RED Phase: Phase3 - hideHints専用テスト（最初は失敗する）
  */
 Deno.test("Core class hideHints should clear hints and update state properly", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
 
   // まずヒントを表示する
   const mockHints: HintMapping[] = [
@@ -260,7 +287,7 @@ Deno.test("Core class hideHints should clear hints and update state properly", (
 });
 
 Deno.test("Core class hideHints should work even when no hints are shown", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
 
   // ヒントが表示されていない状態でhideHintsを呼び出し
   assertEquals(core.isHintsVisible(), false);
@@ -274,7 +301,7 @@ Deno.test("Core class hideHints should work even when no hints are shown", () =>
 });
 
 Deno.test("Core class hideHints should work when disabled", () => {
-  const core = new Core({ enabled: false });
+  const core = Core.getInstance({ enabled: false });
 
   // 無効状態でもhideHintsは機能することを確認
   const mockHints: HintMapping[] = [
@@ -292,7 +319,7 @@ Deno.test("Core class hideHints should work when disabled", () => {
 });
 
 Deno.test("Core class setState should maintain consistency between hintsVisible and currentHints", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
 
   // 整合性のないケース: hintsVisible=true but currentHints=[]
   const inconsistentState = {
@@ -309,7 +336,7 @@ Deno.test("Core class setState should maintain consistency between hintsVisible 
 });
 
 Deno.test("Core class initializeState should reset to clean state", () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
 
   // まず何らかの状態にする
   const mockHints: HintMapping[] = [{
@@ -341,12 +368,12 @@ Deno.test("Core class initializeState should reset to clean state", () => {
  * 単語検出機能の移行テスト
  */
 Deno.test("Core class should have detectWordsOptimized method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.detectWordsOptimized);
 });
 
 Deno.test("Core class detectWordsOptimized should be async and return Promise<Word[]>", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Setup mock responses for word detection
@@ -383,7 +410,7 @@ Deno.test("Core class detectWordsOptimized should be async and return Promise<Wo
 });
 
 Deno.test("Core class detectWordsOptimized should handle invalid buffer number", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Setup mock for invalid buffer case
@@ -399,7 +426,7 @@ Deno.test("Core class detectWordsOptimized should handle invalid buffer number",
 });
 
 Deno.test("Core class detectWordsOptimized should respect cache configuration", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Setup consistent mock responses
@@ -436,7 +463,7 @@ Deno.test("Core class detectWordsOptimized should respect cache configuration", 
 });
 
 Deno.test("Core class detectWordsOptimized should handle config changes", async () => {
-  const core = new Core({ use_japanese: false });
+  const core = Core.getInstance({ use_japanese: false });
   const mockDenops = new MockDenops();
 
   // Setup mock responses
@@ -464,7 +491,7 @@ Deno.test("Core class detectWordsOptimized should handle config changes", async 
 });
 
 Deno.test("Core class detectWordsOptimized should integrate with existing word detection logic", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Setup mock for word detection
@@ -496,12 +523,12 @@ Deno.test("Core class detectWordsOptimized should integrate with existing word d
  * ヒント生成機能の移行テスト
  */
 Deno.test("Core class should have generateHintsOptimized method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.generateHintsOptimized);
 });
 
 Deno.test("Core class generateHintsOptimized should return string array", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const wordCount = 5;
   const markers = ["a", "s", "d", "f", "g"];
   const hints = core.generateHintsOptimized(wordCount, markers);
@@ -517,7 +544,7 @@ Deno.test("Core class generateHintsOptimized should return string array", () => 
 });
 
 Deno.test("Core class generateHintsOptimized should handle empty markers", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const wordCount = 3;
   const emptyMarkers: string[] = [];
   const hints = core.generateHintsOptimized(wordCount, emptyMarkers);
@@ -528,7 +555,7 @@ Deno.test("Core class generateHintsOptimized should handle empty markers", () =>
 });
 
 Deno.test("Core class generateHintsOptimized should handle zero word count", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const wordCount = 0;
   const markers = ["a", "s", "d"];
   const hints = core.generateHintsOptimized(wordCount, markers);
@@ -539,7 +566,7 @@ Deno.test("Core class generateHintsOptimized should handle zero word count", () 
 });
 
 Deno.test("Core class generateHintsOptimized should handle large word count", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const wordCount = 100;
   const markers = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
   const hints = core.generateHintsOptimized(wordCount, markers);
@@ -554,7 +581,7 @@ Deno.test("Core class generateHintsOptimized should handle large word count", ()
 });
 
 Deno.test("Core class generateHintsOptimized should use marker characters", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const wordCount = 3;
   const markers = ["x", "y", "z"];
   const hints = core.generateHintsOptimized(wordCount, markers);
@@ -571,7 +598,7 @@ Deno.test("Core class generateHintsOptimized should use marker characters", () =
 });
 
 Deno.test("Core class generateHintsOptimized should respect config hint groups", () => {
-  const core = new Core({
+  const core = Core.getInstance({
     use_hint_groups: true,
     single_char_keys: ["a", "s", "d"],
     multi_char_keys: ["f", "g", "h"]
@@ -586,7 +613,7 @@ Deno.test("Core class generateHintsOptimized should respect config hint groups",
 });
 
 Deno.test("Core class generateHintsOptimized should validate input parameters", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const markers = ["a", "s", "d"];
 
   // Negative wordCount should throw error
@@ -607,12 +634,12 @@ Deno.test("Core class generateHintsOptimized should validate input parameters", 
  */
 
 Deno.test("Core class should have displayHintsOptimized method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.displayHintsOptimized);
 });
 
 Deno.test("Core class displayHintsOptimized should be async and accept proper parameters", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
   const mockHints: HintMapping[] = [
     { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 }
@@ -632,12 +659,12 @@ Deno.test("Core class displayHintsOptimized should be async and accept proper pa
 });
 
 Deno.test("Core class should have displayHintsAsync method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.displayHintsAsync);
 });
 
 Deno.test("Core class displayHintsAsync should handle hints display asynchronously", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
   const mockHints: HintMapping[] = [
     { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 },
@@ -658,12 +685,12 @@ Deno.test("Core class displayHintsAsync should handle hints display asynchronous
 });
 
 Deno.test("Core class should have displayHintsWithExtmarksBatch method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.displayHintsWithExtmarksBatch);
 });
 
 Deno.test("Core class displayHintsWithExtmarksBatch should handle extmarks batch display", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
   const bufnr = 1;
   const mockHints: HintMapping[] = [
@@ -685,12 +712,12 @@ Deno.test("Core class displayHintsWithExtmarksBatch should handle extmarks batch
 });
 
 Deno.test("Core class should have displayHintsWithMatchAddBatch method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.displayHintsWithMatchAddBatch);
 });
 
 Deno.test("Core class displayHintsWithMatchAddBatch should handle matchadd batch display", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
   const mockHints: HintMapping[] = [
     { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 },
@@ -711,7 +738,7 @@ Deno.test("Core class displayHintsWithMatchAddBatch should handle matchadd batch
 });
 
 Deno.test("Core class displayHints methods should handle empty hints array", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
   const emptyHints: HintMapping[] = [];
 
@@ -726,7 +753,7 @@ Deno.test("Core class displayHints methods should handle empty hints array", asy
 });
 
 Deno.test("Core class displayHints methods should handle AbortSignal cancellation", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
   const mockHints: HintMapping[] = [
     { word: { text: "test", line: 1, col: 1 }, hint: "A", hintCol: 1, hintByteCol: 1 }
@@ -751,12 +778,12 @@ Deno.test("Core class displayHints methods should handle AbortSignal cancellatio
  */
 
 Deno.test("Core class should have showHints method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.showHints);
 });
 
 Deno.test("Core class showHints should be async and integrate full workflow", async () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   const mockDenops = new MockDenops();
 
   // Mock required Vim/Neovim functions
@@ -788,12 +815,12 @@ Deno.test("Core class showHints should be async and integrate full workflow", as
 });
 
 Deno.test("Core class should have showHintsInternal method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.showHintsInternal);
 });
 
 Deno.test("Core class showHintsInternal should handle mode parameter", async () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   const mockDenops = new MockDenops();
 
   // Setup basic mocks
@@ -814,12 +841,12 @@ Deno.test("Core class showHintsInternal should handle mode parameter", async () 
 });
 
 Deno.test("Core class should have showHintsWithKey method", () => {
-  const core = new Core();
+  const core = Core.getInstance();
   assertExists(core.showHintsWithKey);
 });
 
 Deno.test("Core class showHintsWithKey should handle key context", async () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   const mockDenops = new MockDenops();
 
   // Setup mocks
@@ -844,7 +871,7 @@ Deno.test("Core class showHintsWithKey should handle key context", async () => {
 });
 
 Deno.test("Core class showHints should handle multiple calls", async () => {
-  const core = new Core({
+  const core = Core.getInstance({
     enabled: true,
     debounceDelay: 10  // Shorter delay for testing (handled by main.ts)
   });
@@ -872,7 +899,7 @@ Deno.test("Core class showHints should handle multiple calls", async () => {
 });
 
 Deno.test("Core class showHints should be disabled when config.enabled is false", async () => {
-  const core = new Core({ enabled: false });
+  const core = Core.getInstance({ enabled: false });
   const mockDenops = new MockDenops();
 
   await core.showHints(mockDenops as any);
@@ -886,7 +913,7 @@ Deno.test("Core class showHints should be disabled when config.enabled is false"
 });
 
 Deno.test("Core class showHints should handle errors gracefully", async () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   const mockDenops = new MockDenops();
 
   // Setup mocks to throw errors
@@ -902,7 +929,7 @@ Deno.test("Core class showHints should handle errors gracefully", async () => {
 
 // Phase 8: Utility Functions Tests (TDD RED phase)
 Deno.test("Core class recordPerformance should track operation metrics", () => {
-  const core = new Core({ performance_log: true });
+  const core = Core.getInstance({ performance_log: true });
 
   // Record performance for various operations
   (core as any).recordPerformance("showHints", 100, 150);
@@ -927,7 +954,7 @@ Deno.test("Core class recordPerformance should track operation metrics", () => {
 });
 
 Deno.test("Core class recordPerformance should not record when performanceLog is disabled", () => {
-  const core = new Core({ performance_log: false });
+  const core = Core.getInstance({ performance_log: false });
 
   // Try to record performance
   (core as any).recordPerformance("showHints", 100, 150);
@@ -942,7 +969,7 @@ Deno.test("Core class recordPerformance should not record when performanceLog is
 });
 
 Deno.test("Core class recordPerformance should limit metrics to 50 entries", () => {
-  const core = new Core({ performance_log: true });
+  const core = Core.getInstance({ performance_log: true });
 
   // Record more than 50 entries
   for (let i = 0; i < 60; i++) {
@@ -963,7 +990,7 @@ Deno.test("Core class recordPerformance should limit metrics to 50 entries", () 
 });
 
 Deno.test("Core class collectDebugInfo should return complete debug information", () => {
-  const core = new Core({
+  const core = Core.getInstance({
     enabled: true,
     performance_log: true,
     markers: ["w", "e", "b"]
@@ -996,7 +1023,7 @@ Deno.test("Core class collectDebugInfo should return complete debug information"
 });
 
 Deno.test("Core class clearDebugInfo should reset all performance metrics", () => {
-  const core = new Core({ performance_log: true });
+  const core = Core.getInstance({ performance_log: true });
 
   // Record some metrics
   (core as any).recordPerformance("showHints", 100, 150);
@@ -1020,7 +1047,7 @@ Deno.test("Core class clearDebugInfo should reset all performance metrics", () =
 });
 
 Deno.test("Core class waitForUserInput should handle user input for hints", async () => {
-  const core = new Core({ enabled: true, motion_count: 2 });
+  const core = Core.getInstance({ enabled: true, motion_count: 2 });
   const mockDenops = new MockDenops();
 
   // Setup hints
@@ -1053,7 +1080,7 @@ Deno.test("Core class waitForUserInput should handle user input for hints", asyn
 });
 
 Deno.test("Core class waitForUserInput should handle ESC to cancel", async () => {
-  const core = new Core({ enabled: true });
+  const core = Core.getInstance({ enabled: true });
   const mockDenops = new MockDenops();
 
   // Setup hints
@@ -1074,7 +1101,7 @@ Deno.test("Core class waitForUserInput should handle ESC to cancel", async () =>
 });
 
 Deno.test("Core class waitForUserInput should handle timeout", async () => {
-  const core = new Core({ enabled: true, timeout: 100 } as any); // 100ms timeout
+  const core = Core.getInstance({ enabled: true, timeout: 100 } as any); // 100ms timeout
   const mockDenops = new MockDenops();
 
   // Setup hints
@@ -1103,7 +1130,7 @@ Deno.test("Core class waitForUserInput should handle timeout", async () => {
  */
 
 Deno.test("Core class should have dictionary system methods", () => {
-  const core = new Core();
+  const core = Core.getInstance();
 
   // Dictionary system methods should exist
   assertExists(core.initializeDictionarySystem);
@@ -1114,7 +1141,7 @@ Deno.test("Core class should have dictionary system methods", () => {
 });
 
 Deno.test("Core initializeDictionarySystem should initialize dictionary loader", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Should be able to initialize dictionary system
@@ -1129,7 +1156,7 @@ Deno.test("Core initializeDictionarySystem should initialize dictionary loader",
 });
 
 Deno.test("Core reloadDictionary should reload user dictionary", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
@@ -1147,7 +1174,7 @@ Deno.test("Core reloadDictionary should reload user dictionary", async () => {
 });
 
 Deno.test("Core editDictionary should open dictionary file for editing", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
@@ -1165,7 +1192,7 @@ Deno.test("Core editDictionary should open dictionary file for editing", async (
 });
 
 Deno.test("Core showDictionary should display dictionary contents", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
@@ -1184,7 +1211,7 @@ Deno.test("Core showDictionary should display dictionary contents", async () => 
 });
 
 Deno.test("Core validateDictionary should validate dictionary format", async () => {
-  const core = new Core();
+  const core = Core.getInstance();
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first

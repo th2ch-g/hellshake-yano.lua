@@ -103,12 +103,12 @@ import { validateConfigValue } from "./utils/validation.ts";
 let config: UnifiedConfig = getDefaultUnifiedConfig();
 
 /**
- * Phase3: Core class instance for unified functionality
- * Process3 Sub1 Phase3: hideHints機能のCoreクラス移行
- * @type {Core}
+ * Phase10: Coreクラスのシングルトンパターン使用
+ * Process3 Sub1 Phase10: 最終統合とクリーンアップ
+ * Core.getInstance() を直接使用する
  * @since 2.0.0
  */
-let coreInstance: Core | null = null;
+// Phase 10: シングルトンパターン採用により coreInstance 変数は不要
 
 /**
  * 現在表示中のヒントマッピングの配列
@@ -222,11 +222,9 @@ function recordPerformance(
   startTime: number,
   endTime: number,
 ): void {
-  // Phase8: Coreクラスのメソッドに委譲
-  if (!coreInstance) {
-    coreInstance = new Core(config);
-  }
-  coreInstance.recordPerformance(operation, startTime, endTime);
+  // Phase10: シングルトンインスタンスを使用
+  const core = Core.getInstance(config);
+  core.recordPerformance(operation, startTime, endTime);
 }
 
 /**
@@ -313,11 +311,9 @@ export function getMotionCountForKey(key: string, config: UnifiedConfig | Config
  * console.log(`現在のヒント数: ${debugInfo.currentHints.length}`);
  */
 function collectDebugInfo(): DebugInfo {
-  // Phase8: Coreクラスのメソッドに委譲
-  if (!coreInstance) {
-    coreInstance = new Core(config);
-  }
-  return coreInstance.collectDebugInfo();
+  // Phase10: シングルトンインスタンスを使用
+  const core = Core.getInstance(config);
+  return core.collectDebugInfo();
 }
 
 /**
@@ -330,11 +326,9 @@ function collectDebugInfo(): DebugInfo {
  * @since 1.0.0
  */
 function clearDebugInfo(): void {
-  // Phase8: Coreクラスのメソッドに委譲
-  if (!coreInstance) {
-    coreInstance = new Core(config);
-  }
-  coreInstance.clearDebugInfo();
+  // Phase10: シングルトンインスタンスを使用
+  const core = Core.getInstance(config);
+  core.clearDebugInfo();
 }
 
 /**
@@ -722,16 +716,12 @@ export async function main(denops: Denops): Promise<void> {
      * Phase7: CoreクラスのshowHintsメソッドに委譲
      */
     async showHints(): Promise<void> {
-      // Coreインスタンスが存在しない場合は作成
-      if (!coreInstance) {
-        coreInstance = new Core(config);
-      }
-
-      // 現在の設定をCoreクラスに反映
-      coreInstance.updateConfig(config);
+      // Phase10: シングルトンインスタンスを使用
+      const core = Core.getInstance(config);
+      core.updateConfig(config);
 
       // CoreクラスのshowHintsメソッドを呼び出し
-      await coreInstance.showHints(denops);
+      await core.showHints(denops);
     },
 
     /**
@@ -741,6 +731,9 @@ export async function main(denops: Denops): Promise<void> {
       const modeString = mode ? String(mode) : "normal";
       const startTime = performance.now();
       lastShowHintsTime = Date.now();
+
+      // Phase10: シングルトンインスタンスを関数の先頭で取得
+      const core = Core.getInstance(config);
 
       // デバウンスタイムアウトをクリア
       if (debounceTimeoutId) {
@@ -798,10 +791,8 @@ export async function main(denops: Denops): Promise<void> {
 
           // キャッシュを使用して単語を検出（最適化）
           // Phase4: CoreクラスのdetectWordsOptimizedメソッドを使用
-          if (!coreInstance) {
-            coreInstance = new Core(config);
-          }
-          const words = await coreInstance.detectWordsOptimized(denops, bufnr);
+          // Phase10: 関数先頭で宣言済みのcoreを使用
+          const words = await core.detectWordsOptimized(denops, bufnr);
           if (words.length === 0) {
             await denops.cmd("echo 'No words found for hints'");
             return;
@@ -846,10 +837,8 @@ export async function main(denops: Denops): Promise<void> {
           const hintsNeeded = isBothMode ? limitedWords.length * 2 : limitedWords.length;
 
           // Coreインスタンスを使用してヒントを生成
-          if (!coreInstance) {
-            coreInstance = new Core(config);
-          }
-          const hints = coreInstance.generateHintsOptimized(hintsNeeded, config.markers);
+          // Phase10: 関数先頭で宣言済みのcoreを使用
+          const hints = core.generateHintsOptimized(hintsNeeded, config.markers);
           currentHints = assignHintsToWords(
             limitedWords,
             hints,
@@ -868,11 +857,9 @@ export async function main(denops: Denops): Promise<void> {
           }
 
           // Phase6: Coreクラスの displayHintsAsync メソッドを使用
-          if (!coreInstance) {
-            coreInstance = new Core(config);
-          }
+          // Phase10: 関数先頭で宣言済みのcoreを使用
           // バッチ処理でヒントを非同期表示（最適化）
-          coreInstance.displayHintsAsync(denops, currentHints, { mode: "normal" });
+          core.displayHintsAsync(denops, currentHints, { mode: "normal" });
 
           // ヒント表示状態を確実に設定
           hintsVisible = true;
@@ -915,19 +902,15 @@ export async function main(denops: Denops): Promise<void> {
      * @param mode - 現在のVimモード
      */
     async showHintsWithKey(key: unknown, mode?: unknown): Promise<void> {
-      // Coreインスタンスが存在しない場合は作成
-      if (!coreInstance) {
-        coreInstance = new Core(config);
-      }
-
-      // 現在の設定をCoreクラスに反映
-      coreInstance.updateConfig(config);
+      // Phase10: シングルトンインスタンスを使用
+      const core = Core.getInstance(config);
+      core.updateConfig(config);
 
       const keyString = String(key);
       const modeString = mode ? String(mode) : "normal";
 
       // CoreクラスのshowHintsWithKeyメソッドを呼び出し
-      await coreInstance.showHintsWithKey(denops, keyString, modeString);
+      await core.showHintsWithKey(denops, keyString, modeString);
     },
 
     /**
@@ -1922,11 +1905,9 @@ async function clearHintDisplay(denops: Denops): Promise<void> {
  * @throws Vim/Neovim APIエラーが発生した場合（ただし内部でキャッチして継続）
  */
 async function hideHints(denops: Denops): Promise<void> {
-  // Phase3: Process3 Sub1 - Core class delegation for state management
-  if (!coreInstance) {
-    coreInstance = new Core(config);
-  }
-  coreInstance.hideHints();
+  // Phase10: シングルトンインスタンスを使用
+  const core = Core.getInstance(config);
+  core.hideHints();
 
   // 既にヒントが非表示で、currentHintsも空の場合は早期リターン
   if (!hintsVisible && currentHints.length === 0 && fallbackMatchIds.length === 0) {
@@ -3252,16 +3233,14 @@ let vimConfigBridge: VimConfigBridge | null = null;
  * Helper function to ensure Core instance is available
  */
 async function getCoreForDictionary(denops: Denops): Promise<Core> {
-  if (!coreInstance) {
-    coreInstance = new Core(config);
-    await coreInstance.initializeDictionarySystem(denops);
-  } else {
-    // Ensure dictionary system is initialized
-    if (!coreInstance.hasDictionarySystem()) {
-      await coreInstance.initializeDictionarySystem(denops);
-    }
+  // Phase10: シングルトンインスタンスを使用
+  const core = Core.getInstance(config);
+
+  // Ensure dictionary system is initialized
+  if (!core.hasDictionarySystem()) {
+    await core.initializeDictionarySystem(denops);
   }
-  return coreInstance;
+  return core;
 }
 
 /**
