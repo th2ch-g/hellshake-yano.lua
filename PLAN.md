@@ -1014,10 +1014,20 @@ export interface UnifiedConfig {
 @context: UnifiedConfig一本化と重複削除
 @current: 2,076行 → 500行目標（76%削減）
 
-##### sub2-1 旧設定インターフェース削除準備
-- [ ] tests/config*.tsの現状テスト実行（32テストすべてパス確認）
-- [ ] @deprecatedマークされた設定インターフェースをリスト化
-- [ ] 各インターフェースの使用箇所をgrepで調査
+##### sub2-1 旧設定インターフェース削除準備【完了】
+- [x] tests/config*.tsの現状テスト実行（72テスト全パス確認）
+  - [x] config_test.ts: 32ステップパス
+  - [x] config_validation_test.ts: 14テストパス
+  - [x] unified_config_test.ts: 26ステップパス
+- [x] @deprecatedマークされた設定インターフェースをリスト化
+  - [x] CoreConfig（3プロパティ）- 即座削除可能
+  - [x] HintConfig（10プロパティ）- 即座削除可能
+  - [x] WordConfig（10プロパティ）- 段階的削除必要
+  - [x] PerformanceConfig（11プロパティ）- 即座削除可能
+- [x] 各インターフェースの使用箇所をgrepで調査
+  - [x] 実装: word.tsでWordConfigのみ使用
+  - [x] テスト: 9ファイルで62回使用
+- [x] **分析文書作成: tmp/claude/sub2-1-deprecated-analysis.md**
 
 ##### sub2-2 段階的削除（後方互換性維持）
 - [ ] CoreConfig関連（約200行）を削除
