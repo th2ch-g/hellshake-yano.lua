@@ -2,7 +2,7 @@ import type { Denops } from "@denops/std";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import type { DetectionContext, WordDetectionResult } from "./types.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
-import type { Config, Word } from "./types.ts";
+import type { Word } from "./types.ts";
 
 // Re-export Word for backward compatibility
 export type { Word };
@@ -44,10 +44,347 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
 
 import { UnifiedCache, CacheType } from "./cache.ts";
 
+// Additional imports for detector functionality
+import { type SegmentationResult, TinySegmenter } from "./segmenter.ts";
+import { ContextDetector, type SplittingRules } from "./word/context.ts";
+import type { UnifiedConfig } from "./config.ts";
+import { type Config, getMinLengthForKey } from "./main.ts";
+
 // パフォーマンス設定
 const LARGE_FILE_THRESHOLD = 1000;
 const MAX_WORDS_PER_FILE = 1000;
 const wordDetectionCache = UnifiedCache.getInstance().getCache<string, Word[]>(CacheType.WORD_DETECTION);
+
+// ==================== Word Detector Interfaces and Types ====================
+
+/**
+ * WordDetectorインターフェース
+ * 単語検出器の基底インターフェース
+ */
+export interface WordDetector {
+  readonly name: string;
+  readonly priority: number; // Higher priority = preferred detector
+  readonly supportedLanguages: string[]; // e.g., ['ja', 'en', 'any']
+  detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]>;
+  canHandle(text: string): boolean;
+  isAvailable(): Promise<boolean>;
+}
+
+/**
+ * WordDetectionConfig interface
+ * 単語検出設定インターフェース
+ */
+export interface WordDetectionConfig {
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
+  use_japanese?: boolean;
+  // Backward compatibility toggle (ignored in implementation)
+  use_improved_detection?: boolean;
+
+  // TinySegmenter specific options
+  enable_tinysegmenter?: boolean;
+  segmenter_threshold?: number; // minimum characters for segmentation
+  segmenter_cache_size?: number;
+
+  // Fallback and error handling
+  enable_fallback?: boolean;
+  fallback_to_regex?: boolean;
+  max_retries?: number;
+
+  // Performance settings
+  cache_enabled?: boolean;
+  cache_max_size?: number;
+  batch_size?: number;
+
+  // Filtering options
+  min_word_length?: number;
+  max_word_length?: number;
+  exclude_numbers?: boolean;
+  exclude_single_chars?: boolean;
+
+  // Japanese-specific options
+  japanese_merge_particles?: boolean;
+  japanese_merge_threshold?: number;
+  japanese_min_word_length?: number;
+}
+
+/**
+ * UnifiedConfigかConfigかを判定するヘルパー関数
+ * @param config - 判定対象の設定
+ * @returns [unifiedConfig, legacyConfig] のタプル
+ */
+function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | undefined, Config | undefined] {
+  if (config && 'useJapanese' in config) {
+    return [config as UnifiedConfig, undefined];
+  }
+  return [undefined, config as Config];
+}
+
+// ==================== Word Cache Classes ====================
+
+/**
+ * KeyBasedWordCacheの統計情報インターフェース
+ *
+ * UnifiedCache統合版の統計情報を定義します。
+ * レガシー互換性とUnifiedCacheの高度な統計の両方を提供します。
+ */
+export interface KeyBasedWordCacheStats {
+  /** 現在のキャッシュサイズ（レガシー互換） */
+  size: number;
+  /** キー一覧（レガシー互換、UnifiedCacheでは空配列） */
+  keys: string[];
+  /** キャッシュヒット数 */
+  hits: number;
+  /** キャッシュミス数 */
+  misses: number;
+  /** ヒット率（0.0-1.0） */
+  hitRate: number;
+  /** 最大キャッシュサイズ */
+  maxSize: number;
+  /** 使用しているキャッシュタイプ */
+  cacheType: CacheType;
+  /** キャッシュの説明 */
+  description: string;
+  /** UnifiedCache統合済みフラグ */
+  unified: boolean;
+}
+
+/**
+ * キーベースの単語キャッシュクラス
+ * UnifiedCache統合版
+ */
+export class KeyBasedWordCache {
+  private unifiedCache: UnifiedCache;
+  private wordsCache: ReturnType<UnifiedCache['getCache']>;
+
+  /**
+   * KeyBasedWordCacheのコンストラクタ
+   *
+   * UnifiedCacheのWORDSタイプキャッシュを取得して初期化します。
+   * エラーが発生した場合はログを出力しますが、フォールバック機能は
+   * 提供しません（UnifiedCacheが利用できない環境では動作不能）。
+   */
+  constructor() {
+    try {
+      this.unifiedCache = UnifiedCache.getInstance();
+      this.wordsCache = this.unifiedCache.getCache<string, Word[]>(CacheType.WORDS);
+    } catch (error) {
+      console.error("Failed to initialize KeyBasedWordCache with UnifiedCache:", error);
+      throw new Error(
+        `KeyBasedWordCache initialization failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * キーに基づいて単語リストをキャッシュに保存
+   * @param key - キャッシュキー（通常は押下されたキー + バッファ情報）
+   * @param words - キャッシュする単語リスト
+   */
+  set(key: string, words: Word[]): void {
+    // UnifiedCache のWORDSキャッシュに保存（浅いコピーで参照汚染防止）
+    this.wordsCache.set(key, [...words]);
+  }
+
+  /**
+   * キーに基づいてキャッシュから単語リストを取得
+   * @param key - キャッシュキー
+   * @returns キャッシュされた単語リスト、または undefined
+   */
+  get(key: string): Word[] | undefined {
+    const cached = this.wordsCache.get(key) as Word[] | undefined;
+    if (cached && Array.isArray(cached)) {
+      // キャッシュヒット: 新しい配列として返す（参照汚染防止）
+      return [...cached];
+    }
+    return undefined;
+  }
+
+  /**
+   * 特定のキーのキャッシュをクリア
+   * @param key - クリアするキャッシュキー（省略時は全体クリア）
+   */
+  clear(key?: string): void {
+    if (key) {
+      this.wordsCache.delete(key);
+    } else {
+      this.unifiedCache.clearByType(CacheType.WORDS);
+    }
+  }
+
+  /**
+   * キャッシュ統計情報を取得（UnifiedCache統合版）
+   *
+   * レガシー互換性を保ちながら、UnifiedCacheの高度な統計情報を提供します。
+   * 将来的な拡張に備えてメタデータも含めて返します。
+   * エラーが発生した場合は、基本的なフォールバック統計を返します。
+   *
+   * @returns 統計情報オブジェクト
+   */
+  getStats(): KeyBasedWordCacheStats {
+    try {
+      const unifiedStats = this.unifiedCache.getAllStats();
+      const wordStats = unifiedStats.WORDS;
+      if (!wordStats) {
+        throw new Error("WORDS cache statistics not found");
+      }
+      const config = this.unifiedCache.getCacheConfig(CacheType.WORDS);
+      return {
+        // レガシー互換フィールド
+        size: wordStats.size,
+        keys: [], // UnifiedCacheではキー一覧の取得は提供していないため空配列
+        // UnifiedCache統計情報
+        hits: wordStats.hits,
+        misses: wordStats.misses,
+        hitRate: wordStats.hitRate,
+        maxSize: wordStats.maxSize,
+        // メタデータ
+        cacheType: CacheType.WORDS,
+        description: config.description,
+        unified: true, // UnifiedCache統合済みであることを示すフラグ
+      };
+    } catch (error) {
+      console.warn("Failed to retrieve UnifiedCache statistics, returning fallback:", error);
+      // フォールバック統計情報
+      return {
+        size: 0,
+        keys: [],
+        hits: 0,
+        misses: 0,
+        hitRate: 0,
+        maxSize: 1000, // デフォルトサイズ
+        cacheType: CacheType.WORDS,
+        description: "単語検出結果のキャッシュ（統計取得エラー）",
+        unified: true, // 統合されているが統計取得に失敗
+      };
+    }
+  }
+}
+
+// グローバルキャッシュインスタンス
+export const globalWordCache = new KeyBasedWordCache();
+
+// ==================== Word Detector Classes ====================
+
+/**
+ * Regex-based Word Detector
+ * Extracts current word detection logic from word.ts
+ */
+export class RegexWordDetector implements WordDetector {
+  readonly name = "RegexWordDetector";
+  readonly priority = 1;
+  readonly supportedLanguages = ["en", "ja", "any"];
+
+  private config: WordDetectionConfig;
+  private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
+  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
+
+  /**
+   * RegexWordDetectorのコンストラクタ
+   * @description 正規表現ベースの単語ディテクターを初期化
+   * @param config - ディテクター設定（省略時はデフォルト設定）
+   * @param globalConfig - グローバル設定（統一的なmin_length処理のため）
+   */
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | UnifiedConfig) {
+    this.config = this.mergeWithDefaults(config);
+    [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
+  }
+
+  /**
+   * 統一的なmin_length取得
+   * @description Context → GlobalConfig → LocalConfig の優先順位でmin_lengthを取得
+   * @param context - 検出コンテキスト
+   * @param key - モーションキー（グローバル設定のper_key_min_lengthで使用）
+   * @returns 使用すべき最小単語長
+   */
+  private getEffectiveMinLength(context?: DetectionContext, key?: string): number {
+    // 1. Context優先
+    if (context?.minWordLength !== undefined) {
+      return context.minWordLength;
+    }
+
+    // 2. UnifiedConfig/グローバル設定のper_key_min_length
+    if (this.unifiedConfig && key) {
+      return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
+    }
+    if (this.globalConfig && key) {
+      return getMinLengthForKey(this.globalConfig, key);
+    }
+
+    // 3. ローカル設定のmin_word_length
+    return this.config.min_word_length || 1;
+  }
+
+  async detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]> {
+    const words: Word[] = [];
+    const lines = text.split("\n");
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineText = lines[i];
+      const lineNumber = startLine + i;
+
+      // 常に改善版検出を使用（統合済み）
+      const lineWords = this.extractWordsImproved(lineText, lineNumber, context);
+
+      words.push(...lineWords);
+    }
+
+    return this.applyFilters(words, context);
+  }
+
+  canHandle(text: string): boolean {
+    return true; // Regex detector can handle any text
+  }
+
+  async isAvailable(): Promise<boolean> {
+    return true; // Always available
+  }
+
+  // Private methods will be added here
+  private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
+    return {
+      strategy: "regex",
+      use_japanese: true,
+      min_word_length: 1,
+      max_word_length: 50,
+      exclude_numbers: false,
+      exclude_single_chars: false,
+      cache_enabled: true,
+      batch_size: 50,
+      ...config
+    };
+  }
+
+  private extractWordsImproved(lineText: string, lineNumber: number, context?: DetectionContext): Word[] {
+    // Use existing extractWordsFromLine with improved detection
+    const excludeJapanese = !this.config.use_japanese;
+    return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
+  }
+
+  private applyFilters(words: Word[], context?: DetectionContext): Word[] {
+    let filtered = words;
+
+    const minLength = this.getEffectiveMinLength(context, context?.currentKey);
+    // Apply minimum length filter regardless of value (including 1)
+    if (minLength >= 1) {
+      filtered = filtered.filter(word => word.text.length >= minLength);
+    }
+
+    if (this.config.max_word_length) {
+      filtered = filtered.filter(word => word.text.length <= this.config.max_word_length!);
+    }
+
+    if (this.config.exclude_numbers) {
+      filtered = filtered.filter(word => !/^\d+$/.test(word.text));
+    }
+
+    // Skip single char exclusion if minLength is 1
+    if (this.config.exclude_single_chars && minLength > 1) {
+      filtered = filtered.filter(word => word.text.length > 1);
+    }
+
+    return filtered;
+  }
+}
 
 /**
  * 画面内の単語を検出する（レガシー版、後方互換性のため保持）
@@ -172,14 +509,18 @@ export async function detectWordsWithManager(
       // get_config が存在しない場合は無視
     }
 
-    const derivedContext = context ?? deriveContextFromConfig(runtimeConfig);
-    if (derivedContext?.minWordLength !== undefined) {
-      const threshold = derivedContext.minWordLength;
-      const filteredWords = initialResult.words.filter((word) => word.text.length >= threshold);
-      return {
-        ...initialResult,
-        words: filteredWords,
-      };
+    // Context was already passed to manager.detectWordsFromBuffer, so no need to filter again
+    // Only derive context if it wasn't provided
+    if (!context) {
+      const derivedContext = deriveContextFromConfig(runtimeConfig);
+      if (derivedContext?.minWordLength !== undefined) {
+        const threshold = derivedContext.minWordLength;
+        const filteredWords = initialResult.words.filter((word) => word.text.length >= threshold);
+        return {
+          ...initialResult,
+          words: filteredWords,
+        };
+      }
     }
 
     return initialResult;

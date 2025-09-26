@@ -288,6 +288,47 @@ export async function main(denops: Denops): Promise<void> {
       async validateDictionary(): Promise<void> {
         await validateDictionary(denops);
       },
+      async showHintsWithKey(key: unknown, mode?: unknown): Promise<void> {
+        const core = Core.getInstance(config);
+        await core.showHintsWithKey(
+          denops,
+          typeof key === "string" ? key : "",
+          typeof mode === "string" ? mode : undefined
+        );
+      },
+      async showHintsInternal(mode?: unknown): Promise<void> {
+        const core = Core.getInstance(config);
+        await core.showHintsInternal(
+          denops,
+          typeof mode === "string" ? mode : "normal"
+        );
+      },
+      async updateConfig(cfg: unknown): Promise<void> {
+        if (typeof cfg === "object" && cfg !== null) {
+          const core = Core.getInstance(config);
+          core.updateConfig(cfg as Partial<Config>);
+          // グローバル設定も更新
+          const unifiedUserConfig = toUnifiedConfig(cfg as Partial<Config>);
+          config = { ...config, ...unifiedUserConfig };
+          syncManagerConfig(config);
+        }
+      },
+      async clearCache(): Promise<void> {
+        const core = Core.getInstance(config);
+        core.clearCache();
+      },
+      async debug(): Promise<DebugInfo> {
+        const core = Core.getInstance(config);
+        return core.collectDebugInfo();
+      },
+      async clearPerformanceLog(): Promise<void> {
+        performanceMetrics = {
+          showHints: [],
+          hideHints: [],
+          wordDetection: [],
+          hintGeneration: [],
+        };
+      },
     };
     updatePluginState({ status: "initialized" } as any);
   } catch (error) {

@@ -230,8 +230,8 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
         case "getbufline":
           return [
             "function test() { return 'hello world'; }",
-            "const value = test();",
-            "console.log(value);",
+            "const a = 1; const b = 2; const c = a + b;",
+            "for (let i = 0; i < 10; i++) { console.log(i); }",
           ];
         case "get_config":
           return config;
