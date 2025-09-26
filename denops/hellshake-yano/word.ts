@@ -1,8 +1,8 @@
 import type { Denops } from "@denops/std";
-import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import type { DetectionContext, WordDetectionResult } from "./types.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
 import type { Word } from "./types.ts";
+import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 
 // Re-export Word for backward compatibility
 export type { Word };
@@ -42,7 +42,7 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
 // Word interface moved to types.ts for consolidation
 // Use: import type { Word } from "./types.ts";
 
-import { UnifiedCache, CacheType } from "./cache.ts";
+import { CacheType, UnifiedCache } from "./cache.ts";
 
 // Additional imports for detector functionality
 import { type SegmentationResult, TinySegmenter } from "./segmenter.ts";
@@ -53,7 +53,9 @@ import { type Config, getMinLengthForKey } from "./main.ts";
 // パフォーマンス設定
 const LARGE_FILE_THRESHOLD = 1000;
 const MAX_WORDS_PER_FILE = 1000;
-const wordDetectionCache = UnifiedCache.getInstance().getCache<string, Word[]>(CacheType.WORD_DETECTION);
+const wordDetectionCache = UnifiedCache.getInstance().getCache<string, Word[]>(
+  CacheType.WORD_DETECTION,
+);
 
 // ==================== Word Detector Interfaces and Types ====================
 
@@ -65,7 +67,12 @@ export interface WordDetector {
   readonly name: string;
   readonly priority: number; // Higher priority = preferred detector
   readonly supportedLanguages: string[]; // e.g., ['ja', 'en', 'any']
-  detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]>;
+  detectWords(
+    text: string,
+    startLine: number,
+    context?: DetectionContext,
+    denops?: Denops,
+  ): Promise<Word[]>;
   canHandle(text: string): boolean;
   isAvailable(): Promise<boolean>;
 }
@@ -112,8 +119,10 @@ export interface WordDetectionConfig {
  * @param config - 判定対象の設定
  * @returns [unifiedConfig, legacyConfig] のタプル
  */
-function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | undefined, Config | undefined] {
-  if (config && 'useJapanese' in config) {
+function resolveConfigType(
+  config?: Config | UnifiedConfig,
+): [UnifiedConfig | undefined, Config | undefined] {
+  if (config && "useJapanese" in config) {
     return [config as UnifiedConfig, undefined];
   }
   return [undefined, config as Config];
@@ -154,7 +163,7 @@ export interface KeyBasedWordCacheStats {
  */
 export class KeyBasedWordCache {
   private unifiedCache: UnifiedCache;
-  private wordsCache: ReturnType<UnifiedCache['getCache']>;
+  private wordsCache: ReturnType<UnifiedCache["getCache"]>;
 
   /**
    * KeyBasedWordCacheのコンストラクタ
@@ -170,7 +179,9 @@ export class KeyBasedWordCache {
     } catch (error) {
       console.error("Failed to initialize KeyBasedWordCache with UnifiedCache:", error);
       throw new Error(
-        `KeyBasedWordCache initialization failed: ${error instanceof Error ? error.message : String(error)}`
+        `KeyBasedWordCache initialization failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
     }
   }
@@ -314,7 +325,12 @@ export class RegexWordDetector implements WordDetector {
     return this.config.min_word_length || 1;
   }
 
-  async detectWords(text: string, startLine: number, context?: DetectionContext, denops?: Denops): Promise<Word[]> {
+  async detectWords(
+    text: string,
+    startLine: number,
+    context?: DetectionContext,
+    denops?: Denops,
+  ): Promise<Word[]> {
     const words: Word[] = [];
     const lines = text.split("\n");
 
@@ -350,11 +366,15 @@ export class RegexWordDetector implements WordDetector {
       exclude_single_chars: false,
       cache_enabled: true,
       batch_size: 50,
-      ...config
+      ...config,
     };
   }
 
-  private extractWordsImproved(lineText: string, lineNumber: number, context?: DetectionContext): Word[] {
+  private extractWordsImproved(
+    lineText: string,
+    lineNumber: number,
+    context?: DetectionContext,
+  ): Word[] {
     // Use existing extractWordsFromLine with improved detection
     const excludeJapanese = !this.config.use_japanese;
     return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
@@ -366,20 +386,20 @@ export class RegexWordDetector implements WordDetector {
     const minLength = this.getEffectiveMinLength(context, context?.currentKey);
     // Apply minimum length filter regardless of value (including 1)
     if (minLength >= 1) {
-      filtered = filtered.filter(word => word.text.length >= minLength);
+      filtered = filtered.filter((word) => word.text.length >= minLength);
     }
 
     if (this.config.max_word_length) {
-      filtered = filtered.filter(word => word.text.length <= this.config.max_word_length!);
+      filtered = filtered.filter((word) => word.text.length <= this.config.max_word_length!);
     }
 
     if (this.config.exclude_numbers) {
-      filtered = filtered.filter(word => !/^\d+$/.test(word.text));
+      filtered = filtered.filter((word) => !/^\d+$/.test(word.text));
     }
 
     // Skip single char exclusion if minLength is 1
     if (this.config.exclude_single_chars && minLength > 1) {
-      filtered = filtered.filter(word => word.text.length > 1);
+      filtered = filtered.filter((word) => word.text.length > 1);
     }
 
     return filtered;
@@ -1468,3 +1488,11 @@ function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): Normalized
     useWordConfig,
   };
 }
+
+// === Manager Re-exports for backward compatibility ===
+export {
+  WordDetectionManager,
+  type WordDetectionManagerConfig,
+  getWordDetectionManager,
+  resetWordDetectionManager,
+} from "./word/manager.ts";
