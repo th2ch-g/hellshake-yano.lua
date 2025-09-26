@@ -80,29 +80,36 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
     if (perKeyValue !== undefined) return perKeyValue;
   }
 
-  // Check for default_min_length (second priority)
+  // Check for default_min_word_length (second priority)
+  if ('default_min_word_length' in config && typeof config.default_min_word_length === 'number') {
+    return config.default_min_word_length;
+  }
+
+  // Check for default_min_length (third priority)
   if ('default_min_length' in config && typeof config.default_min_length === 'number') {
     return config.default_min_length;
   }
 
-  // Check for min_length (third priority)
+  // Check for min_length (fourth priority)
   if ('min_length' in config && typeof config.min_length === 'number') {
     return config.min_length;
   }
 
-  // Check for legacy min_word_length (lowest priority)
+  // Check for legacy min_word_length (fifth priority)
   if ('min_word_length' in config && typeof config.min_word_length === 'number') {
     return config.min_word_length;
   }
 
   // Default fallback
-  return 2;
+  return 3;
 }
 export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
   // Check for per_key_motion_count first (highest priority)
   if ('per_key_motion_count' in config && config.per_key_motion_count && typeof config.per_key_motion_count === 'object') {
     const perKeyValue = (config.per_key_motion_count as Record<string, number>)[key];
-    if (perKeyValue !== undefined) return perKeyValue;
+    if (perKeyValue !== undefined && perKeyValue >= 1 && Number.isInteger(perKeyValue)) {
+      return perKeyValue;
+    }
   }
 
   // Check for default_motion_count (second priority)
@@ -121,7 +128,7 @@ export function getMotionCountForKey(key: string, config: UnifiedConfig | Config
   }
 
   // Default fallback
-  return 3;
+  return 2;
 }
 function collectDebugInfo(): DebugInfo {
   return {
@@ -442,6 +449,84 @@ async function processMatchaddBatched(
   }
 }
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
+  // null値の明示的チェック
+  const errors: string[] = [];
+  const c = cfg as any;
+
+  // highlight_hint_marker のnullチェック
+  if (c.highlight_hint_marker === null) {
+    errors.push("highlight_hint_marker must be a string");
+  }
+
+  // highlight_hint_marker のempty string チェック
+  if (c.highlight_hint_marker === '') {
+    errors.push("highlight_hint_marker must be a non-empty string");
+  }
+
+  // highlight_hint_marker_current のnullチェック
+  if (c.highlight_hint_marker_current === null) {
+    errors.push("highlight_hint_marker_current must be a string");
+  }
+
+  // highlight_hint_marker_current のempty string チェック
+  if (c.highlight_hint_marker_current === '') {
+    errors.push("highlight_hint_marker_current must be a non-empty string");
+  }
+
+  // 数値型のチェック
+  if (typeof c.highlight_hint_marker === 'number') {
+    errors.push("highlight_hint_marker must be a string");
+  }
+
+  if (typeof c.highlight_hint_marker_current === 'number') {
+    errors.push("highlight_hint_marker_current must be a string");
+  }
+
+  // 配列型のチェック
+  if (Array.isArray(c.highlight_hint_marker)) {
+    errors.push("highlight_hint_marker must be a string");
+  }
+
+  if (Array.isArray(c.highlight_hint_marker_current)) {
+    errors.push("highlight_hint_marker_current must be a string");
+  }
+
+  // ハイライトグループ名として有効な文字列であるかチェック
+  if (typeof c.highlight_hint_marker === 'string' && c.highlight_hint_marker !== '') {
+    // 最初の文字が数字で始まる場合
+    if (/^[0-9]/.test(c.highlight_hint_marker)) {
+      errors.push("highlight_hint_marker must start with a letter or underscore");
+    }
+    // アルファベット、数字、アンダースコア以外の文字を含む場合
+    else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlight_hint_marker)) {
+      errors.push("highlight_hint_marker must contain only alphanumeric characters and underscores");
+    }
+    // 100文字を超える場合
+    else if (c.highlight_hint_marker.length > 100) {
+      errors.push("highlight_hint_marker must be 100 characters or less");
+    }
+  }
+
+  if (typeof c.highlight_hint_marker_current === 'string' && c.highlight_hint_marker_current !== '') {
+    // 最初の文字が数字で始まる場合
+    if (/^[0-9]/.test(c.highlight_hint_marker_current)) {
+      errors.push("highlight_hint_marker_current must start with a letter or underscore");
+    }
+    // アルファベット、数字、アンダースコア以外の文字を含む場合
+    else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlight_hint_marker_current)) {
+      errors.push("highlight_hint_marker_current must contain only alphanumeric characters and underscores");
+    }
+    // 100文字を超える場合
+    else if (c.highlight_hint_marker_current.length > 100) {
+      errors.push("highlight_hint_marker_current must be 100 characters or less");
+    }
+  }
+
+  // 事前チェックでエラーがある場合は早期返却
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
   // ConfigをUnifiedConfigに変換してバリデーション
   const unifiedConfig = toUnifiedConfig(cfg);
   const result = validateUnifiedConfig(unifiedConfig);
@@ -463,11 +548,11 @@ export function getDefaultConfig(): Config {
   return fromUnifiedConfig(getDefaultUnifiedConfig());
 }
 export function validateHighlightGroupName(groupName: string): boolean {
-  return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(groupName);
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(groupName);
 }
 export function isValidColorName(colorName: string): boolean {
   if (typeof colorName !== 'string') return false;
-  const standardColors = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'gray', 'grey'];
+  const standardColors = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'gray', 'grey', 'none'];
   return standardColors.includes(colorName.toLowerCase());
 }
 export function isValidHexColor(hexColor: string): boolean {
@@ -497,16 +582,30 @@ export function validateHighlightColor(color: HighlightColor): { valid: boolean;
   }
 
   if (color.fg !== undefined && color.fg !== null) {
-    const fg = String(color.fg);
-    if (fg && !isValidColorName(fg) && !isValidHexColor(fg) && fg.toLowerCase() !== 'none') {
-      errors.push(`Invalid foreground color: ${fg}`);
+    // Type check: only string is allowed
+    if (typeof color.fg !== 'string') {
+      errors.push('fg must be a string');
+    } else {
+      const fg = color.fg;
+      if (fg === '') {
+        errors.push('fg cannot be empty string');
+      } else if (!isValidColorName(fg) && !isValidHexColor(fg) && fg.toLowerCase() !== 'none') {
+        errors.push(`Invalid fg color: ${fg}`);
+      }
     }
   }
 
   if (color.bg !== undefined && color.bg !== null) {
-    const bg = String(color.bg);
-    if (bg && !isValidColorName(bg) && !isValidHexColor(bg) && bg.toLowerCase() !== 'none') {
-      errors.push(`Invalid background color: ${bg}`);
+    // Type check: only string is allowed
+    if (typeof color.bg !== 'string') {
+      errors.push('bg must be a string');
+    } else {
+      const bg = color.bg;
+      if (bg === '') {
+        errors.push('bg cannot be empty string');
+      } else if (!isValidColorName(bg) && !isValidHexColor(bg) && bg.toLowerCase() !== 'none') {
+        errors.push(`Invalid bg color: ${bg}`);
+      }
     }
   }
 
@@ -566,24 +665,39 @@ export function validateHighlightConfig(config: { [key: string]: any }): { valid
         // Validate individual color properties
         if ('fg' in value) {
           const fg = value.fg;
-          if (fg !== undefined && fg !== null) {
-            const fgStr = String(fg);
-            // Check if it's intended as a color name or hex
-            if (!isValidColorName(fgStr) && !isValidHexColor(fgStr) && fgStr.toLowerCase() !== 'none') {
-              // It might be a highlight group name
-              if (!validateHighlightGroupName(fgStr)) {
-                errors.push(`Invalid value for ${key}.fg: ${fgStr}`);
+          if (fg === null) {
+            errors.push(`fg must be a string for ${key}`);
+          } else if (fg !== undefined) {
+            if (typeof fg !== 'string') {
+              errors.push(`fg must be a string for ${key}`);
+            } else {
+              const fgStr = fg;
+              if (fgStr === '') {
+                errors.push(`fg cannot be empty string for ${key}`);
+              } else if (!isValidColorName(fgStr) && !isValidHexColor(fgStr) && fgStr.toLowerCase() !== 'none') {
+                // It might be a highlight group name
+                if (!validateHighlightGroupName(fgStr)) {
+                  errors.push(`Invalid value for ${key}.fg: ${fgStr}`);
+                }
               }
             }
           }
         }
         if ('bg' in value) {
           const bg = value.bg;
-          if (bg !== undefined && bg !== null) {
-            const bgStr = String(bg);
-            if (!isValidColorName(bgStr) && !isValidHexColor(bgStr) && bgStr.toLowerCase() !== 'none') {
-              if (!validateHighlightGroupName(bgStr)) {
-                errors.push(`Invalid value for ${key}.bg: ${bgStr}`);
+          if (bg === null) {
+            errors.push(`bg must be a string for ${key}`);
+          } else if (bg !== undefined) {
+            if (typeof bg !== 'string') {
+              errors.push(`bg must be a string for ${key}`);
+            } else {
+              const bgStr = bg;
+              if (bgStr === '') {
+                errors.push(`bg cannot be empty string for ${key}`);
+              } else if (!isValidColorName(bgStr) && !isValidHexColor(bgStr) && bgStr.toLowerCase() !== 'none') {
+                if (!validateHighlightGroupName(bgStr)) {
+                  errors.push(`Invalid value for ${key}.bg: ${bgStr}`);
+                }
               }
             }
           }

@@ -1739,6 +1739,7 @@ export class Core {
       "gray",
       "grey",
       "none",
+      "NONE",
     ];
 
     return validColorNames.includes(colorName.toLowerCase());
@@ -2007,7 +2008,7 @@ export class Core {
     }
 
     // デフォルト値
-    return 2;
+    return 3;
   }
 
   /**
@@ -2047,7 +2048,7 @@ export class Core {
     }
 
     // 最終的なデフォルト値
-    return 3;
+    return 2;
   }
 
   // ========================================

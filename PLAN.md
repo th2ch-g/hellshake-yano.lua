@@ -838,38 +838,38 @@ export interface UnifiedConfig {
 - エラーは4カテゴリに分類：非同期処理(1)、設定バリデーション(2)、ハイライト検証(9)、min_length設定(9)
 
 ###### sub2-6-6-1 設定バリデーションメッセージ修正
-- [ ] tests/config_test.ts:171のテスト確認（期待値: "maxHints must be..."）
-- [ ] tests/config_test.ts:194のテスト確認（期待値: "debounceDelay must be..."）
-- [ ] config.tsのvalidateUnifiedConfigでエラーメッセージ修正
-  - [ ] "max_hints" → "maxHints"に変更
-  - [ ] "debounce_delay" → "debounceDelay"に変更
-- [ ] `deno check denops/hellshake-yano/config.ts`で型チェック
-- [ ] `deno test tests/config_test.ts`で該当テストがパス
+- [x] tests/config_test.ts:171のテスト確認（期待値: "maxHints must be..."）
+- [x] tests/config_test.ts:194のテスト確認（期待値: "debounceDelay must be..."）
+- [x] config.tsのvalidateUnifiedConfigでエラーメッセージ修正
+  - [x] "max_hints" → "maxHints"に変更
+  - [x] "debounce_delay" → "debounceDelay"に変更
+- [x] `deno check denops/hellshake-yano/config.ts`で型チェック
+- [x] `deno test tests/config_test.ts`で該当テストがパス
 
-###### sub2-6-6-2 ハイライト検証ロジック修正
-- [ ] validateHighlightGroupNameの修正
-  - [ ] 型チェック追加（string型のみ許可）
-  - [ ] アンダースコア`_`を許可する正規表現に修正
-  - [ ] 長さ制限を200文字に設定
-  - [ ] 数字開始を禁止するチェック追加
-- [ ] isValidColorNameの修正
-  - [ ] null/undefinedチェック追加（falseを返す）
-  - [ ] "NONE"を有効な色名リストに追加
-- [ ] validateHighlightColorの修正
-  - [ ] fg: nullの場合は無効と判定
-- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-- [ ] `deno test tests/highlight*.ts`で該当テストがパス
+###### sub2-6-6-2 ハイライト検証ロジック修正【完了】
+- [x] validateHighlightGroupNameの修正
+  - [x] 型チェック追加（string型のみ許可）
+  - [x] アンダースコア`_`を許可する正規表現に修正
+  - [x] 長さ制限を100文字に設定（テスト要件に合わせて）
+  - [x] 数字開始を禁止するチェック追加
+- [x] isValidColorNameの修正
+  - [x] null/undefinedチェック追加（falseを返す）
+  - [x] "NONE"を有効な色名リストに追加
+- [x] validateHighlightColorの修正
+  - [x] fg: nullの場合は無効と判定
+- [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [x] `deno test tests/highlight*.ts`で該当テストがパス（32個全てパス）
 
-###### sub2-6-6-3 min_length設定ロジック修正
-- [ ] getMinLengthForKeyのデフォルト値修正
-  - [ ] デフォルト値を2から3に変更
-  - [ ] per-key → global → defaultの優先順位実装
-  - [ ] snake_caseとcamelCaseの両方をサポート
-- [ ] getMotionCountForKeyの修正
-  - [ ] null/undefinedチェック追加
-  - [ ] デフォルト値2を返す処理追加
-- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-- [ ] `deno test tests/per_key*.ts tests/main_test.ts`で該当テストがパス
+###### sub2-6-6-3 min_length設定ロジック修正【完了】
+- [x] getMinLengthForKeyのデフォルト値修正
+  - [x] デフォルト値を2から3に変更
+  - [x] per-key → default_min_word_length → global → defaultの優先順位実装
+  - [x] snake_caseとcamelCaseの両方をサポート
+- [x] getMotionCountForKeyの修正
+  - [x] 無効値（0以下）のチェック追加
+  - [x] デフォルト値2を返す処理追加
+- [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [x] `deno test tests/per_key*.ts tests/main_test.ts`で該当テストがパス（47個全てパス）
 
 ###### sub2-6-6-4 非同期処理修正
 - [ ] tests/async_highlight_test.ts:282のテスト分析

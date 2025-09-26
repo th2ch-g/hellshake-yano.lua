@@ -1045,9 +1045,9 @@ export function validateConfig(
     if (c.highlight_hint_marker === null) {
       errors.push("highlight_hint_marker cannot be null");
     } else if (typeof c.highlight_hint_marker === 'number') {
-      errors.push("highlight_hint_marker must be a string or HighlightColor object");
+      errors.push("highlight_hint_marker must be a string");
     } else if (Array.isArray(c.highlight_hint_marker)) {
-      errors.push("highlight_hint_marker must be a string or HighlightColor object");
+      errors.push("highlight_hint_marker must be a string");
     } else if (typeof c.highlight_hint_marker === 'string') {
       if (c.highlight_hint_marker === '') {
         errors.push("highlight_hint_marker must be a non-empty string");
@@ -1068,9 +1068,9 @@ export function validateConfig(
     if (c.highlight_hint_marker_current === null) {
       errors.push("highlight_hint_marker_current cannot be null");
     } else if (typeof c.highlight_hint_marker_current === 'number') {
-      errors.push("highlight_hint_marker_current must be a string or HighlightColor object");
+      errors.push("highlight_hint_marker_current must be a string");
     } else if (Array.isArray(c.highlight_hint_marker_current)) {
-      errors.push("highlight_hint_marker_current must be a string or HighlightColor object");
+      errors.push("highlight_hint_marker_current must be a string");
     } else if (typeof c.highlight_hint_marker_current === 'string') {
       if (c.highlight_hint_marker_current === '') {
         errors.push("highlight_hint_marker_current must be a non-empty string");

@@ -393,7 +393,7 @@ export function isValidColorName(colorName: string): boolean {
     "brown", "darkyellow", "lightgray", "lightgrey", "darkgray", "darkgrey",
     "blue", "lightblue", "green", "lightgreen", "cyan", "lightcyan", "red",
     "lightred", "magenta", "lightmagenta", "yellow", "lightyellow", "white",
-    "orange", "gray", "grey", "seagreen"
+    "orange", "gray", "grey", "seagreen", "none"
   ];
 
   return validColorNames.includes(colorName.toLowerCase());
