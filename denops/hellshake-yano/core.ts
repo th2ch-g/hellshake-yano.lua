@@ -1163,4 +1163,41 @@ export class Core {
       await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
     }
   }
+
+  /**
+   * Vimのハイライトグループ名として有効かどうか検証する
+   * Phase 11: process3 sub2-1-1 - main.tsからCore classへの移行
+   * TDD Green Phase: 既存のvalidateHighlightGroupName関数のロジックを移植
+   *
+   * Vimのハイライトグループ名のルール：
+   * - 英字またはアンダースコアで開始
+   * - 英数字とアンダースコアのみ使用可能
+   * - 100文字以下
+   * @param groupName 検証するハイライトグループ名
+   * @returns 有効な場合はtrue、無効な場合はfalse
+   */
+  static validateHighlightGroupName(groupName: string): boolean {
+    // 空文字列チェック
+    if (!groupName || groupName.length === 0) {
+      return false;
+    }
+
+    // 長さチェック（100文字以下）
+    if (groupName.length > 100) {
+      return false;
+    }
+
+    // 最初の文字は英字またはアンダースコアでなければならない
+    const firstChar = groupName.charAt(0);
+    if (!/[a-zA-Z_]/.test(firstChar)) {
+      return false;
+    }
+
+    // 全体の文字列は英数字とアンダースコアのみ
+    if (!/^[a-zA-Z0-9_]+$/.test(groupName)) {
+      return false;
+    }
+
+    return true;
+  }
 }

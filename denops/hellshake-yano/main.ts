@@ -2933,7 +2933,9 @@ export function getDefaultConfig(): Config {
 }
 
 /**
- * ハイライトグループ名を検証する関数
+ * Vimのハイライトグループ名として有効かどうか検証する
+ * REFACTOR Phase: Core.validateHighlightGroupNameメソッドのラッパー関数
+ *
  * Vimのハイライトグループ名は以下のルールに従う必要がある：
  * - 英字またはアンダースコアで始まる
  * - 英数字とアンダースコアのみ使用可能
@@ -2942,28 +2944,7 @@ export function getDefaultConfig(): Config {
  * @returns 有効な場合はtrue、無効な場合はfalse
  */
 export function validateHighlightGroupName(groupName: string): boolean {
-  // 空文字列チェック
-  if (!groupName || groupName.length === 0) {
-    return false;
-  }
-
-  // 長さチェック（100文字以下）
-  if (groupName.length > 100) {
-    return false;
-  }
-
-  // 最初の文字は英字またはアンダースコアでなければならない
-  const firstChar = groupName.charAt(0);
-  if (!/[a-zA-Z_]/.test(firstChar)) {
-    return false;
-  }
-
-  // 全体の文字列は英数字とアンダースコアのみ
-  if (!/^[a-zA-Z0-9_]+$/.test(groupName)) {
-    return false;
-  }
-
-  return true;
+  return Core.validateHighlightGroupName(groupName);
 }
 
 /**

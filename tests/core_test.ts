@@ -1249,3 +1249,102 @@ Deno.test("Core validateDictionary should validate dictionary format", async () 
   // Cleanup
   core.cleanup();
 });
+
+/**
+ * TDD RED Phase: validateHighlightGroupName method tests
+ * これらのテストは最初失敗する（Core.validateHighlightGroupNameメソッドが未実装のため）
+ */
+
+Deno.test("Core class should have static validateHighlightGroupName method", () => {
+  assertExists(Core.validateHighlightGroupName);
+  assertEquals(typeof Core.validateHighlightGroupName, "function");
+});
+
+Deno.test("Core.validateHighlightGroupName should validate normal highlight group names", () => {
+  // 正常なグループ名のテスト
+  assertEquals(Core.validateHighlightGroupName("MyHighlight"), true);
+  assertEquals(Core.validateHighlightGroupName("Normal"), true);
+  assertEquals(Core.validateHighlightGroupName("Function"), true);
+  assertEquals(Core.validateHighlightGroupName("String"), true);
+  assertEquals(Core.validateHighlightGroupName("Comment"), true);
+  assertEquals(Core.validateHighlightGroupName("SpecialChar"), true);
+  assertEquals(Core.validateHighlightGroupName("LineNr"), true);
+  assertEquals(Core.validateHighlightGroupName("CursorLine"), true);
+  assertEquals(Core.validateHighlightGroupName("Visual"), true);
+  assertEquals(Core.validateHighlightGroupName("Search"), true);
+});
+
+Deno.test("Core.validateHighlightGroupName should validate names with underscores", () => {
+  // アンダースコアを含むグループ名のテスト
+  assertEquals(Core.validateHighlightGroupName("_Valid"), true);
+  assertEquals(Core.validateHighlightGroupName("My_Highlight"), true);
+  assertEquals(Core.validateHighlightGroupName("User_Defined_Group"), true);
+  assertEquals(Core.validateHighlightGroupName("_"), true);
+  assertEquals(Core.validateHighlightGroupName("__double"), true);
+});
+
+Deno.test("Core.validateHighlightGroupName should validate names with numbers", () => {
+  // 数字を含むグループ名のテスト（開始文字以外）
+  assertEquals(Core.validateHighlightGroupName("Group1"), true);
+  assertEquals(Core.validateHighlightGroupName("Highlight123"), true);
+  assertEquals(Core.validateHighlightGroupName("User42Group"), true);
+  assertEquals(Core.validateHighlightGroupName("Version2"), true);
+});
+
+Deno.test("Core.validateHighlightGroupName should reject invalid group names", () => {
+  // 無効なグループ名のテスト
+  // 数字で開始
+  assertEquals(Core.validateHighlightGroupName("1Invalid"), false);
+  assertEquals(Core.validateHighlightGroupName("123Group"), false);
+  assertEquals(Core.validateHighlightGroupName("9Test"), false);
+
+  // 特殊文字を含む
+  assertEquals(Core.validateHighlightGroupName("Invalid-Group"), false);
+  assertEquals(Core.validateHighlightGroupName("My.Highlight"), false);
+  assertEquals(Core.validateHighlightGroupName("Group@Name"), false);
+  assertEquals(Core.validateHighlightGroupName("Hash#Group"), false);
+  assertEquals(Core.validateHighlightGroupName("Dollar$Group"), false);
+  assertEquals(Core.validateHighlightGroupName("Percent%Group"), false);
+  assertEquals(Core.validateHighlightGroupName("Space Group"), false);
+  assertEquals(Core.validateHighlightGroupName("Tab\tGroup"), false);
+  assertEquals(Core.validateHighlightGroupName("New\nLine"), false);
+});
+
+Deno.test("Core.validateHighlightGroupName should reject empty or null names", () => {
+  // 空文字列や無効な値のテスト
+  assertEquals(Core.validateHighlightGroupName(""), false);
+  assertEquals(Core.validateHighlightGroupName("   "), false);
+  assertEquals(Core.validateHighlightGroupName("\t"), false);
+  assertEquals(Core.validateHighlightGroupName("\n"), false);
+});
+
+Deno.test("Core.validateHighlightGroupName should enforce length limits", () => {
+  // 長さ制限のテスト
+  // 100文字以下は有効
+  const validLongName = "A".repeat(100);
+  assertEquals(Core.validateHighlightGroupName(validLongName), true);
+
+  const validMediumName = "MyHighlight".repeat(9); // 99文字
+  assertEquals(Core.validateHighlightGroupName(validMediumName), true);
+
+  // 100文字を超える場合は無効
+  const invalidLongName = "A".repeat(101);
+  assertEquals(Core.validateHighlightGroupName(invalidLongName), false);
+
+  const tooLongName = "VeryLongHighlightGroupName".repeat(10); // 260文字
+  assertEquals(Core.validateHighlightGroupName(tooLongName), false);
+});
+
+Deno.test("Core.validateHighlightGroupName should handle edge cases", () => {
+  // エッジケースのテスト
+  // 最小有効名（1文字）
+  assertEquals(Core.validateHighlightGroupName("A"), true);
+  assertEquals(Core.validateHighlightGroupName("_"), true);
+  assertEquals(Core.validateHighlightGroupName("z"), true);
+
+  // 有効な境界値
+  assertEquals(Core.validateHighlightGroupName("A0"), true);
+  assertEquals(Core.validateHighlightGroupName("Z9"), true);
+  assertEquals(Core.validateHighlightGroupName("_0"), true);
+  assertEquals(Core.validateHighlightGroupName("a_Z_9"), true);
+});

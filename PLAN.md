@@ -563,15 +563,15 @@ export interface UnifiedConfig {
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/main.ts
 @context: ハイライト検証・生成関数をCoreクラスへ移行
 
-###### sub2-1-1 validateHighlightGroupName機能
-- [ ] tests/core_test.tsにvalidateHighlightGroupNameのテスト追加（RED）
-  - [ ] 正常なグループ名のテスト（"MyHighlight"等）
-  - [ ] 無効なグループ名のテスト（数字開始、特殊文字等）
-- [ ] CoreクラスにvalidateHighlightGroupNameメソッド実装（GREEN）
-- [ ] main.tsのvalidateHighlightGroupNameから呼び出し変更
-- [ ] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
-- [ ] `deno test tests/core_test.ts`でテストパス
-- [ ] `deno test tests/highlight_color_test.ts`で既存テストパス
+###### sub2-1-1 validateHighlightGroupName機能【完了】
+- [x] tests/core_test.tsにvalidateHighlightGroupNameのテスト追加（RED）
+  - [x] 正常なグループ名のテスト（"MyHighlight"等）
+  - [x] 無効なグループ名のテスト（数字開始、特殊文字等）
+- [x] CoreクラスにvalidateHighlightGroupNameメソッド実装（GREEN）
+- [x] main.tsのvalidateHighlightGroupNameから呼び出し変更
+- [x] `deno check denops/hellshake-yano/{core,main}.ts`で型チェック
+- [x] `deno test tests/core_test.ts`でテストパス（8/8テスト）
+- [x] `deno test tests/highlight_color_test.ts`で既存テストパス（12/12テスト）
 
 ###### sub2-1-2 isValidColorName機能
 - [ ] tests/core_test.tsにisValidColorNameのテスト追加（RED）
