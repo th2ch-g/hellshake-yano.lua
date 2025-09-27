@@ -16,25 +16,25 @@ describe("HintManager Tests", () => {
     // テスト用の基本設定
     config = {
       markers: ["A", "B", "C", "D", "E"],
-      motion_count: 3,
-      motion_timeout: 2000,
-      hint_position: "start",
-      trigger_on_hjkl: true,
-      counted_motions: [],
+      motionCount: 3,
+      motionTimeout: 2000,
+      hintPosition: "start",
+      triggerOnHjkl: true,
+      countedMotions: [],
       enabled: true,
       maxHints: 100,
       debounceDelay: 50,
-      use_numbers: true,
-      highlight_selected: true,
-      debug_coordinates: false,
+      useNumbers: true,
+      highlightSelected: true,
+      debugCoordinates: false,
       // process1で追加されたキー別設定
-      per_key_min_length: {
+      perKeyMinLength: {
         "f": 2,
         "t": 3,
         "w": 1,
         "b": 4,
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       current_key_context: "f",
     };
 
@@ -107,7 +107,7 @@ describe("HintManager Tests", () => {
 
     it("should handle missing per_key_min_length", () => {
       const configWithoutPerKey = { ...config };
-      delete configWithoutPerKey.per_key_min_length;
+      delete configWithoutPerKey.perKeyMinLength;
 
       const manager = new HintManager(configWithoutPerKey);
       assertEquals(manager.getMinLengthForKey("f"), 2); // default_min_word_length
@@ -165,11 +165,11 @@ describe("HintManager Tests", () => {
       // 設定を更新
       const newConfig = {
         ...config,
-        per_key_min_length: {
+        perKeyMinLength: {
           "f": 5,
           "t": 6,
         },
-        default_min_word_length: 3,
+        defaultMinWordLength: 3,
       };
 
       const newManager = new HintManager(newConfig);
@@ -181,8 +181,8 @@ describe("HintManager Tests", () => {
     it("should handle edge cases in config", () => {
       const edgeConfig = {
         ...config,
-        per_key_min_length: {},
-        default_min_word_length: undefined,
+        perKeyMinLength: {},
+        defaultMinWordLength: undefined,
         min_word_length: 1, // 後方互換性
       };
 
@@ -193,7 +193,7 @@ describe("HintManager Tests", () => {
     it("should provide readonly access to config", () => {
       const configRef = hintManager.getConfig();
       assertExists(configRef);
-      assertEquals(configRef.per_key_min_length?.["f"], 2);
+      assertEquals(configRef.perKeyMinLength?.["f"], 2);
     });
   });
 
@@ -210,7 +210,7 @@ describe("HintManager Tests", () => {
 
     it("should handle undefined initial context", () => {
       const configWithoutContext = { ...config };
-      delete configWithoutContext.current_key_context;
+      delete configWithoutContext.currentKeyContext;
 
       const manager = new HintManager(configWithoutContext);
       assertEquals(manager.getCurrentKeyContext(), undefined);

@@ -15,25 +15,24 @@ import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 function createTestConfig(partial: Partial<Config>): Config {
   return {
     markers: ["A", "B", "C"],
-    motion_count: 3,
-    motion_timeout: 2000,
-    hint_position: "start",
-    trigger_on_hjkl: true,
-    counted_motions: ["w", "b"],
+    motionCount: 3,
+    motionTimeout: 2000,
+    hintPosition: "start",
+    triggerOnHjkl: true,
+    countedMotions: ["w", "b"],
     enabled: true,
     maxHints: 100,
     debounceDelay: 100,
-    use_numbers: false,
-    highlight_selected: false,
-    debug_coordinates: false,
+    useNumbers: false,
+    highlightSelected: false,
+    debugCoordinates: false,
     ...partial,
   };
 }
 
-Deno.test("per_key_motion_count: basic functionality", () => {
-  const config = createTestConfig({
-    motion_count: 3,
-    per_key_motion_count: {
+Deno.test("per_key_motionCount: basic functionality", () => {
+  const config = createTestConfig({motionCount: 3,
+    per_key_motionCount: {
       "v": 1,
       "w": 1,
       "b": 1,
@@ -42,7 +41,7 @@ Deno.test("per_key_motion_count: basic functionality", () => {
       "k": 3,
       "l": 3,
     },
-    default_motion_count: 2,
+    default_motionCount: 2,
   });
 
   // Test per-key specific values
@@ -55,13 +54,12 @@ Deno.test("per_key_motion_count: basic functionality", () => {
   assertEquals(getMotionCountForKey("l", config), 3);
 });
 
-Deno.test("per_key_motion_count: fallback to default_motion_count", () => {
-  const config = createTestConfig({
-    motion_count: 3,
-    per_key_motion_count: {
+Deno.test("per_key_motionCount: fallback to default_motion_count", () => {
+  const config = createTestConfig({motionCount: 3,
+    per_key_motionCount: {
       "v": 1,
     },
-    default_motion_count: 2,
+    default_motionCount: 2,
   });
 
   // Test fallback to default_motion_count for undefined keys
@@ -70,10 +68,9 @@ Deno.test("per_key_motion_count: fallback to default_motion_count", () => {
   assertEquals(getMotionCountForKey("z", config), 2); // default_motion_count
 });
 
-Deno.test("per_key_motion_count: fallback to motion_count when default_motion_count is undefined", () => {
-  const config = createTestConfig({
-    motion_count: 3,
-    per_key_motion_count: {
+Deno.test("per_key_motionCount: fallback to motion_count when default_motion_count is undefined", () => {
+  const config = createTestConfig({motionCount: 3,
+    per_key_motionCount: {
       "v": 1,
     },
     // default_motion_count is undefined
@@ -84,11 +81,10 @@ Deno.test("per_key_motion_count: fallback to motion_count when default_motion_co
   assertEquals(getMotionCountForKey("x", config), 3); // motion_count (backward compatibility)
 });
 
-Deno.test("per_key_motion_count: undefined per_key_motion_count uses default_motion_count", () => {
-  const config = createTestConfig({
-    motion_count: 3,
+Deno.test("per_key_motionCount: undefined per_key_motion_count uses default_motion_count", () => {
+  const config = createTestConfig({motionCount: 3,
     // per_key_motion_count is undefined
-    default_motion_count: 2,
+    default_motionCount: 2,
   });
 
   // Test fallback to default_motion_count when per_key_motion_count is undefined
@@ -96,9 +92,8 @@ Deno.test("per_key_motion_count: undefined per_key_motion_count uses default_mot
   assertEquals(getMotionCountForKey("h", config), 2);
 });
 
-Deno.test("per_key_motion_count: both undefined uses motion_count", () => {
-  const config = createTestConfig({
-    motion_count: 3,
+Deno.test("per_key_motionCount: both undefined uses motion_count", () => {
+  const config = createTestConfig({motionCount: 3,
     // both per_key_motion_count and default_motion_count are undefined
   });
 
@@ -107,14 +102,13 @@ Deno.test("per_key_motion_count: both undefined uses motion_count", () => {
   assertEquals(getMotionCountForKey("h", config), 3);
 });
 
-Deno.test("per_key_motion_count: edge cases", () => {
-  const config = createTestConfig({
-    motion_count: 3,
-    per_key_motion_count: {
+Deno.test("per_key_motionCount: edge cases", () => {
+  const config = createTestConfig({motionCount: 3,
+    per_key_motionCount: {
       "v": 0, // zero value (should fallback as it's invalid)
       "w": -1, // negative value (should fallback)
     },
-    default_motion_count: 2,
+    default_motionCount: 2,
   });
 
   // Zero and negative values should fallback to default (only values >= 1 are valid)
@@ -122,13 +116,12 @@ Deno.test("per_key_motion_count: edge cases", () => {
   assertEquals(getMotionCountForKey("w", config), 2);
 });
 
-Deno.test("per_key_motion_count: empty string key", () => {
-  const config = createTestConfig({
-    motion_count: 3,
-    per_key_motion_count: {
+Deno.test("per_key_motionCount: empty string key", () => {
+  const config = createTestConfig({motionCount: 3,
+    per_key_motionCount: {
       "": 1, // empty string key
     },
-    default_motion_count: 2,
+    default_motionCount: 2,
   });
 
   // Empty string key should work
@@ -138,13 +131,12 @@ Deno.test("per_key_motion_count: empty string key", () => {
   assertEquals(getMotionCountForKey("v", config), 2);
 });
 
-Deno.test("per_key_motion_count: priority test", () => {
-  const config = createTestConfig({
-    motion_count: 5,
-    per_key_motion_count: {
+Deno.test("per_key_motionCount: priority test", () => {
+  const config = createTestConfig({motionCount: 5,
+    per_key_motionCount: {
       "v": 1,
     },
-    default_motion_count: 2,
+    default_motionCount: 2,
   });
 
   // Priority: per_key_motion_count > default_motion_count > motion_count
@@ -152,15 +144,13 @@ Deno.test("per_key_motion_count: priority test", () => {
   assertEquals(getMotionCountForKey("x", config), 2); // default_motion_count
 
   // Test without per_key_motion_count
-  const configWithoutPerKey = createTestConfig({
-    motion_count: 5,
-    default_motion_count: 2,
+  const configWithoutPerKey = createTestConfig({motionCount: 5,
+    default_motionCount: 2,
   });
   assertEquals(getMotionCountForKey("v", configWithoutPerKey), 2); // default_motion_count
 
   // Test without both
-  const configMinimal = createTestConfig({
-    motion_count: 5,
+  const configMinimal = createTestConfig({motionCount: 5,
   });
   assertEquals(getMotionCountForKey("v", configMinimal), 5); // motion_count
 });

@@ -107,18 +107,18 @@ Deno.test("Phase 5 型定義の整理 - 成功検証", async (t) => {
 
     // 必須項目がすべて存在することを確認
     assertExists(config.markers);
-    assertExists(config.motion_count);
-    assertExists(config.motion_timeout);
-    assertExists(config.hint_position);
-    assertExists(config.trigger_on_hjkl);
-    assertExists(config.counted_motions);
+    assertExists(config.motionCount);
+    assertExists(config.motionTimeout);
+    assertExists(config.hintPosition);
+    assertExists(config.triggerOnHjkl);
+    assertExists(config.countedMotions);
     assertExists(config.enabled);
     assertExists(config.maxHints);
     assertExists(config.debounceDelay);
 
     // 型安全性の確認
     assert(Array.isArray(config.markers), "markers should be array");
-    assert(typeof config.motion_count === "number", "motion_count should be number");
+    assert(typeof config.motionCount === "number", "motion_count should be number");
     assert(typeof config.enabled === "boolean", "enabled should be boolean");
   });
 

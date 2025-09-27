@@ -194,7 +194,7 @@ class MockWordDetectionManager {
     let filtered = words;
 
     // Apply Japanese filtering if configured
-    if (!this.config.use_japanese) {
+    if (!this.config.useJapanese) {
       filtered = filtered.filter((word) =>
         !/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(word.text)
       );
@@ -215,9 +215,9 @@ class MockWordDetectionManager {
   private getDefaultConfig(): WordDetectionConfig {
     return {
       strategy: "hybrid",
-      use_japanese: false,
+      useJapanese: false,
       use_improved_detection: true,
-      enable_tinysegmenter: true,
+      enableTinySegmenter: true,
       segmenter_threshold: 4,
       enable_fallback: true,
       fallback_to_regex: true,
@@ -328,8 +328,7 @@ Deno.test("WordDetectionManager Tests", async (t) => {
   });
 
   await t.step("Japanese filtering configuration", async () => {
-    const manager = new MockWordDetectionManager({
-      use_japanese: false,
+    const manager = new MockWordDetectionManager({useJapanese: false,
       strategy: "hybrid",
     });
     manager.addDetector(new MockRegexWordDetector());
@@ -400,7 +399,7 @@ Deno.test("WordDetectionManager Tests", async (t) => {
     // Test custom config
     const customConfig: WordDetectionConfig = {
       strategy: "regex",
-      use_japanese: true,
+      useJapanese: true,
       enable_fallback: false,
     };
     const manager2 = new MockWordDetectionManager(customConfig);
@@ -428,10 +427,9 @@ Deno.test("WordDetectionConfig Tests", async (t) => {
   });
 
   await t.step("Boolean configuration validation", () => {
-    const config: WordDetectionConfig = {
-      use_japanese: true,
+    const config: WordDetectionConfig = {useJapanese: true,
       use_improved_detection: false,
-      enable_tinysegmenter: true,
+      enableTinySegmenter: true,
       enable_fallback: false,
       fallback_to_regex: true,
     };

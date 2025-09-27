@@ -46,7 +46,7 @@ describe("Window Scrolling Detection", () => {
 
       const config: EnhancedWordConfig = {
         strategy: "regex",
-        use_japanese: false,
+        useJapanese: false,
       };
 
       // ウィンドウ位置1: 行1-20
@@ -110,7 +110,7 @@ describe("Window Scrolling Detection", () => {
 
       const config: EnhancedWordConfig = {
         strategy: "regex",
-        use_japanese: false,
+        useJapanese: false,
       };
 
       const words = await detectWordsWithEnhancedConfig(mockDenops as any, config);
@@ -150,7 +150,7 @@ describe("Window Scrolling Detection", () => {
 
       const config: EnhancedWordConfig = {
         strategy: "regex",
-        use_japanese: false,
+        useJapanese: false,
       };
 
       const words = await detectWordsWithEnhancedConfig(mockDenops as any, config);
@@ -201,7 +201,7 @@ describe("Window Scrolling Detection", () => {
 
       const config: EnhancedWordConfig = {
         strategy: "regex",
-        use_japanese: false,
+        useJapanese: false,
       };
 
       // 最初の検出

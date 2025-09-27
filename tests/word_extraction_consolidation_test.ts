@@ -74,7 +74,7 @@ Deno.test("TDD Red Phase: Unified Function Interface Definition", async (t) => {
     const expected = extractWordsFromLineWithConfig(testText, lineNumber, config);
 
     // Test unified behavior: backward compatibility for WordConfig
-    const result = extractWordsUnified(testText, lineNumber, { use_japanese: true });
+    const result = extractWordsUnified(testText, lineNumber, {useJapanese: true });
     assertEquals(result.length, expected.length);
 
     // Verify behavior
@@ -87,8 +87,7 @@ Deno.test("TDD Red Phase: Unified Function Interface Definition", async (t) => {
     const lineNumber = 1;
 
     // Current behavior: EnhancedWordConfig interface
-    const config: EnhancedWordConfig = {
-      use_japanese: true,
+    const config: EnhancedWordConfig = {useJapanese: true,
       strategy: "regex",
       min_word_length: 2
     };
@@ -133,11 +132,10 @@ Deno.test("TDD Red Phase: Configuration Unification", async (t) => {
     // Test that different config formats can be unified
 
     // WordConfig format
-    const wordConfig: WordConfig = { use_japanese: true };
+    const wordConfig: WordConfig = {useJapanese: true };
 
     // EnhancedWordConfig format
-    const enhancedConfig: EnhancedWordConfig = {
-      use_japanese: true,
+    const enhancedConfig: EnhancedWordConfig = {useJapanese: true,
       strategy: "hybrid",
       min_word_length: 3
     };
@@ -152,7 +150,7 @@ Deno.test("TDD Red Phase: Configuration Unification", async (t) => {
     // Future implementation will normalize these to a single internal format
 
     // For now, just verify the configs are valid
-    assertEquals(wordConfig.use_japanese, true);
+    assertEquals(wordConfig.useJapanese, true);
     assertEquals(enhancedConfig.strategy, "hybrid");
     assertEquals(directParams.useImprovedDetection, true);
   });
@@ -239,13 +237,13 @@ export const EXPECTED_UNIFIED_BEHAVIOR = {
     excludeJapanese: "boolean",
 
     // WordConfig compatibility
-    use_japanese: "boolean",
+    useJapanese: "boolean",
     use_improved_detection: "boolean",
 
     // EnhancedWordConfig compatibility
     strategy: ["regex", "tinysegmenter", "hybrid"],
     min_word_length: "number",
-    enable_tinysegmenter: "boolean",
+    enableTinySegmenter: "boolean",
   },
 
   // Migration strategy

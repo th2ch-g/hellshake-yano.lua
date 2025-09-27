@@ -25,8 +25,7 @@ Deno.test({
       ];
       const hints = ["A"];
 
-      const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {
-        hint_position: "end",
+      const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "end",
       });
 
       assertEquals(encodeCount, 0, "計算前にencodeが呼ばれていないこと");

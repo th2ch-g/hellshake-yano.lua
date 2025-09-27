@@ -36,7 +36,7 @@ Deno.test("DetectionContext interface should be defined", () => {
 });
 
 Deno.test("RegexWordDetector should accept optional context parameter", async () => {
-  const detector = new RegexWordDetector({ use_japanese: false });
+  const detector = new RegexWordDetector({useJapanese: false });
   const text = "hello world test";
   const startLine = 1;
 
@@ -59,7 +59,7 @@ Deno.test("RegexWordDetector should accept optional context parameter", async ()
 });
 
 Deno.test("TinySegmenterWordDetector should accept optional context parameter", async () => {
-  const detector = new TinySegmenterWordDetector({ use_japanese: true });
+  const detector = new TinySegmenterWordDetector({useJapanese: true });
   const text = "これは日本語のテストです";
   const startLine = 1;
 
@@ -82,7 +82,7 @@ Deno.test("TinySegmenterWordDetector should accept optional context parameter", 
 });
 
 Deno.test("HybridWordDetector should accept optional context parameter", async () => {
-  const detector = new HybridWordDetector({ use_japanese: true });
+  const detector = new HybridWordDetector({useJapanese: true });
   const text = "hello こんにちは world 世界";
   const startLine = 1;
 
@@ -106,8 +106,7 @@ Deno.test("HybridWordDetector should accept optional context parameter", async (
 });
 
 Deno.test("WordDetectionManager should propagate context to detectors", async () => {
-  const manager = new WordDetectionManager({
-    use_japanese: true,
+  const manager = new WordDetectionManager({useJapanese: true,
     default_strategy: "hybrid",
   });
 
@@ -132,8 +131,7 @@ Deno.test("WordDetectionManager should propagate context to detectors", async ()
 });
 
 Deno.test("Context should override config min_word_length", async () => {
-  const detector = new RegexWordDetector({
-    use_japanese: false,
+  const detector = new RegexWordDetector({useJapanese: false,
     min_word_length: 2, // Config default
   });
 
@@ -173,7 +171,7 @@ Deno.test("Session context should be managed by WordManager", async () => {
 });
 
 Deno.test("Per-key minimum word length should work correctly", async () => {
-  const detector = new RegexWordDetector({ use_japanese: false });
+  const detector = new RegexWordDetector({useJapanese: false });
   const text = "a bb ccc dddd eeeeee";
 
   // Test different keys with different minimum lengths
@@ -198,8 +196,7 @@ Deno.test("Per-key minimum word length should work correctly", async () => {
 });
 
 Deno.test("Context propagation should maintain backward compatibility", async () => {
-  const detector = new RegexWordDetector({
-    use_japanese: false,
+  const detector = new RegexWordDetector({useJapanese: false,
     min_word_length: 2,
   });
 

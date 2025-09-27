@@ -80,11 +80,11 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
 
       // 対応するプロパティの値が一致することをテスト
       assertEquals(oldConfig.enabled, newConfig.enabled);
-      assertEquals(oldConfig.motion_count, newConfig.motionCount);
-      assertEquals(oldConfig.motion_timeout, newConfig.motionTimeout);
-      assertEquals(oldConfig.hint_position, newConfig.hintPosition);
-      assertEquals(oldConfig.use_numbers, newConfig.useNumbers);
-      assertEquals(oldConfig.highlight_selected, newConfig.highlightSelected);
+      assertEquals(oldConfig.motionCount, newConfig.motionCount);
+      assertEquals(oldConfig.motionTimeout, newConfig.motionTimeout);
+      assertEquals(oldConfig.hintPosition, newConfig.hintPosition);
+      assertEquals(oldConfig.useNumbers, newConfig.useNumbers);
+      assertEquals(oldConfig.highlightSelected, newConfig.highlightSelected);
     });
   });
 
@@ -125,13 +125,13 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
     it("should have consistent motion count values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      assertEquals(oldConfig.motion_count, newConfig.motionCount);
+      assertEquals(oldConfig.motionCount, newConfig.motionCount);
     });
 
     it("should have consistent hint position values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      assertEquals(oldConfig.hint_position, newConfig.hintPosition);
+      assertEquals(oldConfig.hintPosition, newConfig.hintPosition);
     });
 
     it("should have consistent marker values", () => {
@@ -144,7 +144,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
     it("should have consistent use_numbers/useNumbers values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      assertEquals(oldConfig.use_numbers, newConfig.useNumbers);
+      assertEquals(oldConfig.useNumbers, newConfig.useNumbers);
     });
   });
 });

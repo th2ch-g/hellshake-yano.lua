@@ -20,7 +20,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
   describe("End-to-end word detection and hint assignment", () => {
     it("should extract English words and calculate correct hint positions", () => {
       const lineText = "これはtest実装example コードです";
-      const config: EnhancedWordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = {useJapanese: false };
 
       // Phase 1: 英数字のみ抽出
       const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
@@ -47,7 +47,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
     it("should handle mixed content with different hint positions", () => {
       const lineText = "関数function変数variable定数constant";
-      const config: EnhancedWordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = {useJapanese: false };
 
       const words = extractWordsFromLineWithEnhancedConfig(lineText, 2, config);
       assertEquals(words.length, 3);
@@ -72,7 +72,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
   describe("Japanese inclusive mode integration", () => {
     it("should work with Japanese mode and positioning", () => {
       const lineText = "コードcode実装implement";
-      const config: EnhancedWordConfig = { use_japanese: true };
+      const config: EnhancedWordConfig = {useJapanese: true };
 
       const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
       // 日本語文字が個別に分割され、英単語も抽出される
@@ -103,7 +103,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         "  indented second行",
         "最後のlast line",
       ];
-      const config: EnhancedWordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = {useJapanese: false };
 
       const allWords: Word[] = [];
       lines.forEach((lineText, index) => {
@@ -145,7 +145,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         mixed.push(englishWords[i], japaneseWords[i]);
       }
       const lineText = mixed.join(" ");
-      const config: EnhancedWordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = {useJapanese: false };
 
       const startTime = Date.now();
 
@@ -185,13 +185,13 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const lineText = "設定config変更change適用apply";
 
       // 設定1: 日本語除外
-      const config1: EnhancedWordConfig = { use_japanese: false };
+      const config1: EnhancedWordConfig = {useJapanese: false };
       const words1 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config1);
       assertEquals(words1.length, 3);
       assertEquals(words1.map((w) => w.text), ["config", "change", "apply"]);
 
       // 設定2: 日本語包含（個別分割）
-      const config2: EnhancedWordConfig = { use_japanese: true };
+      const config2: EnhancedWordConfig = {useJapanese: true };
       const words2 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config2);
       // 日本語文字が個別に分割され、英単語も抽出される
       assert(words2.length > 3);
@@ -242,7 +242,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         "mixed123数字456text",
       ];
 
-      const config: EnhancedWordConfig = { use_japanese: false };
+      const config: EnhancedWordConfig = {useJapanese: false };
 
       edgeCases.forEach((lineText, index) => {
         const words = extractWordsFromLineWithEnhancedConfig(lineText, index + 1, config);

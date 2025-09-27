@@ -23,7 +23,7 @@ export class HintManager {
    */
   constructor(config: Config) {
     this.config = config;
-    this.currentKeyContext = config.current_key_context;
+    this.currentKeyContext = config.currentKeyContext;
   }
 
   /**
@@ -44,7 +44,7 @@ export class HintManager {
 
     // キーコンテキストの更新（内部状態と設定オブジェクトの両方）
     this.currentKeyContext = key;
-    this.config.current_key_context = key;
+    this.config.currentKeyContext = key;
   }
 
   /**

@@ -1153,10 +1153,10 @@ export interface UnifiedConfig {
 - [x] 型チェック通過確認（config.tsはエラーなし）
 
 ###### sub3-2-3 テストファイルの一括修正
-- [ ] snake_caseプロパティを全てcamelCaseに変換（65エラー修正）
-- [ ] toUnifiedConfig/fromUnifiedConfig参照を削除（5箇所）
-- [ ] 型インポートの整理
-- [ ] 各テストファイルの動作確認
+- [x] snake_caseプロパティを全てcamelCaseに変換（65エラー修正）
+- [x] toUnifiedConfig/fromUnifiedConfig参照を削除（5箇所）
+- [x] 型インポートの整理
+- [x] 各テストファイルの動作確認
 
 ###### sub3-2-4 最終検証
 - [ ] `deno check denops/hellshake-yano/`で全体の型チェック

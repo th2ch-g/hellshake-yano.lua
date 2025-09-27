@@ -15,8 +15,7 @@ const createMockDenops = (filetype: string) => ({
 });
 
 Deno.test("HybridWordDetector コンテキスト認識統合テスト", async (t) => {
-  const detector = new HybridWordDetector({
-    use_japanese: true,
+  const detector = new HybridWordDetector({useJapanese: true,
     enable_tinysegmenter: true,
     min_word_length: 1,
   });
@@ -91,8 +90,7 @@ Deno.test("HybridWordDetector コンテキスト認識統合テスト", async (t
 });
 
 Deno.test("コンテキスト認識による分割ルール適用テスト", async (t) => {
-  const detector = new HybridWordDetector({
-    use_japanese: false, // 英語モードでテスト
+  const detector = new HybridWordDetector({useJapanese: false, // 英語モードでテスト
     min_word_length: 1,
   });
 

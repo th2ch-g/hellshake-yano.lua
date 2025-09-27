@@ -27,8 +27,7 @@ Deno.test({
       ];
       const hints = ["A", "B", "C"];
 
-      const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {
-        hint_position: "end",
+      const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "end",
       });
 
       assertEquals(mappings.length, words.length);

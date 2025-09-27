@@ -16,25 +16,25 @@ test({
     // Create test configuration with per_key_min_length
     const testConfig: Config = {
       markers: ["A", "B", "C"],
-      motion_count: 3,
-      motion_timeout: 2000,
-      hint_position: "start",
-      trigger_on_hjkl: true,
-      counted_motions: [],
+      motionCount: 3,
+      motionTimeout: 2000,
+      hintPosition: "start",
+      triggerOnHjkl: true,
+      countedMotions: [],
       enabled: true,
       maxHints: 50,
       debounceDelay: 50,
-      use_numbers: true,
-      highlight_selected: true,
-      debug_coordinates: false,
-      per_key_min_length: {
+      useNumbers: true,
+      highlightSelected: true,
+      debugCoordinates: false,
+      perKeyMinLength: {
         "v": 1,
         "h": 2,
         "j": 2,
         "k": 2,
         "l": 2,
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
     };
 
     // Test setup - this should fail initially (RED phase)
@@ -77,22 +77,22 @@ test({
   fn: async (denops: Denops) => {
     const testConfig: Config = {
       markers: ["A", "B", "C"],
-      motion_count: 3,
-      motion_timeout: 2000,
-      hint_position: "start",
-      trigger_on_hjkl: true,
-      counted_motions: [],
+      motionCount: 3,
+      motionTimeout: 2000,
+      hintPosition: "start",
+      triggerOnHjkl: true,
+      countedMotions: [],
       enabled: true,
       maxHints: 50,
       debounceDelay: 50,
-      use_numbers: true,
-      highlight_selected: true,
-      debug_coordinates: false,
-      per_key_min_length: {
+      useNumbers: true,
+      highlightSelected: true,
+      debugCoordinates: false,
+      perKeyMinLength: {
         "v": 1, // Should detect 1-char words
         "h": 3, // Should detect 3+ char words only
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
     };
 
     // Test text with mix of 1-char, 2-char, and 3+ char words

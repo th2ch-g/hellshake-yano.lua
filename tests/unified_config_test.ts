@@ -332,13 +332,12 @@ describe("UnifiedConfig Tests", () => {
       const unifiedConfig = DEFAULT_UNIFIED_CONFIG;
 
       // Verify all essential properties exist for potential snake_case conversion
-      const essentialProperties = {
-        motion_count: unifiedConfig.motionCount,
-        motion_timeout: unifiedConfig.motionTimeout,
-        hint_position: unifiedConfig.hintPosition,
-        trigger_on_hjkl: unifiedConfig.triggerOnHjkl,
-        use_numbers: unifiedConfig.useNumbers,
-        highlight_selected: unifiedConfig.highlightSelected,
+      const essentialProperties = {motionCount: unifiedConfig.motionCount,
+        motionTimeout: unifiedConfig.motionTimeout,
+        hintPosition: unifiedConfig.hintPosition,
+        triggerOnHjkl: unifiedConfig.triggerOnHjkl,
+        useNumbers: unifiedConfig.useNumbers,
+        highlightSelected: unifiedConfig.highlightSelected,
       };
 
       for (const [key, value] of Object.entries(essentialProperties)) {

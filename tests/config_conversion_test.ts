@@ -1,7 +1,7 @@
 /**
  * 設定変換レイヤーのテスト (Process2 Sub2)
  * TDD Red-Green-Refactor方式で実装
- * toUnifiedConfig()とfromUnifiedConfig()関数の全31個のプロパティマッピングをテスト
+ *()と()関数の全31個のプロパティマッピングをテスト
  */
 
 import { assertEquals, assertExists, assertObjectMatch } from "@std/assert";
@@ -9,52 +9,50 @@ import { describe, it } from "@std/testing/bdd";
 import type { Config, UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 import {
   getDefaultConfig,
-  DEFAULT_UNIFIED_CONFIG,
-  toUnifiedConfig,  // これから実装する関数
-  fromUnifiedConfig  // これから実装する関数
+  DEFAULT_UNIFIED_CONFIG,  // これから実装する関数// これから実装する関数
 } from "../denops/hellshake-yano/config.ts";
 
 describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
   describe("TDD Implementation Verification", () => {
-    it("toUnifiedConfig function should be implemented", () => {
+    it("function should be implemented", () => {
       // 関数が正常に動作することを確認
       const oldConfig: Partial<Config> = {
         enabled: true,
-        motion_count: 5
+        motionCount: 5
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
       assertEquals(result.enabled, true);
       assertEquals(result.motionCount, 5);
     });
 
-    it("fromUnifiedConfig function should be implemented", () => {
+    it("function should be implemented", () => {
       // 関数が正常に動作することを確認
       const unifiedConfig: Partial<UnifiedConfig> = {
         enabled: true,
         motionCount: 5
       };
 
-      const result = fromUnifiedConfig(unifiedConfig);
+      const result =(unifiedConfig);
       assertEquals(result.enabled, true);
-      assertEquals(result.motion_count, 5);
+      assertEquals(result.motionCount, 5);
     });
   });
 
-  describe("toUnifiedConfig() - 旧設定→UnifiedConfigへの変換", () => {
+  describe("() - 旧設定→UnifiedConfigへの変換", () => {
     // これらのテストは最初は失敗する（Red Phase）
 
     it("should convert core settings (6 properties)", () => {
       const oldConfig: Partial<Config> = {
         enabled: true,
         markers: ["A", "S", "D"],
-        motion_count: 5,
-        motion_timeout: 3000,
-        hint_position: "end",
-        visual_hint_position: "start"
+        motionCount: 5,
+        motionTimeout: 3000,
+        hintPosition: "end",
+        visual_hintPosition: "start"
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       assertEquals(result.enabled, true);
       assertEquals(result.markers, ["A", "S", "D"]);
@@ -65,18 +63,17 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     });
 
     it("should convert hint settings (8 properties)", () => {
-      const oldConfig: Partial<Config> = {
-        trigger_on_hjkl: false,
-        counted_motions: ["j", "k"],
+      const oldConfig: Partial<Config> = {triggerOnHjkl: false,
+        countedMotions: ["j", "k"],
         maxHints: 200,
         debounceDelay: 100,
-        use_numbers: false,
-        highlight_selected: false,
-        debug_coordinates: true,
+        useNumbers: false,
+        highlightSelected: false,
+        debugCoordinates: true,
         single_char_keys: ["A", "S"]
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       assertEquals(result.triggerOnHjkl, false);
       assertEquals(result.countedMotions, ["j", "k"]);
@@ -89,14 +86,13 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     });
 
     it("should convert extended hint settings (4 properties)", () => {
-      const oldConfig: Partial<Config> = {
-        multi_char_keys: ["B", "C"],
+      const oldConfig: Partial<Config> = {multiCharKeys: ["B", "C"],
         max_single_char_hints: 15,
         use_hint_groups: false,
         highlight_hint_marker: "DiffChange"
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       assertEquals(result.multiCharKeys, ["B", "C"]);
       assertEquals(result.maxSingleCharHints, 15);
@@ -105,17 +101,16 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     });
 
     it("should convert word detection settings (7 properties)", () => {
-      const oldConfig: Partial<Config> = {
-        highlight_hint_marker_current: "Visual",
+      const oldConfig: Partial<Config> = {highlightHintMarkerCurrent: "Visual",
         suppress_on_key_repeat: false,
         key_repeat_threshold: 75,
-        use_japanese: true,
+        useJapanese: true,
         word_detection_strategy: "tinysegmenter",
-        enable_tinysegmenter: false,
+        enableTinySegmenter: false,
         segmenter_threshold: 6
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       assertEquals(result.highlightHintMarkerCurrent, "Visual");
       assertEquals(result.suppressOnKeyRepeat, false);
@@ -127,17 +122,16 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     });
 
     it("should convert japanese word settings (7 properties)", () => {
-      const oldConfig: Partial<Config> = {
-        japanese_min_word_length: 3,
+      const oldConfig: Partial<Config> = {japaneseMinWordLength: 3,
         japanese_merge_particles: false,
         japanese_merge_threshold: 4,
-        per_key_min_length: { "w": 2, "b": 1 },
-        default_min_word_length: 4,
-        per_key_motion_count: { "j": 2, "k": 4 },
-        default_motion_count: 5
+        perKeyMinLength: { "w": 2, "b": 1 },
+        defaultMinWordLength: 4,
+        per_key_motionCount: { "j": 2, "k": 4 },
+        default_motionCount: 5
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       assertEquals(result.japaneseMinWordLength, 3);
       assertEquals(result.japaneseMergeParticles, false);
@@ -153,7 +147,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         enabled: false
       };
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       // 指定されたプロパティ
       assertEquals(result.enabled, false);
@@ -168,11 +162,11 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
       const oldConfig: Config = getDefaultConfig();
 
       // 一部の値を変更してテスト
-      oldConfig.motion_count = 7;
-      oldConfig.use_numbers = false;
-      oldConfig.japanese_min_word_length = 4;
+      oldConfig.motionCount = 7;
+      oldConfig.useNumbers = false;
+      oldConfig.japaneseMinWordLength = 4;
 
-      const result = toUnifiedConfig(oldConfig);
+      const result =(oldConfig);
 
       // 31個すべてのプロパティが存在することを確認
       assertExists(result.enabled);
@@ -215,7 +209,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     });
   });
 
-  describe("fromUnifiedConfig() - UnifiedConfig→旧設定への変換", () => {
+  describe("() - UnifiedConfig→旧設定への変換", () => {
     // これらのテストは最初は失敗する（Red Phase）
 
     it("should convert core settings back to old format", () => {
@@ -228,14 +222,14 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         visualHintPosition: "both"
       };
 
-      const result = fromUnifiedConfig(unifiedConfig);
+      const result =(unifiedConfig);
 
       assertEquals(result.enabled, false);
       assertEquals(result.markers, ["X", "Y", "Z"]);
-      assertEquals(result.motion_count, 8);
-      assertEquals(result.motion_timeout, 5000);
-      assertEquals(result.hint_position, "same");
-      assertEquals(result.visual_hint_position, "both");
+      assertEquals(result.motionCount, 8);
+      assertEquals(result.motionTimeout, 5000);
+      assertEquals(result.hintPosition, "same");
+      assertEquals(result.visualHintPosition, "both");
     });
 
     it("should convert hint settings back to snake_case", () => {
@@ -250,32 +244,32 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         singleCharKeys: ["F", "G"]
       };
 
-      const result = fromUnifiedConfig(unifiedConfig);
+      const result =(unifiedConfig);
 
-      assertEquals(result.trigger_on_hjkl, false);
-      assertEquals(result.counted_motions, ["h", "l"]);
+      assertEquals(result.triggerOnHjkl, false);
+      assertEquals(result.countedMotions, ["h", "l"]);
       assertEquals(result.maxHints, 150);
       assertEquals(result.debounceDelay, 25);
-      assertEquals(result.use_numbers, true);
-      assertEquals(result.highlight_selected, true);
-      assertEquals(result.debug_coordinates, false);
-      assertEquals(result.single_char_keys, ["F", "G"]);
+      assertEquals(result.useNumbers, true);
+      assertEquals(result.highlightSelected, true);
+      assertEquals(result.debugCoordinates, false);
+      assertEquals(result.singleCharKeys, ["F", "G"]);
     });
 
     it("should handle round-trip conversion correctly", () => {
       const originalConfig: Config = getDefaultConfig();
-      originalConfig.motion_count = 4;
-      originalConfig.hint_position = "end";
-      originalConfig.use_japanese = true;
+      originalConfig.motionCount = 4;
+      originalConfig.hintPosition = "end";
+      originalConfig.useJapanese = true;
 
       // 旧設定 → Unified → 旧設定の往復変換
-      const unified = toUnifiedConfig(originalConfig);
-      const converted = fromUnifiedConfig(unified);
+      const unified =(originalConfig);
+      const converted =(unified);
 
       // 重要なプロパティが正しく変換されることを確認
-      assertEquals(converted.motion_count, 4);
-      assertEquals(converted.hint_position, "end");
-      assertEquals(converted.use_japanese, true);
+      assertEquals(converted.motionCount, 4);
+      assertEquals(converted.hintPosition, "end");
+      assertEquals(converted.useJapanese, true);
       assertEquals(converted.enabled, originalConfig.enabled);
       assertEquals(converted.markers, originalConfig.markers);
     });
@@ -335,7 +329,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
       for (const { snake, camel } of mappings) {
         // snake_case → camelCase の変換テスト
         const snakeConfig = { [snake]: getTestValue(snake) } as any;
-        const unified = toUnifiedConfig(snakeConfig);
+        const unified =(snakeConfig);
 
         if (snake === camel) {
           // 共通プロパティの場合
@@ -346,7 +340,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
 
         // camelCase → snake_case の変換テスト
         const camelConfig = { [camel]: getTestValue(camel) } as any;
-        const converted = fromUnifiedConfig(camelConfig);
+        const converted =(camelConfig);
 
         if (snake === camel) {
           // 共通プロパティの場合
@@ -366,7 +360,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         motionCount: 6  // camelCase形式
       };
 
-      const result = toUnifiedConfig(coreConfig);
+      const result =(coreConfig);
 
       assertEquals(result.enabled, true);
       assertEquals(result.markers, ["Q", "W", "E"]);
@@ -374,14 +368,13 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     });
 
     it("should support mixed snake_case and camelCase input", () => {
-      const mixedConfig = {
-        motion_count: 3,      // snake_case
+      const mixedConfig = {motionCount: 3,      // snake_case
         hintPosition: "end",  // camelCase
-        use_japanese: true,   // snake_case
+        useJapanese: true,   // snake_case
         debugCoordinates: false // camelCase
       };
 
-      const result = toUnifiedConfig(mixedConfig);
+      const result =(mixedConfig);
 
       assertEquals(result.motionCount, 3);
       assertEquals(result.hintPosition, "end");

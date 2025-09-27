@@ -12,24 +12,23 @@ Deno.test("getDefaultConfig() should delegate to config.ts", () => {
 
   // 基本的なプロパティの存在確認
   assertExists(config.markers);
-  assertExists(config.motion_count);
-  assertExists(config.motion_timeout);
-  assertExists(config.hint_position);
+  assertExists(config.motionCount);
+  assertExists(config.motionTimeout);
+  assertExists(config.hintPosition);
   assertExists(config.enabled);
 
   // デフォルト値の検証
   assertEquals(config.enabled, true);
-  assertEquals(config.motion_count, 3);
-  assertEquals(config.motion_timeout, 2000);
-  assertEquals(config.hint_position, "start");
+  assertEquals(config.motionCount, 3);
+  assertEquals(config.motionTimeout, 2000);
+  assertEquals(config.hintPosition, "start");
   assertEquals(config.markers.length > 0, true);
 });
 
 Deno.test("validateConfig() should delegate to config.ts", () => {
   // 有効な設定
-  const validConfig = {
-    motion_count: 3,
-    hint_position: "start" as const,
+  const validConfig = {motionCount: 3,
+    hintPosition: "start" as const,
     enabled: true,
   };
 
@@ -38,8 +37,7 @@ Deno.test("validateConfig() should delegate to config.ts", () => {
   assertEquals(validResult.errors.length, 0);
 
   // 無効な設定
-  const invalidConfig = {
-    motion_count: -1, // 負の値は無効
+  const invalidConfig = {motionCount: -1, // 負の値は無効
   };
 
   const invalidResult = validateConfig(invalidConfig);
@@ -85,13 +83,13 @@ Deno.test("Config types should be backward compatible", () => {
   const config = getDefaultConfig();
 
   // snake_case形式のプロパティが存在することを確認
-  assertEquals(typeof config.motion_count, "number");
-  assertEquals(typeof config.motion_timeout, "number");
-  assertEquals(typeof config.hint_position, "string");
-  assertEquals(typeof config.trigger_on_hjkl, "boolean");
+  assertEquals(typeof config.motionCount, "number");
+  assertEquals(typeof config.motionTimeout, "number");
+  assertEquals(typeof config.hintPosition, "string");
+  assertEquals(typeof config.triggerOnHjkl, "boolean");
   assertEquals(typeof config.enabled, "boolean");
   assertEquals(Array.isArray(config.markers), true);
-  assertEquals(Array.isArray(config.counted_motions), true);
+  assertEquals(Array.isArray(config.countedMotions), true);
 });
 
 Deno.test("UnifiedConfig and Config should provide equivalent functionality", () => {
@@ -100,9 +98,9 @@ Deno.test("UnifiedConfig and Config should provide equivalent functionality", ()
 
   // 重要な設定値が両方で同じであることを確認
   assertEquals(config.enabled, unifiedConfig.enabled);
-  assertEquals(config.motion_count, unifiedConfig.motionCount);
-  assertEquals(config.motion_timeout, unifiedConfig.motionTimeout);
-  assertEquals(config.hint_position, unifiedConfig.hintPosition);
+  assertEquals(config.motionCount, unifiedConfig.motionCount);
+  assertEquals(config.motionTimeout, unifiedConfig.motionTimeout);
+  assertEquals(config.hintPosition, unifiedConfig.hintPosition);
   assertEquals(config.markers.length, unifiedConfig.markers.length);
 });
 
@@ -111,10 +109,10 @@ Deno.test("counted_motions should be strongly typed", () => {
   const config = getDefaultConfig();
 
   // counted_motionsは文字列の配列であるべき
-  assertEquals(Array.isArray(config.counted_motions), true);
+  assertEquals(Array.isArray(config.countedMotions), true);
 
   // 全ての要素が文字列であることを確認（型安全性テスト）
-  config.counted_motions.forEach((key, index) => {
+  config.countedMotions.forEach((key, index) => {
     assertEquals(typeof key, "string", `counted_motions[${index}] should be string, got ${typeof key}`);
     assertEquals(key.length > 0, true, `counted_motions[${index}] should not be empty`);
   });
@@ -124,14 +122,14 @@ Deno.test("motion detection functions should have proper types", () => {
   const config = getDefaultConfig();
 
   // counted_motions内の各キーに対してgetMinLengthForKeyが正しく動作することを確認
-  config.counted_motions.forEach((key: string) => {
+  config.countedMotions.forEach((key: string) => {
     const minLength = getMinLengthForKey(config, key);
     assertEquals(typeof minLength, "number");
     assertEquals(minLength >= 1, true);
   });
 
   // getMotionCountForKeyも同様に確認
-  config.counted_motions.forEach((key: string) => {
+  config.countedMotions.forEach((key: string) => {
     const motionCount = getMotionCountForKey(key, config);
     assertEquals(typeof motionCount, "number");
     assertEquals(motionCount >= 1, true);
@@ -143,12 +141,11 @@ Deno.test("main.ts type safety - filter function should be strongly typed", () =
   // after refactoring from 'any' to proper type guard in main.ts line 510
 
   // Create a mock config with counted_motions that includes invalid types
-  const mockConfig = {
-    counted_motions: ["f", "F", 123, null, "t", "T", "", undefined] as unknown[],
+  const mockConfig = {countedMotions: ["f", "F", 123, null, "t", "T", "", undefined] as unknown[],
   };
 
   // The filter function now uses a type guard instead of 'any'
-  const validKeys = mockConfig.counted_motions.filter((key: unknown): key is string =>
+  const validKeys = mockConfig.countedMotions.filter((key: unknown): key is string =>
     typeof key === "string" && key.length === 1
   );
 

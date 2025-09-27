@@ -141,17 +141,17 @@ Deno.test("Phase 5 Types Test Suite", async (t) => {
 
       const testConfig = {
         markers: ["A", "B", "C"],
-        motion_count: 3,
-        motion_timeout: 2000,
-        hint_position: "start",
-        trigger_on_hjkl: true,
-        counted_motions: [],
+        motionCount: 3,
+        motionTimeout: 2000,
+        hintPosition: "start",
+        triggerOnHjkl: true,
+        countedMotions: [],
         enabled: true,
         maxHints: 100,
         debounceDelay: 50,
-        use_numbers: true,
-        highlight_selected: true,
-        debug_coordinates: false
+        useNumbers: true,
+        highlightSelected: true,
+        debugCoordinates: false
         // 他のプロパティはオプショナル
       };
 

@@ -480,7 +480,7 @@ Deno.test("Core class detectWordsOptimized should respect cache configuration", 
 });
 
 Deno.test("Core class detectWordsOptimized should handle config changes", async () => {
-  const core = Core.getInstance({ use_japanese: false });
+  const core = Core.getInstance({useJapanese: false });
   const mockDenops = new MockDenops();
 
   // Setup mock responses
@@ -502,7 +502,7 @@ Deno.test("Core class detectWordsOptimized should handle config changes", async 
   assertExists(wordsWithoutJapanese);
 
   // Change config to enable Japanese
-  core.updateConfig({ use_japanese: true });
+  core.updateConfig({useJapanese: true });
   const wordsWithJapanese = await core.detectWordsOptimized(mockDenops as any, bufnr);
   assertExists(wordsWithJapanese);
 });
@@ -615,8 +615,7 @@ Deno.test("Core class generateHintsOptimized should use marker characters", () =
 });
 
 Deno.test("Core class generateHintsOptimized should respect config hint groups", () => {
-  const core = Core.getInstance({
-    use_hint_groups: true,
+  const core = Core.getInstance({useHintGroups: true,
     single_char_keys: ["a", "s", "d"],
     multi_char_keys: ["f", "g", "h"]
   });
@@ -881,7 +880,7 @@ Deno.test("Core class showHintsWithKey should handle key context", async () => {
 
   // Config should be updated with key context
   const config = core.getConfig();
-  assertEquals(config.current_key_context, key);
+  assertEquals(config.currentKeyContext, key);
 
   // Cleanup
   core.cleanup();
@@ -947,7 +946,7 @@ Deno.test("Core class showHints should handle errors gracefully", async () => {
 // Phase 8: Utility Functions Tests (TDD RED phase)
 Deno.test("Core class recordPerformance should track operation metrics", () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ performance_log: true });
+  const core = Core.getInstance({performanceLog: true });
 
   // Record performance for various operations
   (core as any).recordPerformance("showHints", 100, 150);
@@ -973,7 +972,7 @@ Deno.test("Core class recordPerformance should track operation metrics", () => {
 
 Deno.test("Core class recordPerformance should not record when performanceLog is disabled", () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ performance_log: false });
+  const core = Core.getInstance({performanceLog: false });
 
   // Try to record performance
   (core as any).recordPerformance("showHints", 100, 150);
@@ -989,7 +988,7 @@ Deno.test("Core class recordPerformance should not record when performanceLog is
 
 Deno.test("Core class recordPerformance should limit metrics to 50 entries", () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ performance_log: true });
+  const core = Core.getInstance({performanceLog: true });
 
   // Record more than 50 entries
   for (let i = 0; i < 60; i++) {
@@ -1045,7 +1044,7 @@ Deno.test("Core class collectDebugInfo should return complete debug information"
 
 Deno.test("Core class clearDebugInfo should reset all performance metrics", () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ performance_log: true });
+  const core = Core.getInstance({performanceLog: true });
 
   // Record some metrics
   (core as any).recordPerformance("showHints", 100, 150);
@@ -1893,15 +1892,14 @@ Deno.test("Core.validateHighlightConfig should reject invalid configs", () => {
  * sub2-2-1: これらのテストは最初失敗する（Core.getMinLengthForKeyメソッドが未実装のため）
  */
 Deno.test("Core.getMinLengthForKey should return correct min length for key", () => {
-  const config = {
-    motion_count: 3,
+  const config = {motionCount: 3,
     per_key_min_length: { f: 4, t: 2, w: 3 }
   } as any; // Test config
 
   assertEquals(Core.getMinLengthForKey(config, "f"), 4);
   assertEquals(Core.getMinLengthForKey(config, "t"), 2);
   assertEquals(Core.getMinLengthForKey(config, "w"), 3);
-  assertEquals(Core.getMinLengthForKey(config, "x"), 3); // defaultMinWordLength from toUnifiedConfig
+  assertEquals(Core.getMinLengthForKey(config, "x"), 3); // defaultMinWordLength from config.defaultMinWordLength
 });
 
 Deno.test("Core.getMinLengthForKey should work with UnifiedConfig", () => {
@@ -1916,8 +1914,8 @@ Deno.test("Core.getMinLengthForKey should work with UnifiedConfig", () => {
 });
 
 Deno.test("Core.getMinLengthForKey should return default when no config", () => {
-  const config = { motion_count: 3 } as any; // Test config
-  assertEquals(Core.getMinLengthForKey(config, "f"), 3); // default value from toUnifiedConfig
+  const config = {motionCount: 3 } as any; // Test config
+  assertEquals(Core.getMinLengthForKey(config, "f"), 3); // default value from config.defaultMinWordLength
 });
 
 /**
@@ -1925,8 +1923,7 @@ Deno.test("Core.getMinLengthForKey should return default when no config", () => 
  * sub2-2-2: これらのテストは最初失敗する（Core.getMotionCountForKeyメソッドが未実装のため）
  */
 Deno.test("Core.getMotionCountForKey should return correct motion count for key", () => {
-  const config = {
-    motion_count: 3,
+  const config = {motionCount: 3,
     per_key_motion_count: { f: 5, t: 2, w: 4 }
   } as any; // Test config
 
@@ -1948,8 +1945,7 @@ Deno.test("Core.getMotionCountForKey should work with UnifiedConfig", () => {
 });
 
 Deno.test("Core.getMotionCountForKey should validate values", () => {
-  const config = {
-    motion_count: 3,
+  const config = {motionCount: 3,
     per_key_motion_count: { f: 0, t: -1, w: 2.5, x: 4 }
   } as any; // Test config
 
@@ -2203,7 +2199,7 @@ Deno.test("Core updateConfig method should work correctly", () => {
   // Verify changes
   const updatedConfig = core.getConfig();
   assertEquals(updatedConfig.enabled, true);
-  assertEquals(updatedConfig.motion_count, 5);
+  assertEquals(updatedConfig.motionCount, 5);
 });
 
 Deno.test("Core updateConfig should handle partial updates", () => {
@@ -2211,18 +2207,18 @@ Deno.test("Core updateConfig should handle partial updates", () => {
   const core = Core.getInstance({ enabled: true, motion_count: 2, use_japanese: false });
 
   // Update only one field
-  core.updateConfig({ motion_count: 3 });
+  core.updateConfig({motionCount: 3 });
 
   const config = core.getConfig();
   assertEquals(config.enabled, true); // Unchanged
-  assertEquals(config.motion_count, 3); // Changed
-  assertEquals(config.use_japanese, false); // Unchanged
+  assertEquals(config.motionCount, 3); // Changed
+  assertEquals(config.useJapanese, false); // Unchanged
 });
 
 // sub2-5-2: showHints method waitForUserInput integration tests
 Deno.test("Core showHints should include user input waiting", async () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ enabled: true, motion_count: 1 });
+  const core = Core.getInstance({ enabled: true, motionCount: 1 });
   const mockDenops = new MockDenops();
 
   // Setup mocks for showHints workflow
@@ -2365,8 +2361,8 @@ Deno.test("Core debug method should collect comprehensive info", () => {
   Core.resetForTesting();
   const core = Core.getInstance({
     enabled: true,
-    motion_count: 2,
-    debug_mode: true
+    motionCount: 2,
+    debugMode: true
   });
 
   // Set up some state
@@ -2396,13 +2392,13 @@ Deno.test("Core debug method should collect comprehensive info", () => {
   assertEquals(debugInfo.currentHints.length, 1);
   assertEquals(debugInfo.currentHints[0].hint, "A");
   assertEquals(debugInfo.config.enabled, true);
-  assertEquals(debugInfo.config.motion_count, 2);
+  assertEquals(debugInfo.config.motionCount, 2);
 });
 
 // Integration test: waitForUserInput critical bug fix
 Deno.test("showHints should call waitForUserInput after display", async () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ enabled: true, motion_count: 1 });
+  const core = Core.getInstance({ enabled: true, motionCount: 1 });
   const mockDenops = new MockDenops();
 
   let waitForUserInputCalled = false;

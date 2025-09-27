@@ -237,9 +237,8 @@ async function generateAndDisplayHints(
     cursorLine,
     cursorCol,
     mode,
-    {
-      hint_position: config.hint_position,
-      visual_hint_position: config.visual_hint_position,
+    {hintPosition: config.hintPosition,
+      visual_hint_position: config.visualHintPosition,
     },
   );
 
@@ -252,12 +251,12 @@ async function generateAndDisplayHints(
  * 有効な最大ヒント数を計算
  */
 function calculateEffectiveMaxHints(config: Config): number {
-  if (config.use_hint_groups && config.single_char_keys && config.multi_char_keys) {
+  if (config.useHintGroups && config.singleCharKeys && config.multiCharKeys) {
     const singleCharCount = Math.min(
-      config.single_char_keys.length,
-      config.max_single_char_hints || config.single_char_keys.length,
+      config.singleCharKeys.length,
+      config.maxSingleCharHints || config.singleCharKeys.length,
     );
-    const multiCharCount = config.multi_char_keys.length * config.multi_char_keys.length;
+    const multiCharCount = config.multiCharKeys.length * config.multiCharKeys.length;
     const numberHintCount = 100; // 2桁数字ヒント
     const totalCapacity = singleCharCount + multiCharCount + numberHintCount;
     return Math.min(config.maxHints, totalCapacity);

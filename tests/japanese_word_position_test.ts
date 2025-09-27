@@ -12,12 +12,11 @@ import {
 } from "../denops/hellshake-yano/word/detector.ts";
 
 describe("Japanese Word Position Issue", () => {
-  const vimConfigText = `    \\ 'use_japanese': v:false,  " 日本語を除外（デフォルト）`;
+  const vimConfigText = `    \\ 'useJapanese': v:false,  " 日本語を除外（デフォルト）`;
 
-  describe("RegexWordDetector with use_japanese: false", () => {
+  describe("RegexWordDetector with useJapanese: false", () => {
     it("should not detect Japanese characters as words", async () => {
-      const config: WordDetectionConfig = {
-        use_japanese: false,
+      const config: WordDetectionConfig = {useJapanese: false,
         use_improved_detection: true,
       };
       const detector = new RegexWordDetector(config);
@@ -47,12 +46,11 @@ describe("Japanese Word Position Issue", () => {
       const testTexts = [
         "日本語",
         "use_japanese",
-        "'use_japanese': v:false",
-        "    \\ 'use_japanese': v:false,  \" 日本語を除外",
+        "'useJapanese': v:false",
+        "    \\ 'useJapanese': v:false,  \" 日本語を除外",
       ];
 
-      const config: WordDetectionConfig = {
-        use_japanese: false,
+      const config: WordDetectionConfig = {useJapanese: false,
         use_improved_detection: true,
       };
       const detector = new RegexWordDetector(config);
@@ -73,8 +71,7 @@ describe("Japanese Word Position Issue", () => {
 
   describe("HybridWordDetector behavior", () => {
     it("should properly handle mixed Japanese-English text", async () => {
-      const config: WordDetectionConfig = {
-        use_japanese: false,
+      const config: WordDetectionConfig = {useJapanese: false,
         use_improved_detection: true,
       };
       const detector = new HybridWordDetector(config);
@@ -107,7 +104,7 @@ describe("Japanese Word Position Issue", () => {
     });
 
     it("should analyze the exact problem case", () => {
-      const text = `\\ 'use_japanese': v:false,  " 日本語を除外（デフォルト）`;
+      const text = `\\ 'useJapanese': v:false,  " 日本語を除外（デフォルト）`;
 
       // 「語」の位置を探す
       const goIndex = text.indexOf("語");

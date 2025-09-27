@@ -122,7 +122,7 @@ function setupTestEnvironment() {
       hintCol: 1
     }
   ];
-  testConfig = { highlight_selected: true };
+  testConfig = {highlightSelected: true };
   testExtmarkNamespace = 1;
   testHintsVisible = false;
 
@@ -230,7 +230,7 @@ Deno.test("highlightCandidateHintsAsync - バッチ処理テスト", async () =>
   setupTestEnvironment();
 
   // グローバル変数configがhighlightCandidateHintsOptimizedで使用される
-  globalThis.config = { highlight_selected: true };
+  globalThis.config = {highlightSelected: true };
   globalThis.extmarkNamespace = 1;
 
   // 大量のヒントを設定（バッチ処理のテスト）

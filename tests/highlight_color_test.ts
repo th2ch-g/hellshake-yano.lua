@@ -11,13 +11,12 @@ Deno.test("ハイライト色設定: デフォルト値のテスト", () => {
   const defaultConfig = getDefaultConfig();
 
   // デフォルト値の確認
-  assertEquals(defaultConfig.highlight_hint_marker, "DiffAdd");
-  assertEquals(defaultConfig.highlight_hint_marker_current, "DiffText");
+  assertEquals(defaultConfig.highlightHintMarker, "DiffAdd");
+  assertEquals(defaultConfig.highlightHintMarkerCurrent, "DiffText");
 });
 
 Deno.test("ハイライト色設定: カスタム値の設定テスト", () => {
-  const customConfig: Partial<Config> = {
-    highlight_hint_marker: "Search",
+  const customConfig: Partial<Config> = {highlightHintMarker: "Search",
     highlight_hint_marker_current: "IncSearch",
   };
 
@@ -100,8 +99,7 @@ Deno.test("ハイライト色設定: 有効なハイライトグループ名の�
 
   // 各有効なハイライトグループ名をテスト
   for (const group of validHighlightGroups) {
-    const config: Partial<Config> = {
-      highlight_hint_marker: group,
+    const config: Partial<Config> = {highlightHintMarker: group,
       highlight_hint_marker_current: group,
     };
 
@@ -112,8 +110,7 @@ Deno.test("ハイライト色設定: 有効なハイライトグループ名の�
 
 Deno.test("ハイライト色設定: 無効な型のテスト", () => {
   // highlight_hint_marker が数値の場合
-  const invalidConfig1: any = {
-    highlight_hint_marker: 123,
+  const invalidConfig1: any = {highlightHintMarker: 123,
   };
 
   const validation1 = validateConfig(invalidConfig1);
@@ -124,8 +121,7 @@ Deno.test("ハイライト色設定: 無効な型のテスト", () => {
   );
 
   // highlight_hint_marker_current が配列の場合
-  const invalidConfig2: any = {
-    highlight_hint_marker_current: ["Search", "IncSearch"],
+  const invalidConfig2: any = {highlightHintMarkerCurrent: ["Search", "IncSearch"],
   };
 
   const validation2 = validateConfig(invalidConfig2);
@@ -136,8 +132,7 @@ Deno.test("ハイライト色設定: 無効な型のテスト", () => {
   );
 
   // highlight_hint_marker が空文字列の場合
-  const invalidConfig3: Partial<Config> = {
-    highlight_hint_marker: "",
+  const invalidConfig3: Partial<Config> = {highlightHintMarker: "",
   };
 
   const validation3 = validateConfig(invalidConfig3);
@@ -150,8 +145,7 @@ Deno.test("ハイライト色設定: 無効な型のテスト", () => {
 
 Deno.test("ハイライト色設定: null と undefined のテスト", () => {
   // null 値のテスト
-  const nullConfig: any = {
-    highlight_hint_marker: null,
+  const nullConfig: any = {highlightHintMarker: null,
     highlight_hint_marker_current: null,
   };
 
@@ -160,8 +154,7 @@ Deno.test("ハイライト色設定: null と undefined のテスト", () => {
   assertEquals(validation1.errors.length >= 2, true);
 
   // undefined 値のテスト（設定なしの場合は有効）
-  const undefinedConfig: Partial<Config> = {
-    highlight_hint_marker: undefined,
+  const undefinedConfig: Partial<Config> = {highlightHintMarker: undefined,
     highlight_hint_marker_current: undefined,
   };
 
@@ -202,8 +195,7 @@ Deno.test("ハイライト色設定: 特殊文字を含む無効な名前のテ�
   ];
 
   for (const invalidName of invalidNames) {
-    const config: Partial<Config> = {
-      highlight_hint_marker: invalidName,
+    const config: Partial<Config> = {highlightHintMarker: invalidName,
     };
 
     const validation = validateConfig(config);
@@ -239,8 +231,7 @@ Deno.test("ハイライト色設定: 有効な名前のパターンテスト", (
   ];
 
   for (const validName of validNames) {
-    const config: Partial<Config> = {
-      highlight_hint_marker: validName,
+    const config: Partial<Config> = {highlightHintMarker: validName,
       highlight_hint_marker_current: validName,
     };
 
@@ -253,8 +244,7 @@ Deno.test("ハイライト色設定: 長すぎる名前のテスト", () => {
   // 100文字以上の名前（通常のVimハイライトグループ名としては長すぎる）
   const tooLongName = "a".repeat(101);
 
-  const config: Partial<Config> = {
-    highlight_hint_marker: tooLongName,
+  const config: Partial<Config> = {highlightHintMarker: tooLongName,
   };
 
   const validation = validateConfig(config);
@@ -276,8 +266,7 @@ Deno.test("ハイライト色設定: 数字で始まる無効な名前のテス�
   ];
 
   for (const invalidName of invalidNames) {
-    const config: Partial<Config> = {
-      highlight_hint_marker: invalidName,
+    const config: Partial<Config> = {highlightHintMarker: invalidName,
     };
 
     const validation = validateConfig(config);
@@ -301,8 +290,7 @@ Deno.test("ハイライト色設定: アンダースコアで始まる有効な�
   ];
 
   for (const validName of validNames) {
-    const config: Partial<Config> = {
-      highlight_hint_marker: validName,
+    const config: Partial<Config> = {highlightHintMarker: validName,
       highlight_hint_marker_current: validName,
     };
 
@@ -315,15 +303,15 @@ Deno.test("ハイライト色設定: 複合設定のテスト", () => {
   // 他の設定と組み合わせたテスト
   const complexConfig: Partial<Config> = {
     markers: ["A", "B", "C"],
-    motion_count: 5,
-    motion_timeout: 3000,
-    hint_position: "overlay",
-    trigger_on_hjkl: false,
+    motionCount: 5,
+    motionTimeout: 3000,
+    hintPosition: "overlay",
+    triggerOnHjkl: false,
     enabled: true,
     highlight_hint_marker: "MyCustomMarker",
     highlight_hint_marker_current: "MyCustomMarkerCurrent",
-    use_numbers: true,
-    highlight_selected: true,
+    useNumbers: true,
+    highlightSelected: true,
   };
 
   const validation = validateConfig(complexConfig);
@@ -340,6 +328,6 @@ Deno.test("ハイライト色設定: デフォルト設定との整合性テス�
   assertEquals(validation.errors.length, 0);
 
   // デフォルトのハイライト色が vim-searchx と同じことを確認
-  assertEquals(defaultConfig.highlight_hint_marker, "DiffAdd");
-  assertEquals(defaultConfig.highlight_hint_marker_current, "DiffText");
+  assertEquals(defaultConfig.highlightHintMarker, "DiffAdd");
+  assertEquals(defaultConfig.highlightHintMarkerCurrent, "DiffText");
 });

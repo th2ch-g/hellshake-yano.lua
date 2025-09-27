@@ -7,8 +7,8 @@ test("デバッグ: キーリピート設定と状態が表示される", async 
   await denops.cmd("source plugin/hellshake-yano.vim");
 
   // カスタム設定で上書き
-  await denops.cmd("let g:hellshake_yano.suppress_on_key_repeat = v:true");
-  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 55");
+  await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:true");
+  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 55");
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 280");
 
   // プラグインを明示的に有効化
@@ -32,9 +32,9 @@ test("デバッグ: キーリピート状態がtrue→falseに遷移する", asy
 
   // 設定（抑制を有効、しきい値=100ms、リセット=300ms）
   // 並列実行時の処理遅延を考慮してしきい値を大きく設定
-  await denops.cmd("let g:hellshake_yano.motion_count = 10");
-  await denops.cmd("let g:hellshake_yano.suppress_on_key_repeat = v:true");
-  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 100");  // 50ms -> 100ms
+  await denops.cmd("let g:hellshake_yano.motionCount = 10");
+  await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:true");
+  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 100");  // 50ms -> 100ms
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 300");
 
   // プラグインを明示的に有効化

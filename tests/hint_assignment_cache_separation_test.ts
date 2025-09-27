@@ -21,15 +21,13 @@ Deno.test({
     const hints = ["A"];
 
     // 正常系キャッシュを初期化
-    assignHintsToWords([baseWord], hints, 1, 1, "normal", {
-      hint_position: "end",
+    assignHintsToWords([baseWord], hints, 1, 1, "normal", {hintPosition: "end",
     });
 
     // Normal mode のキャッシュを上限まで埋める
     for (let i = 0; i < 99; i++) {
       const word = { text: `n${i}`, line: i + 2, col: 1, byteCol: 1 };
-      assignHintsToWords([word], hints, 1, 1, "normal", {
-        hint_position: "end",
+      assignHintsToWords([word], hints, 1, 1, "normal", {hintPosition: "end",
       });
     }
 
@@ -37,14 +35,12 @@ Deno.test({
     textAccessCount = 0;
     for (let i = 0; i < 100; i++) {
       const word = { text: `v${i}`, line: i + 200, col: 1, byteCol: 1 };
-      assignHintsToWords([word], hints, 1, 1, "visual", {
-        hint_position: "start",
-        visual_hint_position: "end",
+      assignHintsToWords([word], hints, 1, 1, "visual", {hintPosition: "start",
+        visual_hintPosition: "end",
       });
     }
 
-    assignHintsToWords([baseWord], ["B"], 1, 1, "normal", {
-      hint_position: "end",
+    assignHintsToWords([baseWord], ["B"], 1, 1, "normal", {hintPosition: "end",
     });
 
     assertEquals(textAccessCount, 0);

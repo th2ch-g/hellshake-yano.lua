@@ -11,9 +11,7 @@ import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 import {
   getDefaultUnifiedConfig,
   mergeConfig,
-  validateUnifiedConfig,
-  fromUnifiedConfig
-} from "../denops/hellshake-yano/config.ts";
+  validateUnifiedConfig} from "../denops/hellshake-yano/config.ts";
 import { initializePlugin } from "../denops/hellshake-yano/lifecycle.ts";
 
 /**
@@ -54,12 +52,12 @@ Deno.test("RED: mergeConfig should work with UnifiedConfig", () => {
     hintPosition: 'end'
   };
 
-  // mergeConfigはConfig型を期待するため、fromUnifiedConfigで変換
-  const configFormat = fromUnifiedConfig(defaultConfig);
-  const configUpdates = fromUnifiedConfig({ ...defaultConfig, ...updates });
+  // mergeConfigはConfig型を期待するため、で変換
+  const configFormat =(defaultConfig);
+  const configUpdates =({ ...defaultConfig, ...updates });
   const result = mergeConfig(configFormat, configUpdates);
-  assertEquals(result.motion_count, 5);
-  assertEquals(result.hint_position, 'end');
+  assertEquals(result.motionCount, 5);
+  assertEquals(result.hintPosition, 'end');
 });
 
 /**
@@ -98,11 +96,11 @@ Deno.test("RED: mergeConfig should handle UnifiedConfig structure", () => {
     debugCoordinates: true
   };
 
-  // mergeConfigはConfig型を期待するため、fromUnifiedConfigで変換
-  const configFormat = fromUnifiedConfig(baseConfig);
-  const configUpdates = fromUnifiedConfig({ ...baseConfig, ...updates });
+  // mergeConfigはConfig型を期待するため、で変換
+  const configFormat =(baseConfig);
+  const configUpdates =({ ...baseConfig, ...updates });
   const result = mergeConfig(configFormat, configUpdates);
-  assertEquals(result.motion_count, 4);
-  assertEquals(result.hint_position, 'start');
+  assertEquals(result.motionCount, 4);
+  assertEquals(result.hintPosition, 'start');
   assertEquals(result.maxHints, 250);
 });

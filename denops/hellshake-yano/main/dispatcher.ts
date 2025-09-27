@@ -115,7 +115,7 @@ export function createControlDispatcher(
      */
     setCount(count: unknown): void {
       if (typeof count === "number" && count >= 1 && Number.isInteger(count)) {
-        config.motion_count = count;
+        config.motionCount = count;
       }
     },
 
@@ -124,7 +124,7 @@ export function createControlDispatcher(
      */
     setTimeout(timeout: unknown): void {
       if (typeof timeout === "number" && timeout >= 100) {
-        config.motion_timeout = timeout;
+        config.motionTimeout = timeout;
       }
     },
   };
@@ -160,19 +160,19 @@ export function createDebugDispatcher(
      * デバッグモードのトグル
      */
     toggleDebugMode(): boolean {
-      config.debug_mode = !config.debug_mode;
-      return config.debug_mode;
+      config.debugMode = !config.debugMode;
+      return config.debugMode;
     },
 
     /**
      * パフォーマンスログのトグル
      */
     togglePerformanceLog(): boolean {
-      config.performance_log = !config.performance_log;
-      if (!config.performance_log) {
+      config.performanceLog = !config.performanceLog;
+      if (!config.performanceLog) {
         clearDebugInfo();
       }
-      return config.performance_log;
+      return config.performanceLog;
     },
   };
 }
@@ -197,17 +197,17 @@ function validateAndApplyMarkers(cfg: Partial<Config>, config: Config): void {
 }
 
 function validateAndApplyMotionCount(cfg: Partial<Config>, config: Config): void {
-  if (typeof cfg.motion_count === "number") {
-    if (cfg.motion_count >= 1 && Number.isInteger(cfg.motion_count)) {
-      config.motion_count = cfg.motion_count;
+  if (typeof cfg.motionCount === "number") {
+    if (cfg.motionCount >= 1 && Number.isInteger(cfg.motionCount)) {
+      config.motionCount = cfg.motionCount;
     }
   }
 }
 
 function validateAndApplyMotionTimeout(cfg: Partial<Config>, config: Config): void {
-  if (typeof cfg.motion_timeout === "number") {
-    if (cfg.motion_timeout >= 100) {
-      config.motion_timeout = cfg.motion_timeout;
+  if (typeof cfg.motionTimeout === "number") {
+    if (cfg.motionTimeout >= 100) {
+      config.motionTimeout = cfg.motionTimeout;
     }
   }
 }

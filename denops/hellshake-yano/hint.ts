@@ -314,7 +314,7 @@ export function assignHintsToWords(
   cursorLine: number,
   cursorCol: number,
   mode: string = "normal",
-  config?: { hint_position?: string; visual_hint_position?: string },
+  config?: { hintPosition?: string; visualHintPosition?: string },
   optimizationConfig?: { skipOverlapDetection?: boolean },
 ): HintMapping[] {
   if (words.length === 0 || hints.length === 0) {
@@ -322,8 +322,8 @@ export function assignHintsToWords(
   }
 
   const isVisualMode = mode === "visual";
-  const hintPositionSetting = config?.hint_position ?? "start";
-  const visualHintPositionSetting = config?.visual_hint_position ?? "end";
+  const hintPositionSetting = config?.hintPosition ?? "start";
+  const visualHintPositionSetting = config?.visualHintPosition ?? "end";
 
   const assignmentCache = getAssignmentCacheForMode(mode);
 
@@ -1051,8 +1051,8 @@ export function generateHintsWithGroups(
   const defaultMultiCharKeys = "BCEIOPQRTUVWXYZ".split("");
 
   // 厳密な分離: single_char_keysとmulti_char_keysを独立して扱う
-  const singleCharKeys = config.single_char_keys || [];
-  const multiCharKeys = config.multi_char_keys || [];
+  const singleCharKeys = config.singleCharKeys || [];
+  const multiCharKeys = config.multiCharKeys || [];
 
   // 両方とも未定義の場合のみ、従来のロジックにフォールバック
   if (singleCharKeys.length === 0 && multiCharKeys.length === 0) {
@@ -1068,8 +1068,8 @@ export function generateHintsWithGroups(
   const hints: string[] = [];
 
   // 1文字ヒントの数を決定
-  const maxSingleChars = config.max_single_char_hints !== undefined
-    ? Math.min(config.max_single_char_hints, singleCharKeys.length)
+  const maxSingleChars = config.maxSingleCharHints !== undefined
+    ? Math.min(config.maxSingleCharHints, singleCharKeys.length)
     : singleCharKeys.length;
   const singleCharCount = Math.min(wordCount, maxSingleChars);
 
@@ -1215,32 +1215,32 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
   const errors: string[] = [];
 
   // 1文字キーの検証
-  if (config.single_char_keys) {
-    const invalidSingle = config.single_char_keys.filter((k) => k.length !== 1);
+  if (config.singleCharKeys) {
+    const invalidSingle = config.singleCharKeys.filter((k) => k.length !== 1);
     if (invalidSingle.length > 0) {
       errors.push(`Invalid single char keys: ${invalidSingle.join(", ")}`);
     }
   }
 
   // 2文字キーの検証（実際は1文字である必要がある）
-  if (config.multi_char_keys) {
-    const invalidMulti = config.multi_char_keys.filter((k) => k.length !== 1);
+  if (config.multiCharKeys) {
+    const invalidMulti = config.multiCharKeys.filter((k) => k.length !== 1);
     if (invalidMulti.length > 0) {
       errors.push(`Multi char keys must be single characters: ${invalidMulti.join(", ")}`);
     }
   }
 
   // 重複チェック
-  if (config.single_char_keys && config.multi_char_keys) {
-    const overlap = config.single_char_keys.filter((k) => config.multi_char_keys!.includes(k));
+  if (config.singleCharKeys && config.multiCharKeys) {
+    const overlap = config.singleCharKeys.filter((k) => config.multiCharKeys!.includes(k));
     if (overlap.length > 0) {
       errors.push(`Keys cannot be in both groups: ${overlap.join(", ")}`);
     }
   }
 
   // max_single_char_hints の検証
-  if (config.max_single_char_hints !== undefined) {
-    if (config.max_single_char_hints < 0) {
+  if (config.maxSingleCharHints !== undefined) {
+    if (config.maxSingleCharHints < 0) {
       errors.push("max_single_char_hints must be non-negative");
     }
   }

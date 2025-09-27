@@ -23,14 +23,15 @@ import type {
   WordDetectionResult,
 } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
+import type { UnifiedConfig } from "./config.ts";
+import { getDefaultUnifiedConfig } from "./config.ts";
 import type { EnhancedWordConfig } from "./word.ts";
 import {
   detectWordsWithManager,
   detectWordsWithConfig,
   createPartialUnifiedConfig,
 } from "./word.ts";
-import type { UnifiedConfig } from "./config.ts";
-import { toUnifiedConfig } from "./config.ts";
+// 重複インポートを削除
 import {
   generateHints,
   generateHintsWithGroups,
@@ -50,7 +51,7 @@ import { VimConfigBridge } from "./word/dictionary-loader.ts";
 export class Core {
   private static instance: Core | null = null;
 
-  private config: Config;
+  private config: UnifiedConfig;
   private isActive: boolean = false;
   private currentHints: HintMapping[] = [];
   private performanceMetrics: PerformanceMetrics = {
@@ -76,8 +77,9 @@ export class Core {
    *
    * @param config 初期設定（省略時はデフォルト設定を使用）
    */
-  private constructor(config?: Partial<Config>) {
-    this.config = { ...createMinimalConfig(), ...config };
+  private constructor(config?: Partial<UnifiedConfig>) {
+    // UnifiedConfigのデフォルト設定を使用
+    this.config = { ...getDefaultUnifiedConfig(), ...config };
   }
 
   /**
@@ -87,7 +89,7 @@ export class Core {
    * @param config 初期設定（初回のみ有効）
    * @returns Coreクラスのシングルトンインスタンス
    */
-  public static getInstance(config?: Partial<Config>): Core {
+  public static getInstance(config?: Partial<UnifiedConfig>): Core {
     if (!Core.instance) {
       Core.instance = new Core(config);
     }
@@ -128,7 +130,7 @@ export class Core {
    *
    * @returns 現在のConfig設定
    */
-  getConfig(): Config {
+  getConfig(): UnifiedConfig {
     return { ...this.config };
   }
 
@@ -137,7 +139,7 @@ export class Core {
    *
    * @param newConfig 新しい設定（部分更新可能）
    */
-  updateConfig(newConfig: Partial<Config>): void {
+  updateConfig(newConfig: Partial<UnifiedConfig>): void {
     this.config = { ...this.config, ...newConfig };
   }
 
@@ -374,7 +376,7 @@ export class Core {
    */
   private getMinLengthForKey(key: string): number {
     // Config型をUnifiedConfigに変換
-    const unifiedConfig = toUnifiedConfig(this.config);
+    const unifiedConfig = this.config; // 既にUnifiedConfig形式
 
     // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
@@ -392,12 +394,12 @@ export class Core {
    */
   private createEnhancedWordConfig(): EnhancedWordConfig {
     return {
-      strategy: this.config.word_detection_strategy,
-      use_japanese: this.config.use_japanese,
-      enable_tinysegmenter: this.config.enable_tinysegmenter,
-      segmenter_threshold: this.config.segmenter_threshold,
-      cache_enabled: true,
-      auto_detect_language: true,
+      strategy: this.config.wordDetectionStrategy,
+      useJapanese: this.config.useJapanese,
+      enableTinySegmenter: this.config.enableTinySegmenter,
+      segmenterThreshold: this.config.segmenterThreshold,
+      cacheEnabled: true,
+      autoDetectLanguage: true,
     };
   }
 
@@ -416,9 +418,9 @@ export class Core {
       const enhancedConfig = this.createEnhancedWordConfig();
 
       // current_key_contextからコンテキストを作成
-      const context = this.config.current_key_context
+      const context = this.config.currentKeyContext
         ? {
-            minWordLength: this.getMinLengthForKey(this.config.current_key_context),
+            minWordLength: this.getMinLengthForKey(this.config.currentKeyContext),
           }
         : undefined;
 
@@ -444,7 +446,7 @@ export class Core {
    */
   private async fallbackWordDetection(denops: Denops): Promise<Word[]> {
     const fallbackConfig = createPartialUnifiedConfig({
-      useJapanese: this.config.use_japanese,
+      useJapanese: this.config.useJapanese,
     });
     return await detectWordsWithConfig(denops, fallbackConfig);
   }
@@ -477,7 +479,7 @@ export class Core {
     }
 
     // Config型をUnifiedConfigに変換
-    const unifiedConfig = toUnifiedConfig(this.config);
+    const unifiedConfig = this.config; // 既にUnifiedConfig形式
 
     // ヒントグループ機能の判定
     const shouldUseHintGroups = unifiedConfig.useHintGroups !== false &&
@@ -486,12 +488,11 @@ export class Core {
 
     if (shouldUseHintGroups) {
       // HintKeyConfigオブジェクトを作成
-      const hintConfig: HintKeyConfig = {
-        single_char_keys: unifiedConfig.singleCharKeys,
-        multi_char_keys: unifiedConfig.multiCharKeys,
+      const hintConfig: HintKeyConfig = {singleCharKeys: unifiedConfig.singleCharKeys,
+        multiCharKeys: unifiedConfig.multiCharKeys,
         markers: markers.length > 0 ? markers : undefined,
-        max_single_char_hints: unifiedConfig.maxSingleCharHints,
-        use_distance_priority: undefined, // UnifiedConfigには存在しない
+        maxSingleCharHints: unifiedConfig.maxSingleCharHints,
+        useDistancePriority: undefined, // UnifiedConfigには存在しない
       };
 
       // 設定の検証
@@ -861,7 +862,7 @@ export class Core {
       }
 
       // ヒント生成
-      const unifiedConfig = toUnifiedConfig(this.config);
+      const unifiedConfig = this.config; // 既にUnifiedConfig形式
       const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
       const hints = this.generateHintsOptimized(words.length, markers);
 
@@ -909,7 +910,7 @@ export class Core {
   async showHintsWithKey(denops: Denops, key: string, mode?: string): Promise<void> {
     try {
       // グローバル設定のcurrent_key_contextを更新
-      this.config.current_key_context = key;
+      this.config.currentKeyContext = key;
 
       const modeString = mode || "normal";
       // 既存のshowHintsInternal処理を呼び出し（モード情報付き）
@@ -933,7 +934,7 @@ export class Core {
     startTime: number,
     endTime: number
   ): void {
-    if (!this.config.performance_log) return;
+    if (!this.config.performanceLog) return;
 
     const duration = endTime - startTime;
     this.performanceMetrics[operation].push(duration);
@@ -944,7 +945,7 @@ export class Core {
     }
 
     // デバッグモードの場合はコンソールにもログ出力
-    if (this.config.debug_mode) {
+    if (this.config.debugMode) {
       console.log(`[Core:PERF] ${operation}: ${duration}ms`);
     }
   }
@@ -1013,7 +1014,7 @@ export class Core {
         target.word.byteCol || target.word.col;
 
       // デバッグログ: ジャンプ位置の詳細
-      if (this.config.debug_mode) {
+      if (this.config.debugMode) {
         console.log(`[hellshake-yano:DEBUG] Jump to target (${context}):`);
         console.log(`  - text: "${target.word.text}"`);
         console.log(`  - line: ${target.word.line}`);
@@ -1067,7 +1068,7 @@ export class Core {
 
     try {
       // 入力タイムアウト設定（設定可能）
-      const inputTimeout = config.motion_timeout || 2000;
+      const inputTimeout = config.motionTimeout || 2000;
 
       // 短い待機時間を入れて、前回の入力が誤って拾われるのを防ぐ
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1088,7 +1089,7 @@ export class Core {
       // 全体タイムアウトの場合
       if (char === -2) {
         // motion_count === 1の場合、単一文字ヒントがあれば自動選択
-        if (config.motion_count === 1) {
+        if (config.motionCount === 1) {
           const singleCharHints = currentHints.filter(h => h.hint.length === 1);
           if (singleCharHints.length === 1) {
             await this.jumpToHintTarget(denops, singleCharHints[0], "timeout auto-select");
@@ -1141,12 +1142,12 @@ export class Core {
       }
 
       // 現在のキー設定に数字が含まれているかチェック
-      const allKeys = [...(config.single_char_keys || []), ...(config.multi_char_keys || [])];
+      const allKeys = [...(config.singleCharKeys || []), ...(config.multiCharKeys || [])];
       const hasNumbers = allKeys.some((k) => /^\d$/.test(k));
 
-      // 有効な文字範囲チェック（use_numbersがtrueまたはキー設定に数字が含まれていれば数字を許可）
-      const validPattern = (config.use_numbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
-      const errorMessage = (config.use_numbers || hasNumbers)
+      // 有効な文字範囲チェック（useNumbersがtrueまたはキー設定に数字が含まれていれば数字を許可）
+      const validPattern = (config.useNumbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
+      const errorMessage = (config.useNumbers || hasNumbers)
         ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
         : "Please use alphabetic characters only";
 
@@ -1170,9 +1171,9 @@ export class Core {
       const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
       const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
 
-      if (config.use_hint_groups) {
+      if (config.useHintGroups) {
         // デフォルトのキー設定
-        const singleOnlyKeys = config.single_char_keys ||
+        const singleOnlyKeys = config.singleCharKeys ||
           [
             "A",
             "S",
@@ -1196,7 +1197,7 @@ export class Core {
             "8",
             "9",
           ];
-        const multiOnlyKeys = config.multi_char_keys ||
+        const multiOnlyKeys = config.multiCharKeys ||
           ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
         // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
@@ -1223,7 +1224,7 @@ export class Core {
 
       // 候補のヒントをハイライト表示（UX改善）
       // Option 3: 1文字ヒントが存在する場合はハイライト処理をスキップ
-      const shouldHighlight = config.highlight_selected && !singleCharTarget;
+      const shouldHighlight = config.highlightSelected && !singleCharTarget;
 
       if (shouldHighlight) {
         // 非同期版を使用してメインスレッドをブロックしない
@@ -1234,8 +1235,8 @@ export class Core {
       // 第2文字の入力を待機
       let secondChar: number;
 
-      if (config.use_hint_groups) {
-        const multiOnlyKeys = config.multi_char_keys ||
+      if (config.useHintGroups) {
+        const multiOnlyKeys = config.multiCharKeys ||
           ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
         if (multiOnlyKeys.includes(inputChar)) {
@@ -1307,8 +1308,8 @@ export class Core {
       }
 
       // 有効な文字範囲チェック（数字対応）
-      const secondValidPattern = config.use_numbers ? /[A-Z0-9]/ : /[A-Z]/;
-      const secondErrorMessage = config.use_numbers
+      const secondValidPattern = config.useNumbers ? /[A-Z0-9]/ : /[A-Z]/;
+      const secondErrorMessage = config.useNumbers
         ? "Second character must be alphabetic or numeric"
         : "Second character must be alphabetic";
 
@@ -2002,11 +2003,8 @@ export class Core {
    * @returns そのキーに対する最小文字数値（デフォルト: 2）
    */
   public static getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
-    // Config型の場合はUnifiedConfigに変換
-    // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
-    const unifiedConfig = "motionCount" in config
-      ? config as UnifiedConfig
-      : toUnifiedConfig(config as Config);
+    // 既にUnifiedConfig形式であることを前提
+    const unifiedConfig = config as UnifiedConfig;
 
     // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
@@ -2033,11 +2031,8 @@ export class Core {
    * @returns そのキーに対するmotion_count値（デフォルト: 3）
    */
   public static getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
-    // Config型の場合はUnifiedConfigに変換
-    // Config型は motion_count を持ち、UnifiedConfig型は motionCount を持つ
-    const unifiedConfig = "motionCount" in config
-      ? config as UnifiedConfig
-      : toUnifiedConfig(config as Config);
+    // 既にUnifiedConfig形式であることを前提
+    const unifiedConfig = config as UnifiedConfig;
 
     // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMotionCount && unifiedConfig.perKeyMotionCount[key] !== undefined) {

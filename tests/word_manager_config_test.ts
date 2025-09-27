@@ -68,7 +68,7 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
   // This test should initially fail because WordDetectionManager still uses Config
   const config: WordDetectionManagerConfig = {
     // These should map to UnifiedConfig properties (currently uses snake_case)
-    use_japanese: mockUnifiedConfig.useJapanese,
+    useJapanese: mockUnifiedConfig.useJapanese,
     default_strategy: mockUnifiedConfig.wordDetectionStrategy,
     cache_enabled: true,
     cache_max_size: 500
@@ -94,10 +94,9 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
 });
 
 Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead of Config", async () => {
-  const config: WordDetectionManagerConfig = {
-    use_japanese: mockUnifiedConfig.useJapanese,
+  const config: WordDetectionManagerConfig = {useJapanese: mockUnifiedConfig.useJapanese,
     default_strategy: mockUnifiedConfig.wordDetectionStrategy,
-    enable_tinysegmenter: mockUnifiedConfig.enableTinySegmenter
+    enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter
   };
 
   // This should work with UnifiedConfig
@@ -120,10 +119,9 @@ Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead o
 });
 
 Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with UnifiedConfig", async () => {
-  const config: WordDetectionManagerConfig = {
-    use_japanese: mockUnifiedConfig.useJapanese,
+  const config: WordDetectionManagerConfig = {useJapanese: mockUnifiedConfig.useJapanese,
     default_strategy: 'hybrid', // Force hybrid strategy
-    enable_tinysegmenter: mockUnifiedConfig.enableTinySegmenter
+    enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter
   };
 
   const manager = new WordDetectionManager(config, mockUnifiedConfig);

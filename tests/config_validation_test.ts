@@ -245,11 +245,10 @@ Deno.test("既存validateConfig()のリダイレクト動作確認", () => {
   // 注意: このテストは既存関数の改修後にパスするはず
 
   // 一旦既存関数の動作をテスト（snake_case入力）
-  const result = validateConfig({
-    motion_count: 3,
-    motion_timeout: 2000,
+  const result = validateConfig({motionCount: 3,
+    motionTimeout: 2000,
     maxHints: 336,
-    hint_position: "start"
+    hintPosition: "start"
   });
 
   // 現在の既存関数の動作を確認

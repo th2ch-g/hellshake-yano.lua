@@ -13,8 +13,7 @@ import { generateHintsWithGroups, type HintKeyConfig } from "../denops/hellshake
 describe("Hint Generation Without Number Fallback", () => {
   describe("Strict single/multi char keys separation", () => {
     it("should NOT generate number hints when hints exceed multi_char combinations", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G"], // 5個
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G"], // 5個
         multi_char_keys: ["B", "C", "E"], // 3×3=9個の2文字組み合わせ
       };
 
@@ -44,8 +43,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
     it("should work with the actual user configuration", () => {
       // ユーザーの実際の設定
-      const config: HintKeyConfig = {
-        single_char_keys: "ASDFGNM0123456789".split(""), // 17個
+      const config: HintKeyConfig = {singleCharKeys: "ASDFGNM0123456789".split(""), // 17個
         multi_char_keys: "BCEIOPQRTUVWXYZ".split(""), // 15×15=225個
       };
 
@@ -64,8 +62,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should handle small hint requests correctly", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
         multi_char_keys: ["B", "C"],
       };
 
@@ -77,8 +74,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should generate multi-char hints when single-char is exhausted", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S"], // 2個
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S"], // 2個
         multi_char_keys: ["B", "C"], // 2×2=4個
       };
 
@@ -94,8 +90,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should respect max_single_char_hints setting", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G"],
         multi_char_keys: ["B", "C"],
         max_single_char_hints: 2, // 1文字ヒントを2個に制限
       };
@@ -113,8 +108,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should NOT generate 3-character hints anymore", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A"], // 1個
+      const config: HintKeyConfig = {singleCharKeys: ["A"], // 1個
         multi_char_keys: ["B", "C"], // 2×2=4個
       };
 
@@ -129,8 +123,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should handle empty multi_char_keys", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
         multi_char_keys: [], // 空
       };
 
@@ -142,8 +135,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should handle empty single_char_keys", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: [], // 空
+      const config: HintKeyConfig = {singleCharKeys: [], // 空
         multi_char_keys: ["B", "C"],
       };
 
@@ -157,8 +149,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
   describe("Edge cases", () => {
     it("should handle zero word count", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A"],
+      const config: HintKeyConfig = {singleCharKeys: ["A"],
         multi_char_keys: ["B"],
       };
 
@@ -167,8 +158,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should handle negative word count", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A"],
+      const config: HintKeyConfig = {singleCharKeys: ["A"],
         multi_char_keys: ["B"],
       };
 
@@ -177,8 +167,7 @@ describe("Hint Generation Without Number Fallback", () => {
     });
 
     it("should handle both keys empty with markers fallback", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: [],
+      const config: HintKeyConfig = {singleCharKeys: [],
         multi_char_keys: [],
         markers: ["X", "Y", "Z"],
       };

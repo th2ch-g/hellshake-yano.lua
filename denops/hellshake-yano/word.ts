@@ -15,9 +15,9 @@ export type { Word };
  */
 export interface WordConfig {
   /** 日本語を含む単語検出を行うか（デフォルト: false） */
-  use_japanese?: boolean;
+  useJapanese?: boolean;
   /** 互換性のためのフラグ（未使用） */
-  use_improved_detection?: boolean;
+  useImprovedDetection?: boolean;
 }
 
 /**
@@ -32,11 +32,11 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   /** 後方互換性のための単語検出ストラテジー */
   strategy?: "regex" | "tinysegmenter" | "hybrid";
   /** キー別の最小文字数設定 */
-  per_key_min_length?: Record<string, number>;
+  perKeyMinLength?: Record<string, number>;
   /** キー別最小文字数のデフォルト */
-  default_min_word_length?: number;
+  defaultMinWordLength?: number;
   /** 現在のキーコンテキスト（内部用） */
-  current_key_context?: string;
+  currentKeyContext?: string;
 }
 
 import { CacheType, UnifiedCache } from "./cache.ts";
@@ -77,28 +77,28 @@ export interface WordDetector {
  */
 export interface WordDetectionConfig {
   strategy?: "regex" | "tinysegmenter" | "hybrid";
-  use_japanese?: boolean;
+  useJapanese?: boolean;
   // Backward compatibility toggle (ignored in implementation)
-  use_improved_detection?: boolean;
+  useImprovedDetection?: boolean;
 
   // TinySegmenter specific options
-  enable_tinysegmenter?: boolean;
-  segmenter_threshold?: number; // minimum characters for segmentation
-  segmenter_cache_size?: number;
+  enableTinySegmenter?: boolean;
+  segmenterThreshold?: number; // minimum characters for segmentation
+  segmenterCacheSize?: number;
 
   // Fallback and error handling
-  enable_fallback?: boolean;
-  fallback_to_regex?: boolean;
-  max_retries?: number;
+  enableFallback?: boolean;
+  fallbackToRegex?: boolean;
+  maxRetries?: number;
 
   // Performance settings
-  cache_enabled?: boolean;
-  cache_max_size?: number;
-  batch_size?: number;
+  cacheEnabled?: boolean;
+  cacheMaxSize?: number;
+  batchSize?: number;
 
   // Filtering options
-  min_word_length?: number;
-  max_word_length?: number;
+  minWordLength?: number;
+  maxWordLength?: number;
   exclude_numbers?: boolean;
   exclude_single_chars?: boolean;
 
@@ -316,7 +316,7 @@ export class RegexWordDetector implements WordDetector {
     }
 
     // 3. ローカル設定のmin_word_length
-    return this.config.min_word_length || 1;
+    return this.config.minWordLength || 1;
   }
 
   async detectWords(
@@ -353,13 +353,13 @@ export class RegexWordDetector implements WordDetector {
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
     return {
       strategy: "regex",
-      use_japanese: true,
-      min_word_length: 1,
-      max_word_length: 50,
+      useJapanese: true,
+      minWordLength: 1,
+      maxWordLength: 50,
       exclude_numbers: false,
       exclude_single_chars: false,
-      cache_enabled: true,
-      batch_size: 50,
+      cacheEnabled: true,
+      batchSize: 50,
       ...config,
     };
   }
@@ -370,7 +370,7 @@ export class RegexWordDetector implements WordDetector {
     context?: DetectionContext,
   ): Word[] {
     // Use existing extractWordsFromLine with improved detection
-    const excludeJapanese = !this.config.use_japanese;
+    const excludeJapanese = !this.config.useJapanese;
     return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
 
@@ -383,8 +383,8 @@ export class RegexWordDetector implements WordDetector {
       filtered = filtered.filter((word) => word.text.length >= minLength);
     }
 
-    if (this.config.max_word_length) {
-      filtered = filtered.filter((word) => word.text.length <= this.config.max_word_length!);
+    if (this.config.maxWordLength) {
+      filtered = filtered.filter((word) => word.text.length <= this.config.maxWordLength!);
     }
 
     if (this.config.exclude_numbers) {
@@ -481,8 +481,8 @@ export async function detectWords(
  * ```typescript
  * const result = await detectWordsWithManager(denops, {
  *   strategy: 'hybrid',
- *   use_japanese: true,
- *   enable_tinysegmenter: true
+ *   useJapanese: true,
+ *   enableTinySegmenter: true
  * });
  * if (result.success) {
  *   console.log(`Found ${result.words.length} words using ${result.detector}`);
@@ -531,7 +531,7 @@ export async function detectWordsWithManager(
 
     // フォールバックとして従来のメソッドを使用
     const fallbackConfig = createPartialUnifiedConfig({
-      useJapanese: config.use_japanese,
+      useJapanese: config.useJapanese,
     });
     const fallbackWords = await detectWordsWithConfig(denops, fallbackConfig);
     return {
@@ -549,14 +549,14 @@ export async function detectWordsWithManager(
 }
 
 function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext | undefined {
-  const key = config.current_key_context;
+  const key = config.currentKeyContext;
   if (!key) {
     return undefined;
   }
 
-  const perKey = config.per_key_min_length ?? {};
+  const perKey = config.perKeyMinLength ?? {};
   const minFromKey = perKey[key];
-  const fallback = config.default_min_word_length ?? config.min_word_length;
+  const fallback = config.defaultMinWordLength ?? config.minWordLength;
 
   const derived: DetectionContext = { currentKey: key };
 
@@ -578,7 +578,7 @@ function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext |
  * @since 1.0.0
  * @example
  * ```typescript
- * const words = await detectWordsWithConfig(denops, { use_japanese: true });
+ * const words = await detectWordsWithConfig(denops, {useJapanese: true });
  * console.log(`Found ${words.length} words with Japanese support`);
  * ```
  */
@@ -1091,12 +1091,11 @@ export function getWordDetectionCacheStats(): {
  */
 export function convertWordConfigToEnhanced(config: WordConfig | UnifiedConfig): EnhancedWordConfig {
   // UnifiedConfigまたはWordConfigを受け入れ、EnhancedWordConfigに変換
-  const useJapanese = 'useJapanese' in config ? config.useJapanese : config.use_japanese;
+  const useJapanese = 'useJapanese' in config ? config.useJapanese : config.useJapanese;
   
-  return {
-    use_japanese: useJapanese ?? false,
+  return {useJapanese: useJapanese ?? false,
     strategy: "regex", // デフォルト戦略
-    enable_tinysegmenter: useJapanese === true,
+    enableTinySegmenter: useJapanese === true,
   };
 }
 
@@ -1159,7 +1158,7 @@ export async function detectWordsWithEnhancedConfig(
   } catch (error) {
     // フォールバックとしてレガシー版を使用
     const legacyConfig = createPartialUnifiedConfig({
-      useJapanese: config.use_japanese,
+      useJapanese: config.useJapanese,
     });
     return await detectWordsWithConfig(denops, legacyConfig);
   }
@@ -1171,7 +1170,7 @@ export function extractWordsFromLineWithEnhancedConfig(
   lineNumber: number,
   config: EnhancedWordConfig = {},
 ): Word[] {
-  const excludeJapanese = config.use_japanese !== true;
+  const excludeJapanese = config.useJapanese !== true;
   return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
 }
 
@@ -1278,16 +1277,16 @@ export interface UnifiedWordExtractionConfig {
   excludeJapanese?: boolean;
 
   // Legacy WordConfig compatibility
-  use_japanese?: boolean;
-  use_improved_detection?: boolean;
+  useJapanese?: boolean;
+  useImprovedDetection?: boolean;
 
   // Enhanced config compatibility
   strategy?: "regex" | "tinysegmenter" | "hybrid";
-  per_key_min_length?: Record<string, number>;
-  default_min_word_length?: number;
-  current_key_context?: string;
-  min_word_length?: number;
-  enable_tinysegmenter?: boolean;
+  perKeyMinLength?: Record<string, number>;
+  defaultMinWordLength?: number;
+  currentKeyContext?: string;
+  minWordLength?: number;
+  enableTinySegmenter?: boolean;
 
   // Mode selection
   legacyMode?: boolean;
@@ -1313,12 +1312,12 @@ export interface UnifiedWordExtractionConfig {
  * const words2 = extractWordsUnified("hello-world", 1, { useImprovedDetection: true });
  *
  * // WordConfig compatibility
- * const words3 = extractWordsUnified("hello こんにちは", 1, { use_japanese: true });
+ * const words3 = extractWordsUnified("hello こんにちは", 1, {useJapanese: true });
  *
  * // Enhanced config compatibility
  * const words4 = extractWordsUnified("test", 1, {
  *   strategy: "hybrid",
- *   min_word_length: 3
+ *   minWordLength: 3
  * });
  * ```
  *
@@ -1339,14 +1338,13 @@ export function extractWordsUnified(
 
   if (normalizedConfig.hasEnhancedFeatures) {
     // Use enhanced config path
-    const enhancedConfig: EnhancedWordConfig = {
-      use_japanese: normalizedConfig.useJapanese,
+    const enhancedConfig: EnhancedWordConfig = {useJapanese: normalizedConfig.useJapanese,
       strategy: normalizedConfig.strategy,
-      min_word_length: normalizedConfig.minWordLength,
-      enable_tinysegmenter: normalizedConfig.enableTinySegmenter,
-      per_key_min_length: normalizedConfig.perKeyMinLength,
-      default_min_word_length: normalizedConfig.defaultMinWordLength,
-      current_key_context: normalizedConfig.currentKeyContext,
+      minWordLength: normalizedConfig.minWordLength,
+      enableTinySegmenter: normalizedConfig.enableTinySegmenter,
+      perKeyMinLength: normalizedConfig.perKeyMinLength,
+      defaultMinWordLength: normalizedConfig.defaultMinWordLength,
+      currentKeyContext: normalizedConfig.currentKeyContext,
     };
     return extractWordsFromLineWithEnhancedConfig(lineText, lineNumber, enhancedConfig);
   }
@@ -1402,15 +1400,15 @@ function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): Normalized
   // Enhanced features detection
   const hasEnhancedFeatures = !!(
     config.strategy ||
-    config.per_key_min_length ||
-    config.current_key_context ||
-    config.enable_tinysegmenter
+    config.perKeyMinLength ||
+    config.currentKeyContext ||
+    config.enableTinySegmenter
   );
 
   // WordConfig features detection
   const useWordConfig = !!(
-    config.use_japanese !== undefined ||
-    config.use_improved_detection !== undefined
+    config.useJapanese !== undefined ||
+    config.useImprovedDetection !== undefined
   ) && !hasEnhancedFeatures;
 
   // Japanese handling priority:
@@ -1423,9 +1421,9 @@ function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): Normalized
   if (config.excludeJapanese !== undefined) {
     excludeJapanese = config.excludeJapanese;
     useJapanese = !config.excludeJapanese;
-  } else if (config.use_japanese !== undefined) {
-    useJapanese = config.use_japanese;
-    excludeJapanese = !config.use_japanese;
+  } else if (config.useJapanese !== undefined) {
+    useJapanese = config.useJapanese;
+    excludeJapanese = !config.useJapanese;
   } else {
     useJapanese = true; // Default: include Japanese for legacy compatibility
     excludeJapanese = false;
@@ -1436,7 +1434,7 @@ function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): Normalized
   // 2. use_improved_detection (WordConfig)
   // 3. default based on mode
   const useImprovedDetection = config.useImprovedDetection ??
-    config.use_improved_detection ??
+    config.useImprovedDetection ??
     false; // Default to false for legacy compatibility
 
   return {
@@ -1444,11 +1442,11 @@ function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): Normalized
     excludeJapanese,
     useJapanese,
     strategy: config.strategy,
-    minWordLength: config.min_word_length ?? config.default_min_word_length,
-    enableTinySegmenter: config.enable_tinysegmenter,
-    perKeyMinLength: config.per_key_min_length,
-    defaultMinWordLength: config.default_min_word_length,
-    currentKeyContext: config.current_key_context,
+    minWordLength: config.minWordLength ?? config.defaultMinWordLength,
+    enableTinySegmenter: config.enableTinySegmenter,
+    perKeyMinLength: config.perKeyMinLength,
+    defaultMinWordLength: config.defaultMinWordLength,
+    currentKeyContext: config.currentKeyContext,
     legacyMode,
     hasEnhancedFeatures,
     useWordConfig,

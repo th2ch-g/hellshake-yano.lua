@@ -147,7 +147,7 @@ Deno.test("assignHintsToWords - performance optimization config interface", asyn
 
   await t.step("should work with existing config parameter unchanged", () => {
     // 既存のconfigパラメータが正常に動作することを確認
-    const hintConfig = { hint_position: "end" as const };
+    const hintConfig = {hintPosition: "end" as const };
     const result = assignHintsToWords(
       simpleWords,
       hints,

@@ -11,7 +11,7 @@ import {
 
 Deno.test("日本語1文字単語の検出", async (t) => {
   await t.step("1文字の日本語漢字が検出される", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "私は本を読む";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -23,7 +23,7 @@ Deno.test("日本語1文字単語の検出", async (t) => {
   });
 
   await t.step("1文字のひらがなが検出される", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "これはよいものだ";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -34,7 +34,7 @@ Deno.test("日本語1文字単語の検出", async (t) => {
   });
 
   await t.step("1文字のカタカナが検出される", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "アイウエオ";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -45,7 +45,7 @@ Deno.test("日本語1文字単語の検出", async (t) => {
   });
 
   await t.step("日本語モードで最小文字数制限が1文字になる", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "今日";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -56,7 +56,7 @@ Deno.test("日本語1文字単語の検出", async (t) => {
   });
 
   await t.step("英数字モードでは短い単語も検出される（改善版実装）", () => {
-    const config: EnhancedWordConfig = { use_japanese: false };
+    const config: EnhancedWordConfig = {useJapanese: false };
     const text = "I am a programmer";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -70,7 +70,7 @@ Deno.test("日本語1文字単語の検出", async (t) => {
   });
 
   await t.step("混在テキストで日本語と英語が適切に処理される", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "私はProgrammerです";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -84,7 +84,7 @@ Deno.test("日本語1文字単語の検出", async (t) => {
 
 Deno.test("日本語文字の個別分割", async (t) => {
   await t.step("連続する漢字が検出される（現実装）", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "今日明日";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -96,7 +96,7 @@ Deno.test("日本語文字の個別分割", async (t) => {
   });
 
   await t.step("ひらがなが検出される（現実装）", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "あいうえお";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -112,7 +112,7 @@ Deno.test("日本語文字の個別分割", async (t) => {
   });
 
   await t.step("カタカナが検出される（現実装）", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "カタカナ";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 
@@ -128,7 +128,7 @@ Deno.test("日本語文字の個別分割", async (t) => {
   });
 
   await t.step("単語の位置（col）が正しく設定される", () => {
-    const config: EnhancedWordConfig = { use_japanese: true };
+    const config: EnhancedWordConfig = {useJapanese: true };
     const text = "私は元気";
     const words = extractWordsFromLineWithEnhancedConfig(text, 1, config);
 

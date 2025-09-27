@@ -37,16 +37,16 @@ const mockDenops = {
 const mockVimConfig = {
   // 基本設定
   markers: ["Z", "Y", "X", "W", "V"], // デフォルトとは異なる値
-  motion_count: 5, // デフォルト: 3
-  motion_timeout: 5000, // デフォルト: 2000
-  hint_position: "end", // デフォルト: "start"
-  trigger_on_hjkl: false, // デフォルト: true
+  motionCount: 5, // デフォルト: 3
+  motionTimeout: 5000, // デフォルト: 2000
+  hintPosition: "end", // デフォルト: "start"
+  triggerOnHjkl: false, // デフォルト: true
   enabled: false, // デフォルト: true
   maxHints: 500, // デフォルト: 336
   debounceDelay: 100, // デフォルト: 50
-  use_numbers: true, // デフォルト: false
-  highlight_selected: false, // デフォルト: true
-  debug_coordinates: true, // デフォルト: false
+  useNumbers: true, // デフォルト: false
+  highlightSelected: false, // デフォルト: true
+  debugCoordinates: true, // デフォルト: false
 
   // Process 50 Sub2: ヒントグループ設定
   single_char_keys: ["Z", "X", "C"], // デフォルトとは異なる
@@ -55,14 +55,14 @@ const mockVimConfig = {
   use_hint_groups: false, // デフォルト: true
 
   // Process 50 Sub3: 日本語設定
-  use_japanese: true, // デフォルト: false
+  useJapanese: true, // デフォルト: false
 
   // Process 50 Sub6: 改善版検出
   use_improved_detection: false, // デフォルト: true
 
   // Process 50 Sub7: 単語検出戦略
   word_detection_strategy: "regex", // デフォルト: "hybrid"
-  enable_tinysegmenter: false, // デフォルト: true
+  enableTinySegmenter: false, // デフォルト: true
   segmenter_threshold: 10, // デフォルト: 4
 
   // Process 50 Sub5: ハイライト色設定
@@ -76,10 +76,10 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     const defaultConfig = getDefaultConfig();
 
     // デフォルト値の確認
-    assertEquals(defaultConfig.motion_count, 3, "motion_countのデフォルトは3");
-    assertEquals(defaultConfig.motion_timeout, 2000, "motion_timeoutのデフォルトは2000");
+    assertEquals(defaultConfig.motionCount, 3, "motion_countのデフォルトは3");
+    assertEquals(defaultConfig.motionTimeout, 2000, "motion_timeoutのデフォルトは2000");
     assertEquals(
-      defaultConfig.use_japanese,
+      defaultConfig.useJapanese,
       false,
       "use_japaneseのデフォルト値はfalse",
     );
@@ -89,18 +89,17 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     // updateConfigは外部から呼べないので、設定の伝播を別の方法で確認
 
     // これらの値がハードコードされた値で上書きされないことが重要
-    assertNotEquals(mockVimConfig.motion_count, 3, "カスタム値はデフォルトと異なる");
-    assertEquals(mockVimConfig.use_japanese, true, "カスタム値が設定されている");
+    assertNotEquals(mockVimConfig.motionCount, 3, "カスタム値はデフォルトと異なる");
+    assertEquals(mockVimConfig.useJapanese, true, "カスタム値が設定されている");
   });
 
   await t.step("WordDetectionManagerでの設定優先順位", async () => {
     const { WordDetectionManager } = await import("../denops/hellshake-yano/word/manager.ts");
 
-    const customConfig = {
-      use_japanese: true,
+    const customConfig = {useJapanese: true,
       min_word_length: 2,
       max_word_length: 100,
-      enable_tinysegmenter: false,
+      enableTinySegmenter: false,
       segmenter_threshold: 10,
     };
 
@@ -108,7 +107,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     const internalConfig = (manager as any).config;
 
     // カスタム設定が維持されることを確認
-    assertEquals(internalConfig.use_japanese, true, "use_japaneseが上書きされない");
+    assertEquals(internalConfig.useJapanese, true, "use_japaneseが上書きされない");
     assertEquals(internalConfig.min_word_length, 2, "min_word_lengthが上書きされない");
     assertEquals(internalConfig.max_word_length, 100, "max_word_lengthが上書きされない");
     assertEquals(
@@ -116,7 +115,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
       false,
       "enable_tinysegmenterが上書きされない",
     );
-    assertEquals(internalConfig.segmenter_threshold, 10, "segmenter_thresholdが上書きされない");
+    assertEquals(internalConfig.segmenterThreshold, 10, "segmenter_thresholdが上書きされない");
   });
 
   await t.step("各Detectorクラスでの設定優先順位", async () => {
@@ -124,8 +123,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
       "../denops/hellshake-yano/word/detector.ts"
     );
 
-    const customConfig = {
-      use_japanese: true,
+    const customConfig = {useJapanese: true,
       use_improved_detection: false,
       min_word_length: 2,
       max_word_length: 100,
@@ -136,19 +134,19 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     // RegexWordDetector
     const regexDetector = new RegexWordDetector(customConfig);
     const regexConfig = (regexDetector as any).config;
-    assertEquals(regexConfig.use_japanese, true, "RegexWordDetectorのuse_japaneseが維持される");
+    assertEquals(regexConfig.useJapanese, true, "RegexWordDetectorのuse_japaneseが維持される");
     assertEquals(regexConfig.min_word_length, 2, "RegexWordDetectorのmin_word_lengthが維持される");
 
     // HybridWordDetector
     const hybridDetector = new HybridWordDetector(customConfig);
     const hybridConfig = (hybridDetector as any).config;
-    assertEquals(hybridConfig.use_japanese, true, "HybridWordDetectorのuse_japaneseが維持される");
+    assertEquals(hybridConfig.useJapanese, true, "HybridWordDetectorのuse_japaneseが維持される");
 
     // TinySegmenterWordDetector
     const segmenterDetector = new TinySegmenterWordDetector(customConfig);
     const segmenterConfig = (segmenterDetector as any).config;
     assertEquals(
-      segmenterConfig.use_japanese,
+      segmenterConfig.useJapanese,
       true,
       "TinySegmenterWordDetectorのuse_japaneseが維持される",
     );
@@ -170,8 +168,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     assertEquals(hasCustomMarker, true, "カスタムマーカーが使用される");
 
     // generateHintsWithGroups（グループ版）
-    const keyConfig = {
-      single_char_keys: ["A", "B", "C"],
+    const keyConfig = {singleCharKeys: ["A", "B", "C"],
       multi_char_keys: ["X", "Y", "Z"],
       max_single_char_hints: 2,
     };
@@ -185,21 +182,19 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
 
   await t.step("デフォルト値のハードコード箇所の確認", async () => {
     // main.tsのconfig変数
-    const mainConfig = {
-      motion_count: 3, // ハードコード
-      motion_timeout: 2000, // ハードコード
-      use_japanese: false, // ハードコード
+    const mainConfig = {motionCount: 3, // ハードコード
+      motionTimeout: 2000, // ハードコード
+      useJapanese: false, // ハードコード
       use_improved_detection: true, // ハードコード
       word_detection_strategy: "hybrid", // ハードコード
-      enable_tinysegmenter: true, // ハードコード
+      enableTinySegmenter: true, // ハードコード
       segmenter_threshold: 4, // ハードコード
     };
 
     // これらの値がupdateConfig()で正しく上書きされることが重要
 
     // WordDetectionManagerのデフォルト値
-    const managerDefaults = {
-      use_japanese: false, // 修正済み（configで上書き可能）
+    const managerDefaults = {useJapanese: false, // 修正済み（configで上書き可能）
       min_word_length: 1,
       max_word_length: 50,
       strategy: "hybrid",
@@ -215,10 +210,9 @@ Deno.test("設定の完全な伝播フロー", async (t) => {
     resetWordDetectionManager();
 
     // 全てカスタム値の設定
-    const fullCustomConfig = {
-      use_japanese: true,
+    const fullCustomConfig = {useJapanese: true,
       use_improved_detection: false,
-      enable_tinysegmenter: false,
+      enableTinySegmenter: false,
       word_detection_strategy: "regex",
       segmenter_threshold: 10,
       min_word_length: 2,
@@ -235,8 +229,7 @@ Deno.test("設定の完全な伝播フロー", async (t) => {
     const { WordDetectionManager } = await import("../denops/hellshake-yano/word/manager.ts");
 
     // 一部だけカスタム設定
-    const partialConfig = {
-      use_japanese: true,
+    const partialConfig = {useJapanese: true,
       // 他はデフォルト値を使用
     };
 
@@ -244,7 +237,7 @@ Deno.test("設定の完全な伝播フロー", async (t) => {
     const config = (manager as any).config;
 
     // カスタム値が設定される
-    assertEquals(config.use_japanese, true, "カスタム値が設定される");
+    assertEquals(config.useJapanese, true, "カスタム値が設定される");
 
     // 他の値はデフォルトが使用される
     assertEquals(config.min_word_length, 1, "デフォルト値が使用される");

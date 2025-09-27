@@ -40,8 +40,8 @@ class VimScriptMockDenops extends MockDenops {
     // デフォルトのグローバル変数をセットアップ
     this.vimVariables.set("g:hellshake_yano", {
       enabled: true,
-      motion_count: 3,
-      motion_timeout: 2000,
+      motionCount: 3,
+      motionTimeout: 2000,
       debug_mode: false,
       performance_log: false,
       suppress_on_key_repeat: true,
@@ -140,7 +140,7 @@ test("denops通知機能のテスト", async (denops) => {
   const config = mockDenops.getVimVariable("g:hellshake_yano");
   assertExists(config);
   assertEquals(config.enabled, true);
-  assertEquals(config.motion_count, 3);
+  assertEquals(config.motionCount, 3);
 });
 
 test("s:stop_and_clear_timer() - タイマー管理のテスト", async (denops) => {
@@ -468,7 +468,7 @@ test("パフォーマンスログ機能のテスト", async (denops) => {
   // パフォーマンスログ関数をシミュレート
   function logPerformance(operation: string, elapsedTime: number, details: any = {}) {
     const config = mockDenops.getVimVariable("g:hellshake_yano");
-    if (config?.performance_log) {
+    if (config?.performanceLog) {
       logHistory.push({
         operation,
         time: elapsedTime,
@@ -483,7 +483,7 @@ test("パフォーマンスログ機能のテスト", async (denops) => {
 
   // パフォーマンスログを有効化
   const config = mockDenops.getVimVariable("g:hellshake_yano");
-  config.performance_log = true;
+  config.performanceLog = true;
   mockDenops.setVimVariable("g:hellshake_yano", config);
 
   // ログの記録
@@ -520,7 +520,7 @@ test("全体統合テスト: モーション検出からヒント表示まで", 
     // キーリピート検出（簡略版）
     const isRepeating = false; // 簡略化
 
-    if (isRepeating && config.suppress_on_key_repeat) {
+    if (isRepeating && config.suppressOnKeyRepeat) {
       return key;
     }
 
@@ -534,7 +534,7 @@ test("全体統合テスト: モーション検出からヒント表示まで", 
     motionCount++;
 
     // ヒント表示の判定
-    if (motionCount >= config.motion_count) {
+    if (motionCount >= config.motionCount) {
       motionCount = 0; // リセット
       hintsVisible = true;
       return key;
@@ -543,7 +543,7 @@ test("全体統合テスト: モーション検出からヒント表示まで", 
       currentTimerId = mockTimer.setTimeout(() => {
         motionCount = 0;
         currentTimerId = null;
-      }, config.motion_timeout);
+      }, config.motionTimeout);
       return key;
     }
   }

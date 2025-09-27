@@ -28,9 +28,8 @@ Deno.test({
     const hints = ["A", "B"];
 
     // visual_hint_position設定でのテスト
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
-      hint_position: "start",
-      visual_hint_position: "end",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
+      visual_hintPosition: "end",
     });
 
     assertEquals(mappings.length, 2);
@@ -52,14 +51,12 @@ Deno.test({
     const hints = ["A"];
 
     // Normal modeでの計算
-    const normalResult = assignHintsToWords(words, hints, 1, 1, "normal", {
-      hint_position: "start",
+    const normalResult = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "start",
     });
 
     // Visual modeでの計算（異なる設定）
-    const visualResult = assignHintsToWords(words, hints, 1, 1, "visual", {
-      hint_position: "start",
-      visual_hint_position: "end",
+    const visualResult = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
+      visual_hintPosition: "end",
     });
 
     // 結果が異なることを確認（キャッシュが分離されている）
@@ -80,9 +77,8 @@ Deno.test({
     ];
     const hints = ["A", "B"];
 
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
-      hint_position: "start",
-      visual_hint_position: "end",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
+      visual_hintPosition: "end",
     }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 2);
@@ -104,8 +100,7 @@ Deno.test({
     const hints = ["A"];
 
     // visual_hint_positionが設定されていない場合のフォールバック
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
-      hint_position: "end",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "end",
     });
 
     assertEquals(mappings.length, 1);
@@ -125,8 +120,7 @@ Deno.test({
     const hints = ["A"];
 
     // Visual mode特有の設定がない場合
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
-      hint_position: "start",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
     });
 
     assertEquals(mappings.length, 1);
@@ -148,9 +142,8 @@ Deno.test({
     ];
     const hints = ["A", "B", "C"];
 
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
-      hint_position: "start",
-      visual_hint_position: "end",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
+      visual_hintPosition: "end",
     }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 3);

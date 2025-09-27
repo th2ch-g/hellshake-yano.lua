@@ -93,8 +93,7 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
 
 Deno.test("Word Detector Integration Tests", async (t) => {
   await t.step("RegexWordDetector with Japanese", async () => {
-    const config: WordDetectionConfig = {
-      use_japanese: true,
+    const config: WordDetectionConfig = {useJapanese: true,
       // use_improved_detection: 統合済み（常に有効）
     };
 
@@ -108,9 +107,9 @@ Deno.test("Word Detector Integration Tests", async (t) => {
 
   await t.step("TinySegmenterWordDetector basic functionality", async () => {
     const config: WordDetectionConfig = {
-      enable_tinysegmenter: true,
+      enableTinySegmenter: true,
       segmenter_threshold: 3,
-      use_japanese: true,
+      useJapanese: true,
     };
 
     const detector = new TinySegmenterWordDetector(config);
@@ -125,9 +124,8 @@ Deno.test("Word Detector Integration Tests", async (t) => {
   });
 
   await t.step("HybridWordDetector auto-detection", async () => {
-    const config: WordDetectionConfig = {
-      use_japanese: true,
-      enable_tinysegmenter: true,
+    const config: WordDetectionConfig = {useJapanese: true,
+      enableTinySegmenter: true,
       segmenter_threshold: 3,
     };
 
@@ -152,9 +150,9 @@ Deno.test("Word Detector Integration Tests", async (t) => {
   await t.step("Compare detection strategies", async () => {
     const testText = "プログラミング言語のテストを実行します";
 
-    const regexDetector = new RegexWordDetector({ use_japanese: true });
-    const segmenterDetector = new TinySegmenterWordDetector({ enable_tinysegmenter: true });
-    const hybridDetector = new HybridWordDetector({ use_japanese: true });
+    const regexDetector = new RegexWordDetector({useJapanese: true });
+    const segmenterDetector = new TinySegmenterWordDetector({ enableTinySegmenter: true });
+    const hybridDetector = new HybridWordDetector({useJapanese: true });
 
     const regexWords = await regexDetector.detectWords(testText, 1);
     const segmenterWords = await segmenterDetector.detectWords(testText, 1);
@@ -174,8 +172,8 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
   await t.step("Manager initialization and detector registration", async () => {
     const manager = new WordDetectionManager({
       strategy: "hybrid",
-      use_japanese: true,
-      enable_tinysegmenter: true,
+      useJapanese: true,
+      enableTinySegmenter: true,
       cache_enabled: true,
     });
 
@@ -200,8 +198,8 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     for (const testCase of testCases) {
       const manager = new WordDetectionManager({
         strategy: testCase.strategy,
-        use_japanese: true,
-        enable_tinysegmenter: true,
+        useJapanese: true,
+        enableTinySegmenter: true,
       });
 
       await manager.initialize();
@@ -224,10 +222,10 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     // Create a manager with TinySegmenter disabled to test fallback
     const manager = new WordDetectionManager({
       strategy: "tinysegmenter",
-      enable_tinysegmenter: false,
+      enableTinySegmenter: false,
       enable_fallback: true,
       fallback_to_regex: true,
-      use_japanese: true,
+      useJapanese: true,
     });
 
     await manager.initialize();
@@ -278,7 +276,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
   await t.step("Configuration updates", async () => {
     const manager = new WordDetectionManager({
       strategy: "regex",
-      use_japanese: false,
+      useJapanese: false,
     });
 
     await manager.initialize();
@@ -289,7 +287,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     // Update configuration
     manager.updateConfig({
       strategy: "hybrid",
-      use_japanese: true,
+      useJapanese: true,
     });
 
     // Test with new configuration
@@ -341,7 +339,7 @@ function calculateTotal(items) {
 
     const manager = new WordDetectionManager({
       strategy: "hybrid",
-      use_japanese: true,
+      useJapanese: true,
       // use_improved_detection: 統合済み（常に有効）
     });
 
@@ -379,7 +377,7 @@ For more information, see the 詳細ドキュメント.
 
     const manager = new WordDetectionManager({
       strategy: "hybrid",
-      use_japanese: true,
+      useJapanese: true,
       min_word_length: 2,
     });
 
@@ -405,8 +403,8 @@ For more information, see the 詳細ドキュメント.
 
     const manager = new WordDetectionManager({
       strategy: "tinysegmenter",
-      use_japanese: true,
-      enable_tinysegmenter: true,
+      useJapanese: true,
+      enableTinySegmenter: true,
     });
 
     await manager.initialize();

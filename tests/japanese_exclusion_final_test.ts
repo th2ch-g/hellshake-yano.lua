@@ -1,6 +1,6 @@
 /**
  * Final test for Japanese exclusion fix
- * Verifies that Japanese characters don't receive hints when use_japanese: false
+ * Verifies that Japanese characters don't receive hints when useJapanese: false
  */
 
 import { assertEquals } from "@std/assert";
@@ -81,7 +81,7 @@ describe("Japanese Exclusion Final Fix", () => {
     });
 
     it("should respect excludeJapanese in complex vim config text", async () => {
-      const vimConfigText = `    \\ 'use_japanese': v:false,  " 日本語を除外（デフォルト）`;
+      const vimConfigText = `    \\ 'useJapanese': v:false,  " 日本語を除外（デフォルト）`;
 
       const words = await detectWords(vimConfigText, 1, true);
 

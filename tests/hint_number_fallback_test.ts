@@ -17,8 +17,7 @@ import type { Word } from "../denops/hellshake-yano/types.ts";
 describe("Hint Generation with Number Fallback (Approach A)", () => {
   describe("Non-overlapping hint generation", () => {
     it("should generate hints without overlap between single and multi char keys", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
         multi_char_keys: [
           "B",
           "C",
@@ -53,7 +52,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         if (hint.length === 2) {
           for (const char of hint) {
             assertEquals(
-              config.multi_char_keys!.includes(char),
+              config.multiCharKeys!.includes(char),
               true,
               `Hint "${hint}" contains non-multi_char_key character "${char}"`,
             );
@@ -64,7 +63,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       // single_char_keys の文字が2文字ヒントに含まれていないことを確認
       for (const hint of multiCharHints) {
         if (hint.length === 2) {
-          for (const singleChar of config.single_char_keys!) {
+          for (const singleChar of config.singleCharKeys!) {
             assertEquals(
               hint.includes(singleChar),
               false,
@@ -76,8 +75,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
     });
 
     it("should NOT generate number hints after alphabet exhaustion", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
         multi_char_keys: ["B", "C"], // 2×2 = 4通りのみ
         max_single_char_hints: 3,
       };
@@ -101,8 +99,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
     });
 
     it("should support up to 236 hints (11 single + 225 double-alpha)", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
         multi_char_keys: [
           "B",
           "C",
@@ -156,8 +153,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         { text: "medium2", line: 9, col: 10 },
       ];
 
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
         multi_char_keys: ["B", "C"],
         max_single_char_hints: 3,
       };
@@ -217,8 +213,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         words.push({ text: `far${i}`, line: 10 + i, col: 100 });
       }
 
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
         multi_char_keys: [
           "B",
           "C",
@@ -268,8 +263,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
     });
 
     it("should handle very large word counts", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A"],
+      const config: HintKeyConfig = {singleCharKeys: ["A"],
         multi_char_keys: ["B", "C"], // 2×2 = 4通り
         max_single_char_hints: 1,
       };
@@ -285,8 +279,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
     });
 
     it("should NOT generate 3-char hints anymore", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A"],
+      const config: HintKeyConfig = {singleCharKeys: ["A"],
         multi_char_keys: ["B"], // 1×1 = 1通りのみ
         max_single_char_hints: 1,
       };

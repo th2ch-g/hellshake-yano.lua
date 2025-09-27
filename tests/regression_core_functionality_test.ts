@@ -27,8 +27,7 @@ Deno.test({
     ];
     const hints = ["a", "b"];
 
-    const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {
-      hint_position: "start",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "start",
     });
 
     assertEquals(mappings.length, 2);
@@ -51,8 +50,7 @@ Deno.test({
     const hints = ["A", "B"];
 
     // 日本語の終端位置のテスト（隣接検出をスキップして両方の単語にヒントを割り当てる）
-    const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {
-      hint_position: "end",
+    const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "end",
     }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 2);
@@ -72,8 +70,7 @@ Deno.test({
 
     // 多くの単語でフォールバック機能をテスト
     const wordCount = 30; // 単文字（26）+ 2文字（4） = 30
-    const config = {
-      single_char_keys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+    const config = {singleCharKeys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
       multi_char_keys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
     };
     const hints = generateHintsWithGroups(wordCount, config);
@@ -112,14 +109,12 @@ Deno.test({
     const hints = ["A"];
 
     // 1回目の呼び出し
-    const result1 = assignHintsToWords([baseWord], hints, 1, 1, "normal", {
-      hint_position: "end",
+    const result1 = assignHintsToWords([baseWord], hints, 1, 1, "normal", {hintPosition: "end",
     });
 
     // 2回目の呼び出し（同じ条件）
     textAccessCount = 0;
-    const result2 = assignHintsToWords([baseWord], hints, 1, 1, "normal", {
-      hint_position: "end",
+    const result2 = assignHintsToWords([baseWord], hints, 1, 1, "normal", {hintPosition: "end",
     });
 
     // キャッシュが効いていることを確認
@@ -154,8 +149,8 @@ Deno.test({
 
     const config = {
       strategy: "hybrid" as const,
-      use_japanese: false,
-      enable_tinysegmenter: false,
+      useJapanese: false,
+      enableTinySegmenter: false,
       cache_enabled: true,
     };
 

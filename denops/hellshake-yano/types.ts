@@ -15,6 +15,8 @@
  * @since Phase 5 - Type Definition Consolidation
  */
 
+import type { UnifiedConfig } from "./config.ts";
+
 // ===== 基本インターフェース =====
 
 /**
@@ -123,7 +125,7 @@ export interface HintPositionWithCoordinateSystem extends HintPosition {
  */
 export interface CoreState {
   /** 現在の設定情報 */
-  config: Config;
+  config: UnifiedConfig;
   /** 現在表示中のヒントマッピング配列 */
   currentHints: HintMapping[];
   /** ヒント表示状態フラグ */
@@ -133,68 +135,16 @@ export interface CoreState {
 }
 
 /**
- * 後方互換性のための設定型エイリアス
- * Process4 Sub3-1: 設定型の統合と型定義の整理
+ * 統合設定型エイリアス
+ * Process4 Sub3-2-2: 型定義の統合実装
  *
- * @deprecated この型は統合され、ConfigTypeを使用してください
- * snake_case形式の設定項目を保持する後方互換性型
+ * @description UnifiedConfigの型エイリアス
+ * すべての設定はcamelCase形式に統一され、UnifiedConfigとして定義される
  *
- * @description ConfigTypeからsnake_case形式へのマッピング型
- * 既存コードとの互換性を維持しながら、新しい統合型への移行を促進
+ * @note この型は UnifiedConfig と完全に同一です
+ * snake_case形式は廃止され、camelCase形式に統一されました
  */
-export type Config = {
-  // === 基本設定（必須項目） ===
-  markers: string[];
-  motion_count: number;
-  motion_timeout: number;
-  hint_position: HintPositionType;
-  trigger_on_hjkl: boolean;
-  counted_motions: string[];
-  enabled: boolean;
-  maxHints: number;
-  debounceDelay: number;
-  use_numbers: boolean;
-  highlight_selected: boolean;
-  debug_coordinates: boolean;
-
-  // === オプション設定 ===
-  visual_hint_position?: HintPositionType;
-  single_char_keys?: string[];
-  multi_char_keys?: string[];
-  max_single_char_hints?: number;
-  use_hint_groups?: boolean;
-
-  // === 単語検出設定 ===
-  use_japanese?: boolean;
-  word_detection_strategy?: DetectionStrategy;
-  enable_tinysegmenter?: boolean;
-  segmenter_threshold?: number;
-  japanese_min_word_length?: number;
-  japanese_merge_particles?: boolean;
-  japanese_merge_threshold?: number;
-
-  // === ハイライト設定 ===
-  highlight_hint_marker?: string | HighlightColor;
-  highlight_hint_marker_current?: string | HighlightColor;
-
-  // === パフォーマンス設定 ===
-  suppress_on_key_repeat?: boolean;
-  key_repeat_threshold?: number;
-  key_repeat_reset_delay?: number;
-
-  // === キー別設定 ===
-  per_key_min_length?: Record<string, number>;
-  default_min_word_length?: number;
-  per_key_motion_count?: Record<string, number>;
-  default_motion_count?: number;
-  current_key_context?: string;
-
-  // === 後方互換性 ===
-  min_word_length?: number;
-  enable?: boolean;
-  debug_mode?: boolean;
-  performance_log?: boolean;
-};
+export type Config = UnifiedConfig;
 
 /**
  * ハイライト色設定インターフェース
@@ -324,15 +274,15 @@ export interface WordDetectionResult {
  */
 export interface HintKeyConfig {
   /** 1文字ヒント専用キー */
-  single_char_keys?: string[];
+  singleCharKeys?: string[];
   /** 2文字以上ヒント専用キー */
-  multi_char_keys?: string[];
+  multiCharKeys?: string[];
   /** 従来のmarkers（後方互換性） */
   markers?: string[];
   /** 1文字ヒントの最大数 */
-  max_single_char_hints?: number;
+  maxSingleCharHints?: number;
   /** カーソルからの距離で1文字/2文字を決定するか */
-  use_distance_priority?: boolean;
+  useDistancePriority?: boolean;
 }
 
 // ===== 型エイリアス =====
@@ -536,11 +486,11 @@ export function isHintMapping(obj: unknown): obj is HintMapping {
 }
 
 /**
- * Config型の型ガード関数（後方互換性用）
- * Process4 Sub3-1: 設定型の統合と型定義の整理
+ * Config型の型ガード関数（統合後）
+ * Process4 Sub3-2-2: 型定義の統合実装
  *
- * @deprecated この関数は後方互換性のために残されています。新しいコードではisConfigType()を使用してください
- * @description オブジェクトがConfig型（snake_case形式）の最小要件を満たしているかを判定
+ * @description オブジェクトがConfig型（UnifiedConfigエイリアス）の最小要件を満たしているかを判定
+ * camelCase形式のプロパティをチェックします
  *
  * @param obj 判定対象のオブジェクト
  * @returns Configインターフェースの必須項目を満たしている場合true
@@ -550,11 +500,11 @@ export function isConfig(obj: unknown): obj is Config {
     typeof obj === "object" &&
     obj !== null &&
     Array.isArray((obj as Config).markers) &&
-    typeof (obj as Config).motion_count === "number" &&
-    typeof (obj as Config).motion_timeout === "number" &&
-    typeof (obj as Config).hint_position === "string" &&
-    typeof (obj as Config).trigger_on_hjkl === "boolean" &&
-    Array.isArray((obj as Config).counted_motions) &&
+    typeof (obj as Config).motionCount === "number" &&
+    typeof (obj as Config).motionTimeout === "number" &&
+    typeof (obj as Config).hintPosition === "string" &&
+    typeof (obj as Config).triggerOnHjkl === "boolean" &&
+    Array.isArray((obj as Config).countedMotions) &&
     typeof (obj as Config).enabled === "boolean"
   );
 }
@@ -754,67 +704,7 @@ export type ValueOf<T> = T[keyof T];
 
 // ===== 統合設定型（TDD Green Phase） =====
 
-/**
- * 統合設定型 (ConfigType)
- * Process4 Sub3-1: 設定型の統合と型定義の整理
- *
- * Config, UnifiedConfig, CamelCaseConfigを統合した単一の型
- * TDD Red-Green-Refactor方式で実装
- *
- * @description 既存のすべての設定インターフェースを統合し、
- * 型安全性と保守性を向上させる統一設定型
- */
-export interface UnifiedConfig {
-  // Core settings (6 properties)
-  enabled: boolean;
-  markers: string[];
-  motionCount: number;
-  motionTimeout: number;
-  hintPosition: "start" | "end" | "same";
-  visualHintPosition?: "start" | "end" | "same" | "both";
-
-  // Hint settings (8 properties)
-  triggerOnHjkl: boolean;
-  countedMotions: string[];
-  maxHints: number;
-  debounceDelay: number;
-  useNumbers: boolean;
-  highlightSelected: boolean;
-  debugCoordinates: boolean;
-  singleCharKeys: string[];
-
-  // Extended hint settings (4 properties)
-  multiCharKeys: string[];
-  maxSingleCharHints?: number;
-  useHintGroups: boolean;
-  highlightHintMarker: string | HighlightColor;
-
-  // Word detection settings (7 properties)
-  highlightHintMarkerCurrent: string | HighlightColor;
-  suppressOnKeyRepeat: boolean;
-  keyRepeatThreshold: number;
-  useJapanese: boolean;
-  wordDetectionStrategy: "regex" | "tinysegmenter" | "hybrid";
-  enableTinySegmenter: boolean;
-  segmenterThreshold: number;
-
-  // Japanese word settings (7 properties)
-  japaneseMinWordLength: number;
-  japaneseMergeParticles: boolean;
-  japaneseMergeThreshold: number;
-  perKeyMinLength?: Record<string, number>;
-  defaultMinWordLength: number;
-  perKeyMotionCount?: Record<string, number>;
-  defaultMotionCount: number;
-  currentKeyContext?: string;
-
-  // Debug settings (2 properties)
-  debugMode: boolean;
-  performanceLog: boolean;
-
-  // Additional settings for backward compatibility
-  useImprovedDetection?: boolean;
-}
+// UnifiedConfigの定義はconfig.tsに移動しました
 
 /**
  * 統合設定型エイリアス
@@ -958,26 +848,46 @@ export function createDefaultHintMapping(word: Word, hint: string): HintMapping 
 }
 
 /**
- * 空のConfig値を作成する（後方互換性用）
- * Process4 Sub3-1: 設定型の統合と型定義の整理
+ * 最小限のConfig値を作成する（統合後）
+ * Process4 Sub3-2-2: 型定義の統合実装
  *
- * @deprecated この関数は後方互換性のために残されています。新しいコードではcreateConfigType()を使用してください
- * @returns 最小限の必須プロパティを持つConfigオブジェクト（snake_case形式）
+ * @description 最小限の必須プロパティを持つConfigオブジェクト（camelCase形式）を作成
+ * config.tsのcreateMinimalConfig()を使用することを推奨
+ *
+ * @returns 最小限の必須プロパティを持つConfigオブジェクト
  */
 export function createMinimalConfig(): Config {
   return {
-    markers: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"],
-    motion_count: 3,
-    motion_timeout: 2000,
-    hint_position: "start",
-    trigger_on_hjkl: true,
-    counted_motions: [],
     enabled: true,
+    markers: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"],
+    motionCount: 3,
+    motionTimeout: 2000,
+    hintPosition: "start",
+    triggerOnHjkl: true,
+    countedMotions: [],
     maxHints: 100,
     debounceDelay: 50,
-    use_numbers: false,
-    highlight_selected: false,
-    debug_coordinates: false,
+    useNumbers: false,
+    highlightSelected: false,
+    debugCoordinates: false,
+    singleCharKeys: [],
+    multiCharKeys: [],
+    useHintGroups: false,
+    highlightHintMarker: "DiffAdd",
+    highlightHintMarkerCurrent: "DiffText",
+    suppressOnKeyRepeat: true,
+    keyRepeatThreshold: 50,
+    useJapanese: false,
+    wordDetectionStrategy: "hybrid",
+    enableTinySegmenter: true,
+    segmenterThreshold: 4,
+    japaneseMinWordLength: 2,
+    japaneseMergeParticles: true,
+    japaneseMergeThreshold: 2,
+    defaultMinWordLength: 3,
+    defaultMotionCount: 3,
+    debugMode: false,
+    performanceLog: false
   };
 }
 

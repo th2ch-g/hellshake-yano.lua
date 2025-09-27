@@ -8,34 +8,30 @@ import {
   Config,
   getDefaultConfig,
   createModernConfig,
-  toUnifiedConfig,
   validateNamingConvention,
   CamelCaseConfig,
   getDeprecationWarnings,
-  validateConfig,
-} from "../denops/hellshake-yano/config.ts";
+  validateConfig} from "../denops/hellshake-yano/config.ts";
 
 Deno.test("Phase 3 sub1: camelCase統一 - Snake caseからCamel caseへの変換", async (t) => {
   await t.step("snake_case プロパティをcamelCaseに変換", () => {
-    const snakeConfig: Partial<Config> = {
-      motion_count: 5,
-      motion_timeout: 3000,
-      hint_position: "end",
-      visual_hint_position: "start",
-      trigger_on_hjkl: false,
-      counted_motions: ["w", "b"],
-      use_numbers: false,
-      highlight_selected: true,
-      debug_coordinates: true,
-      use_japanese: true,
-      enable_tinysegmenter: false,
-      per_key_min_length: { w: 2, b: 3 },
-      default_min_word_length: 4,
-      per_key_motion_count: { w: 2, b: 4 },
-      default_motion_count: 3,
-    };
+    const snakeConfig: Partial<Config> = {motionCount: 5,
+      motionTimeout: 3000,
+      hintPosition: "end",
+      visualHintPosition: "start",
+      triggerOnHjkl: false,
+      countedMotions: ["w", "b"],
+      useNumbers: false,
+      highlightSelected: true,
+      debugCoordinates: true,
+      useJapanese: true,
+      enableTinySegmenter: false,
+      perKeyMinLength: { w: 2, b: 3 },
+      defaultMinWordLength: 4,
+      perKeyMotionCount: { w: 2, b: 4 },
+      defaultMotionCount: 3};
 
-    const camelConfig = toUnifiedConfig(snakeConfig);
+    const camelConfig =(snakeConfig);
 
     // camelCase プロパティの存在確認
     assertEquals(camelConfig.motionCount, 5);
@@ -59,8 +55,7 @@ Deno.test("Phase 3 sub1: camelCase統一 - Snake caseからCamel caseへの変�
     const modernConfig = createModernConfig({
       motionCount: 7,
       hintPosition: "same",
-      useNumbers: true,
-    });
+      useNumbers: true});
 
     // camelCase のみサポート
     assertEquals(modernConfig.motionCount, 7);
@@ -70,7 +65,7 @@ Deno.test("Phase 3 sub1: camelCase統一 - Snake caseからCamel caseへの変�
 
   await t.step("型定義の更新 - CamelCaseConfig型", () => {
     // CamelCaseConfig型が正しく定義されていることを確認
-    const config: CamelCaseConfig = {
+    const config: Partial<CamelCaseConfig> = {
       enabled: true,
       markers: ["A", "B", "C"],
       motionCount: 3,
@@ -83,8 +78,7 @@ Deno.test("Phase 3 sub1: camelCase統一 - Snake caseからCamel caseへの変�
       debounceDelay: 50,
       useNumbers: true,
       highlightSelected: true,
-      debugCoordinates: false,
-    };
+      debugCoordinates: false};
 
     // 型チェック（コンパイル時）
     assertExists(config.motionCount);
@@ -98,8 +92,7 @@ Deno.test("Phase 3 sub2: 明確な命名規則適用", async (t) => {
     const config = createModernConfig({
       enabled: true,
       useNumbers: false,
-      triggerOnHjkl: true,
-    });
+      triggerOnHjkl: true});
 
     // boolean型プロパティの確認
     assertEquals(config.enabled, true);
@@ -132,11 +125,9 @@ Deno.test("Phase 3 sub2: 明確な命名規則適用", async (t) => {
 
 Deno.test("Deprecation Warning システム", async (t) => {
   await t.step("snake_case使用時の警告", () => {
-    const snakeConfig: Partial<Config> = {
-      motion_count: 5,
-      hint_position: "end",
-      use_numbers: false,
-    };
+    const snakeConfig: Partial<Config> = {motionCount: 5,
+      hintPosition: "end",
+      useNumbers: false};
 
     const warnings = getDeprecationWarnings(snakeConfig);
 
@@ -149,8 +140,7 @@ Deno.test("Deprecation Warning システム", async (t) => {
     const camelConfig: Partial<CamelCaseConfig> = {
       motionCount: 5,
       hintPosition: "end",
-      useNumbers: false,
-    };
+      useNumbers: false};
 
     const warnings = getDeprecationWarnings(camelConfig);
     assertEquals(warnings.length, 0);
@@ -160,8 +150,7 @@ Deno.test("Deprecation Warning システム", async (t) => {
 Deno.test("型安全性の確保", async (t) => {
   await t.step("snake_caseとcamelCaseの同期", () => {
     const config = createModernConfig({
-      motionCount: 10,
-    });
+      motionCount: 10});
 
     // camelCaseのみサポート
     assertEquals(config.motionCount, 10);

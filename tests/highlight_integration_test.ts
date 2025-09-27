@@ -42,15 +42,15 @@ Deno.test("Integration - 実際の設定使用例のテスト", () => {
 Deno.test("Integration - 完全な設定オブジェクトのテスト", () => {
   const fullConfig: Partial<Config> = {
     markers: ["A", "S", "D", "F"],
-    motion_count: 3,
-    motion_timeout: 2000,
-    hint_position: "start",
-    trigger_on_hjkl: true,
+    motionCount: 3,
+    motionTimeout: 2000,
+    hintPosition: "start",
+    triggerOnHjkl: true,
     enabled: true,
     maxHints: 100,
     debounceDelay: 50,
-    use_numbers: false,
-    highlight_selected: true,
+    useNumbers: false,
+    highlightSelected: true,
     highlight_hint_marker: { fg: "Red", bg: "White" },
     highlight_hint_marker_current: { fg: "#ffff00", bg: "#000080" },
   };
@@ -68,8 +68,8 @@ Deno.test("Integration - デフォルト設定との互換性", () => {
   assertEquals(result.valid, true);
 
   // デフォルトのハイライト設定は文字列型
-  assertEquals(typeof defaultConfig.highlight_hint_marker, "string");
-  assertEquals(typeof defaultConfig.highlight_hint_marker_current, "string");
+  assertEquals(typeof defaultConfig.highlightHintMarker, "string");
+  assertEquals(typeof defaultConfig.highlightHintMarkerCurrent, "string");
 });
 
 Deno.test("Integration - 複雑なハイライトコマンド生成", () => {
@@ -201,8 +201,7 @@ Deno.test("Integration - パフォーマンスと限界値テスト", () => {
   assertEquals(validateHighlightConfig({ highlightHintMarker: { fg: "Red", bg: "Blue" } }).valid, true);
 
   // 多数の設定項目を持つ設定オブジェクト
-  const largeConfig = {
-    highlight_hint_marker: { fg: "Red", bg: "Blue" },
+  const largeConfig = {highlightHintMarker: { fg: "Red", bg: "Blue" },
     highlight_hint_marker_current: { fg: "Green", bg: "Yellow" },
     markers: Array.from({ length: 100 }, (_, i) => String.fromCharCode(65 + (i % 26))),
     maxHints: 10000,

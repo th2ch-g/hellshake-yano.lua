@@ -235,7 +235,7 @@ export async function processUserInput(
   currentHints: any[],
   inputManager: MultiCharInputManager,
 ): Promise<InputProcessResult> {
-  const timeout = config.motion_timeout || 2000;
+  const timeout = config.motionTimeout || 2000;
   const char = await getUserInputWithTimeout(denops, timeout);
 
   // タイムアウトの場合

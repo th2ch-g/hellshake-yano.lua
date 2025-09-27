@@ -38,26 +38,26 @@ function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | un
  */
 export interface WordDetectionManagerConfig extends WordDetectionConfig {
   /** デフォルトの単語検出ストラテジー */
-  default_strategy?: "regex" | "tinysegmenter" | "hybrid";
+  defaultStrategy?: "regex" | "tinysegmenter" | "hybrid";
   /** 言語の自動検出を有効にするか */
-  auto_detect_language?: boolean;
+  autoDetectLanguage?: boolean;
   /** パフォーマンスモニタリングを有効にするか */
-  performance_monitoring?: boolean;
+  performanceMonitoring?: boolean;
 
   /** キャッシュ機能を有効にするか */
-  cache_enabled?: boolean;
+  cacheEnabled?: boolean;
   /** キャッシュの最大サイズ */
-  cache_max_size?: number;
+  cacheMaxSize?: number;
   /** キャッシュエントリの有効期限（ミリ秒） */
   cache_ttl_ms?: number;
 
   /** 最大リトライ回数 */
-  max_retries?: number;
+  maxRetries?: number;
   /** リトライ間の遅延時間（ミリ秒） */
-  retry_delay_ms?: number;
+  retryDelayMs?: number;
 
   /** 処理タイムアウト時間（ミリ秒） */
-  timeout_ms?: number;
+  timeoutMs?: number;
   /** バッチ処理を有効にするか */
   batch_processing?: boolean;
   /** 同時実行可能な検出数の上限 */
@@ -107,9 +107,9 @@ interface DetectionStats {
  * @example
  * ```typescript
  * const manager = new WordDetectionManager({
- *   default_strategy: 'hybrid',
- *   cache_enabled: true,
- *   use_japanese: true
+ *   defaultStrategy: 'hybrid',
+ *   cacheEnabled: true,
+ *   useJapanese: true
  * });
  * await manager.initialize();
  * const result = await manager.detectWords('テストテキスト');
@@ -220,7 +220,7 @@ export class WordDetectionManager {
 
     // Use provided context or stored session context
     const effectiveContext = context || this.sessionContext || undefined;
-    const useCache = this.config.cache_enabled && !this.shouldSkipCache(effectiveContext);
+    const useCache = this.config.cacheEnabled && !this.shouldSkipCache(effectiveContext);
 
     try {
       // Check cache first
@@ -277,7 +277,7 @@ export class WordDetectionManager {
       // console.error("[WordDetectionManager] Detection failed:", error);
 
       // Try fallback detector if enabled
-      if (this.config.enable_fallback) {
+      if (this.config.enableFallback) {
         try {
           const fallbackDetector = this.getFallbackDetector();
           if (fallbackDetector) {
@@ -374,8 +374,8 @@ export class WordDetectionManager {
 
     // Strategy-based selection
     // word_detection_strategyとstrategyの両方をサポート（後方互換性）
-    const strategy = (this.config as any).word_detection_strategy || this.config.strategy ||
-      this.config.default_strategy;
+    const strategy = (this.config as any).wordDetectionStrategy || this.config.strategy ||
+      this.config.defaultStrategy;
 
     switch (strategy) {
       case "regex":
@@ -397,7 +397,7 @@ export class WordDetectionManager {
 
       default:
         // Auto-detect based on content
-        if (this.config.auto_detect_language) {
+        if (this.config.autoDetectLanguage) {
           const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
           if (hasJapanese) {
             const japaneseDetector = availableDetectors.find((d) =>
@@ -419,7 +419,7 @@ export class WordDetectionManager {
    * @since 1.0.0
    */
   private getFallbackDetector(): WordDetector | null {
-    if (this.config.fallback_to_regex) {
+    if (this.config.fallbackToRegex) {
       return this.detectors.get("RegexWordDetector") || null;
     }
 
@@ -447,14 +447,14 @@ export class WordDetectionManager {
     context?: DetectionContext,
     denops?: Denops,
   ): Promise<Word[]> {
-    if (!this.config.timeout_ms) {
+    if (!this.config.timeoutMs) {
       return detector.detectWords(text, startLine, context, denops);
     }
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error(`Detection timeout (${this.config.timeout_ms}ms)`));
-      }, this.config.timeout_ms);
+        reject(new Error(`Detection timeout (${this.config.timeoutMs}ms)`));
+      }, this.config.timeoutMs);
 
       detector.detectWords(text, startLine, context, denops)
         .then((result) => {
@@ -489,13 +489,13 @@ export class WordDetectionManager {
 
   private generateConfigHash(): string {
     const relevantConfig = {
-      strategy: (this.config as any).word_detection_strategy || this.config.strategy,
-      use_japanese: this.config.use_japanese,
-      // use_improved_detection: 統合済み（常に有効）
-      min_word_length: this.config.min_word_length,
-      max_word_length: this.config.max_word_length,
-      default_min_word_length: (this.globalConfig as Config | undefined)?.default_min_word_length,
-      per_key_min_length: (this.globalConfig as Config | undefined)?.per_key_min_length,
+      strategy: (this.config as any).wordDetectionStrategy || this.config.strategy,
+      useJapanese: this.config.useJapanese,
+      // useImprovedDetection: 統合済み（常に有効）
+      minWordLength: this.config.minWordLength,
+      maxWordLength: this.config.maxWordLength,
+      defaultMinWordLength: (this.globalConfig as Config | undefined)?.defaultMinWordLength,
+      perKeyMinLength: (this.globalConfig as Config | undefined)?.perKeyMinLength,
     };
     return this.simpleHash(JSON.stringify(relevantConfig));
   }
@@ -539,12 +539,12 @@ export class WordDetectionManager {
     const key = this.generateCacheKey(text, startLine, context);
 
     // Manage cache size
-    if (this.cache.size >= this.config.cache_max_size) {
+    if (this.cache.size >= this.config.cacheMaxSize) {
       // Remove oldest entries
       const entries = Array.from(this.cache.entries());
       entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
 
-      const toRemove = entries.slice(0, Math.floor(this.config.cache_max_size * 0.1));
+      const toRemove = entries.slice(0, Math.floor(this.config.cacheMaxSize * 0.1));
       for (const [key] of toRemove) {
         this.cache.delete(key);
       }
@@ -627,7 +627,7 @@ export class WordDetectionManager {
     const total = this.stats.cache_hits + this.stats.cache_misses;
     return {
       size: this.cache.size,
-      maxSize: this.config.cache_max_size,
+      maxSize: this.config.cacheMaxSize,
       hitRate: total > 0 ? this.stats.cache_hits / total : 0,
     };
   }
@@ -668,7 +668,7 @@ export class WordDetectionManager {
    * @since 1.0.0
    * @example
    * ```typescript
-   * manager.updateConfig({ cache_enabled: false, timeout_ms: 3000 });
+   * manager.updateConfig({ cacheEnabled: false, timeoutMs: 3000 });
    * ```
    */
   updateConfig(newConfig: Partial<WordDetectionManagerConfig>): void {
@@ -676,9 +676,9 @@ export class WordDetectionManager {
     this.config = { ...this.config, ...newConfig };
 
     // word_detection_strategyがある場合はstrategyに反映（後方互換性）
-    if ((newConfig as any).word_detection_strategy) {
-      this.config.strategy = (newConfig as any).word_detection_strategy;
-      this.config.default_strategy = (newConfig as any).word_detection_strategy;
+    if ((newConfig as any).wordDetectionStrategy) {
+      this.config.strategy = (newConfig as any).wordDetectionStrategy;
+      this.config.defaultStrategy = (newConfig as any).wordDetectionStrategy;
     }
 
     // 設定変更に影響するキャッシュをクリア
@@ -837,38 +837,38 @@ export class WordDetectionManager {
     const defaults = {
       // Detection settings
       strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
-      use_japanese: false, // デフォルトはfalse、但し明示的な設定を優先
-      enable_tinysegmenter: true,
-      segmenter_threshold: 4,
-      segmenter_cache_size: 1000,
+      useJapanese: false, // デフォルトはfalse、但し明示的な設定を優先
+      enableTinySegmenter: true,
+      segmenterThreshold: 4,
+      segmenterCacheSize: 1000,
 
       // Manager settings
-      default_strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
-      auto_detect_language: true,
-      performance_monitoring: true,
+      defaultStrategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
+      autoDetectLanguage: true,
+      performanceMonitoring: true,
 
       // Cache settings
-      cache_enabled: true,
-      cache_max_size: 500,
+      cacheEnabled: true,
+      cacheMaxSize: 500,
       cache_ttl_ms: 300000, // 5 minutes
 
       // Error handling
-      enable_fallback: true,
-      fallback_to_regex: true,
-      max_retries: 2,
-      retry_delay_ms: 100,
+      enableFallback: true,
+      fallbackToRegex: true,
+      maxRetries: 2,
+      retryDelayMs: 100,
 
       // Performance settings
-      timeout_ms: 5000, // 5 second timeout
+      timeoutMs: 5000, // 5 second timeout
       batch_processing: false,
       max_concurrent_detections: 3,
 
       // Filter settings
-      min_word_length: 1,
-      max_word_length: 50,
+      minWordLength: 1,
+      maxWordLength: 50,
       exclude_numbers: false,
       exclude_single_chars: false,
-      batch_size: 100,
+      batchSize: 100,
     };
 
     // 渡されたconfigの値を優先（use_japaneseが明示的に設定されている場合はそれを使用）
@@ -878,13 +878,13 @@ export class WordDetectionManager {
     };
 
     // use_japaneseが明示的に設定されている場合、その値を確実に適用
-    if (config.use_japanese !== undefined) {
-      merged.use_japanese = config.use_japanese;
+    if (config.useJapanese !== undefined) {
+      merged.useJapanese = config.useJapanese;
     }
 
     // word_detection_strategyがある場合はstrategyに反映
-    if ((config as any).word_detection_strategy) {
-      merged.strategy = (config as any).word_detection_strategy;
+    if ((config as any).wordDetectionStrategy) {
+      merged.strategy = (config as any).wordDetectionStrategy;
     }
 
     return merged as Required<WordDetectionManagerConfig>;
@@ -906,7 +906,7 @@ let globalManager: WordDetectionManager | null = null;
  * @since 1.0.0
  * @example
  * ```typescript
- * const manager = getWordDetectionManager({ use_japanese: true });
+ * const manager = getWordDetectionManager({useJapanese: true });
  * await manager.initialize();
  * ```
  */

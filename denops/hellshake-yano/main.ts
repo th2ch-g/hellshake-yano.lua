@@ -27,11 +27,9 @@ import type {
 // Re-export types for backward compatibility
 export type { Config, HighlightColor };
 import {
-  fromUnifiedConfig,
   getDefaultUnifiedConfig,
   getPerKeyValue,
   mergeConfig,
-  toUnifiedConfig,
   UnifiedConfig,
   validateUnifiedConfig,
 } from "./config.ts";
@@ -75,14 +73,14 @@ function recordPerformance(
 }
 export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
   // Check for per_key_min_length first (highest priority)
-  if ('per_key_min_length' in config && config.per_key_min_length && typeof config.per_key_min_length === 'object') {
-    const perKeyValue = (config.per_key_min_length as Record<string, number>)[key];
+  if ('per_key_min_length' in config && config.perKeyMinLength && typeof config.perKeyMinLength === 'object') {
+    const perKeyValue = (config.perKeyMinLength as Record<string, number>)[key];
     if (perKeyValue !== undefined) return perKeyValue;
   }
 
   // Check for default_min_word_length (second priority)
-  if ('default_min_word_length' in config && typeof config.default_min_word_length === 'number') {
-    return config.default_min_word_length;
+  if ('default_min_word_length' in config && typeof config.defaultMinWordLength === 'number') {
+    return config.defaultMinWordLength;
   }
 
   // Check for default_min_length (third priority)
@@ -96,8 +94,8 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
   }
 
   // Check for legacy min_word_length (fifth priority)
-  if ('min_word_length' in config && typeof config.min_word_length === 'number') {
-    return config.min_word_length;
+  if ('minWordLength' in config && typeof config.minWordLength === 'number') {
+    return config.minWordLength;
   }
 
   // Default fallback
@@ -105,16 +103,16 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
 }
 export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
   // Check for per_key_motion_count first (highest priority)
-  if ('per_key_motion_count' in config && config.per_key_motion_count && typeof config.per_key_motion_count === 'object') {
-    const perKeyValue = (config.per_key_motion_count as Record<string, number>)[key];
+  if ('per_key_motion_count' in config && config.perKeyMotionCount && typeof config.perKeyMotionCount === 'object') {
+    const perKeyValue = (config.perKeyMotionCount as Record<string, number>)[key];
     if (perKeyValue !== undefined && perKeyValue >= 1 && Number.isInteger(perKeyValue)) {
       return perKeyValue;
     }
   }
 
   // Check for default_motion_count (second priority)
-  if ('default_motion_count' in config && typeof config.default_motion_count === 'number') {
-    return config.default_motion_count;
+  if ('default_motion_count' in config && typeof config.defaultMotionCount === 'number') {
+    return config.defaultMotionCount;
   }
 
   // Check for motionCount (UnifiedConfig)
@@ -123,8 +121,8 @@ export function getMotionCountForKey(key: string, config: UnifiedConfig | Config
   }
 
   // Check for motion_count (Config)
-  if ('motion_count' in config && typeof config.motion_count === 'number') {
-    return config.motion_count;
+  if ('motion_count' in config && typeof config.motionCount === 'number') {
+    return config.motionCount;
   }
 
   // Default fallback
@@ -159,6 +157,66 @@ function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config>
   }
   return normalized;
 }
+
+function normalizeBackwardCompatibleFlagsUnified(cfg: Partial<UnifiedConfig>): Partial<UnifiedConfig> {
+  const normalized = { ...cfg };
+
+  // UnifiedConfig では camelCase 形式で直接処理
+  // snake_case から camelCase への変換を行う
+  const snakeToCamelMap: Record<string, string> = {
+    'motionCount': 'motionCount',
+    'motionTimeout': 'motionTimeout',
+    'hintPosition': 'hintPosition',
+    'visualHintPosition': 'visualHintPosition',
+    'triggerOnHjkl': 'triggerOnHjkl',
+    'countedMotions': 'countedMotions',
+    'useNumbers': 'useNumbers',
+    'highlightSelected': 'highlightSelected',
+    'debugCoordinates': 'debugCoordinates',
+    'singleCharKeys': 'singleCharKeys',
+    'multiCharKeys': 'multiCharKeys',
+    'maxSingleCharHints': 'maxSingleCharHints',
+    'useHintGroups': 'useHintGroups',
+    'highlightHintMarker': 'highlightHintMarker',
+    'highlightHintMarkerCurrent': 'highlightHintMarkerCurrent',
+    'suppressOnKeyRepeat': 'suppressOnKeyRepeat',
+    'keyRepeatThreshold': 'keyRepeatThreshold',
+    'useJapanese': 'useJapanese',
+    'wordDetectionStrategy': 'wordDetectionStrategy',
+    'enable_tinysegmenter': 'enableTinySegmenter',
+    'segmenterThreshold': 'segmenterThreshold',
+    'japaneseMinWordLength': 'japaneseMinWordLength',
+    'japaneseMergeParticles': 'japaneseMergeParticles',
+    'japaneseMergeThreshold': 'japaneseMergeThreshold',
+    'perKeyMinLength': 'perKeyMinLength',
+    'defaultMinWordLength': 'defaultMinWordLength',
+    'perKeyMotionCount': 'perKeyMotionCount',
+    'defaultMotionCount': 'defaultMotionCount',
+    'currentKeyContext': 'currentKeyContext',
+    'debugMode': 'debugMode',
+    'performanceLog': 'performanceLog'
+  };
+
+  // snake_case のプロパティを camelCase に変換
+  for (const [snakeKey, camelKey] of Object.entries(snakeToCamelMap)) {
+    if (snakeKey in normalized) {
+      (normalized as any)[camelKey] = (normalized as any)[snakeKey];
+      delete (normalized as any)[snakeKey];
+    }
+  }
+
+  // 追加の後方互換性フラグの正規化
+  if ('enable_word_detection' in normalized) {
+    (normalized as any).enableWordDetection = (normalized as any).enable_word_detection;
+    delete (normalized as any).enable_word_detection;
+  }
+  if ('disable_visual_mode' in normalized) {
+    (normalized as any).disableVisualMode = (normalized as any).disable_visual_mode;
+    delete (normalized as any).disable_visual_mode;
+  }
+
+  return normalized;
+}
 function convertConfigForManager(config: UnifiedConfig): WordDetectionManagerConfig {
   // UnifiedConfigから必要なプロパティを取得（デフォルト値を使用）
   return {
@@ -173,12 +231,11 @@ export async function main(denops: Denops): Promise<void> {
   try {
     await initializePlugin(denops);
     // g:hellshake_yano_configが未定義の場合は空のオブジェクトをフォールバック
-    const userConfig = await denops.eval('g:hellshake_yano_config').catch(() => ({})) as Partial<Config>;
-    const normalizedUserConfig = normalizeBackwardCompatibleFlags(userConfig);
-    const unifiedUserConfig = toUnifiedConfig(normalizedUserConfig);
-    // UnifiedConfigとConfigの型不一致を解決
+    const userConfig = await denops.eval('g:hellshake_yano_config').catch(() => ({})) as Partial<UnifiedConfig>;
+    const normalizedUserConfig = normalizeBackwardCompatibleFlagsUnified(userConfig);
+    // UnifiedConfigを直接使用
     const defaultConfig = getDefaultUnifiedConfig();
-    config = { ...defaultConfig, ...unifiedUserConfig } as UnifiedConfig;
+    config = { ...defaultConfig, ...normalizedUserConfig } as UnifiedConfig;
     syncManagerConfig(config);
     if (denops.meta.host === "nvim") {
       extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake-yano") as number;
@@ -306,10 +363,10 @@ export async function main(denops: Denops): Promise<void> {
       async updateConfig(cfg: unknown): Promise<void> {
         if (typeof cfg === "object" && cfg !== null) {
           const core = Core.getInstance(config);
-          core.updateConfig(cfg as Partial<Config>);
-          // グローバル設定も更新
-          const unifiedUserConfig = toUnifiedConfig(cfg as Partial<Config>);
-          config = { ...config, ...unifiedUserConfig };
+          const unifiedConfig = cfg as Partial<UnifiedConfig>;
+          core.updateConfig(unifiedConfig);
+          // グローバル設定も更新（直接UnifiedConfigを使用）
+          config = { ...config, ...unifiedConfig };
           syncManagerConfig(config);
         }
       },
@@ -548,72 +605,72 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
   const errors: string[] = [];
   const c = cfg as any;
 
-  // highlight_hint_marker のnullチェック
-  if (c.highlight_hint_marker === null) {
-    errors.push("highlight_hint_marker must be a string");
+  // highlightHintMarker のnullチェック
+  if (c.highlightHintMarker === null) {
+    errors.push("highlightHintMarker must be a string");
   }
 
-  // highlight_hint_marker のempty string チェック
-  if (c.highlight_hint_marker === '') {
-    errors.push("highlight_hint_marker must be a non-empty string");
+  // highlightHintMarker のempty string チェック
+  if (c.highlightHintMarker === '') {
+    errors.push("highlightHintMarker must be a non-empty string");
   }
 
-  // highlight_hint_marker_current のnullチェック
-  if (c.highlight_hint_marker_current === null) {
-    errors.push("highlight_hint_marker_current must be a string");
+  // highlightHintMarkerCurrent のnullチェック
+  if (c.highlightHintMarkerCurrent === null) {
+    errors.push("highlightHintMarkerCurrent must be a string");
   }
 
-  // highlight_hint_marker_current のempty string チェック
-  if (c.highlight_hint_marker_current === '') {
-    errors.push("highlight_hint_marker_current must be a non-empty string");
+  // highlightHintMarkerCurrent のempty string チェック
+  if (c.highlightHintMarkerCurrent === '') {
+    errors.push("highlightHintMarkerCurrent must be a non-empty string");
   }
 
   // 数値型のチェック
-  if (typeof c.highlight_hint_marker === 'number') {
-    errors.push("highlight_hint_marker must be a string");
+  if (typeof c.highlightHintMarker === 'number') {
+    errors.push("highlightHintMarker must be a string");
   }
 
-  if (typeof c.highlight_hint_marker_current === 'number') {
-    errors.push("highlight_hint_marker_current must be a string");
+  if (typeof c.highlightHintMarkerCurrent === 'number') {
+    errors.push("highlightHintMarkerCurrent must be a string");
   }
 
   // 配列型のチェック
-  if (Array.isArray(c.highlight_hint_marker)) {
-    errors.push("highlight_hint_marker must be a string");
+  if (Array.isArray(c.highlightHintMarker)) {
+    errors.push("highlightHintMarker must be a string");
   }
 
-  if (Array.isArray(c.highlight_hint_marker_current)) {
-    errors.push("highlight_hint_marker_current must be a string");
+  if (Array.isArray(c.highlightHintMarkerCurrent)) {
+    errors.push("highlightHintMarkerCurrent must be a string");
   }
 
   // ハイライトグループ名として有効な文字列であるかチェック
-  if (typeof c.highlight_hint_marker === 'string' && c.highlight_hint_marker !== '') {
+  if (typeof c.highlightHintMarker === 'string' && c.highlightHintMarker !== '') {
     // 最初の文字が数字で始まる場合
-    if (/^[0-9]/.test(c.highlight_hint_marker)) {
-      errors.push("highlight_hint_marker must start with a letter or underscore");
+    if (/^[0-9]/.test(c.highlightHintMarker)) {
+      errors.push("highlightHintMarker must start with a letter or underscore");
     }
     // アルファベット、数字、アンダースコア以外の文字を含む場合
-    else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlight_hint_marker)) {
-      errors.push("highlight_hint_marker must contain only alphanumeric characters and underscores");
+    else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlightHintMarker)) {
+      errors.push("highlightHintMarker must contain only alphanumeric characters and underscores");
     }
     // 100文字を超える場合
-    else if (c.highlight_hint_marker.length > 100) {
-      errors.push("highlight_hint_marker must be 100 characters or less");
+    else if (c.highlightHintMarker.length > 100) {
+      errors.push("highlightHintMarker must be 100 characters or less");
     }
   }
 
-  if (typeof c.highlight_hint_marker_current === 'string' && c.highlight_hint_marker_current !== '') {
+  if (typeof c.highlightHintMarkerCurrent === 'string' && c.highlightHintMarkerCurrent !== '') {
     // 最初の文字が数字で始まる場合
-    if (/^[0-9]/.test(c.highlight_hint_marker_current)) {
-      errors.push("highlight_hint_marker_current must start with a letter or underscore");
+    if (/^[0-9]/.test(c.highlightHintMarkerCurrent)) {
+      errors.push("highlightHintMarkerCurrent must start with a letter or underscore");
     }
     // アルファベット、数字、アンダースコア以外の文字を含む場合
-    else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlight_hint_marker_current)) {
-      errors.push("highlight_hint_marker_current must contain only alphanumeric characters and underscores");
+    else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlightHintMarkerCurrent)) {
+      errors.push("highlightHintMarkerCurrent must contain only alphanumeric characters and underscores");
     }
     // 100文字を超える場合
-    else if (c.highlight_hint_marker_current.length > 100) {
-      errors.push("highlight_hint_marker_current must be 100 characters or less");
+    else if (c.highlightHintMarkerCurrent.length > 100) {
+      errors.push("highlightHintMarkerCurrent must be 100 characters or less");
     }
   }
 
@@ -622,25 +679,16 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     return { valid: false, errors };
   }
 
-  // ConfigをUnifiedConfigに変換してバリデーション
-  const unifiedConfig = toUnifiedConfig(cfg);
+  // UnifiedConfigを直接バリデーション
+  const unifiedConfig = cfg as UnifiedConfig;
   const result = validateUnifiedConfig(unifiedConfig);
 
-  // エラーメッセージをsnake_case形式に変換
-  // 注意: maxHints と debounceDelay は新しいUnified Config APIの一部で、camelCase形式を保持します
-  const snakeCaseErrors = result.errors.map(err => {
-    return err
-      .replace('motionCount', 'motion_count')
-      .replace('motionTimeout', 'motion_timeout')
-      .replace('hintPosition', 'hint_position')
-      .replace('visualHintPosition', 'visual_hint_position')
-      .replace('useNumbers', 'use_numbers');
-  });
-
-  return { valid: result.valid, errors: snakeCaseErrors };
+  // Process4 sub3-2-3: camelCase統一 - エラーメッセージはそのまま返す
+  // snake_caseは完全に廃止されたため、変換は不要
+  return { valid: result.valid, errors: result.errors };
 }
-export function getDefaultConfig(): Config {
-  return fromUnifiedConfig(getDefaultUnifiedConfig());
+export function getDefaultConfig(): UnifiedConfig {
+  return getDefaultUnifiedConfig();
 }
 export function validateHighlightGroupName(groupName: string): boolean {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(groupName);

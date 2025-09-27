@@ -31,8 +31,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
   await t.step("End-to-end detection with manager", async () => {
     const config: EnhancedWordConfig = {
       strategy: "hybrid" as const,
-      use_japanese: true,
-      enable_tinysegmenter: true,
+      useJapanese: true,
+      enableTinySegmenter: true,
       cache_enabled: true,
     };
 
@@ -72,8 +72,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     for (const strategy of strategies) {
       const config: EnhancedWordConfig = {
         strategy,
-        use_japanese: true,
-        enable_tinysegmenter: true,
+        useJapanese: true,
+        enableTinySegmenter: true,
       };
 
       const result = await detectWordsWithManager(mockDenops, config);
@@ -86,10 +86,10 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     // Test with segmenter disabled but strategy set to tinysegmenter
     const config: EnhancedWordConfig = {
       strategy: "tinysegmenter",
-      enable_tinysegmenter: false,
+      enableTinySegmenter: false,
       enable_fallback: true,
       fallback_to_regex: true,
-      use_japanese: true,
+      useJapanese: true,
     };
 
     const result = await detectWordsWithManager(mockDenops, config);
@@ -129,8 +129,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
   await t.step("Configuration validation", async () => {
     const validConfigs: EnhancedWordConfig[] = [
       { strategy: "regex" },
-      { strategy: "tinysegmenter", enable_tinysegmenter: true },
-      { strategy: "hybrid", use_japanese: true },
+      { strategy: "tinysegmenter", enableTinySegmenter: true },
+      { strategy: "hybrid", useJapanese: true },
       { cache_enabled: false },
       { min_word_length: 2, max_word_length: 20 },
     ];
@@ -194,8 +194,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     for (const scenario of scenarios) {
       const config: EnhancedWordConfig = {
         strategy: "hybrid" as const,
-        use_japanese: true,
-        enable_tinysegmenter: true,
+        useJapanese: true,
+        enableTinySegmenter: true,
       };
 
       // Mock denops to return the test text
@@ -242,14 +242,13 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
   });
 
   await t.step("User types 'v' and gets hints with min_length=1", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1, // 精密移動
         "h": 2, // 通常移動
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     const testDenops = createMockDenopsWithPerKeyConfig(config);
@@ -270,14 +269,13 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
   });
 
   await t.step("User types 'h' and gets hints with min_length=2", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1,
         "h": 2, // 通常移動
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
       min_word_length: 2, // 明示的にmin_lengthを設定
     };
 
@@ -309,8 +307,7 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
       { key: "F", expectedMinLength: 3, description: "Character search - backward" },
     ];
 
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1,
         "w": 1,
         "b": 1,
@@ -321,9 +318,9 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
         "f": 3,
         "F": 3,
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     for (const scenario of scenarios) {
@@ -356,16 +353,15 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
 
 Deno.test("Threshold switching stress tests", async (t) => {
   await t.step("Rapidly switching between keys with different thresholds", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1, // 最小
         "h": 2, // 中間
         "f": 3, // 最大
         "G": 5, // 極大
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     const keys = ["v", "h", "f", "G"];
@@ -407,8 +403,7 @@ Deno.test("Threshold switching stress tests", async (t) => {
   });
 
   await t.step("Performance under heavy switching", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1,
         "h": 2,
         "j": 2,
@@ -422,12 +417,12 @@ Deno.test("Threshold switching stress tests", async (t) => {
         "t": 3,
         "T": 3,
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
-    const keys = Object.keys(config.per_key_min_length);
+    const keys = Object.keys(config.perKeyMinLength);
     const iterations = 500;
     const startTime = performance.now();
 
@@ -436,7 +431,7 @@ Deno.test("Threshold switching stress tests", async (t) => {
       const testConfig = {
         ...config,
         current_key_context: key,
-        min_word_length: (config.per_key_min_length as Record<string, number>)[key],
+        min_word_length: (config.perKeyMinLength as Record<string, number>)[key],
       };
 
       const testDenops = {
@@ -469,14 +464,13 @@ Deno.test("Threshold switching stress tests", async (t) => {
   });
 
   await t.step("UI responsiveness during rapid switching", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1,
         "h": 3,
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     // UIレスポンシブネステスト：短時間での大量切り替え
@@ -538,16 +532,15 @@ Deno.test("Threshold switching stress tests", async (t) => {
 
 Deno.test("Visual mode integration tests", async (t) => {
   await t.step("Visual mode with per-key settings", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1, // ビジュアルモード（文字単位）
         "V": 1, // ビジュアルラインモード
         "h": 2, // 通常の文字移動
         "j": 2, // 通常の行移動
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     // ビジュアルモードのテスト
@@ -598,15 +591,14 @@ Deno.test("Visual mode integration tests", async (t) => {
   });
 
   await t.step("Visual line mode", async () => {
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "V": 1, // ビジュアルラインモード
         "j": 2, // 通常の行移動
         "k": 2, // 通常の行移動
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     const testConfig = {
@@ -648,15 +640,14 @@ Deno.test("Visual mode integration tests", async (t) => {
 
   await t.step("Visual block mode", async () => {
     // ビジュアルブロックモードは特別な処理が必要
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1, // 通常のビジュアルモード
         "V": 1, // ラインビジュアルモード
         "<C-v>": 1, // ブロックビジュアルモード（Ctrl+V）
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     const testConfig = {
@@ -709,14 +700,13 @@ Deno.test("Visual mode integration tests", async (t) => {
       },
     ];
 
-    const config = {
-      per_key_min_length: {
+    const config = {perKeyMinLength: {
         "v": 1,
         "V": 1,
       },
-      default_min_word_length: 2,
+      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
-      use_japanese: false,
+      useJapanese: false,
     };
 
     for (const pattern of textPatterns) {

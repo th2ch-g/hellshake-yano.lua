@@ -12,8 +12,7 @@ describe("Max Hints and Capacity Calculation", () => {
   describe("Hint capacity with custom keys", () => {
     it("should calculate correct capacity for user's config", () => {
       // ユーザーの設定を再現
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
         multi_char_keys: ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
         max_single_char_hints: 10,
       };
@@ -31,7 +30,7 @@ describe("Max Hints and Capacity Calculation", () => {
       // 最初の10個は1文字ヒント
       for (let i = 0; i < 10; i++) {
         assertEquals(hints[i].length, 1);
-        assertEquals(config.single_char_keys!.includes(hints[i]), true);
+        assertEquals(config.singleCharKeys!.includes(hints[i]), true);
       }
 
       // 次の100個は2文字アルファベット
@@ -39,7 +38,7 @@ describe("Max Hints and Capacity Calculation", () => {
         assertEquals(hints[i].length, 2);
         // 各文字がmulti_char_keysに含まれることを確認
         for (const char of hints[i]) {
-          assertEquals(config.multi_char_keys!.includes(char), true);
+          assertEquals(config.multiCharKeys!.includes(char), true);
         }
       }
 
@@ -49,8 +48,7 @@ describe("Max Hints and Capacity Calculation", () => {
 
     it("should handle vim config line scenario", () => {
       // Vim設定の実際のシナリオ
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
         multi_char_keys: ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
         max_single_char_hints: 10,
       };
@@ -69,8 +67,7 @@ describe("Max Hints and Capacity Calculation", () => {
 
     it("should support maximum capacity", () => {
       // デフォルト設定での最大容量
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
         multi_char_keys: [
           "B",
           "C",
@@ -118,8 +115,7 @@ describe("Max Hints and Capacity Calculation", () => {
 
   describe("effectiveMaxHints calculation", () => {
     it("should respect maxHints setting", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
+      const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
         multi_char_keys: ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
         max_single_char_hints: 10,
       };
@@ -143,8 +139,7 @@ describe("Max Hints and Capacity Calculation", () => {
     });
 
     it("should handle more words than capacity gracefully", () => {
-      const config: HintKeyConfig = {
-        single_char_keys: ["A"],
+      const config: HintKeyConfig = {singleCharKeys: ["A"],
         multi_char_keys: ["B", "C"], // 容量: 1 + 4 = 5 (数字フォールバックなし)
       };
 

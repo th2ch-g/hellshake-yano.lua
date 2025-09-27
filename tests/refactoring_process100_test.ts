@@ -17,9 +17,8 @@ Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   // 各パターンでのgetMinLengthForKey関数の動作を記録
 
   // パターン1: per_key_min_length優先
-  const config1: Partial<Config> = {
-    per_key_min_length: { "f": 1, "t": 3 },
-    default_min_word_length: 2,
+  const config1: Partial<Config> = {perKeyMinLength: { "f": 1, "t": 3 },
+    defaultMinWordLength: 2,
     min_word_length: 4,
   };
 
@@ -32,8 +31,7 @@ Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   );
 
   // パターン2: default_min_word_lengthフォールバック
-  const config2: Partial<Config> = {
-    default_min_word_length: 3,
+  const config2: Partial<Config> = {defaultMinWordLength: 3,
     min_word_length: 5,
   };
 
@@ -55,9 +53,8 @@ Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
 Deno.test("Process100: Baseline behavior - HintManager min length handling", () => {
   // HintManagerでのmin_length処理の動作記録
 
-  const baseConfig: Partial<Config> = {
-    per_key_min_length: { "f": 1, "t": 3 },
-    default_min_word_length: 2,
+  const baseConfig: Partial<Config> = {perKeyMinLength: { "f": 1, "t": 3 },
+    defaultMinWordLength: 2,
   };
 
   const hintManager = new HintManager(baseConfig as Config);
@@ -72,14 +69,14 @@ Deno.test("Process100: Baseline behavior - WordDetectionManager config hash", ()
 
   const config1: WordDetectionManagerConfig = {
     strategy: "regex",
-    use_japanese: false,
+    useJapanese: false,
     min_word_length: 2,
     max_word_length: 20,
   };
 
   const config2: WordDetectionManagerConfig = {
     strategy: "regex",
-    use_japanese: false,
+    useJapanese: false,
     min_word_length: 3, // 変更
     max_word_length: 20,
   };
@@ -99,7 +96,7 @@ Deno.test("Process100: Baseline behavior - Detection context propagation", async
 
   const config: WordDetectionManagerConfig = {
     strategy: "regex",
-    use_japanese: false,
+    useJapanese: false,
     min_word_length: 2,
     max_word_length: 20,
   };
@@ -133,7 +130,7 @@ Deno.test("Process100: Baseline behavior - Cache invalidation triggers", async (
 
   const initialConfig: WordDetectionManagerConfig = {
     strategy: "regex",
-    use_japanese: false,
+    useJapanese: false,
     min_word_length: 2,
     max_word_length: 20,
   };
@@ -163,7 +160,7 @@ Deno.test("Process100: Baseline behavior - Performance baseline", async () => {
 
   const config: WordDetectionManagerConfig = {
     strategy: "regex",
-    use_japanese: false,
+    useJapanese: false,
     min_word_length: 2,
     max_word_length: 20,
   };

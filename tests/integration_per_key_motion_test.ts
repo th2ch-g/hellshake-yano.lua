@@ -14,18 +14,18 @@ import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 function createFullConfig(overrides: Partial<Config> = {}): Config {
   return {
     markers: ["A", "B", "C", "D", "E", "F", "G", "H"],
-    motion_count: 3,
-    motion_timeout: 2000,
-    hint_position: "end",
-    trigger_on_hjkl: true,
-    counted_motions: ["w", "b", "e", "ge"],
+    motionCount: 3,
+    motionTimeout: 2000,
+    hintPosition: "end",
+    triggerOnHjkl: true,
+    countedMotions: ["w", "b", "e", "ge"],
     enabled: true,
     maxHints: 100,
     debounceDelay: 100,
-    use_numbers: false,
-    highlight_selected: false,
-    debug_coordinates: false,
-    per_key_motion_count: {
+    useNumbers: false,
+    highlightSelected: false,
+    debugCoordinates: false,
+    per_key_motionCount: {
       "v": 1, // Visual mode - immediate hints
       "V": 1, // Visual line mode - immediate hints
       "w": 1, // Word forward - immediate hints
@@ -36,13 +36,13 @@ function createFullConfig(overrides: Partial<Config> = {}): Config {
       "k": 3, // Up - 3 presses
       "l": 3, // Right - 3 presses
     },
-    default_motion_count: 2,
-    per_key_min_length: {
+    default_motionCount: 2,
+    perKeyMinLength: {
       "v": 1,
       "w": 1,
       "b": 1,
     },
-    default_min_word_length: 2,
+    defaultMinWordLength: 2,
     ...overrides,
   };
 }
@@ -72,7 +72,7 @@ class MotionCountTracker {
     // Set timeout to reset count
     const timer = setTimeout(() => {
       this.resetKey(key);
-    }, this.config.motion_timeout);
+    }, this.config.motionTimeout);
     this.timers.set(key, timer as unknown as number);
 
     return newCount >= requiredCount;
@@ -239,8 +239,7 @@ describe("Integration: リセット処理の確認", () => {
   });
 
   it("タイムアウトで自動リセットされる（シミュレーション）", async () => {
-    const config = createFullConfig({
-      motion_timeout: 100, // 100msに短縮
+    const config = createFullConfig({motionTimeout: 100, // 100msに短縮
     });
     tracker = new MotionCountTracker(config);
 
@@ -374,11 +373,10 @@ describe("Integration: エッジケースと実際の使用パターン", () => 
     tracker.resetKey("v");
 
     // 設定を変更（実際にはconfigオブジェクトを作り直す）
-    config = createFullConfig({
-      per_key_motion_count: {
+    config = createFullConfig({perKeyMotionCount: {
         "v": 3, // 3回に変更
       },
-      default_motion_count: 2,
+      default_motionCount: 2,
     });
     newTracker = new MotionCountTracker(config);
 

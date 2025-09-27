@@ -12,9 +12,9 @@ async function setup(denops: Denops) {
 
   // hellshake-yano.vimの初期設定
   await denops.cmd(`let g:hellshake_yano = {}`);
-  await denops.cmd(`let g:hellshake_yano.motion_count = 3`);
-  await denops.cmd(`let g:hellshake_yano.motion_timeout = 2000`);
-  await denops.cmd(`let g:hellshake_yano.hint_position = 'start'`);
+  await denops.cmd(`let g:hellshake_yano.motionCount = 3`);
+  await denops.cmd(`let g:hellshake_yano.motionTimeout = 2000`);
+  await denops.cmd(`let g:hellshake_yano.hintPosition = 'start'`);
   await denops.cmd(`let g:hellshake_yano.markers = split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '\\.\\zs')`);
 
   // テスト用バッファを作成

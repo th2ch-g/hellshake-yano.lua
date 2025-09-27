@@ -69,7 +69,7 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
   // This test should initially fail because RegexWordDetector still uses Config
   const config: WordDetectionConfig = {
     // These should map to UnifiedConfig properties (currently uses snake_case)
-    use_japanese: mockUnifiedConfig.useJapanese,
+    useJapanese: mockUnifiedConfig.useJapanese,
     min_word_length: mockUnifiedConfig.defaultMinWordLength
   };
 
@@ -91,9 +91,8 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
 });
 
 Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead of Config", async () => {
-  const config: WordDetectionConfig = {
-    use_japanese: mockUnifiedConfig.useJapanese,
-    enable_tinysegmenter: mockUnifiedConfig.enableTinySegmenter,
+  const config: WordDetectionConfig = {useJapanese: mockUnifiedConfig.useJapanese,
+    enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter,
     segmenter_threshold: mockUnifiedConfig.segmenterThreshold
   };
 
@@ -114,8 +113,7 @@ Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead
 });
 
 Deno.test("Red Phase: HybridWordDetector should use UnifiedConfig instead of Config", async () => {
-  const config: WordDetectionConfig = {
-    use_japanese: mockUnifiedConfig.useJapanese,
+  const config: WordDetectionConfig = {useJapanese: mockUnifiedConfig.useJapanese,
     strategy: mockUnifiedConfig.wordDetectionStrategy
   };
 
