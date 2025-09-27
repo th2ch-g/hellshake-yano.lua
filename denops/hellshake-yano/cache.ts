@@ -21,7 +21,200 @@
  * ```
  */
 
-import { LRUCache, CacheStatistics } from "./utils/cache.ts";
+/**
+ * キャッシュの統計情報インターフェース
+ * キャッシュのパフォーマンスと使用状況を追跡するための統計データ
+ */
+export interface CacheStatistics {
+  /** ヒット数 - キーが見つかった回数 */
+  hits: number;
+  /** ミス数 - キーが見つからなかった回数 */
+  misses: number;
+  /** 現在のサイズ - 現在格納されているエントリの数 */
+  size: number;
+  /** 最大サイズ - キャッシュが保持できるエントリの最大数 */
+  maxSize: number;
+  /** ヒット率（0.0-1.0） - hits / (hits + misses) で計算される効率の指標 */
+  hitRate: number;
+}
+
+/**
+ * LRU (Least Recently Used) キャッシュの実装
+ * 最も最近使用されていないエントリから削除される方式のキャッシュ
+ *
+ * @template K キーの型
+ * @template V 値の型
+ * @example
+ * ```typescript
+ * const cache = new LRUCache<string, number>(100);
+ * cache.set('key1', 42);
+ * const value = cache.get('key1'); // 42
+ * ```
+ */
+export class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+  private maxSize: number;
+  private hits = 0;
+  private misses = 0;
+
+  /**
+   * LRUキャッシュインスタンスを作成
+   * @param maxSize キャッシュの最大サイズ（正の整数である必要がある）
+   * @throws {Error} maxSizeが0以下の場合
+   */
+  constructor(maxSize: number) {
+    if (maxSize <= 0) {
+      throw new Error("maxSize must be positive");
+    }
+    this.maxSize = maxSize;
+  }
+
+  /**
+   * キャッシュから値を取得し、LRUの順序を更新
+   * @param key 取得するキー
+   * @returns キーに対応する値、存在しない場合はundefined
+   */
+  get(key: K): V | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      // アクセスされたアイテムを最新にするため、削除してから再追加
+      this.cache.delete(key);
+      this.cache.set(key, value);
+      this.hits++;
+      return value;
+    }
+    this.misses++;
+    return undefined;
+  }
+
+  /**
+   * キャッシュに値を設定し、必要に応じて古いエントリを削除
+   * @param key 設定するキー
+   * @param value 設定する値
+   */
+  set(key: K, value: V): void {
+    // 既存のキーの場合は削除してから再追加（LRU順序を更新）
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // 容量を超える場合、最も古いアイテムを削除
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+
+    this.cache.set(key, value);
+  }
+
+  /**
+   * 指定されたキーのエントリをキャッシュから削除
+   * @param key 削除するキー
+   * @returns 削除に成功した場合true、キーが存在しなかった場合false
+   */
+  delete(key: K): boolean {
+    return this.cache.delete(key);
+  }
+
+  /**
+   * 指定されたキーがキャッシュに存在するかチェック
+   * @param key チェックするキー
+   * @returns キーが存在する場合true
+   */
+  has(key: K): boolean {
+    return this.cache.has(key);
+  }
+
+  /**
+   * キャッシュを完全にクリアし、統計情報もリセット
+   */
+  clear(): void {
+    this.cache.clear();
+    this.hits = 0;
+    this.misses = 0;
+  }
+
+  /**
+   * 現在キャッシュに格納されているエントリ数を取得
+   * @returns 現在のエントリ数
+   */
+  size(): number {
+    return this.cache.size;
+  }
+
+  /**
+   * キャッシュの最大容量を取得
+   * @returns 最大エントリ数
+   */
+  get capacity(): number {
+    return this.maxSize;
+  }
+
+  /**
+   * キャッシュのパフォーマンス統計情報を取得
+   * @returns ヒット数、ミス数、ヒット率などの統計データ
+   */
+  getStats(): CacheStatistics {
+    const total = this.hits + this.misses;
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      size: this.cache.size,
+      maxSize: this.maxSize,
+      hitRate: total > 0 ? this.hits / total : 0,
+    };
+  }
+
+  /**
+   * キャッシュされている全てのキーのイテレータを取得
+   * @returns キーのイテレータ
+   */
+  keys(): IterableIterator<K> {
+    return this.cache.keys();
+  }
+
+  /**
+   * キャッシュされている全ての値のイテレータを取得
+   * @returns 値のイテレータ
+   */
+  values(): IterableIterator<V> {
+    return this.cache.values();
+  }
+
+  /**
+   * キャッシュされている全てのエントリ（キーと値のペア）のイテレータを取得
+   * @returns [キー, 値]ペアのイテレータ
+   */
+  entries(): IterableIterator<[K, V]> {
+    return this.cache.entries();
+  }
+
+  /**
+   * キャッシュの各エントリに対して関数を実行
+   * @param callbackfn 各エントリに対して実行する関数
+   * @param thisArg コールバック関数内でthisとして使用する値
+   */
+  forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
+    this.cache.forEach(callbackfn, thisArg);
+  }
+
+  /**
+   * 統計情報を取得（getStatsのエイリアス - 後方互換性のため）
+   * @returns キャッシュ統計情報
+   * @deprecated getStats()を使用してください
+   */
+  getStatistics(): CacheStatistics {
+    return this.getStats();
+  }
+
+  /**
+   * ヒット・ミス統計をリセット（キャッシュ内容は保持）
+   */
+  resetStatistics(): void {
+    this.hits = 0;
+    this.misses = 0;
+  }
+}
 
 /**
  * キャッシュタイプの列挙型

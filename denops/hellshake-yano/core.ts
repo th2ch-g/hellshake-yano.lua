@@ -3396,6 +3396,237 @@ export class Core {
  * 既存のCoreクラスのシングルトンパターンを維持しつつ、
  * 通常のコンストラクタでテスト可能なAPIインターフェースを提供
  */
+// ============================================================================
+// VALIDATION FUNCTIONS
+// Moved from utils/validation.ts as part of Process4 Sub6-2
+// ============================================================================
+
+/**
+ * ハイライト色設定インターフェース
+ * fg（前景色）とbg（背景色）を個別に指定するための型定義
+ *
+ * @interface HighlightColor - Already defined in types.ts, importing from there
+ */
+// Note: HighlightColor interface is already defined in types.ts and imported above
+
+/**
+ * ハイライトグループ名の検証
+ * Vimのハイライトグループ名の命名規則に従って検証を行う
+ *
+ * @param {string} groupName - 検証するハイライトグループ名
+ * @returns {boolean} 有効な場合true、無効な場合false
+ * @throws {never} この関数は例外をスローしません
+ * @example
+ * ```typescript
+ * validateHighlightGroupName("MyGroup"); // true
+ * validateHighlightGroupName("_underscore"); // true
+ * validateHighlightGroupName("123invalid"); // false（数字で始まる）
+ * validateHighlightGroupName(""); // false（空文字列）
+ * validateHighlightGroupName("Group-Name"); // false（ハイフンは無効）
+ * ```
+ */
+export function validateHighlightGroupName(groupName: string): boolean {
+  // 空文字列チェック
+  if (!groupName || groupName.length === 0) {
+    return false;
+  }
+
+  // 長さチェック（100文字以下）
+  if (groupName.length > 100) {
+    return false;
+  }
+
+  // 英字またはアンダースコアで始まる
+  if (!/^[a-zA-Z_]/.test(groupName)) {
+    return false;
+  }
+
+  // 英数字とアンダースコアのみ使用可能
+  if (!/^[a-zA-Z0-9_]+$/.test(groupName)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * 色名の検証
+ * Vimで使用可能な標準色名かどうかを検証
+ *
+ * @param {string} colorName - 検証する色名
+ * @returns {boolean} 有効な色名の場合true、無効な場合false
+ * @throws {never} この関数は例外をスローしません
+ * @example
+ * ```typescript
+ * isValidColorName("red"); // true
+ * isValidColorName("Red"); // true（大文字小文字不区別）
+ * isValidColorName("darkblue"); // true
+ * isValidColorName("invalidcolor"); // false
+ * isValidColorName(""); // false（空文字列）
+ * ```
+ */
+export function isValidColorName(colorName: string): boolean {
+  if (!colorName || typeof colorName !== "string") {
+    return false;
+  }
+
+  // 標準的なVim色名（大文字小文字不区別）
+  const validColorNames = [
+    "black", "darkblue", "darkgreen", "darkcyan", "darkred", "darkmagenta",
+    "brown", "darkyellow", "lightgray", "lightgrey", "darkgray", "darkgrey",
+    "blue", "lightblue", "green", "lightgreen", "cyan", "lightcyan", "red",
+    "lightred", "magenta", "lightmagenta", "yellow", "lightyellow", "white",
+    "orange", "gray", "grey", "seagreen", "none"
+  ];
+
+  return validColorNames.includes(colorName.toLowerCase());
+}
+
+/**
+ * 16進数色表記の検証
+ * 16進数カラーコード（#RRGGBB または #RGB 形式）の検証を行う
+ *
+ * @param {string} hexColor - 検証する16進数色（例: "#ff0000", "#fff"）
+ * @returns {boolean} 有効な16進数色の場合true、無効な場合false
+ * @throws {never} この関数は例外をスローしません
+ * @example
+ * ```typescript
+ * isValidHexColor("#ff0000"); // true（6桁形式）
+ * isValidHexColor("#fff"); // true（3桁形式）
+ * isValidHexColor("#FF0000"); // true（大文字も有効）
+ * isValidHexColor("ff0000"); // false（#が必要）
+ * isValidHexColor("#gg0000"); // false（無効な文字）
+ * isValidHexColor("#ff00"); // false（4桁は無効）
+ * ```
+ */
+export function isValidHexColor(hexColor: string): boolean {
+  if (!hexColor || typeof hexColor !== "string") {
+    return false;
+  }
+
+  // #で始まること
+  if (!hexColor.startsWith("#")) {
+    return false;
+  }
+
+  // #を除いた部分
+  const hex = hexColor.slice(1);
+
+  // 3桁または6桁の16進数のみ許可
+  if (hex.length !== 3 && hex.length !== 6) {
+    return false;
+  }
+
+  // 16進数文字のみ
+  return /^[0-9a-fA-F]+$/.test(hex);
+}
+
+/**
+ * ハイライト色設定の総合検証
+ * 文字列（ハイライトグループ名）またはオブジェクト（色設定）の検証を行う
+ *
+ * @param {string | HighlightColor} colorConfig - 検証するハイライト色設定
+ * @returns {{valid: boolean, errors: string[]}} 検証結果とエラーメッセージのリスト
+ * @throws {never} この関数は例外をスローしません
+ * @example
+ * ```typescript
+ * // ハイライトグループ名での設定
+ * validateHighlightColor("Error"); // { valid: true, errors: [] }
+ * validateHighlightColor("123invalid"); // { valid: false, errors: [...] }
+ *
+ * // 色設定オブジェクトでの設定
+ * validateHighlightColor({ fg: "red", bg: "white" }); // { valid: true, errors: [] }
+ * validateHighlightColor({ fg: "#ff0000" }); // { valid: true, errors: [] }
+ * validateHighlightColor({ fg: "invalidcolor" }); // { valid: false, errors: [...] }
+ * validateHighlightColor({}); // { valid: false, errors: ["At least one of fg or bg must be specified"] }
+ * ```
+ */
+export function validateHighlightColor(
+  colorConfig: string | HighlightColor,
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // null と undefined のチェック
+  if (colorConfig === null) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  // 数値や配列などの無効な型チェック
+  if (typeof colorConfig === "number") {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  if (Array.isArray(colorConfig)) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  // 文字列の場合（従来のハイライトグループ名）
+  if (typeof colorConfig === "string") {
+    // 空文字列チェック
+    if (colorConfig === "") {
+      errors.push("highlight_hint_marker must be a non-empty string");
+      return { valid: false, errors };
+    }
+
+    // ハイライトグループ名のバリデーション
+    if (!validateHighlightGroupName(colorConfig)) {
+      // より詳細なエラーメッセージを提供
+      if (!/^[a-zA-Z_]/.test(colorConfig)) {
+        errors.push("highlight_hint_marker must start with a letter or underscore");
+      } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
+        errors.push(
+          "highlight_hint_marker must contain only alphanumeric characters and underscores",
+        );
+      } else if (colorConfig.length > 100) {
+        errors.push("highlight_hint_marker must be 100 characters or less");
+      } else {
+        errors.push(`Invalid highlight group name: ${colorConfig}`);
+      }
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  // オブジェクトの場合（fg/bg個別指定）
+  if (typeof colorConfig === "object" && colorConfig !== null) {
+    const { fg, bg } = colorConfig;
+
+    // fgの検証
+    if (fg !== undefined) {
+      if (typeof fg !== "string") {
+        errors.push("fg must be a string");
+      } else if (fg === "") {
+        errors.push("fg cannot be empty string");
+      } else if (!isValidColorName(fg) && !isValidHexColor(fg)) {
+        errors.push(`Invalid fg color: ${fg}`);
+      }
+    }
+
+    // bgの検証
+    if (bg !== undefined) {
+      if (typeof bg !== "string") {
+        errors.push("bg must be a string");
+      } else if (bg === "") {
+        errors.push("bg cannot be empty string");
+      } else if (!isValidColorName(bg) && !isValidHexColor(bg)) {
+        errors.push(`Invalid bg color: ${bg}`);
+      }
+    }
+
+    // fgもbgも指定されていない場合
+    if (fg === undefined && bg === undefined) {
+      errors.push("At least one of fg or bg must be specified");
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  errors.push("Color configuration must be a string or object");
+  return { valid: false, errors };
+}
+
 export class HellshakeYanoCore {
   /** プラグインの設定 */
   private config: UnifiedConfig;
@@ -3641,5 +3872,288 @@ export class HellshakeYanoCore {
   }>): void {
     const core = Core.getInstance();
     core.updateMotionConfig(updates);
+  }
+
+  // ========================================
+  // Display Width Utilities (from utils/display.ts)
+  // ========================================
+
+  /**
+   * Create a cache for display width calculations
+   *
+   * @param maxSize - Maximum number of entries in cache (default: 1000)
+   * @returns LRUCache instance for caching display width calculations
+   */
+  static async createDisplayWidthCache(maxSize = 1000): Promise<import("./utils/cache.ts").LRUCache<string, number>> {
+    const { LRUCache } = await import("./utils/cache.ts");
+    return new LRUCache<string, number>(maxSize);
+  }
+
+  /**
+   * 一般的な文字列のグローバルキャッシュ（遅延初期化）
+   * 頻繁に計算される文字列の表示幅をキャッシュ
+   */
+  private static _globalDisplayWidthCache: import("./utils/cache.ts").LRUCache<string, number> | null = null;
+
+  /**
+   * グローバルキャッシュのゲッター（遅延初期化）
+   */
+  private static async getGlobalDisplayWidthCache(): Promise<import("./utils/cache.ts").LRUCache<string, number>> {
+    if (!this._globalDisplayWidthCache) {
+      this._globalDisplayWidthCache = await this.createDisplayWidthCache(2000);
+    }
+    return this._globalDisplayWidthCache;
+  }
+
+  /**
+   * Cached version of getDisplayWidth for improved performance
+   * Use this for repeated calculations of the same strings
+   *
+   * @param text - Text to calculate width for
+   * @param tabWidth - Width of tab character (default: 8)
+   * @returns Total display width of the text (cached result if available)
+   *
+   * @example
+   * ```typescript
+   * // 最初の呼び出しは計算してキャッシュ
+   * const width1 = Core.getDisplayWidthCached("hello\tworld");
+   * // 2回目の呼び出しはキャッシュされた結果を返す（大幅に高速）
+   * const width2 = Core.getDisplayWidthCached("hello\tworld");
+   * ```
+   */
+  static async getDisplayWidthCached(text: string, tabWidth = 8): Promise<number> {
+    if (text == null || text.length === 0) {
+      return 0;
+    }
+
+    const cacheKey = `${text}_${tabWidth}`;
+    const cache = await this.getGlobalDisplayWidthCache();
+    const cached = cache.get(cacheKey);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    // Import display functions from hint.ts
+    const { getDisplayWidth } = await import("./hint.ts");
+    const width = getDisplayWidth(text, tabWidth);
+    cache.set(cacheKey, width);
+
+    return width;
+  }
+
+  /**
+   * Get display width using Vim's strdisplaywidth() function
+   * Falls back to TypeScript implementation if Vim is not available
+   *
+   * @param denops - Denops instance for Vim integration
+   * @param text - Text to calculate width for
+   * @returns Promise resolving to display width
+   *
+   * @example
+   * ```typescript
+   * const width = await Core.getVimDisplayWidth(denops, "hello\tworld");
+   * console.log(width); // Vimのネイティブ計算またはフォールバックを使用
+   * ```
+   */
+  static async getVimDisplayWidth(denops: Denops, text: string): Promise<number> {
+    try {
+      // Vimのネイティブ関数を使用を試行
+      const fn = await import("https://deno.land/x/denops_std@v5.0.1/function/mod.ts");
+      const width = await fn.strdisplaywidth(denops, text);
+      return typeof width === "number" ? width : 0;
+    } catch (error) {
+      // TypeScript実装にフォールバック
+      const { getDisplayWidth } = await import("./hint.ts");
+      return getDisplayWidth(text);
+    }
+  }
+
+  /**
+   * Clear the global display width cache
+   * Useful for memory management or when cache becomes stale
+   *
+   * @example
+   * ```typescript
+   * Core.clearDisplayWidthCache();
+   * ```
+   */
+  static async clearDisplayWidthCache(): Promise<void> {
+    if (this._globalDisplayWidthCache) {
+      this._globalDisplayWidthCache.clear();
+    }
+
+    // Import and clear character cache from unified cache system
+    const { UnifiedCache, CacheType } = await import("./cache.ts");
+    const CHAR_WIDTH_CACHE = UnifiedCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
+    CHAR_WIDTH_CACHE.clear();
+
+    // ASCII文字キャッシュを再初期化
+    for (let i = 0x20; i <= 0x7E; i++) {
+      CHAR_WIDTH_CACHE.set(i, 1);
+    }
+  }
+
+  /**
+   * 性能監視用キャッシュ統計の取得
+   *
+   * 文字列キャッシュと文字キャッシュの統計情報を提供。
+   * キャッシュヒット率やサイズを監視して性能調整に活用。
+   *
+   * @returns キャッシュヒット/ミス統計を含むオブジェクト
+   *
+   * @example
+   * ```typescript
+   * const stats = Core.getDisplayWidthCacheStats();
+   * console.log(`ヒット率: ${stats.stringCache.hitRate * 100}%`);
+   * console.log(`文字キャッシュサイズ: ${stats.charCacheSize}`);
+   * ```
+   */
+  static async getDisplayWidthCacheStats() {
+    const { UnifiedCache, CacheType } = await import("./cache.ts");
+    const CHAR_WIDTH_CACHE = UnifiedCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
+    const cache = await this.getGlobalDisplayWidthCache();
+
+    return {
+      stringCache: cache.getStats(),
+      charCacheSize: CHAR_WIDTH_CACHE.size,
+    };
+  }
+
+  /**
+   * テキストに全角文字が含まれているかをチェックするユーティリティ関数
+   *
+   * コストの高い幅計算の前の高速スクリーニングに有用。
+   * ASCII文字のみのテキストを素早く識別し、最適化されたパスを選択可能。
+   *
+   * hellshake-yano.vimでの性能最適化において、日本語やCJK文字、絵文字が
+   * 含まれていない場合の高速処理パスの判定に使用。
+   *
+   * @param text - チェックするテキスト
+   * @returns 幅が1より大きい文字が含まれている場合true
+   *
+   * @example
+   * ```typescript
+   * Core.hasWideCharacters("hello")     // false（ASCII文字のみ）
+   * Core.hasWideCharacters("こんにちは") // true（日本語文字）
+   * Core.hasWideCharacters("hello😀")   // true（絵文字含む）
+   * ```
+   */
+  static hasWideCharacters(text: string): boolean {
+    if (!text || text.length === 0) {
+      return false;
+    }
+
+    for (let i = 0; i < text.length;) {
+      const codePoint = text.codePointAt(i);
+      if (codePoint === undefined) {
+        i++;
+        continue;
+      }
+
+      if (codePoint >= 0x1100 && (
+        this.isInCJKRange(codePoint) ||
+        this.isInEmojiRange(codePoint) ||
+        this.isInExtendedWideRange(codePoint)
+      )) {
+        return true;
+      }
+
+      i += codePoint > 0xFFFF ? 2 : 1;
+    }
+
+    return false;
+  }
+
+  /**
+   * 最適化された範囲を使用したCJK文字の高速チェック
+   * @param codePoint Unicodeコードポイント
+   * @returns CJK文字の場合true
+   */
+  private static isInCJKRange(codePoint: number): boolean {
+    const CJK_RANGES = [
+      [0x3000, 0x303F], // CJK記号と句読点
+      [0x3040, 0x309F], // ひらがな
+      [0x30A0, 0x30FF], // カタカナ
+      [0x4E00, 0x9FFF], // CJK統合漢字
+      [0xFF00, 0xFFEF], // 半角・全角形式
+    ] as const;
+
+    for (const [start, end] of CJK_RANGES) {
+      if (codePoint >= start && codePoint <= end) {
+        return true;
+      }
+    }
+
+    // 追加のCJK範囲
+    return (
+      (codePoint >= 0x1100 && codePoint <= 0x115F) || // ハングル字母
+      (codePoint >= 0x2E80 && codePoint <= 0x2EFF) || // CJK部首補助
+      (codePoint >= 0x2F00 && codePoint <= 0x2FDF) || // 康熙部首
+      (codePoint >= 0x3100 && codePoint <= 0x312F) || // 注音字母
+      (codePoint >= 0x3130 && codePoint <= 0x318F) || // ハングル互換字母
+      (codePoint >= 0x3200 && codePoint <= 0x33FF) || // 囲みCJK文字・月 + CJK互換
+      (codePoint >= 0x3400 && codePoint <= 0x4DBF) || // CJK拡張A
+      (codePoint >= 0xAC00 && codePoint <= 0xD7AF) || // ハングル音節
+      (codePoint >= 0xF900 && codePoint <= 0xFAFF)    // CJK互換漢字
+    );
+  }
+
+  /**
+   * 絵文字範囲の高速チェッカー
+   * @param codePoint Unicodeコードポイント
+   * @returns 絵文字の場合true
+   */
+  private static isInEmojiRange(codePoint: number): boolean {
+    const EMOJI_RANGES = [
+      [0x1F600, 0x1F64F], // 顔文字
+      [0x1F300, 0x1F5FF], // その他の記号と絵文字
+      [0x1F680, 0x1F6FF], // 交通・地図記号
+      [0x1F1E6, 0x1F1FF], // 地域表示記号
+    ] as const;
+
+    for (const [start, end] of EMOJI_RANGES) {
+      if (codePoint >= start && codePoint <= end) {
+        return true;
+      }
+    }
+
+    return (
+      (codePoint >= 0x1F000 && codePoint <= 0x1F0FF) || // 麻雀/ドミノ/トランプ
+      (codePoint >= 0x1F100 && codePoint <= 0x1F2FF) || // 囲み英数字/表意文字補助
+      (codePoint >= 0x1F700 && codePoint <= 0x1F9FF) || // 拡張絵文字範囲
+      (codePoint >= 0x1FA00 && codePoint <= 0x1FAFF)    // チェス記号 + 拡張絵記号
+    );
+  }
+
+  /**
+   * 拡張全角文字範囲チェッカー（矢印、記号など）
+   * @param codePoint Unicodeコードポイント
+   * @returns 幅が2の文字の場合true
+   */
+  private static isInExtendedWideRange(codePoint: number): boolean {
+    return (
+      // Latin-1補助数学記号（× ÷ など）
+      this.isLatinMathSymbol(codePoint) ||
+      (codePoint >= 0x2190 && codePoint <= 0x21FF) || // 矢印
+      (codePoint >= 0x2460 && codePoint <= 0x24FF) || // 囲み英数字（④ など）
+      (codePoint >= 0x2500 && codePoint <= 0x25FF) || // 罫線素片（□ など）
+      (codePoint >= 0x2600 && codePoint <= 0x26FF) || // その他の記号
+      (codePoint >= 0x2700 && codePoint <= 0x27BF) || // 装飾記号
+      (codePoint >= 0xFE10 && codePoint <= 0xFE1F) || // 縦書き形式
+      (codePoint >= 0xFE30 && codePoint <= 0xFE6F)    // CJK互換形式 + 小字形バリエーション
+    );
+  }
+
+  /**
+   * 幅が2であるべきLatin-1補助数学記号かチェック
+   * @param codePoint Unicodeコードポイント
+   * @returns 数学記号の場合true
+   */
+  private static isLatinMathSymbol(codePoint: number): boolean {
+    return (
+      codePoint === 0x00D7 || // × (multiplication sign)
+      codePoint === 0x00F7    // ÷ (division sign)
+    );
   }
 }

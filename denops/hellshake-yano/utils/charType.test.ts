@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.220.0/assert/mod.ts";
-import { CharType, getCharType, analyzeString, findBoundaries } from "./charType.ts";
+import { CharType, getCharType, analyzeString, findBoundaries } from "../word.ts";
 
 Deno.test("文字種判定 - ひらがな", () => {
   assertEquals(getCharType("あ"), CharType.Hiragana);

@@ -1,6 +1,6 @@
 import type { Denops } from "@denops/std";
 import type { DetectionContext, Word, WordDetectionResult } from "./types.ts";
-import { charIndexToByteIndex } from "./utils/encoding.ts";
+// エンコーディング関数は本ファイル内で実装
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
 import { getDefaultUnifiedConfig } from "./config.ts";
 
@@ -1494,3 +1494,803 @@ export {
 
 // Re-export segmenter types and classes for integrated access
 export { type SegmentationResult, TinySegmenter } from "./segmenter.ts";
+
+// ==========================================
+// === Encoding Functions (from utils/encoding.ts) ===
+// ==========================================
+
+/**
+ * UTF-8文字とバイトインデックス変換のエンコーディングユーティリティ
+ *
+ * このモジュールはUTF-8エンコードテキストの文字インデックスとバイトインデックス間の
+ * 変換を行うユーティリティを提供します。特に日本語文字（1文字3バイト）を適切に処理します。
+ *
+ * 統一されたバイト長計算とエンコーディング処理を提供し、
+ * 複数のモジュール間での重複実装を排除します。
+ *
+ * @module encoding utilities (integrated into word.ts)
+ * @version 1.0.0
+ */
+
+/**
+ * TextEncoderの共有インスタンス
+ * インスタンス生成コストを削減し、メモリ使用量を最小化
+ */
+const sharedTextEncoder = new TextEncoder();
+
+/**
+ * マルチバイト文字のバイト長キャッシュ
+ * 頻繁に使用される文字列のバイト長をキャッシュして性能を向上
+ * 統一キャッシュシステムによるLRUアルゴリズムで効率的にメモリ管理
+ */
+const byteLengthCache = UnifiedCache.getInstance().getCache<string, number>(CacheType.BYTE_LENGTH);
+
+/**
+ * ASCII文字のみかどうかを高速チェック
+ *
+ * 文字列内のすべての文字がASCII文字（0x00-0x7F）であるかを判定します。
+ * ASCII文字のみの場合はバイト長計算の最適化パスを使用できます。
+ *
+ * @param text チェック対象の文字列
+ * @returns ASCII文字のみの場合true、マルチバイト文字が含まれる場合false
+ * @example
+ * ```typescript
+ * isAscii("hello"); // true
+ * isAscii("こんにちは"); // false
+ * isAscii("hello world 123"); // true
+ * isAscii("hello 世界"); // false
+ * ```
+ */
+export function isAscii(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * 統一されたバイト長計算関数（キャッシュ付き、ASCII最適化）
+ *
+ * 文字列のUTF-8エンコーディングでのバイト数を計算します。
+ * ASCII文字のみの場合は高速処理パスを使用し、
+ * マルチバイト文字が含まれる場合はキャッシュで最適化を行います。
+ *
+ * パフォーマンス最適化:
+ * - ASCII文字のみ: O(n)の文字コードチェック
+ * - マルチバイト文字: TextEncoderを使用してキャッシュに保存
+ *
+ * @param text バイト長を計算する文字列
+ * @returns UTF-8エンコーディングでのバイト数
+ * @throws なし（常に有効な数値を返します）
+ * @example
+ * ```typescript
+ * getByteLength(""); // 0
+ * getByteLength("hello"); // 5
+ * getByteLength("あいう"); // 9 (3バイト × 3文字)
+ * getByteLength("Hello世界"); // 11 (5 + 6バイト)
+ * ```
+ */
+export function getByteLength(text: string): number {
+  if (text.length === 0) {
+    return 0;
+  }
+
+  // ASCII文字のみの場合は高速パス
+  if (isAscii(text)) {
+    return text.length;
+  }
+
+  // キャッシュをチェック
+  const cached = byteLengthCache.get(text);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // バイト長を計算してキャッシュに保存
+  const length = sharedTextEncoder.encode(text).length;
+  byteLengthCache.set(text, length);
+  return length;
+}
+
+/**
+ * バイト長キャッシュをクリア
+ *
+ * メモリ使用量の制限や長時間実行時のメモリリーク防止のため、
+ * バイト長計算のキャッシュをクリアします。
+ * 大量の異なる文字列を処理した後や、メモリ使用量を削減したい場合に使用します。
+ *
+ * @returns なし
+ * @example
+ * ```typescript
+ * // 大量の文字列処理後にメモリを解放
+ * for (const text of largeTextArray) {
+ *   const length = getByteLength(text);
+ *   // 処理...
+ * }
+ * clearByteLengthCache(); // キャッシュをリセット
+ * ```
+ */
+export function clearByteLengthCache(): void {
+  byteLengthCache.clear();
+}
+
+/**
+ * 文字インデックスをUTF-8バイトインデックスに変換
+ *
+ * UTF-8エンコードされたテキスト内での文字位置をバイト位置に変換します。
+ * 日本語文字などのマルチバイト文字を適切に処理し、正確なバイト位置を返します。
+ *
+ * 処理の特徴:
+ * - 範囲外の文字インデックスは適切に処理されます
+ * - 負数や0以下は0を返します
+ * - 文字列長以上のインデックスは全体のバイト長を返します
+ *
+ * @param text UTF-8エンコードされたテキスト
+ * @param charIndex 文字位置（0ベースインデックス）
+ * @returns UTF-8バイト位置（0ベースインデックス）
+ * @throws なし（範囲外アクセスも安全に処理されます）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'こんにちはworld';
+ *
+ * charIndexToByteIndex(text, 0);  // 0 ('こ'の開始位置)
+ * charIndexToByteIndex(text, 1);  // 3 ('ん'の開始位置)
+ * charIndexToByteIndex(text, 5);  // 15 ('w'の開始位置)
+ * charIndexToByteIndex(text, -1); // 0 (負数は0に正規化)
+ * charIndexToByteIndex(text, 100); // 20 (範囲外は全体のバイト長)
+ * ```
+ */
+export function charIndexToByteIndex(text: string, charIndex: number): number {
+  // 範囲外チェックと空文字列チェック
+  if (charIndex <= 0) return 0;
+  if (text.length === 0) return 0;
+  if (charIndex >= text.length) return new TextEncoder().encode(text).length;
+
+  // 開始から指定された文字インデックスまでの部分文字列を抽出
+  const substring = text.substring(0, charIndex);
+
+  // UTF-8バイトに変換して長さを返す
+  return new TextEncoder().encode(substring).length;
+}
+
+/**
+ * UTF-8バイトインデックスを文字インデックスに変換
+ *
+ * UTF-8エンコードされたテキスト内でのバイト位置を文字位置に変換します。
+ * マルチバイト文字の途中を指している場合は、その文字の開始位置を返します。
+ *
+ * 処理の特徴:
+ * - マルチバイト文字の境界を適切に処理
+ * - 文字の途中のバイト位置でも安全に文字境界を返す
+ * - 範囲外のバイト位置は適切に正規化される
+ *
+ * @param text UTF-8エンコードされたテキスト
+ * @param byteIndex バイト位置（0ベースインデックス）
+ * @returns 対応する文字位置（0ベースインデックス）
+ * @throws なし（デコードエラー時は安全な文字境界を返します）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'こんにちはworld';
+ *
+ * byteIndexToCharIndex(text, 0);  // 0 ('こ'の位置)
+ * byteIndexToCharIndex(text, 1);  // 0 ('こ'の途中 -> 'こ'の位置)
+ * byteIndexToCharIndex(text, 3);  // 1 ('ん'の開始位置)
+ * byteIndexToCharIndex(text, 15); // 5 ('w'の位置)
+ * byteIndexToCharIndex(text, -1); // 0 (負数は0に正規化)
+ * byteIndexToCharIndex(text, 100); // 11 (範囲外は文字列長)
+ * ```
+ */
+export function byteIndexToCharIndex(text: string, byteIndex: number): number {
+  // 範囲外チェック
+  if (byteIndex <= 0) return 0;
+  if (text.length === 0) return 0;
+
+  const encoder = new TextEncoder();
+  const fullBytes = encoder.encode(text);
+
+  // byteIndexが全体のバイト長以上の場合は文字列長を返す
+  if (byteIndex >= fullBytes.length) return text.length;
+
+  // より効率的なアプローチ: 文字ごとに累積バイト数を計算
+  let currentByteIndex = 0;
+  for (let charIndex = 0; charIndex < text.length; charIndex++) {
+    const char = text[charIndex];
+    const charByteLength = encoder.encode(char).length;
+
+    // 現在の文字の終端バイト位置
+    const nextByteIndex = currentByteIndex + charByteLength;
+
+    // 指定されたバイトインデックスが現在の文字の範囲内にある場合
+    if (byteIndex < nextByteIndex) {
+      // マルチバイト文字の境界チェック
+      if (byteIndex === currentByteIndex) {
+        // 文字の開始位置の場合、その文字のインデックスを返す
+        return charIndex;
+      } else {
+        // マルチバイト文字の途中の場合、前の文字境界を返す
+        return charIndex;
+      }
+    }
+
+    currentByteIndex = nextByteIndex;
+  }
+
+  // ここに到達することは通常ないが、安全のため文字列長を返す
+  return text.length;
+}
+
+/**
+ * 指定位置の文字のバイト長を取得
+ *
+ * 特定の文字位置にある文字がUTF-8エンコーディングで何バイトを占めるかを取得します。
+ * ASCII文字は1バイト、日本語文字（ひらがな・カタカナ・漢字）は通常3バイト、
+ * 絵文字などは4バイト以上になる場合があります。
+ *
+ * @param text UTF-8エンコードされたテキスト
+ * @param charIndex 文字位置（0ベースインデックス）
+ * @returns 指定位置の文字のバイト数（無効な位置の場合は0）
+ * @throws なし（範囲外アクセスは0を返します）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'あAい😀';
+ *
+ * getCharByteLength(text, 0); // 3 ('あ' - ひらがな)
+ * getCharByteLength(text, 1); // 1 ('A' - ASCII文字)
+ * getCharByteLength(text, 2); // 3 ('い' - ひらがな)
+ * getCharByteLength(text, 3); // 4 ('😀' - 絵文字)
+ * getCharByteLength(text, -1); // 0 (範囲外)
+ * getCharByteLength(text, 10); // 0 (範囲外)
+ * ```
+ */
+export function getCharByteLength(text: string, charIndex: number): number {
+  // 範囲外チェックと空文字列チェック
+  if (text.length === 0) return 0;
+  if (charIndex < 0 || charIndex >= text.length) return 0;
+
+  const char = text[charIndex];
+  return new TextEncoder().encode(char).length;
+}
+
+/**
+ * テキストにマルチバイト文字（日本語など）が含まれているかチェック
+ *
+ * テキストのUTF-8バイト長と文字長を比較し、マルチバイト文字の存在を判定します。
+ * ASCII文字のみの場合はバイト数と文字数が等しくなりますが、
+ * 日本語文字や絵文字が含まれる場合はバイト数の方が大きくなります。
+ *
+ * この情報はパフォーマンス最適化の判断に使用できます。
+ *
+ * @param text チェックするテキスト
+ * @returns マルチバイト文字が含まれている場合true、ASCII文字のみの場合false
+ * @throws なし
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * hasMultibyteCharacters('');           // false (空文字列)
+ * hasMultibyteCharacters('hello');     // false (ASCII文字のみ)
+ * hasMultibyteCharacters('こんにちは'); // true (日本語文字)
+ * hasMultibyteCharacters('hello世界'); // true (混在)
+ * hasMultibyteCharacters('café');      // true (アクセント文字)
+ * hasMultibyteCharacters('😀');        // true (絵文字)
+ * ```
+ */
+export function hasMultibyteCharacters(text: string): boolean {
+  return new TextEncoder().encode(text).length > text.length;
+}
+
+/**
+ * デバッグ用の詳細エンコーディング情報を取得
+ *
+ * テキストの各文字に対する詳細なUTF-8エンコーディング情報を取得し、
+ * デバッグ、分析、テストに使用します。文字ごとのバイト位置とバイト数の
+ * マッピングを提供し、エンコーディング処理の検証に役立ちます。
+ *
+ * 返却される情報:
+ * - charLength: 文字数
+ * - byteLength: 総バイト数
+ * - hasMultibyte: マルチバイト文字の有無
+ * - charToByteMap: 各文字の詳細マッピング
+ *
+ * @param text 分析するテキスト
+ * @returns エンコーディングの詳細情報オブジェクト
+ * @throws なし
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const info = getEncodingInfo('あAい😀');
+ *
+ * console.log(info.charLength);   // 4
+ * console.log(info.byteLength);   // 11 (3+1+3+4)
+ * console.log(info.hasMultibyte); // true
+ *
+ * // 各文字の詳細情報
+ * console.log(info.charToByteMap[0]);
+ * // { char: 'あ', charIndex: 0, byteStart: 0, byteLength: 3 }
+ * console.log(info.charToByteMap[1]);
+ * // { char: 'A', charIndex: 1, byteStart: 3, byteLength: 1 }
+ * console.log(info.charToByteMap[2]);
+ * // { char: 'い', charIndex: 2, byteStart: 4, byteLength: 3 }
+ * console.log(info.charToByteMap[3]);
+ * // { char: '😀', charIndex: 3, byteStart: 7, byteLength: 4 }
+ * ```
+ */
+export function getEncodingInfo(text: string): {
+  charLength: number;
+  byteLength: number;
+  hasMultibyte: boolean;
+  charToByteMap: Array<{ char: string; charIndex: number; byteStart: number; byteLength: number }>;
+} {
+  const encoder = new TextEncoder();
+  const charToByteMap: Array<
+    { char: string; charIndex: number; byteStart: number; byteLength: number }
+  > = [];
+
+  let bytePosition = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const charBytes = encoder.encode(char);
+
+    charToByteMap.push({
+      char,
+      charIndex: i,
+      byteStart: bytePosition,
+      byteLength: charBytes.length,
+    });
+
+    bytePosition += charBytes.length;
+  }
+
+  return {
+    charLength: text.length,
+    byteLength: encoder.encode(text).length,
+    hasMultibyte: hasMultibyteCharacters(text),
+    charToByteMap,
+  };
+}
+
+/**
+ * 複数の文字インデックスをバイトインデックスに効率的に変換
+ *
+ * 複数の文字位置を一度にバイト位置に変換します。
+ * 内部的にインデックスをソートして一回のテキスト走査で全ての変換を行うため、
+ * 個別変換を繰り返すよりも効率的です。元の順序は保持されます。
+ *
+ * パフォーマンス特性:
+ * - 時間計算量: O(n + m log m) (n=テキスト長, m=インデックス数)
+ * - 個別変換の場合: O(n * m)
+ * - 大量のインデックス変換時に特に有効
+ *
+ * @param text UTF-8エンコードされたテキスト
+ * @param charIndices 変換する文字位置の配列（0ベースインデックス）
+ * @returns 対応するバイト位置の配列（元の順序を保持、0ベースインデックス）
+ * @throws なし（範囲外インデックスも安全に処理されます）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const text = 'あいうABC';
+ *
+ * // 基本的な使用例
+ * const charIndices = [0, 2, 4]; // 'あ', 'う', 'B'の位置
+ * const byteIndices = charIndicesToByteIndices(text, charIndices);
+ * console.log(byteIndices); // [0, 6, 10]
+ *
+ * // 順序が保持される例
+ * const mixedIndices = [4, 0, 2]; // 順序はそのまま
+ * const mixedBytes = charIndicesToByteIndices(text, mixedIndices);
+ * console.log(mixedBytes); // [10, 0, 6]
+ *
+ * // 範囲外も安全に処理
+ * const invalidIndices = [-1, 0, 100];
+ * const safeBytes = charIndicesToByteIndices(text, invalidIndices);
+ * console.log(safeBytes); // [0, 0, 12] (全体のバイト長)
+ *
+ * // 空配列の場合
+ * const emptyResult = charIndicesToByteIndices(text, []);
+ * console.log(emptyResult); // []
+ * ```
+ */
+export function charIndicesToByteIndices(text: string, charIndices: number[]): number[] {
+  // 空の入力チェック
+  if (charIndices.length === 0) return [];
+  if (text.length === 0) return charIndices.map(() => 0);
+
+  const encoder = new TextEncoder();
+  const result: number[] = [];
+  const fullTextByteLength = encoder.encode(text).length;
+
+  // インデックスをソートして効率的に処理
+  const sortedIndices = charIndices
+    .map((index, originalIndex) => ({ index: Math.max(0, index), originalIndex }))
+    .sort((a, b) => a.index - b.index);
+
+  let currentCharIndex = 0;
+  let currentByteIndex = 0;
+  let processedCount = 0;
+
+  for (let i = 0; i < text.length && processedCount < sortedIndices.length; i++) {
+    const char = text[i];
+    const charByteLength = encoder.encode(char).length;
+
+    // この文字位置がターゲットインデックスのいずれかと一致するかチェック
+    while (
+      processedCount < sortedIndices.length &&
+      sortedIndices[processedCount].index === currentCharIndex
+    ) {
+      result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
+      processedCount++;
+    }
+
+    currentCharIndex++;
+    currentByteIndex += charByteLength;
+  }
+
+  // 文字列長以上のインデックスを処理
+  while (processedCount < sortedIndices.length) {
+    const targetIndex = charIndices[sortedIndices[processedCount].originalIndex];
+    if (targetIndex >= text.length) {
+      result[sortedIndices[processedCount].originalIndex] = fullTextByteLength;
+    } else {
+      result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
+    }
+    processedCount++;
+  }
+
+  return result;
+}
+
+/**
+ * 文字種判定ユーティリティ
+ * Unicode範囲に基づく文字種の分類と境界検出を提供
+ */
+
+/**
+ * 文字種別を表すenum
+ *
+ * @description Unicode範囲に基づいて文字を分類するための定数
+ * @example
+ * ```typescript
+ * const type = getCharType('あ');
+ * if (type === CharType.Hiragana) {
+ *   console.log('ひらがなです');
+ * }
+ * ```
+ */
+export enum CharType {
+  /** ひらがな文字 (U+3040-U+309F) */
+  Hiragana = "hiragana",
+  /** カタカナ文字 (U+30A0-U+30FF) */
+  Katakana = "katakana",
+  /** 漢字 (CJK統合漢字：U+4E00-U+9FFF) */
+  Kanji = "kanji",
+  /** 英数字 (ASCII 0-9, A-Z, a-z) */
+  Alphanumeric = "alphanumeric",
+  /** 記号類 (各種記号文字) */
+  Symbol = "symbol",
+  /** 空白文字 (半角・全角スペース、タブ等) */
+  Space = "space",
+  /** その他の文字 */
+  Other = "other"
+}
+
+/**
+ * パフォーマンス最適化: 文字種判定キャッシュ
+ *
+ * @description 文字種判定結果をキャッシュしてパフォーマンスを向上させます。
+ * 統一キャッシュシステムのLRU（Least Recently Used）アルゴリズムでサイズ制限を管理します。
+ */
+const charTypeCache = UnifiedCache.getInstance().getCache<string, CharType>(CacheType.CHAR_TYPE);
+
+/**
+ * 隣接文字解析結果を表すインターフェース
+ *
+ * @description 連続する同じ文字種の範囲を示すデータ構造
+ */
+export interface AdjacentAnalysis {
+  /** この範囲の文字種 */
+  type: CharType;
+  /** 範囲の開始位置（0ベース） */
+  start: number;
+  /** 範囲の終了位置（exclusive、0ベース） */
+  end: number;
+  /** 範囲内の実際のテキスト */
+  text: string;
+}
+
+/**
+ * 単一文字の種類を判定する（キャッシュ付き）
+ *
+ * @description Unicode範囲に基づいて文字の種別を判定します。
+ * パフォーマンス向上のため、結果をキャッシュします。
+ *
+ * @param char - 判定対象の文字（単一文字）
+ * @returns 文字種別
+ *
+ * @example
+ * ```typescript
+ * getCharType('あ'); // CharType.Hiragana
+ * getCharType('ア'); // CharType.Katakana
+ * getCharType('漢'); // CharType.Kanji
+ * getCharType('A');  // CharType.Alphanumeric
+ * getCharType('!');  // CharType.Symbol
+ * getCharType(' ');  // CharType.Space
+ * ```
+ */
+export function getCharType(char: string): CharType {
+  if (!char || char.length === 0) {
+    return CharType.Other;
+  }
+
+  // キャッシュから取得を試行
+  const cached = charTypeCache.get(char);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // 統一キャッシュシステムが自動的にLRUアルゴリズムでサイズ制限を管理
+
+  const code = char.codePointAt(0);
+  if (code === undefined) {
+    charTypeCache.set(char, CharType.Other);
+    return CharType.Other;
+  }
+
+  let result: CharType;
+
+  // Unicode範囲による文字種判定
+  // スペース文字（半角・全角スペース、タブ、改行文字）
+  if (char === ' ' || char === '　' || char === '\t' || char === '\n' || char === '\r') {
+    result = CharType.Space;
+  }
+  // ひらがな文字（あいうえお等、U+3040-U+309F）
+  else if (code >= 0x3040 && code <= 0x309F) {
+    result = CharType.Hiragana;
+  }
+  // カタカナ文字（アイウエオ等、U+30A0-U+30FF）
+  else if (code >= 0x30A0 && code <= 0x30FF) {
+    result = CharType.Katakana;
+  }
+  // CJK統合漢字（日中韓の漢字、U+4E00-U+9FFF）
+  else if (code >= 0x4E00 && code <= 0x9FFF) {
+    result = CharType.Kanji;
+  }
+  // ASCII英数字（半角の0-9、A-Z、a-z）
+  else if ((code >= 0x0030 && code <= 0x0039) || // 数字0-9
+      (code >= 0x0041 && code <= 0x005A) || // 大文字A-Z
+      (code >= 0x0061 && code <= 0x007A)) { // 小文字a-z
+    result = CharType.Alphanumeric;
+  }
+  // 記号文字（句読点、算術記号、CJK記号、全角記号等）
+  else if ((code >= 0x0020 && code <= 0x002F) || // ASCII記号 !"#$%&'()*+,-./
+      (code >= 0x003A && code <= 0x0040) || // ASCII記号 :;<=>?@
+      (code >= 0x005B && code <= 0x0060) || // ASCII記号 [\]^_`
+      (code >= 0x007B && code <= 0x007E) || // ASCII記号 {|}~
+      (code >= 0x3000 && code <= 0x303F) || // CJK記号及び句読点
+      (code >= 0xFF00 && code <= 0xFFEF)) { // 全角英数字・記号
+    result = CharType.Symbol;
+  }
+  // 上記以外の文字（特殊文字、絵文字等）
+  else {
+    result = CharType.Other;
+  }
+
+  // キャッシュに保存
+  charTypeCache.set(char, result);
+  return result;
+}
+
+/**
+ * 文字列を文字種別に解析する
+ *
+ * @description 入力文字列を連続する同じ文字種のセグメントに分割し、
+ * それぞれの範囲と文字種を解析します。
+ *
+ * @param text - 解析対象の文字列
+ * @returns 文字種別解析結果の配列。各要素は連続する同じ文字種の範囲を表す
+ *
+ * @example
+ * ```typescript
+ * const result = analyzeString('こんにちはWorld123');
+ * // [
+ * //   { type: 'hiragana', start: 0, end: 5, text: 'こんにちは' },
+ * //   { type: 'alphanumeric', start: 5, end: 10, text: 'World' },
+ * //   { type: 'alphanumeric', start: 10, end: 13, text: '123' }
+ * // ]
+ * ```
+ */
+export function analyzeString(text: string): AdjacentAnalysis[] {
+  if (!text || text.length === 0) {
+    return [];
+  }
+
+  const result: AdjacentAnalysis[] = [];
+  let currentType = getCharType(text[0]);
+  let start = 0;
+
+  for (let i = 1; i <= text.length; i++) {
+    const charType = i < text.length ? getCharType(text[i]) : null;
+
+    if (charType !== currentType || i === text.length) {
+      result.push({
+        type: currentType,
+        start: start,
+        end: i,
+        text: text.slice(start, i)
+      });
+
+      if (charType !== null) {
+        currentType = charType;
+        start = i;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 文字種境界とCamelCase境界を検出する
+ *
+ * @description 文字列内で文字種が変わる位置とCamelCase記法での
+ * 単語境界を検出し、境界位置のリストを返します。
+ *
+ * @param text - 境界検出対象の文字列
+ * @returns ソートされた境界位置の配列（0ベースインデックス）
+ *
+ * @example
+ * ```typescript
+ * findBoundaries('helloWorld漢字');
+ * // [0, 5, 10, 12] (hello|World|漢字|の境界)
+ *
+ * findBoundaries('camelCaseExample');
+ * // [0, 5, 9, 16] (camel|Case|Example|の境界)
+ * ```
+ */
+export function findBoundaries(text: string): number[] {
+  if (!text || text.length === 0) {
+    return [0];
+  }
+
+  const boundaries = new Set<number>();
+  boundaries.add(0); // 開始位置
+
+  for (let i = 1; i < text.length; i++) {
+    const prevChar = text[i - 1];
+    const currentChar = text[i];
+    const prevType = getCharType(prevChar);
+    const currentType = getCharType(currentChar);
+
+    // 文字種境界
+    if (prevType !== currentType) {
+      boundaries.add(i);
+    }
+
+    // CamelCase境界（小文字→大文字）
+    if (prevType === CharType.Alphanumeric &&
+        currentType === CharType.Alphanumeric &&
+        prevChar >= 'a' && prevChar <= 'z' &&
+        currentChar >= 'A' && currentChar <= 'Z') {
+      boundaries.add(i);
+    }
+
+    // 記号境界（記号の前後で区切る）
+    if (currentType === CharType.Symbol && prevType !== CharType.Symbol) {
+      boundaries.add(i);
+    }
+    if (prevType === CharType.Symbol && currentType !== CharType.Symbol) {
+      boundaries.add(i);
+    }
+  }
+
+  boundaries.add(text.length); // 終了位置
+  return Array.from(boundaries).sort((a, b) => a - b);
+}
+
+/**
+ * パフォーマンス最適化: 日本語助詞の高速検索セット
+ *
+ * @description 日本語の助詞パターンをSetで管理して高速検索を実現します。
+ * 前の語と結合すべき助詞を定義しています。
+ */
+const particleSet = new Set(['の', 'が', 'を', 'に', 'で', 'と', 'は', 'も', 'から', 'まで', 'より']);
+
+/**
+ * パフォーマンス最適化: 接続詞の高速検索セット
+ *
+ * @description 日本語の接続詞パターンをSetで管理して高速検索を実現します。
+ * 前の語と結合すべき接続詞を定義しています。
+ */
+const connectorSet = new Set(['そして', 'また', 'しかし', 'だから', 'それで', 'ところで']);
+
+/**
+ * パフォーマンス最適化: 動詞語尾の高速検索セット
+ *
+ * @description 日本語の動詞活用語尾をSetで管理して高速検索を実現します。
+ * 漢字の後に続く動詞活用パターンを定義しています。
+ */
+const verbEndingSet = new Set(['する', 'され', 'でき', 'れる', 'られ']);
+
+/**
+ * 文字種に基づく結合判定（最適化版）
+ *
+ * @description 前のセグメントと現在のセグメントを結合すべきかどうかを
+ * 言語学的ルールに基づいて判定します。助詞、接続詞、動詞活用、
+ * 複合語などのパターンを考慮します。
+ *
+ * @param prevSegment - 前のセグメント文字列
+ * @param currentSegment - 現在のセグメント文字列
+ * @param nextSegment - 次のセグメント文字列（オプション、将来の拡張用）
+ * @returns 結合すべき場合はtrue、そうでなければfalse
+ *
+ * @example
+ * ```typescript
+ * shouldMerge('私', 'は');     // true (助詞パターン)
+ * shouldMerge('勉強', 'する'); // true (動詞活用)
+ * shouldMerge('コンピュータ', 'システム'); // true (複合語)
+ * shouldMerge('hello', 'world'); // false (結合不要)
+ * ```
+ */
+export function shouldMerge(
+  prevSegment: string,
+  currentSegment: string,
+  nextSegment?: string
+): boolean {
+  // 日本語の助詞（は、が、を等）は前の単語と結合する
+  if (particleSet.has(currentSegment)) {
+    return true;
+  }
+
+  // 接続詞（そして、また等）は前の文と結合する
+  if (connectorSet.has(currentSegment)) {
+    return true;
+  }
+
+  // 文字種を取得して動詞活用と複合語を判定
+  const prevType = prevSegment.length > 0 ? getCharType(prevSegment[prevSegment.length - 1]) : null;
+  const currentType = currentSegment.length > 0 ? getCharType(currentSegment[0]) : null;
+
+  // 動詞活用パターン（漢字の語幹＋ひらがなの活用語尾）
+  if (prevType === CharType.Kanji && currentType === CharType.Hiragana) {
+    // 「勉強する」「作成される」等の動詞活用を検出
+    for (const ending of verbEndingSet) {
+      if (currentSegment.startsWith(ending)) {
+        return true;
+      }
+    }
+  }
+
+  // 複合語パターン（カタカナ同士の連結）
+  // 例：「コンピュータ + システム」→「コンピュータシステム」
+  if (prevType === CharType.Katakana && currentType === CharType.Katakana) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * キャッシュクリア（テスト時やメモリ使用量が気になる場合に使用）
+ *
+ * @description 文字種判定のキャッシュをクリアします。
+ * 主にテスト時のクリーンアップやメモリ使用量の最適化時に使用します。
+ *
+ * @returns なし（void）
+ *
+ * @example
+ * ```typescript
+ * // テスト前のクリーンアップ
+ * clearCharTypeCache();
+ *
+ * // メモリ使用量を抑えたい場合
+ * if (memoryPressure) {
+ *   clearCharTypeCache();
+ * }
+ * ```
+ */
+export function clearCharTypeCache(): void {
+  charTypeCache.clear();
+}

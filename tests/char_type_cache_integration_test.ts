@@ -8,7 +8,7 @@
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/testing/asserts.ts";
 import { UnifiedCache, CacheType } from "../denops/hellshake-yano/cache.ts";
-import { CharType } from "../denops/hellshake-yano/utils/charType.ts";
+import { CharType } from "../denops/hellshake-yano/word.ts";
 
 Deno.test("charTypeCache integration - cache type exists", () => {
   // CacheType.CHAR_TYPEが定義されていることを確認

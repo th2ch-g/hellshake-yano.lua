@@ -495,11 +495,11 @@ sed -i 's/cache_ttl_ms/cacheTtlMs/g' denops/hellshake-yano/word/manager.ts
 - [x] TDD Red-Green-Refactorアプローチ適用
 
 ##### sub4-6 coreディレクトリ統合（180行）
-- [ ] detection.ts（31行）をcore.tsへ統合
+- [x] detection.ts（31行）をcore.tsへ統合
   - [ ] **移行完了後、core/detection.tsを削除**
-- [ ] generation.ts（35行）をcore.tsへ統合
+- [x] generation.ts（35行）をcore.tsへ統合
   - [ ] **移行完了後、core/generation.tsを削除**
-- [ ] operations.ts（102行）をcore.tsへ統合
+- [x] operations.ts（102行）をcore.tsへ統合
   - [ ] **移行完了後、core/operations.tsを削除**
 - [ ] index.ts（12行）を削除
 - [ ] 重複コード削除と最適化
@@ -531,6 +531,7 @@ sed -i 's/cache_ttl_ms/cacheTtlMs/g' denops/hellshake-yano/word/manager.ts
 - [ ] 表示関連の必要な関数のみ選択的移行
 - [ ] 重複コードの削除
 - [ ] 最終的に1,500行以内であることを確認
+- [ ] `deno check denops/hellshake-yano/hint.ts`で型チェック
 - [ ] `deno test tests/hint*.ts`で全hint関連テストパス
 
 #### sub6 utils/ディレクトリ統合（TDD方式）

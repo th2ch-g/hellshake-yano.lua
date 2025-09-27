@@ -33,7 +33,7 @@ import { type SegmentationResult, TinySegmenter } from "../word.ts";
 import { ContextDetector, type SplittingRules } from "./context.ts";
 import type { UnifiedConfig } from "../config.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
-import { charIndexToByteIndex } from "../utils/encoding.ts";
+import { charIndexToByteIndex } from "../word.ts";
 import { convertToDisplayColumn } from "../hint-utils.ts";
 import { WordDictionaryImpl, createBuiltinDictionary, applyDictionaryCorrection } from "./dictionary.ts";
 import { DictionaryLoader, DictionaryMerger, VimConfigBridge, type UserDictionary } from "./dictionary-loader.ts";

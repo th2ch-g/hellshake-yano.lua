@@ -12,7 +12,7 @@ import {
   getCharByteLength,
   getEncodingInfo,
   hasMultibyteCharacters,
-} from "../denops/hellshake-yano/utils/encoding.ts";
+} from "../denops/hellshake-yano/word.ts";
 
 describe("Character Encoding and Column Position", () => {
   it("should calculate correct byte position for ASCII text", () => {

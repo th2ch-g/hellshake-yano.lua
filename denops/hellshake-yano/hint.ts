@@ -4,14 +4,12 @@ import type {
   HintPosition,
   HintPositionWithCoordinateSystem,
   Word,
+  Config,
 } from "./types.ts";
-import {
-  areWordsAdjacent,
-  calculateHintDisplayPosition,
-  getWordDisplayEndCol,
-} from "./hint-utils.ts";
-import { getDisplayWidth } from "./utils/display.ts";
+// Utility functions migrated from hint-utils.ts are now defined in this file
+// Display width calculation functions integrated from utils/display.ts
 import { UnifiedCache, CacheType } from "./cache.ts";
+import { getMinLengthForKey } from "./main.ts";
 
 // Re-export types for backward compatibility
 export type { HintKeyConfig, HintMapping, HintPosition };
@@ -50,25 +48,235 @@ const assignmentCacheNormal = unifiedCache.getCache<string, Word[]>(CacheType.HI
 const assignmentCacheVisual = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
 const assignmentCacheOther = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
 
+// ===== Display Width Functions (from utils/display.ts) =====
+const CHAR_WIDTH_CACHE = unifiedCache.getCache<number, number>(CacheType.CHAR_WIDTH);
+const CJK_RANGES = [[0x3000, 0x303F], [0x3040, 0x309F], [0x30A0, 0x30FF], [0x4E00, 0x9FFF], [0xFF00, 0xFFEF]] as const;
+const EMOJI_RANGES = [[0x1F600, 0x1F64F], [0x1F300, 0x1F5FF], [0x1F680, 0x1F6FF], [0x1F1E6, 0x1F1FF]] as const;
 
-/**
- * バッチ処理を開始する単語数の閾値
- * @constant {number}
- * @default 500
- * @since 1.0.0
- */
+function initializeASCIICache(): void {
+  for (let i = 0x20; i <= 0x7E; i++) {
+    if (CHAR_WIDTH_CACHE.get(i) === undefined) {
+      CHAR_WIDTH_CACHE.set(i, 1);
+    }
+  }
+}
+initializeASCIICache();
+
+function isLatinMathSymbol(codePoint: number): boolean {
+  return (codePoint >= 0x00B0 && codePoint <= 0x00B1) || (codePoint >= 0x00B7 && codePoint <= 0x00B7) ||
+         (codePoint >= 0x00D7 && codePoint <= 0x00D7) || (codePoint >= 0x00F7 && codePoint <= 0x00F7) ||
+         (codePoint >= 0x2190 && codePoint <= 0x21FF) || (codePoint >= 0x2200 && codePoint <= 0x22FF) ||
+         (codePoint >= 0x2300 && codePoint <= 0x23FF) || (codePoint >= 0x25A0 && codePoint <= 0x25FF) ||
+         (codePoint >= 0x2600 && codePoint <= 0x26FF) || (codePoint >= 0x2700 && codePoint <= 0x27BF);
+}
+
+function isInCJKRange(codePoint: number): boolean {
+  for (const [start, end] of CJK_RANGES) {
+    if (codePoint >= start && codePoint <= end) return true;
+  }
+  return false;
+}
+
+function isInEmojiRange(codePoint: number): boolean {
+  for (const [start, end] of EMOJI_RANGES) {
+    if (codePoint >= start && codePoint <= end) return true;
+  }
+  return false;
+}
+
+function isInExtendedWideRange(codePoint: number): boolean {
+  return isLatinMathSymbol(codePoint) || (codePoint >= 0x2460 && codePoint <= 0x24FF) ||
+         (codePoint >= 0x2E80 && codePoint <= 0x2EFF) || (codePoint >= 0x2F00 && codePoint <= 0x2FDF) ||
+         (codePoint >= 0x2FF0 && codePoint <= 0x2FFF) || (codePoint >= 0x3400 && codePoint <= 0x4DBF) ||
+         (codePoint >= 0x20000 && codePoint <= 0x2A6DF) || (codePoint >= 0x2A700 && codePoint <= 0x2B73F) ||
+         (codePoint >= 0x2B740 && codePoint <= 0x2B81F) || (codePoint >= 0x2B820 && codePoint <= 0x2CEAF) ||
+         (codePoint >= 0x2CEB0 && codePoint <= 0x2EBEF) || (codePoint >= 0xF900 && codePoint <= 0xFAFF) ||
+         (codePoint >= 0xFE30 && codePoint <= 0xFE4F);
+}
+
+function calculateCharWidth(codePoint: number, tabWidth: number): number {
+  if (codePoint === 0x09) return tabWidth;
+  if (codePoint >= 0x20 && codePoint <= 0x7E) return 1;
+  if (codePoint < 0x20 || (codePoint >= 0x7F && codePoint < 0xA0)) return 0;
+  if (isLatinMathSymbol(codePoint)) return 2;
+  if (codePoint < 0x100) return 1;
+  if (isInCJKRange(codePoint) || isInEmojiRange(codePoint)) return 2;
+  if (isInExtendedWideRange(codePoint)) return 2;
+  return 1;
+}
+
+export function getCharDisplayWidth(char: string, tabWidth = 8): number {
+  if (!char || char.length === 0) return 0;
+  const codePoint = char.codePointAt(0);
+  if (codePoint === undefined) return 0;
+  if (tabWidth === 8) {
+    const cached = CHAR_WIDTH_CACHE.get(codePoint);
+    if (cached !== undefined) return cached;
+  }
+  const width = calculateCharWidth(codePoint, tabWidth);
+  if (tabWidth === 8 && width !== tabWidth) {
+    CHAR_WIDTH_CACHE.set(codePoint, width);
+  }
+  return width;
+}
+
+function isEmojiSequence(text: string): boolean {
+  return /[\u{1F1E6}-\u{1F1FF}]{2}/u.test(text) || /[\u{1F600}-\u{1F64F}]/u.test(text) ||
+         /[\u{1F300}-\u{1F5FF}]/u.test(text) || /[\u{1F680}-\u{1F6FF}]/u.test(text) ||
+         /[\u{1F900}-\u{1F9FF}]/u.test(text);
+}
+
+function getDisplayWidthFallback(text: string, tabWidth = 8): number {
+  let totalWidth = 0;
+  for (let i = 0; i < text.length;) {
+    const codePoint = text.codePointAt(i);
+    if (codePoint === undefined) {
+      i++;
+      continue;
+    }
+    const char = String.fromCodePoint(codePoint);
+    totalWidth += getCharDisplayWidth(char, tabWidth);
+    i += codePoint > 0xFFFF ? 2 : 1;
+  }
+  return totalWidth;
+}
+
+export function getDisplayWidth(text: string, tabWidth = 8): number {
+  if (text == null || text.length === 0) return 0;
+  let totalWidth = 0;
+  try {
+    let segmenter: Intl.Segmenter;
+    try {
+      segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    } catch (e) {
+      return getDisplayWidthFallback(text, tabWidth);
+    }
+    for (const segment of segmenter.segment(text)) {
+      const cluster = segment.segment;
+      if (cluster.length === 1) {
+        totalWidth += getCharDisplayWidth(cluster, tabWidth);
+      } else {
+        const hasZWJ = cluster.includes('\u200D');
+        const hasEmojiModifier = /[\u{1F3FB}-\u{1F3FF}]/u.test(cluster);
+        const hasVariationSelector = /[\uFE0E\uFE0F]/u.test(cluster);
+        if (hasZWJ || hasEmojiModifier || hasVariationSelector || isEmojiSequence(cluster)) {
+          totalWidth += 2;
+        } else {
+          for (let i = 0; i < cluster.length;) {
+            const codePoint = cluster.codePointAt(i);
+            if (codePoint === undefined) {
+              i++;
+              continue;
+            }
+            const char = String.fromCodePoint(codePoint);
+            totalWidth += getCharDisplayWidth(char, tabWidth);
+            i += codePoint > 0xFFFF ? 2 : 1;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    return getDisplayWidthFallback(text, tabWidth);
+  }
+  return totalWidth;
+}
+
+// ===== End Display Width Functions =====
+
+/** バッチ処理を開始する単語数の閾値 */
 export const BATCH_PROCESS_THRESHOLD = 500;
 
-/**
- * バッチ処理時のバッチサイズ
- * @constant {number}
- * @default 250
- * @since 1.0.0
- */
+/** バッチ処理時のバッチサイズ */
 export const BATCH_BATCH_SIZE = 250;
 
 // 統一されたエンコーディングユーティリティを使用
-import { getByteLength } from "./utils/encoding.ts";
+import { getByteLength } from "./word.ts";
+
+/** 文字インデックスを表示column位置に変換（0ベース→1ベース、tab対応） */
+export function convertToDisplayColumn(line: string, charIndex: number, tabWidth = 8): number {
+  if (charIndex <= 0) {
+    return 1;
+  }
+
+  // Get substring from start to charIndex
+  const substring = line.slice(0, charIndex);
+  return getDisplayWidth(substring, tabWidth);
+}
+
+/** 単語の表示終了column位置を取得（tab・マルチバイト対応） */
+export function getWordDisplayEndCol(word: Word, tabWidth = 8): number {
+  const textWidth = getDisplayWidth(word.text, tabWidth);
+  return word.col + textWidth - 1;
+}
+
+/** 2つの単語が表示幅で隣接しているかチェック（gap <= 0で隣接判定） */
+export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolean {
+  // Must be on the same line
+  if (word1.line !== word2.line) {
+    return false;
+  }
+
+  // Calculate display end positions
+  const word1EndCol = getWordDisplayEndCol(word1, tabWidth);
+  const word2EndCol = getWordDisplayEndCol(word2, tabWidth);
+
+  // Calculate distance between words
+  let distance: number;
+  if (word1.col < word2.col) {
+    // word1 comes before word2
+    distance = word2.col - word1EndCol - 1;
+  } else {
+    // word2 comes before word1
+    distance = word1.col - word2EndCol - 1;
+  }
+
+  // Adjacent if touching (distance 0) or overlapping (negative distance)
+  // Distance 0 = touching, Distance 1 = one space between (not adjacent), Distance < 0 = overlapping
+  return distance <= 0;
+}
+
+/**
+ * 表示幅を考慮したヒント位置の計算
+ *
+ * 単語に対するヒント配置の最適な表示column位置を決定し、異なる配置
+ * ストラテジーをサポートします。この関数はヒント表示システムの中核であり、
+ * ヒントが視覚的に適切な位置に配置されることを保証します。
+ *
+ * @param word - ヒント位置を計算する単語オブジェクト
+ * @param word.col - 開始column位置（1ベース）
+ * @param word.text - 単語のテキスト内容
+ * @param position - ヒント配置のストラテジー
+ *   - "start": 単語の始まりにヒントを配置
+ *   - "end": 単語の終わりにヒントを配置
+ *   - "overlay": 単語に重ねてヒントを配置（startと同じ）
+ * @param tabWidth - 表示計算用のtab幅設定（デフォルト: 8）
+ * @returns ヒント配置用の表示column位置（1ベース座標系）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: "function", col: 5, line: 1 };
+ *
+ * calculateHintDisplayPosition(word, "start", 8);   // Returns 5 (word start)
+ * calculateHintDisplayPosition(word, "end", 8);     // Returns 12 (word end)
+ * calculateHintDisplayPosition(word, "overlay", 8); // Returns 5 (overlay on start)
+ * ```
+ */
+export function calculateHintDisplayPosition(
+  word: Word,
+  position: "start" | "end" | "overlay",
+  tabWidth = 8,
+): number {
+  switch (position) {
+    case "start":
+      return word.col;
+    case "end":
+      return getWordDisplayEndCol(word, tabWidth);
+    case "overlay":
+      return word.col;
+    default:
+      return word.col;
+  }
+}
 
 /**
  * モードに応じた割り当てキャッシュを取得
@@ -1747,4 +1955,209 @@ function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[])
   // Rule 3: Left position > Right position
   longestWords.sort((a, b) => a.word.col - b.word.col);
   return longestWords[0].word;
+}
+
+// ===== Additional Utility Functions from hint-utils.ts =====
+
+/**
+ * 単語の表示開始column位置を取得
+ *
+ * 単語の開始表示column位置を返します。現在は単語がすでに表示位置を
+ * 格納しているため、単語のcolumnを直接返しますが、この関数は単語境界
+ * 計算のための一貫したAPIを提供します。
+ *
+ * @param word - 位置情報を含む単語オブジェクト
+ * @param word.col - 開始column位置（1ベース）
+ * @param tabWidth - tab幅設定（API一貫性のため含む、デフォルト: 8）
+ * @returns 表示開始column位置（1ベース座標系）
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: "example", col: 10, line: 1 };
+ * getWordDisplayStartCol(word, 8); // Returns 10
+ * ```
+ */
+export function getWordDisplayStartCol(word: Word, tabWidth = 8): number {
+  return word.col;
+}
+
+/**
+ * 位置が単語の表示範囲内にあるかをチェック
+ *
+ * 指定された表示column位置が単語の境界内にあるかを判定します。
+ * tabやマルチバイト文字を含む単語の視覚的幅を考慮します。
+ * これはカーソル位置決めと単語選択の検証に使用されます。
+ *
+ * @param position - チェックするcolumn位置（1ベース座標系）
+ * @param word - チェック対象の単語オブジェクト
+ * @param word.col - 単語の開始column位置（1ベース）
+ * @param word.text - 単語のテキスト内容
+ * @param tabWidth - 表示計算用のtab幅設定（デフォルト: 8）
+ * @returns 位置が単語の表示範囲内（境界含む）にある場合はtrue、そうでなければfalse
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word = { text: "example", col: 5, line: 1 };
+ * // 単語はcolumn 5-11にまたがる（column 5から始まる7文字）
+ *
+ * isPositionWithinWord(5, word, 8);  // Returns true (start of word)
+ * isPositionWithinWord(8, word, 8);  // Returns true (middle of word)
+ * isPositionWithinWord(11, word, 8); // Returns true (end of word)
+ * isPositionWithinWord(4, word, 8);  // Returns false (before word)
+ * isPositionWithinWord(12, word, 8); // Returns false (after word)
+ * ```
+ */
+export function isPositionWithinWord(position: number, word: Word, tabWidth = 8): boolean {
+  const startCol = getWordDisplayStartCol(word, tabWidth);
+  const endCol = getWordDisplayEndCol(word, tabWidth);
+  return position >= startCol && position <= endCol;
+}
+
+/**
+ * 表示位置での2つの単語間のギャップを計算
+ *
+ * 同じ行の2つの単語間の視覚的距離を表示column位置で測定して計算します。
+ * 単語間の空の位置数を返すか、単語が重複している場合は負の値を返します。
+ * これはヒントの間隔とレイアウト決定に不可欠です。
+ *
+ * @param word1 - 最初の単語オブジェクト
+ * @param word2 - 2番目の単語オブジェクト
+ * @param tabWidth - 表示計算用のtab幅設定（デフォルト: 8）
+ * @returns 単語間の表示位置でのギャップ
+ *   - 正数: 単語間の空のcolumn数
+ *   - ゼロ: 単語が接触している（隣接）
+ *   - 負数: 単語が重複している
+ *   - Infinity: 単語が異なる行にある
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * const word1 = { text: "hello", col: 1, line: 1 };  // Spans columns 1-5
+ * const word2 = { text: "world", col: 7, line: 1 };  // Spans columns 7-11
+ * calculateWordGap(word1, word2, 8); // Returns 0 (touching: 5->6->7)
+ *
+ * const word3 = { text: "far", col: 10, line: 1 };   // Spans columns 10-12
+ * calculateWordGap(word1, word3, 8); // Returns 3 (gap: columns 6,7,8,9)
+ *
+ * const word4 = { text: "overlap", col: 3, line: 1 }; // Spans columns 3-9
+ * calculateWordGap(word1, word4, 8); // Returns -3 (overlapping by 3 columns)
+ *
+ * const word5 = { text: "other", col: 1, line: 2 };
+ * calculateWordGap(word1, word5, 8); // Returns Infinity (different lines)
+ * ```
+ */
+export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number {
+  if (word1.line !== word2.line) {
+    return Infinity; // Different lines
+  }
+
+  const word1EndCol = getWordDisplayEndCol(word1, tabWidth);
+  const word2EndCol = getWordDisplayEndCol(word2, tabWidth);
+
+  if (word1.col < word2.col) {
+    // word1 comes before word2
+    return word2.col - word1EndCol - 1;
+  } else {
+    // word2 comes before word1
+    return word1.col - word2EndCol - 1;
+  }
+}
+
+// ===================================================================
+// HintManager Class Integration (migrated from hint/manager.ts)
+// ===================================================================
+
+/**
+ * HintManagerクラス - ヒント管理システム
+ *
+ * 主要機能:
+ * - キー別最小文字数設定の管理
+ * - キーコンテキストの変更時のヒントクリア
+ * - 設定値の委譲とアクセス
+ */
+export class HintManager {
+  private config: Config;
+  private currentKeyContext?: string;
+
+  /**
+   * HintManagerのコンストラクタ
+   * @param config - ヒント管理に必要な設定オブジェクト
+   */
+  constructor(config: Config) {
+    this.config = config;
+    this.currentKeyContext = config.currentKeyContext;
+  }
+
+  /**
+   * キー押下時の処理
+   *
+   * キーコンテキストが変更された場合の処理:
+   * 1. 既存ヒントのクリア（即座の表示更新）
+   * 2. 新しいキーコンテキストの設定（設定オブジェクトとの同期）
+   *
+   * @param key - 押下されたキー文字
+   */
+  onKeyPress(key: string): void {
+    const hasKeyChanged = this.currentKeyContext !== key;
+
+    if (hasKeyChanged) {
+      this.clearCurrentHints();
+    }
+
+    // キーコンテキストの更新（内部状態と設定オブジェクトの両方）
+    this.currentKeyContext = key;
+    this.config.currentKeyContext = key;
+  }
+
+  /**
+   * キー別最小文字数の取得
+   *
+   * main.tsのgetMinLengthForKey関数に委譲することで:
+   * - 設定の一元管理を維持
+   * - 後方互換性を保持
+   * - 単一責任の原則を遵守
+   *
+   * @param key - 最小文字数を取得したいキー
+   * @returns キーに対応する最小文字数（設定に基づく）
+   */
+  getMinLengthForKey(key: string): number {
+    return getMinLengthForKey(this.config, key);
+  }
+
+  /**
+   * 現在のヒントを即座にクリア
+   */
+  clearCurrentHints(): void {
+    // 即座のヒントクリア機能の基本実装
+    // この段階では状態管理を行い、実際のUI操作は将来の統合で実装予定
+
+    // 内部状態をリセット
+    // キー変更時の即座クリアを保証
+
+    // キーコンテキストの変更を記録
+    if (this.currentKeyContext) {
+      // 前のキーコンテキストでのヒント状態をクリア
+      // 実際のUI操作は統合フェーズで実装
+    }
+
+    // TODO: 実際のヒント表示システムとの統合
+    // - Vim/Neovimのハイライトクリア
+    // - ExtMarkの削除
+    // - 仮想テキストの削除
+  }
+
+  /**
+   * 現在のキーコンテキストを取得
+   * @returns 現在設定されているキーコンテキスト
+   */
+  getCurrentKeyContext(): string | undefined {
+    return this.currentKeyContext;
+  }
+
+  /**
+   * 設定オブジェクトへの読み取り専用アクセス
+   * @returns 現在の設定オブジェクト（読み取り専用）
+   */
+  getConfig(): Readonly<Config> {
+    return this.config;
+  }
 }

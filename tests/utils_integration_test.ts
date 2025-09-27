@@ -13,13 +13,33 @@ import {
   isAscii,
 } from "../denops/hellshake-yano/utils/encoding.ts";
 
-import { sortByIndex, sortByPriorityDesc, sortBy } from "../denops/hellshake-yano/utils/sort.ts";
+// ソート関数をインライン化（utils/sort.ts から移植）
+function sortByIndex<T extends { index: number }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.index - b.index);
+}
+
+function sortByPriorityDesc<T extends { priority: number }>(items: T[]): T[] {
+  return [...items].sort((a, b) => b.priority - a.priority);
+}
+
+function sortBy<T, K extends string | number>(
+  items: T[],
+  keyFn: (item: T) => K,
+  ascending = true,
+): T[] {
+  return [...items].sort((a, b) => {
+    const keyA = keyFn(a);
+    const keyB = keyFn(b);
+
+    if (keyA < keyB) return ascending ? -1 : 1;
+    if (keyA > keyB) return ascending ? 1 : -1;
+    return 0;
+  });
+}
 
 import {
-  CacheManager,
-  globalCacheManager,
   LRUCache,
-} from "../denops/hellshake-yano/utils/cache.ts";
+} from "../denops/hellshake-yano/cache.ts";
 
 Deno.test("統一されたエンコーディングユーティリティのテスト", async (t) => {
   await t.step("getByteLength関数の動作確認", () => {
@@ -136,46 +156,24 @@ Deno.test("統一されたキャッシュシステムのテスト", async (t) =>
     assertEquals(cache.size(), 3);
   });
 
-  await t.step("CacheManagerの動作確認", () => {
-    const manager = new CacheManager();
+  await t.step("統計情報の取得確認", () => {
+    const cache = new LRUCache<string, number>(5);
 
-    // キャッシュの取得/作成
-    const cache1 = manager.getCache<string, number>("test1", 100);
-    const cache2 = manager.getCache<string, string>("test2", 200);
+    // 初期状態の統計
+    let stats = cache.getStats();
+    assertEquals(stats.hits, 0);
+    assertEquals(stats.misses, 0);
+    assertEquals(stats.hitRate, 0);
 
-    // 同じ名前で取得した場合は同じインスタンスが返される
-    const cache1Again = manager.getCache<string, number>("test1");
-    assert(cache1 === cache1Again);
+    // ヒット/ミスを発生させる
+    cache.set("key1", 1);
+    cache.get("key1"); // ヒット
+    cache.get("key2"); // ミス
 
-    // キャッシュの使用
-    cache1.set("key1", 100);
-    cache2.set("key2", "value2");
-
-    assertEquals(cache1.get("key1"), 100);
-    assertEquals(cache2.get("key2"), "value2");
-
-    // キャッシュ名の一覧取得
-    const names = manager.getCacheNames();
-    assert(names.includes("test1"));
-    assert(names.includes("test2"));
-
-    // 統計情報の取得
-    const stats = manager.getAllStats();
-    assert("test1" in stats);
-    assert("test2" in stats);
-  });
-
-  await t.step("グローバルキャッシュマネージャーの動作確認", () => {
-    // グローバルマネージャーでキャッシュを作成
-    const globalCache = globalCacheManager.getCache<string, any>("global_test");
-
-    globalCache.set("test_key", { data: "test_value" });
-    const retrieved = globalCache.get("test_key");
-
-    assertEquals(retrieved?.data, "test_value");
-
-    // クリーンアップ
-    globalCacheManager.removeCache("global_test");
+    stats = cache.getStats();
+    assertEquals(stats.hits, 1);
+    assertEquals(stats.misses, 1);
+    assertEquals(stats.hitRate, 0.5);
   });
 });
 
@@ -224,7 +222,7 @@ Deno.test("リファクタリング効果の検証", async (t) => {
     // 同じインターフェースで異なるキャッシュが使用できることを確認
     const caches = [
       new LRUCache<string, number>(10),
-      globalCacheManager.getCache<string, number>("test_consistency"),
+      new LRUCache<string, number>(10),
     ];
 
     caches.forEach((cache, index) => {

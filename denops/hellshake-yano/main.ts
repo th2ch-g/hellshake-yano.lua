@@ -47,7 +47,7 @@ import {
   initializePlugin,
   updatePluginState,
 } from "./lifecycle.ts";
-import { LRUCache } from "./utils/cache.ts";
+import { LRUCache } from "./cache.ts";
 let config: UnifiedConfig = getDefaultUnifiedConfig();
 let currentHints: HintMapping[] = [];
 let hintsVisible = false;

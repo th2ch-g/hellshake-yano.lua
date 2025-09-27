@@ -1,10 +1,14 @@
 /**
  * ヒントユーティリティ関数
  *
+ * @deprecated このファイルの関数は hint.ts に統合されました。
+ * このファイルは後方互換性のためにのみ保持されています。
+ * 新しいコードでは hint.ts から直接インポートしてください。
+ *
  * 表示幅サポート付きヒント処理のためのヘルパー関数
  */
 
-import { getDisplayWidth } from "./utils/display.ts";
+import { getDisplayWidth } from "./display.ts";
 import type { Word } from "./types.ts";
 
 /**

@@ -36,7 +36,7 @@
 import type { Denops } from "@denops/std";
 import type { UnifiedConfig } from "./config.ts";
 import { getDefaultUnifiedConfig } from "./config.ts";
-import { LRUCache } from "./utils/cache.ts";
+import { LRUCache } from "./cache.ts";
 import { UnifiedCache, CacheType } from "./cache.ts";
 
 /**
