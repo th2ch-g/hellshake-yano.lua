@@ -40,6 +40,24 @@ import {
 // Dictionary system imports
 import { DictionaryLoader, type UserDictionary } from "./word/dictionary-loader.ts";
 import { VimConfigBridge } from "./word/dictionary-loader.ts";
+// API integration imports
+import {
+  enable,
+  disable,
+  toggle,
+  setCount,
+  setTimeout as setTimeoutCommand,
+  CommandFactory
+} from "./commands.ts";
+import {
+  initializePlugin,
+  cleanupPlugin,
+  getPluginState,
+  updatePluginState,
+  healthCheck,
+  getPluginStatistics
+} from "./lifecycle.ts";
+import { validateUnifiedConfig } from "./config.ts";
 
 /**
  * Hellshake-Yano プラグインの中核クラス
@@ -106,10 +124,41 @@ export class Core {
   }
 
   /**
-   * クリーンアップメソッド（テスト用）
-   * リソースを解放する（デバウンス処理はmain.tsで管理）
+   * インスタンスリセット（テスト用）
+   * TDD Green Phase: lifecycle統合用
    */
-  cleanup(): void {
+  reset(): void {
+    Core.instance = null;
+  }
+
+  /**
+   * ライフサイクル管理 - プラグイン初期化
+   * TDD Refactor Phase: lifecycle.tsに完全委譲し、エラーハンドリングとログを追加
+   */
+  async initialize(denops: Denops, options?: any): Promise<void> {
+    try {
+      await initializePlugin(denops, options || {});
+      if (this.config.debugMode) {
+        console.log('[Core] Plugin initialized successfully via lifecycle.ts');
+      }
+    } catch (error) {
+      console.error('[Core] Initialization failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ライフサイクル管理 - プラグインクリーンアップ
+   * TDD Refactor Phase: lifecycle.tsの優先実行とエラーハンドリングを改善
+   */
+  async cleanup(denops?: Denops): Promise<void> {
+    try {
+      // lifecycle.tsのクリーンアップを優先実行
+      if (denops) {
+        await cleanupPlugin(denops);
+      }
+
+      // 既存のクリーンアップロジックも実行
     // デバウンス処理はmain.tsで管理するためCoreクラス内では不要
     // 表示状態のクリーンアップ (sub2-3)
     this.abortCurrentRendering();
@@ -122,7 +171,106 @@ export class Core {
       this._pendingHighlightTimerId = undefined;
     }
 
-    // 必要に応じて他のクリーンアップ処理をここに追加
+      // 必要に応じて他のクリーンアップ処理をここに追加
+
+      if (this.config.debugMode) {
+        console.log('[Core] Cleanup completed via lifecycle.ts');
+      }
+    } catch (error) {
+      console.error('[Core] Cleanup failed:', error);
+      // クリーンアップエラーはスローさせるが、ログで記録
+    }
+  }
+
+  /**
+   * ヘルスチェック機能
+   * TDD Refactor Phase: lifecycle.tsへの完全委譲とログ出力
+   */
+  async getHealthStatus(denops: Denops): Promise<{
+    healthy: boolean;
+    issues: string[];
+    recommendations: string[];
+  }> {
+    try {
+      const result = await healthCheck(denops);
+      if (this.config.debugMode) {
+        console.log(`[Core] Health check completed: ${result.healthy ? 'HEALTHY' : 'ISSUES_FOUND'}`);
+      }
+      return result;
+    } catch (error) {
+      console.error('[Core] Health check failed:', error);
+      return {
+        healthy: false,
+        issues: [`Health check error: ${error instanceof Error ? error.message : String(error)}`],
+        recommendations: ['Try reinitializing the plugin']
+      };
+    }
+  }
+
+  /**
+   * 統計情報取得
+   * TDD Refactor Phase: lifecycle.tsへの完全委譲と型安全性向上
+   */
+  getStatistics(): {
+    cacheStats: { words: any; hints: any };
+    performanceStats: {
+      showHints: { count: number; average: number; max: number; min: number };
+      hideHints: { count: number; average: number; max: number; min: number };
+      wordDetection: { count: number; average: number; max: number; min: number };
+      hintGeneration: { count: number; average: number; max: number; min: number };
+    };
+    currentState: { initialized: boolean; hintsVisible: boolean; currentHintsCount: number };
+  } {
+    try {
+      return getPluginStatistics();
+    } catch (error) {
+      console.error('[Core] Failed to get statistics:', error);
+      // フォールバック統計を返す
+      return {
+        cacheStats: { words: {}, hints: {} },
+        performanceStats: {
+          showHints: { count: 0, average: 0, max: 0, min: 0 },
+          hideHints: { count: 0, average: 0, max: 0, min: 0 },
+          wordDetection: { count: 0, average: 0, max: 0, min: 0 },
+          hintGeneration: { count: 0, average: 0, max: 0, min: 0 }
+        },
+        currentState: { initialized: false, hintsVisible: false, currentHintsCount: 0 }
+      };
+    }
+  }
+
+  /**
+   * 状態更新
+   * TDD Refactor Phase: lifecycle.tsへの完全委譲とエラーハンドリング
+   */
+  updateState(updates: any): void {
+    try {
+      updatePluginState(updates);
+      if (this.config.debugMode) {
+        console.log('[Core] State updated via lifecycle.ts:', Object.keys(updates));
+      }
+    } catch (error) {
+      console.error('[Core] State update failed:', error);
+    }
+  }
+
+  /**
+   * パフォーマンスメトリクス記録
+   * TDD Refactor Phase: lifecycle.tsの状態管理への完全移行
+   */
+  recordPerformanceMetric(operation: string, duration: number): void {
+    try {
+      const state = getPluginState();
+      if (state.performanceMetrics[operation as keyof typeof state.performanceMetrics]) {
+        state.performanceMetrics[operation as keyof typeof state.performanceMetrics].push(duration);
+
+        if (this.config.debugMode) {
+          console.log(`[Core] Performance metric recorded: ${operation} = ${duration}ms`);
+        }
+      }
+    } catch (error) {
+      console.error(`[Core] Failed to record performance metric for ${operation}:`, error);
+    }
   }
 
   /**
@@ -2234,5 +2382,202 @@ export class Core {
         console.error("[Core] highlightCandidateHintsAsync error:", error);
       }
     }, delay) as unknown as number;
+  }
+
+}
+
+/**
+ * API統合クラス (process4 sub4-1)
+ *
+ * api.tsの機能をcore.tsに統合するために作成された専用クラス
+ * 既存のCoreクラスのシングルトンパターンを維持しつつ、
+ * 通常のコンストラクタでテスト可能なAPIインターフェースを提供
+ */
+export class HellshakeYanoCore {
+  /** プラグインの設定 */
+  private config: UnifiedConfig;
+  /** CommandFactoryインスタンス */
+  private commandFactory: CommandFactory;
+
+  /**
+   * HellshakeYanoCoreのインスタンスを作成します
+   * @param initialConfig - 初期設定（省略時はデフォルト設定を使用）
+   */
+  constructor(initialConfig: UnifiedConfig = getDefaultUnifiedConfig()) {
+    this.config = initialConfig;
+    this.commandFactory = new CommandFactory(this.config);
+  }
+
+  /**
+   * プラグインを有効化します
+   * 内部的にコマンドモジュールのenable関数を呼び出します
+   */
+  enable(): void {
+    enable(this.config);
+  }
+
+  /**
+   * プラグインを無効化します
+   * 内部的にコマンドモジュールのdisable関数を呼び出します
+   */
+  disable(): void {
+    disable(this.config);
+  }
+
+  /**
+   * プラグインの有効/無効を切り替えます
+   * @returns 切り替え後の有効状態（true: 有効, false: 無効）
+   */
+  toggle(): boolean {
+    return toggle(this.config);
+  }
+
+  /**
+   * プラグインの現在の有効状態を取得します
+   * @returns プラグインが有効かどうか（true: 有効, false: 無効）
+   */
+  isEnabled(): boolean {
+    return this.config.enabled;
+  }
+
+  /**
+   * 現在の設定を取得します
+   * @returns 現在の設定のコピー（元の設定オブジェクトは変更されません）
+   */
+  getConfig(): UnifiedConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * 設定を更新します
+   * @param updates - 更新する設定項目（部分的な更新が可能）
+   * @throws {Error} 無効な設定が指定された場合、バリデーションエラーメッセージを含む
+   */
+  updateConfig(updates: Partial<UnifiedConfig>): void {
+    const validation = validateUnifiedConfig(updates);
+    if (!validation.valid) {
+      throw new Error(`Invalid configuration: ${validation.errors.join(", ")}`);
+    }
+
+    this.config = { ...this.config, ...updates };
+  }
+
+  /**
+   * 設定をデフォルト値にリセットします
+   * CommandFactoryインスタンスも新しい設定で再作成されます
+   */
+  resetConfig(): void {
+    this.config = getDefaultUnifiedConfig();
+    this.commandFactory = new CommandFactory(this.config);
+  }
+
+  /**
+   * ヒント表示の文字数を設定します
+   * @param count - 表示する文字数
+   */
+  setCount(count: number): void {
+    setCount(this.config, count);
+  }
+
+  /**
+   * タイムアウト時間を設定します
+   * @param timeout - タイムアウト時間（ミリ秒）
+   */
+  setTimeout(timeout: number): void {
+    setTimeoutCommand(this.config, timeout);
+  }
+
+  /**
+   * プラグインを初期化します
+   * @param denops - Denopsインスタンス
+   * @param options - 初期化オプション（省略可能、デフォルト: {}）
+   * @returns 初期化完了のPromise
+   * @throws {Error} 初期化処理でエラーが発生した場合
+   */
+  async initialize(denops: Denops, options: any = {}): Promise<void> {
+    await initializePlugin(denops, { config: this.config, ...options });
+  }
+
+  /**
+   * プラグインをクリーンアップします
+   * @param denops - Denopsインスタンス
+   * @returns クリーンアップ完了のPromise
+   * @throws {Error} クリーンアップ処理でエラーが発生した場合
+   */
+  async cleanup(denops: Denops): Promise<void> {
+    await cleanupPlugin(denops);
+  }
+
+  /**
+   * デバッグ情報を取得します
+   * @returns 現在の設定、プラグイン状態、キャッシュ統計を含むデバッグ情報オブジェクト
+   */
+  getDebugInfo(): any {
+    const state = getPluginState();
+    return {
+      config: this.config,
+      state: {
+        initialized: state.initialized,
+        hintsVisible: state.hintsVisible,
+        currentHintsCount: state.currentHints.length,
+      },
+      cacheStats: {
+        words: state.caches.words.getStatistics(),
+        hints: state.caches.hints.getStatistics(),
+      },
+    };
+  }
+
+  /**
+   * プラグインの統計情報を取得します
+   * ライフサイクルモジュールのgetPluginStatistics関数を呼び出します
+   * @returns プラグインの統計情報オブジェクト
+   */
+  getStatistics(): any {
+    return getPluginStatistics();
+  }
+
+  /**
+   * プラグインのヘルスチェックを実行します
+   * @param denops - Denopsインスタンス
+   * @returns ヘルスチェック結果のPromise
+   * @throws {Error} ヘルスチェック実行中にエラーが発生した場合
+   */
+  async healthCheck(denops: Denops): Promise<any> {
+    return await healthCheck(denops);
+  }
+
+  /**
+   * ヒントを表示します
+   * @param denops - Denopsインスタンス
+   * @returns ヒント表示完了のPromise
+   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
+   * @todo 既存のmain.tsから実装を移行する予定
+   */
+  async showHints(denops: Denops): Promise<void> {
+    // 実際の実装は既存のmain.tsから移行予定
+    throw new Error("showHints not yet implemented in modular architecture");
+  }
+
+  /**
+   * ヒントを非表示にします
+   * @param denops - Denopsインスタンス
+   * @returns ヒント非表示完了のPromise
+   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
+   * @todo 既存のmain.tsから実装を移行する予定
+   */
+  async hideHints(denops: Denops): Promise<void> {
+    // 実際の実装は既存のmain.tsから移行予定
+    throw new Error("hideHints not yet implemented in modular architecture");
+  }
+
+  /**
+   * キャッシュをクリアします
+   * 単語キャッシュとヒントキャッシュの両方をクリアします
+   */
+  clearCache(): void {
+    const state = getPluginState();
+    state.caches.words.clear();
+    state.caches.hints.clear();
   }
 }

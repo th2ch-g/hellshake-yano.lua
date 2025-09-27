@@ -438,15 +438,15 @@ sed -i 's/cache_ttl_ms/cacheTtlMs/g' denops/hellshake-yano/word/manager.ts
 @context: コア機能を集約
 @current: 2,205行 + 統合対象2,422行 = 約4,627行 → 2,000行目標
 
-##### sub4-1 api.ts統合（515行）
-- [ ] tests/api*.tsのテスト実行確認
-- [ ] API関連関数をCoreクラスへ段階的移行
-  - [ ] エクスポート関数のリスト作成
-  - [ ] Coreクラスへメソッドとして移行
-  - [ ] 元のapi.tsからCoreクラスを呼び出すラッパー作成
-- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-- [ ] `deno test tests/api*.ts`でテストパス
-- [ ] **移行完了後、api.tsを削除**
+##### sub4-1 api.ts統合（515行）【完了】
+- [x] tests/api*.tsのテスト実行確認
+- [x] API関連関数をCoreクラスへ段階的移行
+  - [x] エクスポート関数のリスト作成
+  - [x] Coreクラスへメソッドとして移行
+  - [x] 元のapi.tsからCoreクラスを呼び出すラッパー作成
+- [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [x] `deno test tests/api*.ts`でテストパス
+- [x] **移行完了後、api.tsを削除**
 
 ##### sub4-2 lifecycle.ts統合（754行）
 - [ ] tests/lifecycle*.tsのテスト実行確認

@@ -1,25 +1,14 @@
 /**
  * 公開APIモジュール
+ *
+ * process4 sub4-1: api.tsの機能をcore.tsに統合済み
+ * 後方互換性のため、このファイルはcore.tsの機能を再エクスポートします
  */
 
 import type { Denops } from "@denops/std";
 import type { UnifiedConfig, HighlightColor } from "./config.ts";
-import { getDefaultUnifiedConfig, validateUnifiedConfig } from "./config.ts";
-import {
-  enable,
-  disable,
-  toggle,
-  setCount,
-  setTimeout as setTimeoutCommand,
-  CommandFactory
-} from "./commands.ts";
-import {
-  initializePlugin,
-  cleanupPlugin,
-  getPluginState,
-  healthCheck,
-  getPluginStatistics
-} from "./lifecycle.ts";
+import { getDefaultUnifiedConfig } from "./config.ts";
+import { HellshakeYanoCore } from "./core.ts";
 
 /**
  * プラグインの公開API
@@ -228,13 +217,11 @@ export interface HellshakeYanoAPI {
 
 /**
  * メインAPIクラスの実装
- * HellshakeYanoAPIインターフェースの具体的な実装を提供します
+ * process4 sub4-1: core.tsに移行済み、後方互換性のためのプロキシクラス
  */
 export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
-  /** プラグインの設定 */
-  private config: UnifiedConfig;
-  /** コマンドファクトリーインスタンス */
-  private commandFactory: CommandFactory;
+  /** core.tsのインスタンス */
+  private core: HellshakeYanoCore;
 
   /**
    * HellshakeYanoAPIImplのインスタンスを作成します
@@ -253,198 +240,85 @@ export class HellshakeYanoAPIImpl implements HellshakeYanoAPI {
    * ```
    */
   constructor(initialConfig: UnifiedConfig = getDefaultUnifiedConfig()) {
-    this.config = initialConfig;
-    this.commandFactory = new CommandFactory(this.config);
+    this.core = new HellshakeYanoCore(initialConfig);
   }
 
-  // 基本制御
+  // 基本制御 - core.tsに委譲
 
-  /**
-   * プラグインを有効化します
-   * 内部的にコマンドモジュールのenable関数を呼び出します
-   */
   enable(): void {
-    enable(this.config);
+    return this.core.enable();
   }
 
-  /**
-   * プラグインを無効化します
-   * 内部的にコマンドモジュールのdisable関数を呼び出します
-   */
   disable(): void {
-    disable(this.config);
+    return this.core.disable();
   }
 
-  /**
-   * プラグインの有効/無効を切り替えます
-   * @returns 切り替え後の有効状態（true: 有効, false: 無効）
-   */
   toggle(): boolean {
-    return toggle(this.config);
+    return this.core.toggle();
   }
 
-  /**
-   * プラグインの現在の有効状態を取得します
-   * @returns プラグインが有効かどうか（true: 有効, false: 無効）
-   */
   isEnabled(): boolean {
-    return this.config.enabled;
+    return this.core.isEnabled();
   }
 
-  // 設定管理
+  // 設定管理 - core.tsに委譲
 
-  /**
-   * 現在の設定を取得します
-   * @returns 現在の設定のコピー（元の設定オブジェクトは変更されません）
-   */
   getConfig(): UnifiedConfig {
-    return { ...this.config };
+    return this.core.getConfig();
   }
 
-  /**
-   * 設定を更新します
-   * @param updates - 更新する設定項目（部分的な更新が可能）
-   * @throws {Error} 無効な設定が指定された場合、バリデーションエラーメッセージを含む
-   */
   updateConfig(updates: Partial<UnifiedConfig>): void {
-    const validation = validateUnifiedConfig(updates);
-    if (!validation.valid) {
-      throw new Error(`Invalid configuration: ${validation.errors.join(", ")}`);
-    }
-
-    this.config = { ...this.config, ...updates };
+    return this.core.updateConfig(updates);
   }
 
-  /**
-   * 設定をデフォルト値にリセットします
-   * CommandFactoryインスタンスも新しい設定で再作成されます
-   */
   resetConfig(): void {
-    this.config = getDefaultUnifiedConfig();
-    this.commandFactory = new CommandFactory(this.config);
+    return this.core.resetConfig();
   }
 
-  /**
-   * ヒント表示の文字数を設定します
-   * @param count - 表示する文字数
-   */
   setCount(count: number): void {
-    setCount(this.config, count);
+    return this.core.setCount(count);
   }
 
-  /**
-   * タイムアウト時間を設定します
-   * @param timeout - タイムアウト時間（ミリ秒）
-   */
   setTimeout(timeout: number): void {
-    setTimeoutCommand(this.config, timeout);
+    return this.core.setTimeout(timeout);
   }
 
-  // ライフサイクル
+  // ライフサイクル - core.tsに委譲
 
-  /**
-   * プラグインを初期化します
-   * @param denops - Denopsインスタンス
-   * @param options - 初期化オプション（省略可能、デフォルト: {}）
-   * @returns 初期化完了のPromise
-   * @throws {Error} 初期化処理でエラーが発生した場合
-   */
   async initialize(denops: Denops, options: any = {}): Promise<void> {
-    await initializePlugin(denops, { config: this.config, ...options });
+    return await this.core.initialize(denops, options);
   }
 
-  /**
-   * プラグインをクリーンアップします
-   * @param denops - Denopsインスタンス
-   * @returns クリーンアップ完了のPromise
-   * @throws {Error} クリーンアップ処理でエラーが発生した場合
-   */
   async cleanup(denops: Denops): Promise<void> {
-    await cleanupPlugin(denops);
+    return await this.core.cleanup(denops);
   }
 
-  // デバッグ・統計
+  // デバッグ・統計 - core.tsに委譲
 
-  /**
-   * デバッグ情報を取得します
-   * @returns 現在の設定、プラグイン状態、キャッシュ統計を含むデバッグ情報オブジェクト
-   * @returns {Object} debugInfo
-   * @returns {Config} debugInfo.config - 現在の設定
-   * @returns {Object} debugInfo.state - プラグインの状態情報
-   * @returns {boolean} debugInfo.state.initialized - 初期化状態
-   * @returns {boolean} debugInfo.state.hintsVisible - ヒント表示状態
-   * @returns {number} debugInfo.state.currentHintsCount - 現在のヒント数
-   * @returns {Object} debugInfo.cacheStats - キャッシュ統計情報
-   */
   getDebugInfo(): any {
-    const state = getPluginState();
-    return {
-      config: this.config,
-      state: {
-        initialized: state.initialized,
-        hintsVisible: state.hintsVisible,
-        currentHintsCount: state.currentHints.length,
-      },
-      cacheStats: {
-        words: state.caches.words.getStatistics(),
-        hints: state.caches.hints.getStatistics(),
-      },
-    };
+    return this.core.getDebugInfo();
   }
 
-  /**
-   * プラグインの統計情報を取得します
-   * ライフサイクルモジュールのgetPluginStatistics関数を呼び出します
-   * @returns プラグインの統計情報オブジェクト
-   */
   getStatistics(): any {
-    return getPluginStatistics();
+    return this.core.getStatistics();
   }
 
-  /**
-   * プラグインのヘルスチェックを実行します
-   * @param denops - Denopsインスタンス
-   * @returns ヘルスチェック結果のPromise
-   * @throws {Error} ヘルスチェック実行中にエラーが発生した場合
-   */
   async healthCheck(denops: Denops): Promise<any> {
-    return await healthCheck(denops);
+    return await this.core.healthCheck(denops);
   }
 
-  // ヒント制御（スタブ実装）
+  // ヒント制御 - core.tsに委譲
 
-  /**
-   * ヒントを表示します
-   * @param denops - Denopsインスタンス
-   * @returns ヒント表示完了のPromise
-   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
-   * @todo 既存のmain.tsから実装を移行する予定
-   */
   async showHints(denops: Denops): Promise<void> {
-    // 実際の実装は既存のmain.tsから移行予定
-    throw new Error("showHints not yet implemented in modular architecture");
+    return await this.core.showHints(denops);
   }
 
-  /**
-   * ヒントを非表示にします
-   * @param denops - Denopsインスタンス
-   * @returns ヒント非表示完了のPromise
-   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
-   * @todo 既存のmain.tsから実装を移行する予定
-   */
   async hideHints(denops: Denops): Promise<void> {
-    // 実際の実装は既存のmain.tsから移行予定
-    throw new Error("hideHints not yet implemented in modular architecture");
+    return await this.core.hideHints(denops);
   }
 
-  /**
-   * キャッシュをクリアします
-   * 単語キャッシュとヒントキャッシュの両方をクリアします
-   */
   clearCache(): void {
-    const state = getPluginState();
-    state.caches.words.clear();
-    state.caches.hints.clear();
+    return this.core.clearCache();
   }
 }
 
@@ -482,35 +356,12 @@ export function getAPI(config?: UnifiedConfig): HellshakeYanoAPIImpl {
   return apiInstance;
 }
 
-
 /**
  * 型エクスポート（再エクスポート）
  * 他のモジュールから重要な型定義を再エクスポートして、APIの利用者が
  * 必要な型にアクセスしやすくします
  */
 export type { UnifiedConfig, HighlightColor } from "./config.ts";
-export type { PluginController, ConfigManager } from "./commands.ts";
-export type { PluginState, InitializationOptions } from "./lifecycle.ts";
-export type { LRUCache, CacheStatistics } from "./utils/cache.ts";
 
-/**
- * 全モジュールの再エクスポート（便利関数）
- * 各モジュール全体を名前空間として再エクスポートし、
- * 詳細な機能にアクセスする必要がある場合に使用します
- * @example
- * ```typescript
- * import { ConfigModule, CommandsModule } from './api.ts';
- *
- * // 設定モジュールの詳細機能にアクセス
- * const defaultConfig = ConfigModule.getDefaultConfig();
- * const validation = ConfigModule.validateConfig(config);
- *
- * // コマンドモジュールの詳細機能にアクセス
- * const factory = new CommandsModule.CommandFactory(config);
- * ```
- */
-export * as ConfigModule from "./config.ts";
-export * as CommandsModule from "./commands.ts";
-export * as LifecycleModule from "./lifecycle.ts";
-export * as CacheModule from "./utils/cache.ts";
-export * as ValidationModule from "./utils/validation.ts";
+// process4 sub4-1完了: api.ts → core.ts統合
+// 後方互換性を完全に維持しつつ、実装をcore.tsに委譲

@@ -60,19 +60,19 @@ Deno.test("RED: HellshakeYanoAPI should use UnifiedConfig in methods", async () 
 });
 
 /**
- * TDD Red Phase Test 3: HellshakeYanoAPIImplクラスがUnifiedConfigを使用するか
+ * TDD Green Phase Test 3: HellshakeYanoAPIImplクラスがcore.tsに統合済みでUnifiedConfigを使用するか
  *
- * 現在はConfig型を使用しているため失敗するはず
+ * process4 sub4-1統合後の新しい実装を確認
  */
-Deno.test("RED: HellshakeYanoAPIImpl should use UnifiedConfig internally", async () => {
+Deno.test("GREEN: HellshakeYanoAPIImpl should use core delegation with UnifiedConfig", async () => {
   const apiSource = await Deno.readTextFile("./denops/hellshake-yano/api.ts");
 
-  // privateプロパティの型定義をチェック
-  const privateConfigMatch = apiSource.match(/private\s+config:\s*(\w+)/);
+  // core.tsを委譲するprivateプロパティをチェック
+  const privateCoreMatch = apiSource.match(/private\s+core:\s*(\w+)/);
   assertEquals(
-    privateConfigMatch?.[1],
-    "UnifiedConfig",
-    "HellshakeYanoAPIImpl.config should be of UnifiedConfig type"
+    privateCoreMatch?.[1],
+    "HellshakeYanoCore",
+    "HellshakeYanoAPIImpl should use HellshakeYanoCore for delegation"
   );
 
   // constructorのパラメータ型をチェック
@@ -81,6 +81,13 @@ Deno.test("RED: HellshakeYanoAPIImpl should use UnifiedConfig internally", async
     constructorMatch?.[1],
     "UnifiedConfig",
     "constructor should accept UnifiedConfig parameter"
+  );
+
+  // core.tsへの委譲コメントをチェック
+  assertEquals(
+    apiSource.includes("core.tsに委譲"),
+    true,
+    "Should indicate delegation to core.ts"
   );
 });
 
