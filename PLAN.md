@@ -1115,13 +1115,51 @@ export interface UnifiedConfig {
   - [x] 削除完了まで繰り返し
 
 ##### sub3-2 重複型の統合
-- [ ] 似た型定義を特定して統一
-- [ ] エイリアスの整理と最適化
-- [ ] Word、Config、HintMapping等の必須型は保持
-- [ ] その他の型を各ファイルへ移動
+
+###### sub3-2-1 調査と計画策定【調査完了】
+@date: 2025-09-27
+@context: 65個のTypeScriptエラーを分析し、型統合計画を策定
+@findings:
+- Config型: snake_case使用（motion_count, hint_position等）
+- UnifiedConfig型: camelCase使用（motionCount, hintPosition等）
+- 重複型: Config, UnifiedConfig, CamelCaseConfig, ModernConfig, HintConfig, WordConfig等
+- 削除済み関数の参照: toUnifiedConfig, fromUnifiedConfig（5箇所）
+- 影響範囲: 20個以上のテストファイル
+
+**詳細な型エラー分析:**
+- motion_count → motionCount: 12箇所
+- motion_timeout → motionTimeout: 8箇所
+- hint_position → hintPosition: 8箇所
+- use_japanese → useJapanese: 4箇所
+- performance_log → performanceLog: 5箇所
+- highlight_hint_marker → highlightHintMarker: 6箇所
+- その他snake_caseプロパティ: 22箇所
+
+**統合計画:**
+1. Config interfaceを削除し、UnifiedConfig型に一本化
+2. 全プロパティをcamelCaseに統一（snake_case廃止）
+3. 型エイリアス: type Config = UnifiedConfig（後方互換性）
+4. 部分型（HintConfig, WordConfig等）を削除し、Partial<UnifiedConfig>で代替
+5. テストファイル20個以上のsnake_caseをcamelCaseに変更
+
+###### sub3-2-2 型定義の統合実装
+- [ ] Config interfaceを削除
+- [ ] UnifiedConfigを主要型として確立
+- [ ] type Config = UnifiedConfigのエイリアス作成
+- [ ] HintConfig, WordConfig, PerformanceConfig, DebugConfig削除
+- [ ] ModernConfig, CamelCaseConfig削除
+- [ ] 型チェック通過確認
+
+###### sub3-2-3 テストファイルの一括修正
+- [ ] snake_caseプロパティを全てcamelCaseに変換（65エラー修正）
+- [ ] toUnifiedConfig/fromUnifiedConfig参照を削除（5箇所）
+- [ ] 型インポートの整理
+- [ ] 各テストファイルの動作確認
+
+###### sub3-2-4 最終検証
 - [ ] `deno check denops/hellshake-yano/`で全体の型チェック
-- [ ] `deno test tests/*.ts`で全テストパス
-- [ ] 最終的に200行以内であることを確認
+- [ ] `deno test tests/*.ts`で全654テストパス
+- [ ] config.tsが200行以内であることを確認
 
 #### sub4 core.ts統合（TDD方式）
 @target: denops/hellshake-yano/core.ts
