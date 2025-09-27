@@ -1053,26 +1053,30 @@ export interface UnifiedConfig {
   - [x] 削減行数計測（目標: 200-300行削減）
   - [x] 全72テストがパスすることを確認
 
-##### sub2-3 段階的削除Phase2（WordConfig移行）
+##### sub2-3 段階的削除Phase2（WordConfig移行）【完了】
 @context: word.tsで使用中のWordConfigを慎重に移行
 @important: 後方互換性を完全に維持しながら段階的に実施
 
-- [ ] **🟡 WordConfig移行準備**
-  - [ ] word.ts内のWordConfig使用箇所をリストアップ
-    - [ ] detectWordsWithConfig()関数
-    - [ ] extractWordsFromLineWithConfig()関数
-    - [ ] convertWordConfigToEnhanced()変換関数
-  - [ ] UnifiedConfigへの移行計画作成
-- [ ] **WordConfigの段階的置換**
-  - [ ] word.ts内の関数をUnifiedConfig対応に修正
-  - [ ] 変換関数を更新（後方互換性維持）
-  - [ ] テストケースを更新
-  - [ ] `deno check`で型チェック
-  - [ ] `deno test tests/word*.ts`でテストパス
-- [ ] **WordConfigインターフェース削除**
-  - [ ] 最終的にWordConfig定義を削除
-  - [ ] 関連するimport/export削除
-  - [ ] 全652テストがパスすることを確認
+- [x] **🟡 WordConfig移行準備**
+  - [x] word.ts内のWordConfig使用箇所をリストアップ
+    - [x] detectWordsWithConfig()関数
+    - [x] extractWordsFromLineWithConfig()関数
+    - [x] convertWordConfigToEnhanced()変換関数
+  - [x] UnifiedConfigへの移行計画作成
+- [x] **WordConfigの段階的置換**
+  - [x] word.ts内の関数をUnifiedConfig対応に修正
+  - [x] 変換関数を更新（後方互換性維持）
+  - [x] テストケースを更新
+  - [x] `deno check`で型チェック
+  - [x] `deno test tests/word*.ts`でテストパス
+- [x] **WordConfigインターフェース削除**
+  - [x] 最終的にWordConfig定義を削除
+  - [x] 関連するimport/export削除
+  - [x] 全652テストがパスすることを確認
+- [x] **削減効果確認**
+  - [x] 199行のコード削減達成
+  - [x] UnifiedConfigへのuseImprovedDetection追加
+  - [x] 全テストが合格（型安全性維持）
 
 ##### sub2-4 階層設定削除と変換関数簡素化
 - [ ] toUnifiedConfig/fromUnifiedConfig最小化
