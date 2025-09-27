@@ -130,6 +130,7 @@ describe("変換関数簡素化テスト (Process4 Sub2-4)", () => {
   describe("変換関数のパフォーマンス確認", () => {
     it("変換処理が高速である", () => {
       const config: Config = {
+        ...DEFAULT_UNIFIED_CONFIG,
         enabled: true,
         markers: ["A", "S", "D"],
         motionCount: 5,

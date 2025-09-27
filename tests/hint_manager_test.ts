@@ -7,6 +7,7 @@ import { assert, assertEquals, assertExists } from "@std/assert";
 import { beforeEach, describe, it } from "@std/testing/bdd";
 import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
 import type { Config } from "../denops/hellshake-yano/types.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 
 describe("HintManager Tests", () => {
   let config: Config;
@@ -15,6 +16,7 @@ describe("HintManager Tests", () => {
   beforeEach(() => {
     // テスト用の基本設定
     config = {
+      ...DEFAULT_UNIFIED_CONFIG,
       markers: ["A", "B", "C", "D", "E"],
       motionCount: 3,
       motionTimeout: 2000,

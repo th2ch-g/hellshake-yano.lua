@@ -9,11 +9,13 @@
 
 import { assertEquals, assertNotEquals } from "@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 
 // Test helper to create minimal config with required fields
 function createTestConfig(partial: Partial<Config>): Config {
   return {
+    ...DEFAULT_UNIFIED_CONFIG,
     markers: ["A", "B", "C"],
     motionCount: 3,
     motionTimeout: 2000,

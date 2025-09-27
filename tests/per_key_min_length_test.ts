@@ -1,10 +1,13 @@
 import { assertEquals, assertExists, assertThrows } from "jsr:@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 import { getMinLengthForKey } from "../denops/hellshake-yano/main.ts";
 import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
 
 Deno.test("Config interface - should have perKeyMinLength property", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "V": 1,
       "w": 1,
@@ -15,18 +18,6 @@ Deno.test("Config interface - should have perKeyMinLength property", () => {
       "l": 2,
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   assertExists(config.perKeyMinLength);
@@ -36,20 +27,9 @@ Deno.test("Config interface - should have perKeyMinLength property", () => {
 });
 
 Deno.test("Config interface - should support optional perKeyMinLength", () => {
-  const config: Config = {
-    enabled: true,
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
     defaultMinWordLength: 2,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   // perKeyMinLengthは省略可能
@@ -57,45 +37,23 @@ Deno.test("Config interface - should support optional perKeyMinLength", () => {
 });
 
 Deno.test("Config interface - should have currentKeyContext for internal use", () => {
-  const config: Config = {
-    enabled: true,
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
     defaultMinWordLength: 2,
-    currentKeyContext: "v", // 内部使用のためのキーコンテキスト
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+    currentKeyContext: "v", // 内部使用のためのキーコンテキスト,
   };
 
   assertEquals(config.currentKeyContext, "v");
 });
 
 Deno.test("getMinLengthForKey - should return per-key setting when available", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 2,
     },
     defaultMinWordLength: 3,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   // main.tsからエクスポートされた実際の関数を使用
@@ -106,20 +64,9 @@ Deno.test("getMinLengthForKey - should return per-key setting when available", (
 });
 
 Deno.test("Config validation - should handle legacy minWordLength", () => {
-  const legacyConfig: Config = {
-    enabled: true,
-    defaultMinWordLength: 3, // 旧形式の設定
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+const legacyConfig: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    defaultMinWordLength: 3,
   };
 
   // 後方互換性：minWordLengthがすべてのキーに適用される
@@ -133,7 +80,9 @@ Deno.test("Config validation - should handle legacy minWordLength", () => {
 // ========================================
 
 Deno.test("Per-key configuration - comprehensive settings", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1, // ビジュアルモード（精密移動）
       "V": 1, // ビジュアルラインモード
       "w": 1, // 単語移動（前方）
@@ -153,18 +102,6 @@ Deno.test("Per-key configuration - comprehensive settings", () => {
       "gg": 5, // ファイル先頭（2文字キー）
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   // 精密移動キー
@@ -199,25 +136,15 @@ Deno.test("Per-key configuration - comprehensive settings", () => {
 });
 
 Deno.test("Per-key configuration - edge cases and validation", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "zero": 0, // ゼロ値
       "negative": -1, // 負の値
       "large": 100, // 非常に大きな値
       "empty": 0, // 空文字相当
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   // エッジケースの動作確認
@@ -227,25 +154,15 @@ Deno.test("Per-key configuration - edge cases and validation", () => {
   assertEquals(getMinLengthForKey(config, "empty"), 0);
 
   // 特殊文字キー
-  const specialConfig: Config = {perKeyMinLength: {
+const specialConfig: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       " ": 1, // スペース
       "\t": 2, // タブ
       "\n": 3, // 改行
       "<CR>": 1, // Vim形式のキー
       "<Esc>": 2, // エスケープ
     },
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   assertEquals(getMinLengthForKey(specialConfig, " "), 1);
@@ -261,75 +178,33 @@ Deno.test("Per-key configuration - edge cases and validation", () => {
 
 Deno.test("Fallback behavior - complete fallback chain", () => {
   // パターン1: perKeyMinLength → defaultMinWordLength → minWordLength
-  const config1: Config = {perKeyMinLength: { "v": 1 },
+const config1: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: { "v": 1 },
     defaultMinWordLength: 3,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   assertEquals(getMinLengthForKey(config1, "v"), 1); // per_key設定を使用
   assertEquals(getMinLengthForKey(config1, "h"), 3); // defaultMinWordLengthを使用
 
   // パターン2: defaultMinWordLength → minWordLength
-  const config2: Config = {defaultMinWordLength: 4,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+const config2: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    defaultMinWordLength: 4,
   };
 
   assertEquals(getMinLengthForKey(config2, "any"), 4); // defaultMinWordLengthを使用
 
   // パターン3: minWordLengthのみ（レガシー）
-  const config3: Config = {
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+const config3: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
   };
 
   assertEquals(getMinLengthForKey(config3, "any"), 7); // minWordLengthを使用
 
   // パターン4: 何も設定されていない場合のデフォルト
-  const config4: Config = {
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+const config4: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
   };
 
   assertEquals(getMinLengthForKey(config4, "any"), 3); // デフォルト値（defaultMinWordLength）
@@ -337,62 +212,31 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
 
 Deno.test("Fallback behavior - missing configurations", () => {
   // perKeyMinLengthが空のオブジェクト
-  const config1: Config = {perKeyMinLength: {},
+const config1: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
     defaultMinWordLength: 3,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   assertEquals(getMinLengthForKey(config1, "v"), 3); // defaultMinWordLengthを使用
 
   // 部分的な設定
-  const config2: Config = {perKeyMinLength: {
+const config2: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       // 'h'は設定されていない
     },
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   assertEquals(getMinLengthForKey(config2, "v"), 1); // per_key設定
   assertEquals(getMinLengthForKey(config2, "h"), 4); // defaultMinWordLengthにフォールバック
 
   // undefined値の扱い
-  const config3: Config = {perKeyMinLength: {
+const config3: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": undefined as any, // 明示的にundefined
     },
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   assertEquals(getMinLengthForKey(config3, "v"), 6); // undefinedなのでdefaultMinWordLengthを使用
@@ -403,24 +247,14 @@ Deno.test("Fallback behavior - missing configurations", () => {
 // ========================================
 
 Deno.test("Key switching recalculation - HintManager integration", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 2,
       "f": 3,
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const hintManager = new HintManager(config);
@@ -450,24 +284,14 @@ Deno.test("Key switching recalculation - HintManager integration", () => {
 });
 
 Deno.test("Key switching recalculation - cache behavior verification", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 2,
     },
     defaultMinWordLength: 3,
     currentKeyContext: "initial", // 初期コンテキスト
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const hintManager = new HintManager(config);
@@ -498,7 +322,9 @@ Deno.test("Key switching recalculation - cache behavior verification", () => {
 });
 
 Deno.test("Key switching recalculation - rapid switching stress test", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 2,
       "j": 2,
@@ -510,18 +336,6 @@ Deno.test("Key switching recalculation - rapid switching stress test", () => {
       "F": 3,
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const hintManager = new HintManager(config);
@@ -557,21 +371,9 @@ Deno.test("Performance test - large configuration handling", () => {
     perKeyMinLength[`key${i}`] = i % 10 + 1; // 1-10の範囲
   }
 
-  const config: Config = {
-    perKeyMinLength,
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const hintManager = new HintManager(config);
@@ -598,23 +400,13 @@ Deno.test("Performance test - large configuration handling", () => {
 });
 
 Deno.test("Performance test - key switching with large word lists", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 3,
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const hintManager = new HintManager(config);
@@ -646,7 +438,9 @@ Deno.test("Performance test - key switching with large word lists", () => {
 });
 
 Deno.test("Performance test - memory usage patterns", () => {
-  const config: Config = {perKeyMinLength: {
+const config: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 2,
       "j": 2,
@@ -654,18 +448,6 @@ Deno.test("Performance test - memory usage patterns", () => {
       "l": 2,
     },
     defaultMinWordLength: 2,
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   // 複数のHintManagerインスタンスを作成してメモリリーク確認
@@ -704,20 +486,9 @@ Deno.test("Performance test - memory usage patterns", () => {
 // ========================================
 
 Deno.test("Backward compatibility - legacy minWordLength only", () => {
-  const legacyConfig: Config = {
-    defaultMinWordLength: 4, // 旧形式のみ
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+const legacyConfig: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    defaultMinWordLength: 4,
   };
 
   const hintManager = new HintManager(legacyConfig);
@@ -731,23 +502,13 @@ Deno.test("Backward compatibility - legacy minWordLength only", () => {
 });
 
 Deno.test("Backward compatibility - mixed old and new configurations", () => {
-  const mixedConfig: Config = {perKeyMinLength: {
+const mixedConfig: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1, // 新形式
       "h": 2,
     },
     defaultMinWordLength: 3, // 新形式のデフォルト
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const hintManager = new HintManager(mixedConfig);
@@ -765,41 +526,20 @@ Deno.test("Backward compatibility - mixed old and new configurations", () => {
 
 Deno.test("Backward compatibility - migration scenarios", () => {
   // シナリオ1: 旧設定から新設定への段階的移行
-  const migrationStep1: Config = {
-    defaultMinWordLength: 3, // 既存設定
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
+const migrationStep1: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    defaultMinWordLength: 3,
   };
 
   const manager1 = new HintManager(migrationStep1);
   assertEquals(manager1.getMinLengthForKey("any"), 3); // defaultMinWordLengthを使用
 
   // シナリオ2: 部分的なキー別設定の追加
-  const migrationStep2: Config = {perKeyMinLength: {
+const migrationStep2: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1, // 精密移動のみ新設定
     },
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const manager2 = new HintManager(migrationStep2);
@@ -807,7 +547,9 @@ Deno.test("Backward compatibility - migration scenarios", () => {
   assertEquals(manager2.getMinLengthForKey("h"), 3); // デフォルト
 
   // シナリオ3: 完全移行（minWordLength削除）
-  const migrationStep3: Config = {perKeyMinLength: {
+const migrationStep3: Config = {
+    ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength: {
       "v": 1,
       "h": 2,
       "j": 2,
@@ -815,18 +557,6 @@ Deno.test("Backward compatibility - migration scenarios", () => {
       "l": 2,
     },
     // minWordLengthは削除済み
-    enabled: true,
-    markers: [],
-    motionCount: 0,
-    motionTimeout: 500,
-    hintPosition: "start",
-    triggerOnHjkl: false,
-    countedMotions: [],
-    maxHints: 200,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
   };
 
   const manager3 = new HintManager(migrationStep3);

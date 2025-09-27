@@ -937,7 +937,6 @@ export type {
   HintMapping as HM,
   ConfigType as CT,     // 新しい統合型のエイリアス
   Config as C,          // 後方互換性のため保持
-  UnifiedConfig as UC,  // 統合型のエイリアス
   HintPosition as HP,
   DetectionContext as DC,
   WordDetectionResult as WDR,

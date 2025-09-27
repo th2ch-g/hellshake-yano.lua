@@ -1,6 +1,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import type { Config } from "../denops/hellshake-yano/types.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 
 /**
@@ -13,6 +14,7 @@ import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 // Helper to create a full config object
 function createFullConfig(overrides: Partial<Config> = {}): Config {
   return {
+    ...DEFAULT_UNIFIED_CONFIG,
     markers: ["A", "B", "C", "D", "E", "F", "G", "H"],
     motionCount: 3,
     motionTimeout: 2000,

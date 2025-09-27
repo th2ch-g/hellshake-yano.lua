@@ -389,6 +389,8 @@ export interface UnifiedConfig {
   - tests/integration_per_key_motion_test.ts
   - tests/per_key_motion_count_test.ts
   - undefinedではなく空配列`[]`を確実に設定
+- [ ] deno check
+- [ ] deno test
 
 **Phase 5: 存在しないプロパティの削除（2エラー）**
 - [ ] `splitCamelCase` プロパティ削除

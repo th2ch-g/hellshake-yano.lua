@@ -5,17 +5,17 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import type {
-  Config,
-  UnifiedConfig,
-  CamelCaseConfig,
-  ModernConfig,
-  HintConfig,
-  WordConfig,
-  PerformanceConfig,
-  DebugConfig
+import {
+  DEFAULT_UNIFIED_CONFIG,
+  type Config,
+  type UnifiedConfig,
+  type CamelCaseConfig,
+  type ModernConfig,
+  type HintConfig,
+  type WordConfig,
+  type PerformanceConfig,
+  type DebugConfig
 } from "../denops/hellshake-yano/config.ts";
-import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 
 describe("Type Consolidation - Process4 sub3-2", () => {
   describe("RED Phase: 重複型が存在することを確認", () => {
@@ -129,6 +129,7 @@ describe("Type Usage Examples", () => {
   it("既存のコードが引き続き動作すること", () => {
     // 後方互換性の確認
     const oldStyleConfig: Config = {
+      ...DEFAULT_UNIFIED_CONFIG,
       enabled: true,
       markers: ["A", "B"],
       motionCount: 3,
@@ -146,8 +147,6 @@ describe("Type Usage Examples", () => {
       enableTinySegmenter: false,
       perKeyMinLength: {},
       defaultMinWordLength: 1,
-      splitCamelCase: true,
-      preserveCase: false,
       perKeyMotionCount: {},
       defaultMotionCount: 3
     };

@@ -8,6 +8,7 @@ import type { Denops } from "@denops/std";
 import { test } from "@denops/test";
 import { MockDenops } from "./helpers/mock.ts";
 import type { Config } from "../denops/hellshake-yano/types.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 
 test({
   mode: "all",
@@ -15,6 +16,7 @@ test({
   fn: async (denops: Denops) => {
     // Create test configuration with perKeyMinLength
     const testConfig: Config = {
+      ...DEFAULT_UNIFIED_CONFIG,
       markers: ["A", "B", "C"],
       motionCount: 3,
       motionTimeout: 2000,
@@ -76,6 +78,7 @@ test({
   name: "Motion Integration: Key context propagation to word detection",
   fn: async (denops: Denops) => {
     const testConfig: Config = {
+      ...DEFAULT_UNIFIED_CONFIG,
       markers: ["A", "B", "C"],
       motionCount: 3,
       motionTimeout: 2000,

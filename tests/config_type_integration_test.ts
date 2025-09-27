@@ -16,9 +16,9 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert
 // RED Phase: まだ実装されていない統合型をインポートしようとする（失敗する）
 import type {
   ConfigType,     // 新しい統合型（まだ存在しない）
-  Config,         // 既存の型
-  UnifiedConfig   // 既存の型
+  Config         // 既存の型
 } from "../denops/hellshake-yano/types.ts";
+import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 
 import {
   isConfigType,           // 新しい型ガード（まだ存在しない）

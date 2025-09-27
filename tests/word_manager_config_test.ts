@@ -80,7 +80,7 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
   // Test that manager can access UnifiedConfig properties
   const result = await manager.detectWords("test word", 1, undefined, {
     currentKey: 'f',
-    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
+    minWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
   });
 
   // Should be able to detect words with proper min length from UnifiedConfig
@@ -106,7 +106,7 @@ Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead o
   // Test Japanese text detection with UnifiedConfig settings
   const result = await manager.detectWords("これはテストです", 1, undefined, {
     currentKey: 't',
-    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
+    minWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
   });
 
   assertExists(result);
@@ -130,7 +130,7 @@ Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with U
   // Test hybrid detection with mixed content
   const result = await manager.detectWords("Hello こんにちは world", 1, undefined, {
     currentKey: 'F',
-    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
+    minWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
   });
 
   assertExists(result);

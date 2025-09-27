@@ -100,7 +100,7 @@ Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead
   // Test Japanese text detection with UnifiedConfig settings
   const words = await detector.detectWords("これはテストです", 1, {
     currentKey: 't',
-    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
+    minWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
   });
 
   assertExists(words);
@@ -121,7 +121,7 @@ Deno.test("Red Phase: HybridWordDetector should use UnifiedConfig instead of Con
   // Test hybrid detection with mixed content
   const words = await detector.detectWords("Hello こんにちは world", 1, {
     currentKey: 'F',
-    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
+    minWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
   });
 
   assertExists(words);
