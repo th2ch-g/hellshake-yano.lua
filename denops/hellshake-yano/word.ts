@@ -2,6 +2,7 @@ import type { Denops } from "@denops/std";
 import type { DetectionContext, Word, WordDetectionResult } from "./types.ts";
 import { charIndexToByteIndex } from "./utils/encoding.ts";
 import { getWordDetectionManager, type WordDetectionManagerConfig } from "./word/manager.ts";
+import { getDefaultUnifiedConfig } from "./config.ts";
 
 // Re-export Word for backward compatibility
 export type { Word };
@@ -529,9 +530,9 @@ export async function detectWordsWithManager(
     // console.error("[detectWordsWithManager] Error:", error);
 
     // フォールバックとして従来のメソッドを使用
-    const fallbackConfig: WordConfig = {
-      use_japanese: config.use_japanese,
-    };
+    const fallbackConfig = createPartialUnifiedConfig({
+      useJapanese: config.use_japanese,
+    });
     const fallbackWords = await detectWordsWithConfig(denops, fallbackConfig);
     return {
       words: fallbackWords,
@@ -583,8 +584,10 @@ function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext |
  */
 export async function detectWordsWithConfig(
   denops: Denops,
-  config: WordConfig = {},
+  config: Partial<UnifiedConfig> = {},
 ): Promise<Word[]> {
+  // createMinimalConfigで完全なUnifiedConfigを生成
+  const fullConfig = { ...getDefaultUnifiedConfig(), ...config };
   const words: Word[] = [];
 
   // 画面の表示範囲を取得
@@ -595,8 +598,8 @@ export async function detectWordsWithConfig(
   for (let line = topLine; line <= bottomLine; line++) {
     const lineText = await denops.call("getline", line) as string;
 
-    // use_japanese設定に基づいてexcludeJapaneseを決定
-    const excludeJapanese = config.use_japanese !== true;
+    // useJapanese設定に基づいてexcludeJapaneseを決定
+    const excludeJapanese = fullConfig.useJapanese !== true;
     const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
     words.push(...lineWords);
   }
@@ -974,9 +977,11 @@ export function extractWordsFromLine(
 export function extractWordsFromLineWithConfig(
   lineText: string,
   lineNumber: number,
-  config: WordConfig = {},
+  config: Partial<UnifiedConfig> = {},
 ): Word[] {
-  const excludeJapanese = config.use_japanese !== true;
+  // createMinimalConfigで完全なUnifiedConfigを生成
+  const fullConfig = { ...getDefaultUnifiedConfig(), ...config };
+  const excludeJapanese = fullConfig.useJapanese !== true;
   return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
 }
 
@@ -1084,12 +1089,55 @@ export function getWordDetectionCacheStats(): {
  * @returns EnhancedWordConfig - 変換されたEnhancedWordConfig
  * @since 1.0.0
  */
-export function convertWordConfigToEnhanced(wordConfig: WordConfig): EnhancedWordConfig {
+export function convertWordConfigToEnhanced(config: WordConfig | UnifiedConfig): EnhancedWordConfig {
+  // UnifiedConfigまたはWordConfigを受け入れ、EnhancedWordConfigに変換
+  const useJapanese = 'useJapanese' in config ? config.useJapanese : config.use_japanese;
+  
   return {
-    use_japanese: wordConfig.use_japanese ?? false,
+    use_japanese: useJapanese ?? false,
     strategy: "regex", // デフォルト戦略
-    enable_tinysegmenter: wordConfig.use_japanese === true,
+    enable_tinysegmenter: useJapanese === true,
   };
+}
+
+/**
+ * UnifiedConfigの部分的なオブジェクトを作成するヘルパー関数
+ * WordConfigとの後方互換性を保ちつつ、UnifiedConfigの型要件を満たします
+ */
+export function createPartialUnifiedConfig(options: { useJapanese?: boolean }): UnifiedConfig {
+  // UnifiedConfigの最小必須プロパティのデフォルト値
+  return {
+    enabled: true,
+    markers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+    motionCount: 3,
+    motionTimeout: 1000,
+    hintPosition: "start",
+    triggerOnHjkl: true,
+    countedMotions: ['h', 'j', 'k', 'l'],
+    maxHints: 50,
+    debounceDelay: 100,
+    useNumbers: false,
+    highlightSelected: true,
+    debugCoordinates: false,
+    singleCharKeys: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+    multiCharKeys: ['a', 'b', 'c', 'd', 'e', 'f'],
+    useHintGroups: false,
+    highlightHintMarker: "HellshakeYanoHintMarker",
+    highlightHintMarkerCurrent: "HellshakeYanoHintMarkerCurrent",
+    suppressOnKeyRepeat: false,
+    keyRepeatThreshold: 50,
+    useJapanese: options.useJapanese ?? false,
+    wordDetectionStrategy: "regex",
+    enableTinySegmenter: false,
+    segmenterThreshold: 2,
+    japaneseMinWordLength: 1,
+    japaneseMergeParticles: false,
+    japaneseMergeThreshold: 10,
+    defaultMinWordLength: 2,
+    defaultMotionCount: 3,
+    debugMode: false,
+    performanceLog: false,
+  } as UnifiedConfig;
 }
 
 /**
@@ -1110,9 +1158,9 @@ export async function detectWordsWithEnhancedConfig(
     return result.words;
   } catch (error) {
     // フォールバックとしてレガシー版を使用
-    const legacyConfig: WordConfig = {
-      use_japanese: config.use_japanese,
-    };
+    const legacyConfig = createPartialUnifiedConfig({
+      useJapanese: config.use_japanese,
+    });
     return await detectWordsWithConfig(denops, legacyConfig);
   }
 }
@@ -1304,12 +1352,11 @@ export function extractWordsUnified(
   }
 
   if (normalizedConfig.useWordConfig) {
-    // Use WordConfig path
-    const wordConfig: WordConfig = {
-      use_japanese: normalizedConfig.useJapanese,
-      use_improved_detection: normalizedConfig.useImprovedDetection,
-    };
-    return extractWordsFromLineWithConfig(lineText, lineNumber, wordConfig);
+    // Use UnifiedConfig path instead of WordConfig for type compatibility
+    const unifiedConfig = createPartialUnifiedConfig({
+      useJapanese: normalizedConfig.useJapanese,
+    });
+    return extractWordsFromLineWithConfig(lineText, lineNumber, unifiedConfig);
   }
 
   // Check if we should use improved detection via extractWordsFromLine

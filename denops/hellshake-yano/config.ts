@@ -469,6 +469,9 @@ export interface ModernConfig extends CamelCaseConfig {
  * };
  * ```
  */
+// UnifiedConfigインターフェースに useImprovedDetection プロパティを追加
+// WordConfig削除後の後方互換性のため
+
 export interface UnifiedConfig {
   // Core settings (6 properties)
   /** プラグインの有効/無効状態 */
@@ -551,6 +554,10 @@ export interface UnifiedConfig {
   debugMode: boolean;
   /** パフォーマンスログの出力有効/無効 */
   performanceLog: boolean;
+
+  // Additional settings for backward compatibility
+  /** 改善された単語検出を使用するか（WordConfig互換性のため） */
+  useImprovedDetection?: boolean;
 }
 
 /**
@@ -615,6 +622,9 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
   // Debug settings
   debugMode: false,
   performanceLog: false,
+
+  // Additional settings for backward compatibility
+  useImprovedDetection: true,
 };
 
 /**

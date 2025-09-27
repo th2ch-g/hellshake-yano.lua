@@ -11,7 +11,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
   describe("English-only mode", () => {
     it("should extract only English words from mixed content", () => {
       const lineText = "こんにちはworld テストtest 日本語english";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -24,7 +24,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should handle alphanumeric combinations", () => {
       const lineText = "test123 日本語456abc コード789def";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -36,7 +36,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should extract words at word boundaries", () => {
       const lineText = "hello,world test;case code:block";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -51,7 +51,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should ignore pure numbers and short words", () => {
       const lineText = "a 12 abc 123 hello world";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -64,7 +64,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
   describe("Mixed text boundary handling", () => {
     it("should handle Japanese-English boundaries correctly", () => {
       const lineText = "これはtestです。hello世界world";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -76,7 +76,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should handle complex mixed scenarios", () => {
       const lineText = "変数nameは値valueを持つ。functionNameのreturnValue";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -91,7 +91,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
   describe("Japanese-inclusive mode (backward compatibility)", () => {
     it("should include Japanese when use_japanese is true", () => {
       const lineText = "こんにちはworld テストtest";
-      const config = { use_japanese: true };
+      const config = { useJapanese: true };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -110,7 +110,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
         mixed.push(englishWords[i], japaneseWords[i]);
       }
       const lineText = mixed.join(" ");
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const startTime = Date.now();
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
@@ -129,7 +129,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
   describe("Edge cases", () => {
     it("should handle empty lines", () => {
       const lineText = "";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -138,7 +138,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should handle whitespace-only lines", () => {
       const lineText = "   \t   ";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -147,7 +147,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should handle Japanese-only lines", () => {
       const lineText = "これは日本語のみです";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 
@@ -156,7 +156,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
 
     it("should handle special characters", () => {
       const lineText = "test@email.com function() {return value;}";
-      const config = { use_japanese: false };
+      const config = { useJapanese: false };
 
       const words = extractWordsFromLineWithConfig(lineText, 1, config);
 

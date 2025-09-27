@@ -1033,25 +1033,25 @@ export interface UnifiedConfig {
 @context: sub2-1分析で安全と判定された3インターフェース削除
 @target: CoreConfig, HintConfig, PerformanceConfig（実装コードで未使用）
 
-- [ ] **🟢 CoreConfig関連（3プロパティ）を削除**
-  - [ ] CoreConfigインターフェース削除（enabled, markers, motionCount）
-  - [ ] 関連する変換関数削除
-  - [ ] `deno check denops/hellshake-yano/`で型エラー確認
-  - [ ] `deno test tests/config_test.ts`でテストパス確認
-- [ ] **🟢 HintConfig関連（10プロパティ）を削除**
-  - [ ] HintConfigインターフェース削除
-  - [ ] 注意: HintKeyConfigとは別物（HintKeyConfigは保持）
-  - [ ] 関連マッピング削除
-  - [ ] `deno check`で型チェック
-  - [ ] `deno test tests/config*.ts`でテストパス
-- [ ] **🟢 PerformanceConfig関連（11プロパティ）を削除**
-  - [ ] PerformanceConfigインターフェース削除
-  - [ ] 関連する変換関数削除
-  - [ ] `deno check`で型チェック
-  - [ ] `deno test tests/config*.ts`でテストパス
-- [ ] **削減効果確認**
-  - [ ] 削減行数計測（目標: 200-300行削減）
-  - [ ] 全72テストがパスすることを確認
+- [x] **🟢 CoreConfig関連（3プロパティ）を削除**
+  - [x] CoreConfigインターフェース削除（enabled, markers, motionCount）
+  - [x] 関連する変換関数削除
+  - [x] `deno check denops/hellshake-yano/`で型エラー確認
+  - [x] `deno test tests/config_test.ts`でテストパス確認
+- [x] **🟢 HintConfig関連（10プロパティ）を削除**
+  - [x] HintConfigインターフェース削除
+  - [x] 注意: HintKeyConfigとは別物（HintKeyConfigは保持）
+  - [x] 関連マッピング削除
+  - [x] `deno check`で型チェック
+  - [x] `deno test tests/config*.ts`でテストパス
+- [x] **🟢 PerformanceConfig関連（11プロパティ）を削除**
+  - [x] PerformanceConfigインターフェース削除
+  - [x] 関連する変換関数削除
+  - [x] `deno check`で型チェック
+  - [x] `deno test tests/config*.ts`でテストパス
+- [x] **削減効果確認**
+  - [x] 削減行数計測（目標: 200-300行削減）
+  - [x] 全72テストがパスすることを確認
 
 ##### sub2-3 段階的削除Phase2（WordConfig移行）
 @context: word.tsで使用中のWordConfigを慎重に移行

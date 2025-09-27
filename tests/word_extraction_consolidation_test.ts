@@ -69,8 +69,8 @@ Deno.test("TDD Red Phase: Unified Function Interface Definition", async (t) => {
     const testText = "hello こんにちは world";
     const lineNumber = 1;
 
-    // Current behavior: WordConfig interface
-    const config: WordConfig = { use_japanese: true };
+    // Current behavior: Partial UnifiedConfig
+    const config = { useJapanese: true };
     const expected = extractWordsFromLineWithConfig(testText, lineNumber, config);
 
     // Test unified behavior: backward compatibility for WordConfig

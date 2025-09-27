@@ -91,8 +91,8 @@ describe("Japanese Filtering Tests", () => {
 
     it("should respect use_japanese=false setting", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        use_improved_detection: true,
-        use_japanese: false,
+        useImprovedDetection: true,
+        useJapanese: false,
       });
 
       const texts = words.map((w) => w.text);
@@ -114,8 +114,8 @@ describe("Japanese Filtering Tests", () => {
 
     it("should include Japanese when use_japanese=true", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        use_improved_detection: true,
-        use_japanese: true,
+        useImprovedDetection: true,
+        useJapanese: true,
       });
 
       const texts = words.map((w) => w.text);
@@ -130,8 +130,8 @@ describe("Japanese Filtering Tests", () => {
 
     it("should default to excluding Japanese when use_japanese is undefined", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        use_improved_detection: true,
-        // use_japanese is undefined
+        useImprovedDetection: true,
+        // useJapanese is undefined
       });
 
       const texts = words.map((w) => w.text);
