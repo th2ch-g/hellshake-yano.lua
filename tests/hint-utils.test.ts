@@ -139,7 +139,7 @@ Deno.test("calculateHintDisplayPosition function", async (t) => {
   });
 
   await t.step("should return overlay position correctly", () => {
-    assertEquals(calculateHintDisplayPosition(word, "end"), 5);
+    assertEquals(calculateHintDisplayPosition(word, "overlay"), 5);
   });
 });
 

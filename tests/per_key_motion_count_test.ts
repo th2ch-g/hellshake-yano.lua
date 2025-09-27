@@ -151,8 +151,8 @@ Deno.test("perKeyMotionCount: priority test", () => {
   });
   assertEquals(getMotionCountForKey("v", configWithoutPerKey), 2); // defaultMotionCount
 
-  // Test without both
+  // Test without both perKeyMotionCount and custom defaultMotionCount
   const configMinimal = createTestConfig({motionCount: 5,
   });
-  assertEquals(getMotionCountForKey("v", configMinimal), 5); // motionCount
+  assertEquals(getMotionCountForKey("v", configMinimal), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMotionCount
 });

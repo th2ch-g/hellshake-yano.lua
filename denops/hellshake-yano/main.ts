@@ -72,28 +72,28 @@ function recordPerformance(
   }
 }
 export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
-  // Check for per_key_min_length first (highest priority)
-  if ('per_key_min_length' in config && config.perKeyMinLength && typeof config.perKeyMinLength === 'object') {
+  // Check for perKeyMinLength first (highest priority)
+  if ('perKeyMinLength' in config && config.perKeyMinLength && typeof config.perKeyMinLength === 'object') {
     const perKeyValue = (config.perKeyMinLength as Record<string, number>)[key];
-    if (perKeyValue !== undefined) return perKeyValue;
+    if (perKeyValue !== undefined && perKeyValue > 0) return perKeyValue;
   }
 
-  // Check for default_min_word_length (second priority)
-  if ('default_min_word_length' in config && typeof config.defaultMinWordLength === 'number') {
+  // Check for defaultMinWordLength (second priority)
+  if ('defaultMinWordLength' in config && typeof config.defaultMinWordLength === 'number') {
     return config.defaultMinWordLength;
   }
 
-  // Check for default_min_length (third priority)
+  // Check for default_min_length (third priority - for backward compatibility)
   if ('default_min_length' in config && typeof config.default_min_length === 'number') {
     return config.default_min_length;
   }
 
-  // Check for min_length (fourth priority)
+  // Check for min_length (fourth priority - for backward compatibility)
   if ('min_length' in config && typeof config.min_length === 'number') {
     return config.min_length;
   }
 
-  // Check for legacy min_word_length (fifth priority)
+  // Check for legacy minWordLength (fifth priority)
   if ('minWordLength' in config && typeof config.minWordLength === 'number') {
     return config.minWordLength;
   }
@@ -102,16 +102,16 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
   return 3;
 }
 export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
-  // Check for per_key_motion_count first (highest priority)
-  if ('per_key_motion_count' in config && config.perKeyMotionCount && typeof config.perKeyMotionCount === 'object') {
+  // Check for perKeyMotionCount first (highest priority)
+  if ('perKeyMotionCount' in config && config.perKeyMotionCount && typeof config.perKeyMotionCount === 'object') {
     const perKeyValue = (config.perKeyMotionCount as Record<string, number>)[key];
     if (perKeyValue !== undefined && perKeyValue >= 1 && Number.isInteger(perKeyValue)) {
       return perKeyValue;
     }
   }
 
-  // Check for default_motion_count (second priority)
-  if ('default_motion_count' in config && typeof config.defaultMotionCount === 'number') {
+  // Check for defaultMotionCount (second priority)
+  if ('defaultMotionCount' in config && typeof config.defaultMotionCount === 'number') {
     return config.defaultMotionCount;
   }
 

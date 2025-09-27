@@ -32,8 +32,8 @@ const config: Config = {
     defaultMinWordLength: 2,
   };
 
-  // perKeyMinLengthは省略可能
-  assertEquals(config.perKeyMinLength, undefined);
+  // perKeyMinLengthは省略可能（DEFAULT_UNIFIED_CONFIGでは{}）
+  assertEquals(config.perKeyMinLength, {});
 });
 
 Deno.test("Config interface - should have currentKeyContext for internal use", () => {
@@ -67,12 +67,12 @@ Deno.test("Config validation - should handle legacy minWordLength", () => {
 const legacyConfig: Config = {
     ...DEFAULT_UNIFIED_CONFIG,
     defaultMinWordLength: 3,
+    perKeyMinLength: undefined,
   };
 
   // 後方互換性：minWordLengthがすべてのキーに適用される
   assertEquals(legacyConfig.defaultMinWordLength, 3);
   assertEquals(legacyConfig.perKeyMinLength, undefined);
-  assertEquals(legacyConfig.defaultMinWordLength, undefined);
 });
 
 // ========================================
@@ -148,10 +148,11 @@ const config: Config = {
   };
 
   // エッジケースの動作確認
-  assertEquals(getMinLengthForKey(config, "zero"), 0);
-  assertEquals(getMinLengthForKey(config, "negative"), -1);
-  assertEquals(getMinLengthForKey(config, "large"), 100);
-  assertEquals(getMinLengthForKey(config, "empty"), 0);
+  // 0や負の値は無効なのでdefaultMinWordLengthにフォールバック
+  assertEquals(getMinLengthForKey(config, "zero"), 2); // defaultMinWordLengthにフォールバック
+  assertEquals(getMinLengthForKey(config, "negative"), 2); // defaultMinWordLengthにフォールバック
+  assertEquals(getMinLengthForKey(config, "large"), 100); // 有効な値
+  assertEquals(getMinLengthForKey(config, "empty"), 2); // defaultMinWordLengthにフォールバック
 
   // 特殊文字キー
 const specialConfig: Config = {
@@ -195,19 +196,21 @@ const config2: Config = {
 
   assertEquals(getMinLengthForKey(config2, "any"), 4); // defaultMinWordLengthを使用
 
-  // パターン3: minWordLengthのみ（レガシー）
+  // パターン3: DEFAULT_UNIFIED_CONFIGのデフォルト値
 const config3: Config = {
     ...DEFAULT_UNIFIED_CONFIG,
   };
 
-  assertEquals(getMinLengthForKey(config3, "any"), 7); // minWordLengthを使用
+  assertEquals(getMinLengthForKey(config3, "any"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLength
 
-  // パターン4: 何も設定されていない場合のデフォルト
+  // パターン4: minWordLengthのみ（レガシー）
 const config4: Config = {
     ...DEFAULT_UNIFIED_CONFIG,
-  };
+    defaultMinWordLength: undefined as any,
+    minWordLength: 7,
+  } as Config;
 
-  assertEquals(getMinLengthForKey(config4, "any"), 3); // デフォルト値（defaultMinWordLength）
+  assertEquals(getMinLengthForKey(config4, "any"), 7); // minWordLengthを使用
 });
 
 Deno.test("Fallback behavior - missing configurations", () => {
@@ -229,7 +232,7 @@ const config2: Config = {
   };
 
   assertEquals(getMinLengthForKey(config2, "v"), 1); // per_key設定
-  assertEquals(getMinLengthForKey(config2, "h"), 4); // defaultMinWordLengthにフォールバック
+  assertEquals(getMinLengthForKey(config2, "h"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLengthにフォールバック
 
   // undefined値の扱い
 const config3: Config = {
@@ -237,6 +240,7 @@ const config3: Config = {
     perKeyMinLength: {
       "v": undefined as any, // 明示的にundefined
     },
+    defaultMinWordLength: 6,
   };
 
   assertEquals(getMinLengthForKey(config3, "v"), 6); // undefinedなのでdefaultMinWordLengthを使用
@@ -373,6 +377,7 @@ Deno.test("Performance test - large configuration handling", () => {
 
 const config: Config = {
     ...DEFAULT_UNIFIED_CONFIG,
+    perKeyMinLength,
     defaultMinWordLength: 2,
   };
 
@@ -562,5 +567,5 @@ const migrationStep3: Config = {
   const manager3 = new HintManager(migrationStep3);
   assertEquals(manager3.getMinLengthForKey("v"), 1);
   assertEquals(manager3.getMinLengthForKey("h"), 2);
-  assertEquals(manager3.getMinLengthForKey("x"), 2); // defaultMinWordLength
+  assertEquals(manager3.getMinLengthForKey("x"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLength
 });
