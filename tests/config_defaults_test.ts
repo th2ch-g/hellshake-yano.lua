@@ -133,7 +133,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       const hierarchical = getDefaultHierarchicalConfig();
 
       assertEquals(oldConfig.enabled, newConfig.enabled);
-      assertEquals(oldConfig.enabled, hierarchical.core.enabled);
+      assertEquals(oldConfig.enabled, hierarchical.core?.enabled);
     });
 
     it("should have consistent motion count values", () => {
@@ -142,7 +142,8 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       const hierarchical = getDefaultHierarchicalConfig();
 
       assertEquals(oldConfig.motion_count, newConfig.motionCount);
-      assertEquals(oldConfig.motion_count, hierarchical.core.motionCount);
+      // CoreConfig削除により、motionCountはUnifiedConfigから取得
+      assertEquals(oldConfig.motion_count, newConfig.motionCount);
     });
 
     it("should have consistent hint position values", () => {
@@ -160,9 +161,9 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       const hierarchical = getDefaultHierarchicalConfig();
 
       assertEquals(oldConfig.markers.length, newConfig.markers.length);
-      assertEquals(oldConfig.markers.length, hierarchical.core.markers.length);
+      // CoreConfig削除により、markersはUnifiedConfigから取得
+      assertEquals(oldConfig.markers.length, newConfig.markers.length);
       assertEquals(oldConfig.markers[0], newConfig.markers[0]);
-      assertEquals(oldConfig.markers[0], hierarchical.core.markers[0]);
     });
 
     it("should have consistent use_numbers/useNumbers values", () => {

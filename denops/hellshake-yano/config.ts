@@ -64,14 +64,7 @@ export type { HighlightColor };
  * };
  * ```
  */
-export interface CoreConfig {
-  /** プラグインの有効/無効状態 */
-  enabled: boolean;
-  /** ヒント表示に使用するマーカー文字の配列 */
-  markers: string[];
-  /** 必要なモーション回数 */
-  motionCount: number;
-}
+// CoreConfig削除: process4 sub2-2で削除（未使用のため）
 
 /**
  * ヒント関連設定インターフェース
@@ -308,8 +301,12 @@ export interface DebugConfig {
  * ```
  */
 export interface HierarchicalConfig {
-  /** 基本設定 */
-  core: CoreConfig;
+  /** コア設定（後方互換性のため最小限維持） */
+  core?: {
+    enabled?: boolean;
+    markers?: string[];
+    motionCount?: number;
+  };
   /** ヒント関連設定 */
   hint: HintConfig;
   /** 単語検出関連設定 */
@@ -1156,8 +1153,8 @@ export function getDefaultHierarchicalConfig(): HierarchicalConfig {
   return {
     core: {
       enabled: true,
-      markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-      motionCount: 3,
+      markers: ["t", "T", "f", "F"],
+      motionCount: 2,
     },
     hint: {
       hintPosition: "start",
@@ -1245,13 +1242,9 @@ export function getDefaultHierarchicalConfig(): HierarchicalConfig {
  */
 export function createHierarchicalConfig(flatConfig: Partial<Config> = {}): HierarchicalConfig {
   const defaults = getDefaultHierarchicalConfig();
+  const unifiedDefaults = getDefaultUnifiedConfig();
 
   return {
-    core: {
-      enabled: flatConfig.enabled ?? flatConfig.enable ?? defaults.core.enabled,
-      markers: flatConfig.markers ?? defaults.core.markers,
-      motionCount: flatConfig.motion_count ?? defaults.core.motionCount,
-    },
     hint: {
       hintPosition: (flatConfig.hint_position ?? defaults.hint.hintPosition) as
         | "start"
@@ -1330,11 +1323,13 @@ export function createHierarchicalConfig(flatConfig: Partial<Config> = {}): Hier
  * ```
  */
 export function flattenHierarchicalConfig(hierarchicalConfig: HierarchicalConfig): Config {
+  const unifiedDefaults = getDefaultUnifiedConfig();
+  
   return {
-    // Core
-    enabled: hierarchicalConfig.core.enabled,
-    markers: hierarchicalConfig.core.markers,
-    motion_count: hierarchicalConfig.core.motionCount,
+    // Core properties (now taken from UnifiedConfig defaults)
+    enabled: unifiedDefaults.enabled,
+    markers: unifiedDefaults.markers,
+    motion_count: unifiedDefaults.motionCount,
 
     // Hint
     hint_position: hierarchicalConfig.hint.hintPosition,
@@ -1408,7 +1403,6 @@ export function mergeHierarchicalConfig(
   updates: Partial<HierarchicalConfig>,
 ): HierarchicalConfig {
   return {
-    core: { ...baseConfig.core, ...updates.core },
     hint: { ...baseConfig.hint, ...updates.hint },
     word: { ...baseConfig.word, ...updates.word },
     performance: { ...baseConfig.performance, ...updates.performance },
