@@ -78,7 +78,6 @@ describe("Type Consolidation - Process4 sub3-2", () => {
         useJapanese: false,
         enableTinySegmenter: false,
         perKeyMinLength: {},
-        defaultMinWordLength: 1,
         perKeyMotionCount: {},
         defaultMotionCount: 3
       };

@@ -238,7 +238,6 @@ export const EXPECTED_UNIFIED_BEHAVIOR = {
 
     // WordConfig compatibility
     useJapanese: "boolean",
-    useImprovedDetection: "boolean",
 
     // EnhancedWordConfig compatibility
     strategy: ["regex", "tinysegmenter", "hybrid"],

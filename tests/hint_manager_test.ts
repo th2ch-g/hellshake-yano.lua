@@ -169,7 +169,6 @@ describe("HintManager Tests", () => {
           "f": 5,
           "t": 6,
         },
-        defaultMinWordLength: 3,
       };
 
       const newManager = new HintManager(newConfig);
@@ -182,8 +181,6 @@ describe("HintManager Tests", () => {
       const edgeConfig = {
         ...config,
         perKeyMinLength: {},
-        defaultMinWordLength: undefined,
-        defaultMinWordLength: 1, // 後方互換性
       };
 
       const manager = new HintManager(edgeConfig);

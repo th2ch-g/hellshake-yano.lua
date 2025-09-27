@@ -51,7 +51,6 @@ describe("Japanese Word Position Issue", () => {
       ];
 
       const config: WordDetectionConfig = {useJapanese: false,
-        useImprovedDetection: true,
       };
       const detector = new RegexWordDetector(config);
 
@@ -72,7 +71,6 @@ describe("Japanese Word Position Issue", () => {
   describe("HybridWordDetector behavior", () => {
     it("should properly handle mixed Japanese-English text", async () => {
       const config: WordDetectionConfig = {useJapanese: false,
-        useImprovedDetection: true,
       };
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(vimConfigText, 1);

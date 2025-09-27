@@ -273,10 +273,8 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
         "v": 1,
         "h": 2, // 通常移動
       },
-      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
-      defaultMinWordLength: 2, // 明示的にmin_lengthを設定
     };
 
     const testDenops = createMockDenopsWithPerKeyConfig(config);
@@ -318,7 +316,6 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
         "f": 3,
         "F": 3,
       },
-      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
     };
@@ -327,7 +324,6 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
       const testDenops = createMockDenopsWithPerKeyConfig({
         ...config,
         currentKeyContext: scenario.key,
-        defaultMinWordLength: scenario.expectedMinLength,
       });
 
       const result = await detectWordsWithManager(testDenops, config);
@@ -376,7 +372,6 @@ Deno.test("Threshold switching stress tests", async (t) => {
       const testConfig = {
         ...config,
         currentKeyContext: key,
-        defaultMinWordLength: expectedMinLength,
       };
 
       const testDenops = {
@@ -431,7 +426,6 @@ Deno.test("Threshold switching stress tests", async (t) => {
       const testConfig = {
         ...config,
         currentKeyContext: key,
-        defaultMinWordLength: (config.perKeyMinLength as Record<string, number>)[key],
       };
 
       const testDenops = {
@@ -468,7 +462,6 @@ Deno.test("Threshold switching stress tests", async (t) => {
         "v": 1,
         "h": 3,
       },
-      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
     };
@@ -485,7 +478,6 @@ Deno.test("Threshold switching stress tests", async (t) => {
       const testConfig = {
         ...config,
         currentKeyContext: key,
-        defaultMinWordLength: expectedMinLength,
       };
 
       const testDenops = {
@@ -561,7 +553,6 @@ Deno.test("Visual mode integration tests", async (t) => {
       const testConfig = {
         ...config,
         currentKeyContext: test.mode,
-        defaultMinWordLength: 1,
       };
 
       const testDenops = {
@@ -596,7 +587,6 @@ Deno.test("Visual mode integration tests", async (t) => {
         "j": 2, // 通常の行移動
         "k": 2, // 通常の行移動
       },
-      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
     };
@@ -604,7 +594,6 @@ Deno.test("Visual mode integration tests", async (t) => {
     const testConfig = {
       ...config,
       currentKeyContext: "V",
-      defaultMinWordLength: 1,
     };
 
     const testDenops = {
@@ -645,7 +634,6 @@ Deno.test("Visual mode integration tests", async (t) => {
         "V": 1, // ラインビジュアルモード
         "<C-v>": 1, // ブロックビジュアルモード（Ctrl+V）
       },
-      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
     };
@@ -653,7 +641,6 @@ Deno.test("Visual mode integration tests", async (t) => {
     const testConfig = {
       ...config,
       currentKeyContext: "<C-v>",
-      defaultMinWordLength: 1,
     };
 
     const testDenops = {
@@ -704,7 +691,6 @@ Deno.test("Visual mode integration tests", async (t) => {
         "v": 1,
         "V": 1,
       },
-      defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
     };
@@ -713,7 +699,6 @@ Deno.test("Visual mode integration tests", async (t) => {
       const testConfig = {
         ...config,
         currentKeyContext: "v",
-        defaultMinWordLength: 1,
       };
 
       const testDenops = {

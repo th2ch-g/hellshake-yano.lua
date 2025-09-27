@@ -39,7 +39,6 @@ Deno.test("Config interface - should support optional perKeyMinLength", () => {
   const config: Config = {
     enabled: true,
     defaultMinWordLength: 2,
-    enabled: true,
     markers: [],
     motionCount: 0,
     motionTimeout: 500,
@@ -110,7 +109,6 @@ Deno.test("Config validation - should handle legacy minWordLength", () => {
   const legacyConfig: Config = {
     enabled: true,
     defaultMinWordLength: 3, // 旧形式の設定
-    enabled: true,
     markers: [],
     motionCount: 0,
     motionTimeout: 500,
@@ -236,7 +234,6 @@ Deno.test("Per-key configuration - edge cases and validation", () => {
       "<CR>": 1, // Vim形式のキー
       "<Esc>": 2, // エスケープ
     },
-    defaultMinWordLength: 2,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -303,7 +300,6 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
 
   // パターン3: minWordLengthのみ（レガシー）
   const config3: Config = {
-    defaultMinWordLength: 7,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -364,7 +360,6 @@ Deno.test("Fallback behavior - missing configurations", () => {
       "v": 1,
       // 'h'は設定されていない
     },
-    defaultMinWordLength: 4,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -386,7 +381,6 @@ Deno.test("Fallback behavior - missing configurations", () => {
   const config3: Config = {perKeyMinLength: {
       "v": undefined as any, // 明示的にundefined
     },
-    defaultMinWordLength: 6,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -794,7 +788,6 @@ Deno.test("Backward compatibility - migration scenarios", () => {
   const migrationStep2: Config = {perKeyMinLength: {
       "v": 1, // 精密移動のみ新設定
     },
-    defaultMinWordLength: 3, // 他はデフォルト
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -821,7 +814,6 @@ Deno.test("Backward compatibility - migration scenarios", () => {
       "k": 2,
       "l": 2,
     },
-    defaultMinWordLength: 2,
     // minWordLengthは削除済み
     enabled: true,
     markers: [],

@@ -78,7 +78,6 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
   // Test that detector can access UnifiedConfig properties
   const words = await detector.detectWords("test word", 1, {
     currentKey: 'f',
-    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
   });
 
   // Should be able to detect words with proper min length from UnifiedConfig

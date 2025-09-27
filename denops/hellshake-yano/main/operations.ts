@@ -6,7 +6,7 @@
  */
 
 import type { Denops } from "@denops/std";
-import { type Config, toUnifiedConfig } from "../config.ts";
+import { type Config, type UnifiedConfig } from "../config.ts";
 import { detectWordsOptimized } from "../main.ts";
 import { generateHintsOptimized } from "../main.ts";
 import { assignHintsToWords } from "../hint.ts";
@@ -238,12 +238,12 @@ async function generateAndDisplayHints(
     cursorCol,
     mode,
     {hintPosition: config.hintPosition,
-      visual_hint_position: config.visualHintPosition,
+      visualHintPosition: config.visualHintPosition,
     },
   );
 
   // ヒントを非同期で表示（入力をブロックしない）（旧Config → UnifiedConfigに変換）
-  await displayHintsAsync(denops, toUnifiedConfig(config as any), currentHints);
+  await displayHintsAsync(denops, config as UnifiedConfig, currentHints);
   hintsVisible = true;
 }
 

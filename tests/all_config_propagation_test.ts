@@ -125,7 +125,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
 
     const customConfig = {useJapanese: true,
       useImprovedDetection: false,
-      defaultMinWordLength: 2,
       maxWordLength: 100,
       exclude_numbers: true,
       exclude_single_chars: true,
@@ -185,7 +184,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     const mainConfig = {motionCount: 3, // ハードコード
       motionTimeout: 2000, // ハードコード
       useJapanese: false, // ハードコード
-      useImprovedDetection: true, // ハードコード
       wordDetectionStrategy: "hybrid", // ハードコード
       enableTinySegmenter: true, // ハードコード
       segmenterThreshold: 4, // ハードコード
@@ -195,7 +193,6 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
 
     // WordDetectionManagerのデフォルト値
     const managerDefaults = {useJapanese: false, // 修正済み（configで上書き可能）
-      defaultMinWordLength: 1,
       maxWordLength: 50,
       strategy: "hybrid",
     };

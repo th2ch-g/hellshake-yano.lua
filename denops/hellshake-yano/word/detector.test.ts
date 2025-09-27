@@ -10,7 +10,7 @@ import type { Word } from "../types.ts";
 // Default test config
 const defaultConfig: WordDetectionConfig = {useJapanese: true,
   exclude_numbers: false,
-  min_word_length: 2,
+  minWordLength: 2,
 };
 
 Deno.test("WordDetector - Word.col display width conversion", async (t) => {
@@ -151,7 +151,7 @@ Deno.test("WordDetector - 基本的な単語検出確認", async (t) => {
 
   await t.step("基本的な日本語単語検出", async () => {
     const lineText = "データの解析が必要を示すに";
-    const detector = new RegexWordDetector({useJapanese: true, min_word_length: 1});
+    const detector = new RegexWordDetector({useJapanese: true, minWordLength: 1});
     const words = await detector.detectWords(lineText, 1);
 
     // 現実的な期待: RegexWordDetectorの実際の動作に基づく
@@ -178,7 +178,7 @@ Deno.test("WordDetector - 基本的な単語検出確認", async (t) => {
 
   await t.step("英数字混合テスト", async () => {
     const lineText = "getUserNameメソッド";
-    const detector = new RegexWordDetector({useJapanese: true, min_word_length: 1});
+    const detector = new RegexWordDetector({useJapanese: true, minWordLength: 1});
     const words = await detector.detectWords(lineText, 1);
 
     // 現実的な期待: CamelCaseの分割と日本語検出
@@ -191,7 +191,7 @@ Deno.test("WordDetector - 基本的な単語検出確認", async (t) => {
 
   await t.step("記号区切り基本テスト", async () => {
     const lineText = "関数()を呼び出す";
-    const detector = new RegexWordDetector({useJapanese: true, min_word_length: 1});
+    const detector = new RegexWordDetector({useJapanese: true, minWordLength: 1});
     const words = await detector.detectWords(lineText, 1);
 
     // 現実的な期待: 基本的な単語の検出

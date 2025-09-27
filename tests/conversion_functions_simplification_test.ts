@@ -164,7 +164,6 @@ describe("変換関数簡素化テスト (Process4 Sub2-4)", () => {
         currentKeyContext: "",
         debugMode: false,
         performanceLog: false,
-        defaultMinWordLength: 3
       };
 
       // 変換処理の時間測定

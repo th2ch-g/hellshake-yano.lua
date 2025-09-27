@@ -114,7 +114,6 @@ describe("Japanese Filtering Tests", () => {
 
     it("should include Japanese when useJapanese=true", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        useImprovedDetection: true,
         useJapanese: true,
       });
 
@@ -130,7 +129,6 @@ describe("Japanese Filtering Tests", () => {
 
     it("should default to excluding Japanese when useJapanese is undefined", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        useImprovedDetection: true,
         // useJapanese is undefined
       });
 
