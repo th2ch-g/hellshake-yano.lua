@@ -448,15 +448,15 @@ sed -i 's/cache_ttl_ms/cacheTtlMs/g' denops/hellshake-yano/word/manager.ts
 - [x] `deno test tests/api*.ts`でテストパス
 - [x] **移行完了後、api.tsを削除**
 
-##### sub4-2 lifecycle.ts統合（754行）
-- [ ] tests/lifecycle*.tsのテスト実行確認
-- [ ] プラグインライフサイクル管理をCoreへ移行
-  - [ ] initializeState関数移行
-  - [ ] resetCaches関数移行
-  - [ ] ステート管理の統合
-- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-- [ ] `deno test tests/lifecycle*.ts`でテストパス
-- [ ] **移行完了後、lifecycle.tsを削除**
+##### sub4-2 lifecycle.ts統合（754行）【完了】
+- [x] tests/lifecycle*.tsのテスト実行確認
+- [x] プラグインライフサイクル管理をCoreへ移行
+  - [x] initializeState関数移行
+  - [x] resetCaches関数移行
+  - [x] ステート管理の統合
+- [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [x] `deno test tests/lifecycle*.ts`でテストパス
+- [x] **移行完了後、lifecycle.tsを削除**
 
 ##### sub4-3 commands.ts統合（639行）
 - [ ] コマンド関連機能をCoreへ移行

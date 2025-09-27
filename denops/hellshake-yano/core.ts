@@ -2384,6 +2384,203 @@ export class Core {
     }, delay) as unknown as number;
   }
 
+  // ===== Commands Integration Methods (TDD Green Phase) =====
+
+  /**
+   * プラグインを有効化 (commands.ts HellshakeYanoController.enable() 統合)
+   */
+  enablePlugin(): void {
+    this.config.enabled = true;
+  }
+
+  /**
+   * プラグインを無効化 (commands.ts HellshakeYanoController.disable() 統合)
+   */
+  disablePlugin(): void {
+    this.config.enabled = false;
+  }
+
+  /**
+   * プラグインの有効/無効を切り替え (commands.ts HellshakeYanoController.toggle() 統合)
+   * @returns 切り替え後の状態
+   */
+  togglePlugin(): boolean {
+    this.config.enabled = !this.config.enabled;
+    return this.config.enabled;
+  }
+
+  /**
+   * プラグインが有効かどうかを確認 (commands.ts HellshakeYanoController.isEnabled() 統合)
+   * @returns プラグインの有効状態
+   */
+  isPluginEnabled(): boolean {
+    return this.config.enabled;
+  }
+
+  /**
+   * モーション回数を設定 (commands.ts HellshakeYanoConfigManager.setCount() 統合)
+   * @param count 正の整数のモーション回数
+   * @throws Error countが正の整数でない場合
+   */
+  setMotionCount(count: number): void {
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new Error("count must be a positive integer");
+    }
+    this.config.motionCount = count;
+  }
+
+  /**
+   * モーションタイムアウト時間を設定 (commands.ts HellshakeYanoConfigManager.setTimeout() 統合)
+   * @param timeout 100以上の整数のタイムアウト時間（ミリ秒）
+   * @throws Error timeoutが100未満の整数でない場合
+   */
+  setMotionTimeout(timeout: number): void {
+    if (!Number.isInteger(timeout) || timeout < 100) {
+      throw new Error("timeout must be an integer >= 100ms");
+    }
+    this.config.motionTimeout = timeout;
+  }
+
+  /**
+   * デバッグモードを切り替え (commands.ts DebugController.toggleDebugMode() 統合)
+   * @returns 切り替え後のデバッグモード状態
+   */
+  toggleDebugMode(): boolean {
+    this.config.debugMode = !this.config.debugMode;
+    return this.config.debugMode;
+  }
+
+  /**
+   * パフォーマンスログを切り替え (commands.ts DebugController.togglePerformanceLog() 統合)
+   * @returns 切り替え後のパフォーマンスログ状態
+   */
+  togglePerformanceLog(): boolean {
+    this.config.performanceLog = !this.config.performanceLog;
+    return this.config.performanceLog;
+  }
+
+  /**
+   * 座標デバッグを切り替え (commands.ts DebugController.toggleCoordinateDebug() 統合)
+   * @returns 切り替え後の座標デバッグ状態
+   */
+  toggleCoordinateDebug(): boolean {
+    this.config.debugCoordinates = !this.config.debugCoordinates;
+    return this.config.debugCoordinates;
+  }
+
+  /**
+   * コマンドファクトリーを取得 (commands.ts CommandFactory 統合)
+   * @returns CommandFactoryインスタンス
+   */
+  getCommandFactory(): CommandFactory {
+    return new CommandFactory(this.config);
+  }
+
+  /**
+   * 設定を安全に更新 (commands.ts updateConfigSafely() 統合)
+   * @param updates 更新する設定値
+   * @param validator バリデーション関数（オプション）
+   * @throws Error バリデーションが失敗した場合
+   */
+  updateConfigSafely(
+    updates: Partial<UnifiedConfig>,
+    validator?: (config: Partial<UnifiedConfig>) => { valid: boolean; errors: string[] }
+  ): void {
+    if (validator) {
+      const result = validator(updates);
+      if (!result.valid) {
+        throw new Error(`Configuration validation failed: ${result.errors.join(", ")}`);
+      }
+    }
+    Object.assign(this.config, updates);
+  }
+
+  /**
+   * 設定を元に戻す機能付きの更新 (commands.ts updateConfigWithRollback() 統合)
+   * @param updates 更新する設定値
+   * @returns ロールバック関数を含むオブジェクト
+   */
+  updateConfigWithRollback(
+    updates: Partial<UnifiedConfig>
+  ): { rollback: () => void } {
+    const originalValues: Partial<UnifiedConfig> = {};
+
+    // 変更される値をバックアップ
+    for (const key in updates) {
+      if (key in this.config) {
+        const configKey = key as keyof UnifiedConfig;
+        (originalValues as any)[configKey] = this.config[configKey];
+      }
+    }
+
+    // 設定を更新
+    Object.assign(this.config, updates);
+
+    // ロールバック関数を返す
+    return {
+      rollback: () => {
+        Object.assign(this.config, originalValues);
+      },
+    };
+  }
+
+  /**
+   * バッチ設定更新 (commands.ts batchUpdateConfig() 統合)
+   * @param updateFunctions 設定更新関数の配列
+   * @throws Error いずれかの更新関数でエラーが発生した場合
+   */
+  batchUpdateConfig(
+    updateFunctions: Array<(config: UnifiedConfig) => void>
+  ): void {
+    const backup = { ...this.config };
+
+    try {
+      updateFunctions.forEach(fn => fn(this.config));
+    } catch (error) {
+      // エラーが発生した場合は設定を元に戻す
+      Object.assign(this.config, backup);
+      throw error;
+    }
+  }
+
+  /**
+   * レガシー有効化 (commands.ts enable() 統合)
+   */
+  enableLegacy(): void {
+    this.config.enabled = true;
+  }
+
+  /**
+   * レガシー無効化 (commands.ts disable() 統合)
+   */
+  disableLegacy(): void {
+    this.config.enabled = false;
+  }
+
+  /**
+   * レガシーモーション回数設定 (commands.ts setCount() 統合)
+   * @param count 正の整数のモーション回数
+   * @throws Error countが正の整数でない場合
+   */
+  setCountLegacy(count: number): void {
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new Error("count must be a positive integer");
+    }
+    this.config.motionCount = count;
+  }
+
+  /**
+   * レガシータイムアウト設定 (commands.ts setTimeout() 統合)
+   * @param timeout 100以上の整数のタイムアウト時間（ミリ秒）
+   * @throws Error timeoutが100未満の整数でない場合
+   */
+  setTimeoutLegacy(timeout: number): void {
+    if (!Number.isInteger(timeout) || timeout < 100) {
+      throw new Error("timeout must be an integer >= 100ms");
+    }
+    this.config.motionTimeout = timeout;
+  }
+
 }
 
 /**
