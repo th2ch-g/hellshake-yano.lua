@@ -2,7 +2,7 @@
  * TDDテスト: 数字フォールバック削除の検証
  *
  * このテストは、generateHintsWithGroups関数が
- * single_char_keysとmulti_char_keysの組み合わせのみを生成し、
+ * singleCharKeysとmultiCharKeysの組み合わせのみを生成し、
  * 数字フォールバック（00, 01, 02...）を生成しないことを検証します。
  */
 
@@ -14,7 +14,7 @@ describe("Hint Generation Without Number Fallback", () => {
   describe("Strict single/multi char keys separation", () => {
     it("should NOT generate number hints when hints exceed multi_char combinations", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G"], // 5個
-        multi_char_keys: ["B", "C", "E"], // 3×3=9個の2文字組み合わせ
+        multiCharKeys: ["B", "C", "E"], // 3×3=9個の2文字組み合わせ
       };
 
       // 最大: 5個（single） + 9個（multi） = 14個
@@ -36,15 +36,15 @@ describe("Hint Generation Without Number Fallback", () => {
       multiCharHints.forEach(hint => {
         assertEquals(hint.length, 2, "Multi-char hints should be 2 characters");
         const [first, second] = hint.split("");
-        assertExists(["B", "C", "E"].includes(first), "First char should be from multi_char_keys");
-        assertExists(["B", "C", "E"].includes(second), "Second char should be from multi_char_keys");
+        assertExists(["B", "C", "E"].includes(first), "First char should be from multiCharKeys");
+        assertExists(["B", "C", "E"].includes(second), "Second char should be from multiCharKeys");
       });
     });
 
     it("should work with the actual user configuration", () => {
       // ユーザーの実際の設定
       const config: HintKeyConfig = {singleCharKeys: "ASDFGNM0123456789".split(""), // 17個
-        multi_char_keys: "BCEIOPQRTUVWXYZ".split(""), // 15×15=225個
+        multiCharKeys: "BCEIOPQRTUVWXYZ".split(""), // 15×15=225個
       };
 
       // 最大: 17 + 225 = 242個
@@ -57,13 +57,13 @@ describe("Hint Generation Without Number Fallback", () => {
       const numberHints = hints250.filter(h => /^\d{2}$/.test(h));
       assertEquals(numberHints.length, 0, "No '00', '01' style number hints");
 
-      // 最後のヒントがZZであることを確認（multi_char_keysの最後の組み合わせ）
+      // 最後のヒントがZZであることを確認（multiCharKeysの最後の組み合わせ）
       assertEquals(hints250[hints250.length - 1], "ZZ");
     });
 
     it("should handle small hint requests correctly", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
-        multi_char_keys: ["B", "C"],
+        multiCharKeys: ["B", "C"],
       };
 
       // 3個のヒントのみ要求
@@ -75,7 +75,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
     it("should generate multi-char hints when single-char is exhausted", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S"], // 2個
-        multi_char_keys: ["B", "C"], // 2×2=4個
+        multiCharKeys: ["B", "C"], // 2×2=4個
       };
 
       // 5個要求（2個のsingle + 3個のmulti）
@@ -89,10 +89,10 @@ describe("Hint Generation Without Number Fallback", () => {
       assertEquals(hints[4], "CB");
     });
 
-    it("should respect max_single_char_hints setting", () => {
+    it("should respect maxSingleCharHints setting", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G"],
-        multi_char_keys: ["B", "C"],
-        max_single_char_hints: 2, // 1文字ヒントを2個に制限
+        multiCharKeys: ["B", "C"],
+        maxSingleCharHints: 2, // 1文字ヒントを2個に制限
       };
 
       const hints = generateHintsWithGroups(5, config);
@@ -109,7 +109,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
     it("should NOT generate 3-character hints anymore", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"], // 1個
-        multi_char_keys: ["B", "C"], // 2×2=4個
+        multiCharKeys: ["B", "C"], // 2×2=4個
       };
 
       // 10個要求しても、5個（1+4）しか生成されない
@@ -122,26 +122,26 @@ describe("Hint Generation Without Number Fallback", () => {
       assertEquals(threeCharHints.length, 0, "No 3-character hints should be generated");
     });
 
-    it("should handle empty multi_char_keys", () => {
+    it("should handle empty multiCharKeys", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
-        multi_char_keys: [], // 空
+        multiCharKeys: [], // 空
       };
 
       const hints = generateHintsWithGroups(5, config);
 
-      // single_char_keysの3個のみ生成
+      // singleCharKeysの3個のみ生成
       assertEquals(hints.length, 3);
       assertEquals(hints, ["A", "S", "D"]);
     });
 
-    it("should handle empty single_char_keys", () => {
+    it("should handle empty singleCharKeys", () => {
       const config: HintKeyConfig = {singleCharKeys: [], // 空
-        multi_char_keys: ["B", "C"],
+        multiCharKeys: ["B", "C"],
       };
 
       const hints = generateHintsWithGroups(3, config);
 
-      // multi_char_keysから2文字ヒントのみ生成
+      // multiCharKeysから2文字ヒントのみ生成
       assertEquals(hints.length, 3);
       assertEquals(hints, ["BB", "BC", "CB"]);
     });
@@ -150,7 +150,7 @@ describe("Hint Generation Without Number Fallback", () => {
   describe("Edge cases", () => {
     it("should handle zero word count", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"],
-        multi_char_keys: ["B"],
+        multiCharKeys: ["B"],
       };
 
       const hints = generateHintsWithGroups(0, config);
@@ -159,7 +159,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
     it("should handle negative word count", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"],
-        multi_char_keys: ["B"],
+        multiCharKeys: ["B"],
       };
 
       const hints = generateHintsWithGroups(-1, config);
@@ -168,7 +168,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
     it("should handle both keys empty with markers fallback", () => {
       const config: HintKeyConfig = {singleCharKeys: [],
-        multi_char_keys: [],
+        multiCharKeys: [],
         markers: ["X", "Y", "Z"],
       };
 

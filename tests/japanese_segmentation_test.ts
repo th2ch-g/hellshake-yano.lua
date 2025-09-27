@@ -94,7 +94,7 @@ Deno.test("TinySegmenter Basic Functionality", async (t) => {
 Deno.test("Word Detector Integration Tests", async (t) => {
   await t.step("RegexWordDetector with Japanese", async () => {
     const config: WordDetectionConfig = {useJapanese: true,
-      // use_improved_detection: 統合済み（常に有効）
+      // useImprovedDetection: 統合済み（常に有効）
     };
 
     const detector = new RegexWordDetector(config);
@@ -108,7 +108,7 @@ Deno.test("Word Detector Integration Tests", async (t) => {
   await t.step("TinySegmenterWordDetector basic functionality", async () => {
     const config: WordDetectionConfig = {
       enableTinySegmenter: true,
-      segmenter_threshold: 3,
+      segmenterThreshold: 3,
       useJapanese: true,
     };
 
@@ -126,7 +126,7 @@ Deno.test("Word Detector Integration Tests", async (t) => {
   await t.step("HybridWordDetector auto-detection", async () => {
     const config: WordDetectionConfig = {useJapanese: true,
       enableTinySegmenter: true,
-      segmenter_threshold: 3,
+      segmenterThreshold: 3,
     };
 
     const detector = new HybridWordDetector(config);
@@ -174,7 +174,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
       strategy: "hybrid",
       useJapanese: true,
       enableTinySegmenter: true,
-      cache_enabled: true,
+      cacheEnabled: true,
     });
 
     await manager.initialize();
@@ -223,8 +223,8 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     const manager = new WordDetectionManager({
       strategy: "tinysegmenter",
       enableTinySegmenter: false,
-      enable_fallback: true,
-      fallback_to_regex: true,
+      enableFallback: true,
+      fallbackToRegex: true,
       useJapanese: true,
     });
 
@@ -244,9 +244,9 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
 
   await t.step("Performance monitoring and caching", async () => {
     const manager = new WordDetectionManager({
-      cache_enabled: true,
-      cache_max_size: 100,
-      performance_monitoring: true,
+      cacheEnabled: true,
+      cacheMaxSize: 100,
+      performanceMonitoring: true,
     });
 
     await manager.initialize();
@@ -302,8 +302,8 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
   await t.step("Large text performance", async () => {
     const manager = new WordDetectionManager({
       strategy: "hybrid",
-      cache_enabled: true,
-      timeout_ms: 10000, // 10 second timeout
+      cacheEnabled: true,
+      timeoutMs: 10000, // 10 second timeout
     });
 
     await manager.initialize();
@@ -340,7 +340,7 @@ function calculateTotal(items) {
     const manager = new WordDetectionManager({
       strategy: "hybrid",
       useJapanese: true,
-      // use_improved_detection: 統合済み（常に有効）
+      // useImprovedDetection: 統合済み（常に有効）
     });
 
     await manager.initialize();
@@ -378,7 +378,7 @@ For more information, see the 詳細ドキュメント.
     const manager = new WordDetectionManager({
       strategy: "hybrid",
       useJapanese: true,
-      min_word_length: 2,
+      defaultMinWordLength: 2,
     });
 
     await manager.initialize();

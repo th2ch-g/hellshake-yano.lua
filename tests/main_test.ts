@@ -105,23 +105,23 @@ Deno.test("UnifiedConfig and Config should provide equivalent functionality", ()
 });
 
 // Process2 Sub6: 型安全性のテスト（Red Phase）
-Deno.test("counted_motions should be strongly typed", () => {
+Deno.test("countedMotions should be strongly typed", () => {
   const config = getDefaultConfig();
 
-  // counted_motionsは文字列の配列であるべき
+  // countedMotionsは文字列の配列であるべき
   assertEquals(Array.isArray(config.countedMotions), true);
 
   // 全ての要素が文字列であることを確認（型安全性テスト）
   config.countedMotions.forEach((key, index) => {
-    assertEquals(typeof key, "string", `counted_motions[${index}] should be string, got ${typeof key}`);
-    assertEquals(key.length > 0, true, `counted_motions[${index}] should not be empty`);
+    assertEquals(typeof key, "string", `countedMotions[${index}] should be string, got ${typeof key}`);
+    assertEquals(key.length > 0, true, `countedMotions[${index}] should not be empty`);
   });
 });
 
 Deno.test("motion detection functions should have proper types", () => {
   const config = getDefaultConfig();
 
-  // counted_motions内の各キーに対してgetMinLengthForKeyが正しく動作することを確認
+  // countedMotions内の各キーに対してgetMinLengthForKeyが正しく動作することを確認
   config.countedMotions.forEach((key: string) => {
     const minLength = getMinLengthForKey(config, key);
     assertEquals(typeof minLength, "number");
@@ -140,7 +140,7 @@ Deno.test("main.ts type safety - filter function should be strongly typed", () =
   // This test validates that the type guard filter function works correctly
   // after refactoring from 'any' to proper type guard in main.ts line 510
 
-  // Create a mock config with counted_motions that includes invalid types
+  // Create a mock config with countedMotions that includes invalid types
   const mockConfig = {countedMotions: ["f", "F", 123, null, "t", "T", "", undefined] as unknown[],
   };
 

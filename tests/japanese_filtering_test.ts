@@ -2,7 +2,7 @@
 
 /**
  * 日本語フィルタリングのテスト
- * use_japanese設定が正しく動作することを確認
+ * useJapanese設定が正しく動作することを確認
  */
 
 import { assertEquals } from "@std/assert";
@@ -89,7 +89,7 @@ describe("Japanese Filtering Tests", () => {
       },
     };
 
-    it("should respect use_japanese=false setting", async () => {
+    it("should respect useJapanese=false setting", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
         useImprovedDetection: true,
         useJapanese: false,
@@ -112,7 +112,7 @@ describe("Japanese Filtering Tests", () => {
       assertEquals(texts.includes("あ"), false);
     });
 
-    it("should include Japanese when use_japanese=true", async () => {
+    it("should include Japanese when useJapanese=true", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
         useImprovedDetection: true,
         useJapanese: true,
@@ -128,7 +128,7 @@ describe("Japanese Filtering Tests", () => {
       assertEquals(texts.includes("試験"), true);
     });
 
-    it("should default to excluding Japanese when use_japanese is undefined", async () => {
+    it("should default to excluding Japanese when useJapanese is undefined", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
         useImprovedDetection: true,
         // useJapanese is undefined

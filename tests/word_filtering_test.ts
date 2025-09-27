@@ -89,7 +89,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
   });
 
   describe("Japanese-inclusive mode (backward compatibility)", () => {
-    it("should include Japanese when use_japanese is true", () => {
+    it("should include Japanese when useJapanese is true", () => {
       const lineText = "こんにちはworld テストtest";
       const config = { useJapanese: true };
 

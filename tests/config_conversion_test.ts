@@ -49,7 +49,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         motionCount: 5,
         motionTimeout: 3000,
         hintPosition: "end",
-        visual_hintPosition: "start"
+        visualHintPosition: "start"
       };
 
       const result =(oldConfig);
@@ -70,7 +70,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         useNumbers: false,
         highlightSelected: false,
         debugCoordinates: true,
-        single_char_keys: ["A", "S"]
+        singleCharKeys: ["A", "S"]
       };
 
       const result =(oldConfig);
@@ -87,9 +87,9 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
 
     it("should convert extended hint settings (4 properties)", () => {
       const oldConfig: Partial<Config> = {multiCharKeys: ["B", "C"],
-        max_single_char_hints: 15,
-        use_hint_groups: false,
-        highlight_hint_marker: "DiffChange"
+        maxSingleCharHints: 15,
+        useHintGroups: false,
+        highlightHintMarker: "DiffChange"
       };
 
       const result =(oldConfig);
@@ -102,12 +102,12 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
 
     it("should convert word detection settings (7 properties)", () => {
       const oldConfig: Partial<Config> = {highlightHintMarkerCurrent: "Visual",
-        suppress_on_key_repeat: false,
-        key_repeat_threshold: 75,
+        suppressOnKeyRepeat: false,
+        keyRepeatThreshold: 75,
         useJapanese: true,
-        word_detection_strategy: "tinysegmenter",
+        wordDetectionStrategy: "tinysegmenter",
         enableTinySegmenter: false,
-        segmenter_threshold: 6
+        segmenterThreshold: 6
       };
 
       const result =(oldConfig);
@@ -123,12 +123,12 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
 
     it("should convert japanese word settings (7 properties)", () => {
       const oldConfig: Partial<Config> = {japaneseMinWordLength: 3,
-        japanese_merge_particles: false,
-        japanese_merge_threshold: 4,
+        japaneseMergeParticles: false,
+        japaneseMergeThreshold: 4,
         perKeyMinLength: { "w": 2, "b": 1 },
         defaultMinWordLength: 4,
-        per_key_motionCount: { "j": 2, "k": 4 },
-        default_motionCount: 5
+        perKeyMotionCount: { "j": 2, "k": 4 },
+        defaultMotionCount: 5
       };
 
       const result =(oldConfig);
@@ -279,42 +279,42 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
     it("should map all 32 properties bidirectionally", () => {
       const mappings = [
         // Core settings (5) - enabled と markers は共通なのでカウントしない
-        { snake: "motion_count", camel: "motionCount" },
-        { snake: "motion_timeout", camel: "motionTimeout" },
-        { snake: "hint_position", camel: "hintPosition" },
-        { snake: "visual_hint_position", camel: "visualHintPosition" },
+        { snake: "motionCount", camel: "motionCount" },
+        { snake: "motionTimeout", camel: "motionTimeout" },
+        { snake: "hintPosition", camel: "hintPosition" },
+        { snake: "visualHintPosition", camel: "visualHintPosition" },
 
         // Hint settings (6) - maxHints と debounceDelay は共通なのでカウントしない
-        { snake: "trigger_on_hjkl", camel: "triggerOnHjkl" },
-        { snake: "counted_motions", camel: "countedMotions" },
-        { snake: "use_numbers", camel: "useNumbers" },
-        { snake: "highlight_selected", camel: "highlightSelected" },
-        { snake: "debug_coordinates", camel: "debugCoordinates" },
-        { snake: "single_char_keys", camel: "singleCharKeys" },
+        { snake: "triggerOnHjkl", camel: "triggerOnHjkl" },
+        { snake: "countedMotions", camel: "countedMotions" },
+        { snake: "useNumbers", camel: "useNumbers" },
+        { snake: "highlightSelected", camel: "highlightSelected" },
+        { snake: "debugCoordinates", camel: "debugCoordinates" },
+        { snake: "singleCharKeys", camel: "singleCharKeys" },
 
         // Extended hint settings (4)
-        { snake: "multi_char_keys", camel: "multiCharKeys" },
-        { snake: "max_single_char_hints", camel: "maxSingleCharHints" },
-        { snake: "use_hint_groups", camel: "useHintGroups" },
-        { snake: "highlight_hint_marker", camel: "highlightHintMarker" },
+        { snake: "multiCharKeys", camel: "multiCharKeys" },
+        { snake: "maxSingleCharHints", camel: "maxSingleCharHints" },
+        { snake: "useHintGroups", camel: "useHintGroups" },
+        { snake: "highlightHintMarker", camel: "highlightHintMarker" },
 
         // Word detection settings (7)
-        { snake: "highlight_hint_marker_current", camel: "highlightHintMarkerCurrent" },
-        { snake: "suppress_on_key_repeat", camel: "suppressOnKeyRepeat" },
-        { snake: "key_repeat_threshold", camel: "keyRepeatThreshold" },
-        { snake: "use_japanese", camel: "useJapanese" },
-        { snake: "word_detection_strategy", camel: "wordDetectionStrategy" },
-        { snake: "enable_tinysegmenter", camel: "enableTinySegmenter" },
-        { snake: "segmenter_threshold", camel: "segmenterThreshold" },
+        { snake: "highlightHintMarkerCurrent", camel: "highlightHintMarkerCurrent" },
+        { snake: "suppressOnKeyRepeat", camel: "suppressOnKeyRepeat" },
+        { snake: "keyRepeatThreshold", camel: "keyRepeatThreshold" },
+        { snake: "useJapanese", camel: "useJapanese" },
+        { snake: "wordDetectionStrategy", camel: "wordDetectionStrategy" },
+        { snake: "enableTinySegmenter", camel: "enableTinySegmenter" },
+        { snake: "segmenterThreshold", camel: "segmenterThreshold" },
 
         // Japanese word settings (7)
-        { snake: "japanese_min_word_length", camel: "japaneseMinWordLength" },
-        { snake: "japanese_merge_particles", camel: "japaneseMergeParticles" },
-        { snake: "japanese_merge_threshold", camel: "japaneseMergeThreshold" },
-        { snake: "per_key_min_length", camel: "perKeyMinLength" },
-        { snake: "default_min_word_length", camel: "defaultMinWordLength" },
-        { snake: "per_key_motion_count", camel: "perKeyMotionCount" },
-        { snake: "default_motion_count", camel: "defaultMotionCount" },
+        { snake: "japaneseMinWordLength", camel: "japaneseMinWordLength" },
+        { snake: "japaneseMergeParticles", camel: "japaneseMergeParticles" },
+        { snake: "japaneseMergeThreshold", camel: "japaneseMergeThreshold" },
+        { snake: "perKeyMinLength", camel: "perKeyMinLength" },
+        { snake: "defaultMinWordLength", camel: "defaultMinWordLength" },
+        { snake: "perKeyMotionCount", camel: "perKeyMotionCount" },
+        { snake: "defaultMotionCount", camel: "defaultMotionCount" },
 
         // Common properties (共通プロパティも含める)
         { snake: "enabled", camel: "enabled" },

@@ -36,7 +36,7 @@ Deno.test({
     for (let i = 0; i < 100; i++) {
       const word = { text: `v${i}`, line: i + 200, col: 1, byteCol: 1 };
       assignHintsToWords([word], hints, 1, 1, "visual", {hintPosition: "start",
-        visual_hintPosition: "end",
+        visualHintPosition: "end",
       });
     }
 

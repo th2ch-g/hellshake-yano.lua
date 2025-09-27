@@ -82,7 +82,7 @@ Deno.test("RED: CommandFactory should accept UnifiedConfig", () => {
 /**
  * TDD Red Phase Test 5: HellshakeYanoConfigManager.setCount()がUnifiedConfigの構造を理解するか
  *
- * UnifiedConfigではmotion_countの代わりに入力パラメータの構造が変わる可能性
+ * UnifiedConfigではmotionCountの代わりに入力パラメータの構造が変わる可能性
  */
 Deno.test("RED: ConfigManager methods should work with UnifiedConfig structure", async () => {
   const commandsSource = await Deno.readTextFile(
@@ -90,15 +90,15 @@ Deno.test("RED: ConfigManager methods should work with UnifiedConfig structure",
   );
 
   // setCountメソッドがUnifiedConfigのプロパティにアクセスしているかチェック
-  // 現在はthis.config.motion_countを使用しているが、
+  // 現在はthis.config.motionCountを使用しているが、
   // UnifiedConfigでは構造が異なる可能性がある
   const setCountMatch = commandsSource.match(
     /setCount\([^)]+\)[^{]*\{[^}]*this\.config\.(\w+)/
   );
 
-  // 現在はmotion_countを使用しているが、UnifiedConfigでは異なる可能性
+  // 現在はmotionCountを使用しているが、UnifiedConfigでは異なる可能性
   assertEquals(
-    setCountMatch?.[1] !== 'motion_count',
+    setCountMatch?.[1] !== 'motionCount',
     true,
     "setCount should be updated to use UnifiedConfig property structure"
   );

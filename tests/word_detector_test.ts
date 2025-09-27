@@ -10,14 +10,14 @@ export interface WordDetector {
 
 export interface WordDetectionConfig {
   strategy?: "regex" | "tinysegmenter" | "hybrid";
-  use_japanese?: boolean;
-  use_improved_detection?: boolean;
+  useJapanese?: boolean;
+  useImprovedDetection?: boolean;
   // TinySegmenter specific
-  enable_tinysegmenter?: boolean;
-  segmenter_threshold?: number; // minimum characters for segmentation
+  enableTinySegmenter?: boolean;
+  segmenterThreshold?: number; // minimum characters for segmentation
   // Fallback options
-  enable_fallback?: boolean;
-  fallback_to_regex?: boolean;
+  enableFallback?: boolean;
+  fallbackToRegex?: boolean;
 }
 
 // Mock implementation for testing
@@ -143,7 +143,7 @@ class MockWordDetectionManager {
         words = await detector.detectWords(text, startLine);
       } catch (error) {
         console.warn(`Detector ${detector.name} failed:`, error);
-        if (this.config.enable_fallback) {
+        if (this.config.enableFallback) {
           const fallbackDetector = this.getFallbackDetector();
           if (fallbackDetector && fallbackDetector !== detector) {
             words = await fallbackDetector.detectWords(text, startLine);
@@ -184,7 +184,7 @@ class MockWordDetectionManager {
   }
 
   private getFallbackDetector(): WordDetector | null {
-    if (this.config.fallback_to_regex) {
+    if (this.config.fallbackToRegex) {
       return this.detectors.find((d) => d.name.includes("Regex")) || null;
     }
     return this.detectors.length > 1 ? this.detectors[1] : null;
@@ -216,11 +216,11 @@ class MockWordDetectionManager {
     return {
       strategy: "hybrid",
       useJapanese: false,
-      use_improved_detection: true,
+      useImprovedDetection: true,
       enableTinySegmenter: true,
-      segmenter_threshold: 4,
-      enable_fallback: true,
-      fallback_to_regex: true,
+      segmenterThreshold: 4,
+      enableFallback: true,
+      fallbackToRegex: true,
     };
   }
 
@@ -375,8 +375,8 @@ Deno.test("WordDetectionManager Tests", async (t) => {
     }
 
     const manager = new MockWordDetectionManager({
-      enable_fallback: true,
-      fallback_to_regex: true,
+      enableFallback: true,
+      fallbackToRegex: true,
     });
     manager.addDetector(new FailingDetector());
     manager.addDetector(new MockRegexWordDetector());
@@ -400,7 +400,7 @@ Deno.test("WordDetectionManager Tests", async (t) => {
     const customConfig: WordDetectionConfig = {
       strategy: "regex",
       useJapanese: true,
-      enable_fallback: false,
+      enableFallback: false,
     };
     const manager2 = new MockWordDetectionManager(customConfig);
     const stats2 = manager2.getCacheStats();
@@ -428,10 +428,10 @@ Deno.test("WordDetectionConfig Tests", async (t) => {
 
   await t.step("Boolean configuration validation", () => {
     const config: WordDetectionConfig = {useJapanese: true,
-      use_improved_detection: false,
+      useImprovedDetection: false,
       enableTinySegmenter: true,
-      enable_fallback: false,
-      fallback_to_regex: true,
+      enableFallback: false,
+      fallbackToRegex: true,
     };
 
     const manager = new MockWordDetectionManager(config);

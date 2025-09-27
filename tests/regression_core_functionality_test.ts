@@ -71,7 +71,7 @@ Deno.test({
     // 多くの単語でフォールバック機能をテスト
     const wordCount = 30; // 単文字（26）+ 2文字（4） = 30
     const config = {singleCharKeys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-      multi_char_keys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+      multiCharKeys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
     };
     const hints = generateHintsWithGroups(wordCount, config);
 
@@ -151,7 +151,7 @@ Deno.test({
       strategy: "hybrid" as const,
       useJapanese: false,
       enableTinySegmenter: false,
-      cache_enabled: true,
+      cacheEnabled: true,
     };
 
     const result = await detectWordsWithManager(mockDenops, config);

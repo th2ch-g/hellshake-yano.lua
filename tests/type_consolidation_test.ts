@@ -15,6 +15,7 @@ import type {
   PerformanceConfig,
   DebugConfig
 } from "../denops/hellshake-yano/config.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 
 describe("Type Consolidation - Process4 sub3-2", () => {
   describe("RED Phase: 重複型が存在することを確認", () => {
@@ -60,6 +61,7 @@ describe("Type Consolidation - Process4 sub3-2", () => {
       type ConfigType = Config; // 現在はエイリアスとして存在
 
       const config: ConfigType = {
+        ...DEFAULT_UNIFIED_CONFIG,
         enabled: true,
         markers: ["A", "B", "C"],
         motionCount: 3,

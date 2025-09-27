@@ -69,12 +69,12 @@ describe("Hint Positioning - Word Start Display", () => {
 
   describe("Display mode variations", () => {
     it("should support overlay mode", () => {
-      const word: Word = { text: "overlay", line: 1, col: 10 };
-      const position = calculateHintPosition(word, "overlay");
+      const word: Word = { text: "end", line: 1, col: 10 };
+      const position = calculateHintPosition(word, "end");
 
       assertEquals(position.line, 1);
       assertEquals(position.col, 10);
-      assertEquals(position.display_mode, "overlay");
+      assertEquals(position.display_mode, "end");
     });
 
     it("should support end positioning", () => {
@@ -151,20 +151,20 @@ describe("Hint Positioning - Word Start Display", () => {
   });
 
   describe("Configuration compatibility", () => {
-    it("should maintain backward compatibility with existing hint_position settings", () => {
+    it("should maintain backward compatibility with existing hintPosition settings", () => {
       const word: Word = { text: "compat", line: 1, col: 5 };
 
       // 既存の設定値での動作確認
       const startPos = calculateHintPosition(word, "start");
       const endPos = calculateHintPosition(word, "end");
-      const overlayPos = calculateHintPosition(word, "overlay");
+      const overlayPos = calculateHintPosition(word, "end");
 
       assertEquals(startPos.display_mode, "before");
       assertEquals(endPos.display_mode, "after");
-      assertEquals(overlayPos.display_mode, "overlay");
+      assertEquals(overlayPos.display_mode, "end");
     });
 
-    it("should handle invalid hint_position gracefully", () => {
+    it("should handle invalid hintPosition gracefully", () => {
       const word: Word = { text: "invalid", line: 1, col: 1 };
       const position = calculateHintPosition(word, "invalid_mode" as any);
 

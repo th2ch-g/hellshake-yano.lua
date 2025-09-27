@@ -27,14 +27,14 @@ Deno.test({
     ];
     const hints = ["A", "B"];
 
-    // visual_hint_position設定でのテスト
+    // visualHintPosition設定でのテスト
     const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
-      visual_hintPosition: "end",
+      visualHintPosition: "end",
     });
 
     assertEquals(mappings.length, 2);
 
-    // Visual modeでは visual_hint_position が優先される
+    // Visual modeでは visualHintPosition が優先される
     assertEquals(mappings[0].hintCol, 4); // "test"の終端位置（1 + 4 - 1）
     assertEquals(mappings[1].hintCol, 9); // "word"の終端位置（6 + 4 - 1）
   },
@@ -56,7 +56,7 @@ Deno.test({
 
     // Visual modeでの計算（異なる設定）
     const visualResult = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
-      visual_hintPosition: "end",
+      visualHintPosition: "end",
     });
 
     // 結果が異なることを確認（キャッシュが分離されている）
@@ -78,7 +78,7 @@ Deno.test({
     const hints = ["A", "B"];
 
     const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
-      visual_hintPosition: "end",
+      visualHintPosition: "end",
     }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 2);
@@ -99,12 +99,12 @@ Deno.test({
     ];
     const hints = ["A"];
 
-    // visual_hint_positionが設定されていない場合のフォールバック
+    // visualHintPositionが設定されていない場合のフォールバック
     const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "end",
     });
 
     assertEquals(mappings.length, 1);
-    // hint_positionにフォールバックするが、Visual modeのデフォルト動作(end)になる
+    // hintPositionにフォールバックするが、Visual modeのデフォルト動作(end)になる
     assertEquals(mappings[0].hintCol, 4); // "test"の終端位置
   },
 });
@@ -143,7 +143,7 @@ Deno.test({
     const hints = ["A", "B", "C"];
 
     const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {hintPosition: "start",
-      visual_hintPosition: "end",
+      visualHintPosition: "end",
     }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 3);

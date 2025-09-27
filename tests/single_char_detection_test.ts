@@ -116,7 +116,7 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       assertEquals(words.map((w) => w.text), problemChars);
     });
 
-    await t.step("should detect single_char_keys", () => {
+    await t.step("should detect singleCharKeys", () => {
       const singleCharKeys = ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"];
       const line = singleCharKeys.join(" ");
       const words = extractWordsFromLine(line, 1, true);
@@ -125,7 +125,7 @@ Deno.test("Single Character Word Detection Tests", async (t) => {
       assertEquals(words.map((w) => w.text), singleCharKeys);
     });
 
-    await t.step("should detect multi_char_keys", () => {
+    await t.step("should detect multiCharKeys", () => {
       const multiCharKeys = [
         "B",
         "C",

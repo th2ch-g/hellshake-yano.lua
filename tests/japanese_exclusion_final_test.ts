@@ -90,8 +90,8 @@ describe("Japanese Exclusion Final Fix", () => {
       });
 
       // Should detect English identifiers
-      const hasUseJapanese = words.some((w) => w.text === "use_japanese");
-      assertEquals(hasUseJapanese, true, "Should detect 'use_japanese'");
+      const hasUseJapanese = words.some((w) => w.text === "useJapanese");
+      assertEquals(hasUseJapanese, true, "Should detect 'useJapanese'");
 
       // Should NOT detect "日本語" or "除外" or "語"
       const japaneseChars = ["日", "本", "語", "除", "外"];

@@ -70,7 +70,7 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
   const config: WordDetectionConfig = {
     // These should map to UnifiedConfig properties (currently uses snake_case)
     useJapanese: mockUnifiedConfig.useJapanese,
-    min_word_length: mockUnifiedConfig.defaultMinWordLength
+    defaultMinWordLength: mockUnifiedConfig.defaultMinWordLength
   };
 
   const detector = new RegexWordDetector(config, mockUnifiedConfig);
@@ -78,7 +78,7 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
   // Test that detector can access UnifiedConfig properties
   const words = await detector.detectWords("test word", 1, {
     currentKey: 'f',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
+    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
   });
 
   // Should be able to detect words with proper min length from UnifiedConfig
@@ -93,7 +93,7 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
 Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead of Config", async () => {
   const config: WordDetectionConfig = {useJapanese: mockUnifiedConfig.useJapanese,
     enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter,
-    segmenter_threshold: mockUnifiedConfig.segmenterThreshold
+    segmenterThreshold: mockUnifiedConfig.segmenterThreshold
   };
 
   const detector = new TinySegmenterWordDetector(config, mockUnifiedConfig);
@@ -101,7 +101,7 @@ Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead
   // Test Japanese text detection with UnifiedConfig settings
   const words = await detector.detectWords("これはテストです", 1, {
     currentKey: 't',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
+    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
   });
 
   assertExists(words);
@@ -122,7 +122,7 @@ Deno.test("Red Phase: HybridWordDetector should use UnifiedConfig instead of Con
   // Test hybrid detection with mixed content
   const words = await detector.detectWords("Hello こんにちは world", 1, {
     currentKey: 'F',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
+    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
   });
 
   assertExists(words);

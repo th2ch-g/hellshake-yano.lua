@@ -6,7 +6,7 @@ import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
 /**
  * Integration tests for per-key motion count feature
  *
- * These tests verify the complete workflow of the per_key_motion_count feature
+ * These tests verify the complete workflow of the perKeyMotionCount feature
  * in realistic editing scenarios.
  */
 
@@ -25,7 +25,7 @@ function createFullConfig(overrides: Partial<Config> = {}): Config {
     useNumbers: false,
     highlightSelected: false,
     debugCoordinates: false,
-    per_key_motionCount: {
+    perKeyMotionCount: {
       "v": 1, // Visual mode - immediate hints
       "V": 1, // Visual line mode - immediate hints
       "w": 1, // Word forward - immediate hints
@@ -36,7 +36,7 @@ function createFullConfig(overrides: Partial<Config> = {}): Config {
       "k": 3, // Up - 3 presses
       "l": 3, // Right - 3 presses
     },
-    default_motionCount: 2,
+    defaultMotionCount: 2,
     perKeyMinLength: {
       "v": 1,
       "w": 1,
@@ -114,7 +114,7 @@ describe("Integration: 実際の編集シナリオでの動作確認", () => {
     // 'v'キーを1回押す
     const shouldTrigger = tracker.processKey("v");
 
-    // motion_countが1なので、1回で即座にトリガー
+    // motionCountが1なので、1回で即座にトリガー
     assertEquals(shouldTrigger, true);
     assertEquals(tracker.getCount("v"), 1);
   });
@@ -376,7 +376,7 @@ describe("Integration: エッジケースと実際の使用パターン", () => 
     config = createFullConfig({perKeyMotionCount: {
         "v": 3, // 3回に変更
       },
-      default_motionCount: 2,
+      defaultMotionCount: 2,
     });
     newTracker = new MotionCountTracker(config);
 
@@ -390,7 +390,7 @@ describe("Integration: エッジケースと実際の使用パターン", () => 
     const config = createFullConfig();
     tracker = new MotionCountTracker(config);
 
-    // 'x'は未定義なのでdefault_motion_count (2)を使用
+    // 'x'は未定義なのでdefaultMotionCount (2)を使用
     assertEquals(tracker.processKey("x"), false);
     assertEquals(tracker.processKey("x"), true);
   });

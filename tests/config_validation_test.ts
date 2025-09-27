@@ -279,5 +279,5 @@ Deno.test("validateUnifiedConfig - エラーメッセージの一貫性", () => 
   // camelCase形式のエラーメッセージを確認
   const errorMessage = result.errors[0];
   assertEquals(errorMessage.includes("motionCount"), true, "Error message should use camelCase");
-  assertEquals(errorMessage.includes("motion_count"), false, "Error message should not use snake_case");
+  assertEquals(errorMessage.includes("motionCount"), false, "Error message should not use snake_case");
 });

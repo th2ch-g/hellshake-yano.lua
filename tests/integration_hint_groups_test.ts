@@ -20,17 +20,17 @@ describe("Integration: Hint Groups Feature", () => {
     it("should use hint groups when configured", () => {
       // 設定例: ホームポジションキーと上段キーを分ける
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"],
-        multi_char_keys: ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-        max_single_char_hints: 10,
+        multiCharKeys: ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+        maxSingleCharHints: 10,
       };
 
       // 15個の単語に対してヒントを生成
       const hints = generateHintsWithGroups(15, config);
 
-      // 最初の10個は single_char_keys から
+      // 最初の10個は singleCharKeys から
       assertEquals(hints.slice(0, 10), ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"]);
 
-      // 11個目以降は multi_char_keys の組み合わせ
+      // 11個目以降は multiCharKeys の組み合わせ
       assertEquals(hints[10], "QQ");
       assertEquals(hints[11], "QW");
       assertEquals(hints[12], "QE");
@@ -41,8 +41,8 @@ describe("Integration: Hint Groups Feature", () => {
     it("should validate configuration before use", () => {
       // 無効な設定
       const invalidConfig: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
-        multi_char_keys: ["A", "Q"], // Aが重複
-        max_single_char_hints: 3,
+        multiCharKeys: ["A", "Q"], // Aが重複
+        maxSingleCharHints: 3,
       };
 
       const validation = validateHintKeyConfig(invalidConfig);
@@ -65,8 +65,8 @@ describe("Integration: Hint Groups Feature", () => {
     it("should handle Vim-like home row configuration", () => {
       // Vimのホームロウを1文字ヒントに、それ以外を2文字に
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "J", "K", "L", ";"],
-        multi_char_keys: ["G", "H", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-        max_single_char_hints: 8,
+        multiCharKeys: ["G", "H", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+        maxSingleCharHints: 8,
       };
 
       const hints = generateHintsWithGroups(20, config);
@@ -82,8 +82,8 @@ describe("Integration: Hint Groups Feature", () => {
     it("should handle limited single-char scenario", () => {
       // 少数の1文字ヒント、多数の2文字ヒント
       const config: HintKeyConfig = {singleCharKeys: ["F", "J"], // 最も押しやすい2キーのみ
-        multi_char_keys: ["A", "S", "D", "G", "H", "K", "L"],
-        max_single_char_hints: 2,
+        multiCharKeys: ["A", "S", "D", "G", "H", "K", "L"],
+        maxSingleCharHints: 2,
       };
 
       const hints = generateHintsWithGroups(10, config);
@@ -102,8 +102,8 @@ describe("Integration: Hint Groups Feature", () => {
   describe("Performance", () => {
     it("should generate hints efficiently for large word counts", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-        multi_char_keys: ["Q", "W", "E", "R", "T"],
-        max_single_char_hints: 9,
+        multiCharKeys: ["Q", "W", "E", "R", "T"],
+        maxSingleCharHints: 9,
       };
 
       const startTime = Date.now();
@@ -126,7 +126,7 @@ describe("Integration: Hint Groups Feature", () => {
 
     it("should handle edge case with very few keys", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"],
-        multi_char_keys: ["B", "C"],
+        multiCharKeys: ["B", "C"],
       };
 
       const hints = generateHintsWithGroups(10, config);
@@ -154,7 +154,7 @@ describe("Integration: Hint Groups Feature", () => {
 
       const hints = generateHintsWithGroups(5, config);
 
-      // markersが single_char_keys として使われる
+      // markersが singleCharKeys として使われる
       assertEquals(hints[0], "X");
       assertEquals(hints[1], "Y");
       assertEquals(hints[2], "Z");
@@ -169,10 +169,10 @@ describe("Integration: Hint Groups Feature", () => {
 
       const hints = generateHintsWithGroups(4, config);
 
-      // single_char_keys が優先される
+      // singleCharKeys が優先される
       assertEquals(hints[0], "A");
       assertEquals(hints[1], "B");
-      // single_char_keysのみでmulti_char_keysが未定義の場合、2個のみ生成される
+      // singleCharKeysのみでmultiCharKeysが未定義の場合、2個のみ生成される
       assertEquals(hints.length, 2);
       assertEquals(hints[2], undefined);
       assertEquals(hints[3], undefined);

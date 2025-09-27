@@ -616,8 +616,8 @@ Deno.test("Core class generateHintsOptimized should use marker characters", () =
 
 Deno.test("Core class generateHintsOptimized should respect config hint groups", () => {
   const core = Core.getInstance({useHintGroups: true,
-    single_char_keys: ["a", "s", "d"],
-    multi_char_keys: ["f", "g", "h"]
+    singleCharKeys: ["a", "s", "d"],
+    multiCharKeys: ["f", "g", "h"]
   });
   const wordCount = 10;
   const markers = ["a", "s", "d", "f", "g", "h"];
@@ -1012,7 +1012,7 @@ Deno.test("Core class collectDebugInfo should return complete debug information"
   Core.resetForTesting();
   const core = Core.getInstance({
     enabled: true,
-    performance_log: true,
+    performanceLog: true,
     markers: ["w", "e", "b"]
   });
 
@@ -1068,7 +1068,7 @@ Deno.test("Core class clearDebugInfo should reset all performance metrics", () =
 });
 
 Deno.test("Core class waitForUserInput should handle user input for hints", async () => {
-  const core = Core.getInstance({ enabled: true, motion_count: 2 });
+  const core = Core.getInstance({ enabled: true, motionCount: 2 });
   const mockDenops = new MockDenops();
 
   // Setup hints
@@ -1893,7 +1893,7 @@ Deno.test("Core.validateHighlightConfig should reject invalid configs", () => {
  */
 Deno.test("Core.getMinLengthForKey should return correct min length for key", () => {
   const config = {motionCount: 3,
-    per_key_min_length: { f: 4, t: 2, w: 3 }
+    perKeyMinLength: { f: 4, t: 2, w: 3 }
   } as any; // Test config
 
   assertEquals(Core.getMinLengthForKey(config, "f"), 4);
@@ -1924,13 +1924,13 @@ Deno.test("Core.getMinLengthForKey should return default when no config", () => 
  */
 Deno.test("Core.getMotionCountForKey should return correct motion count for key", () => {
   const config = {motionCount: 3,
-    per_key_motion_count: { f: 5, t: 2, w: 4 }
+    perKeyMotionCount: { f: 5, t: 2, w: 4 }
   } as any; // Test config
 
   assertEquals(Core.getMotionCountForKey("f", config), 5);
   assertEquals(Core.getMotionCountForKey("t", config), 2);
   assertEquals(Core.getMotionCountForKey("w", config), 4);
-  assertEquals(Core.getMotionCountForKey("x", config), 3); // fallback to motion_count
+  assertEquals(Core.getMotionCountForKey("x", config), 3); // fallback to motionCount
 });
 
 Deno.test("Core.getMotionCountForKey should work with UnifiedConfig", () => {
@@ -1946,7 +1946,7 @@ Deno.test("Core.getMotionCountForKey should work with UnifiedConfig", () => {
 
 Deno.test("Core.getMotionCountForKey should validate values", () => {
   const config = {motionCount: 3,
-    per_key_motion_count: { f: 0, t: -1, w: 2.5, x: 4 }
+    perKeyMotionCount: { f: 0, t: -1, w: 2.5, x: 4 }
   } as any; // Test config
 
   assertEquals(Core.getMotionCountForKey("f", config), 3); // invalid 0, uses fallback
@@ -2194,7 +2194,7 @@ Deno.test("Core updateConfig method should work correctly", () => {
   assertEquals(core.getConfig().enabled, false);
 
   // Update config
-  core.updateConfig({ enabled: true, motion_count: 5 });
+  core.updateConfig({ enabled: true, motionCount: 5 });
 
   // Verify changes
   const updatedConfig = core.getConfig();
@@ -2204,7 +2204,7 @@ Deno.test("Core updateConfig method should work correctly", () => {
 
 Deno.test("Core updateConfig should handle partial updates", () => {
   Core.resetForTesting();
-  const core = Core.getInstance({ enabled: true, motion_count: 2, use_japanese: false });
+  const core = Core.getInstance({ enabled: true, motionCount: 2, useJapanese: false });
 
   // Update only one field
   core.updateConfig({motionCount: 3 });

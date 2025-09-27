@@ -42,14 +42,14 @@ class VimScriptMockDenops extends MockDenops {
       enabled: true,
       motionCount: 3,
       motionTimeout: 2000,
-      debug_mode: false,
-      performance_log: false,
-      suppress_on_key_repeat: true,
-      key_repeat_threshold: 50,
+      debugMode: false,
+      performanceLog: false,
+      suppressOnKeyRepeat: true,
+      keyRepeatThreshold: 50,
       key_repeat_reset_delay: 300,
       markers: ["A", "B", "C", "D", "E"],
-      highlight_hint_marker: "DiffAdd",
-      highlight_hint_marker_current: "DiffText",
+      highlightHintMarker: "DiffAdd",
+      highlightHintMarkerCurrent: "DiffText",
     });
     this.vimVariables.set("g:loaded_denops", 1);
     this.vimVariables.set("g:hellshake_yano_ready", false);
@@ -248,7 +248,7 @@ test("設定値の検証とサニタイズのテスト", async (denops) => {
   // 無効な設定値のテスト
   function validateKeyRepeatThreshold(value: number): number {
     if (value <= 0) {
-      console.warn("Warning: key_repeat_threshold must be positive, using default 50ms");
+      console.warn("Warning: keyRepeatThreshold must be positive, using default 50ms");
       return 50;
     }
     return value;

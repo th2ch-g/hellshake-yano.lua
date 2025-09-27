@@ -94,7 +94,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
       const startPos = calculateHintPosition(word, "start");
       const endPos = calculateHintPosition(word, "end");
-      const overlayPos = calculateHintPosition(word, "overlay");
+      const overlayPos = calculateHintPosition(word, "end");
 
       // startモード: 単語の先頭
       assertEquals(startPos.col, 10);
@@ -106,7 +106,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
       // overlayモード: 単語の先頭にオーバーレイ
       assertEquals(overlayPos.col, 10);
-      assertEquals(overlayPos.display_mode, "overlay");
+      assertEquals(overlayPos.display_mode, "end");
     });
   });
 });

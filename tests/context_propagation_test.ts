@@ -107,7 +107,7 @@ Deno.test("HybridWordDetector should accept optional context parameter", async (
 
 Deno.test("WordDetectionManager should propagate context to detectors", async () => {
   const manager = new WordDetectionManager({useJapanese: true,
-    default_strategy: "hybrid",
+    defaultStrategy: "hybrid",
   });
 
   await manager.initialize();
@@ -130,15 +130,15 @@ Deno.test("WordDetectionManager should propagate context to detectors", async ()
   }
 });
 
-Deno.test("Context should override config min_word_length", async () => {
+Deno.test("Context should override config minWordLength", async () => {
   const detector = new RegexWordDetector({useJapanese: false,
-    min_word_length: 2, // Config default
+    defaultMinWordLength: 2, // Config default
   });
 
   const text = "a bb ccc dddd eeeee";
   const startLine = 1;
 
-  // Without context - should use config min_word_length (2)
+  // Without context - should use config minWordLength (2)
   const wordsWithoutContext = await detector.detectWords(text, startLine);
   assertEquals(wordsWithoutContext.length, 4); // bb, ccc, dddd, eeeee
 
@@ -197,7 +197,7 @@ Deno.test("Per-key minimum word length should work correctly", async () => {
 
 Deno.test("Context propagation should maintain backward compatibility", async () => {
   const detector = new RegexWordDetector({useJapanese: false,
-    min_word_length: 2,
+    defaultMinWordLength: 2,
   });
 
   const text = "hello world test";

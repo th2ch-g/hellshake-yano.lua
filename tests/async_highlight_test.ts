@@ -146,7 +146,7 @@ function setupTestEnvironment() {
     return {
       vim_line: word.line,
       vim_col: word.col,
-      display_mode: "overlay"
+      display_mode: "end"
     };
   };
 

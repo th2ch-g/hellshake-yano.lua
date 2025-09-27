@@ -33,7 +33,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
       strategy: "hybrid" as const,
       useJapanese: true,
       enableTinySegmenter: true,
-      cache_enabled: true,
+      cacheEnabled: true,
     };
 
     const result = await detectWordsWithManager(mockDenops, config);
@@ -87,8 +87,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     const config: EnhancedWordConfig = {
       strategy: "tinysegmenter",
       enableTinySegmenter: false,
-      enable_fallback: true,
-      fallback_to_regex: true,
+      enableFallback: true,
+      fallbackToRegex: true,
       useJapanese: true,
     };
 
@@ -107,8 +107,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
 
   await t.step("Performance monitoring", async () => {
     const manager = getWordDetectionManager({
-      performance_monitoring: true,
-      cache_enabled: true,
+      performanceMonitoring: true,
+      cacheEnabled: true,
     });
 
     await manager.initialize();
@@ -131,8 +131,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
       { strategy: "regex" },
       { strategy: "tinysegmenter", enableTinySegmenter: true },
       { strategy: "hybrid", useJapanese: true },
-      { cache_enabled: false },
-      { min_word_length: 2, max_word_length: 20 },
+      { cacheEnabled: false },
+      { defaultMinWordLength: 2, maxWordLength: 20 },
     ];
 
     for (const config of validConfigs) {
@@ -143,8 +143,8 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
 
   await t.step("Memory and resource management", async () => {
     const manager = getWordDetectionManager({
-      cache_enabled: true,
-      cache_max_size: 10, // Small cache for testing
+      cacheEnabled: true,
+      cacheMaxSize: 10, // Small cache for testing
     });
 
     await manager.initialize();
@@ -253,7 +253,7 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
 
     const testDenops = createMockDenopsWithPerKeyConfig(config);
     // 'v'キーのコンテキストを渡す
-    const context = { currentKey: "v", minWordLength: 1 };
+    const context = { currentKey: "v", defaultMinWordLength: 1 };
     const result = await detectWordsWithManager(testDenops, config, context);
 
     assertEquals(result.success, true);
@@ -276,7 +276,7 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
       defaultMinWordLength: 2,
       strategy: "hybrid" as const,
       useJapanese: false,
-      min_word_length: 2, // 明示的にmin_lengthを設定
+      defaultMinWordLength: 2, // 明示的にmin_lengthを設定
     };
 
     const testDenops = createMockDenopsWithPerKeyConfig(config);
@@ -326,8 +326,8 @@ Deno.test("Real editing scenarios - per-key min_length integration", async (t) =
     for (const scenario of scenarios) {
       const testDenops = createMockDenopsWithPerKeyConfig({
         ...config,
-        current_key_context: scenario.key,
-        min_word_length: scenario.expectedMinLength,
+        currentKeyContext: scenario.key,
+        defaultMinWordLength: scenario.expectedMinLength,
       });
 
       const result = await detectWordsWithManager(testDenops, config);
@@ -375,8 +375,8 @@ Deno.test("Threshold switching stress tests", async (t) => {
 
       const testConfig = {
         ...config,
-        current_key_context: key,
-        min_word_length: expectedMinLength,
+        currentKeyContext: key,
+        defaultMinWordLength: expectedMinLength,
       };
 
       const testDenops = {
@@ -430,8 +430,8 @@ Deno.test("Threshold switching stress tests", async (t) => {
       const key = keys[i % keys.length];
       const testConfig = {
         ...config,
-        current_key_context: key,
-        min_word_length: (config.perKeyMinLength as Record<string, number>)[key],
+        currentKeyContext: key,
+        defaultMinWordLength: (config.perKeyMinLength as Record<string, number>)[key],
       };
 
       const testDenops = {
@@ -484,8 +484,8 @@ Deno.test("Threshold switching stress tests", async (t) => {
 
       const testConfig = {
         ...config,
-        current_key_context: key,
-        min_word_length: expectedMinLength,
+        currentKeyContext: key,
+        defaultMinWordLength: expectedMinLength,
       };
 
       const testDenops = {
@@ -560,8 +560,8 @@ Deno.test("Visual mode integration tests", async (t) => {
     for (const test of visualModeTests) {
       const testConfig = {
         ...config,
-        current_key_context: test.mode,
-        min_word_length: 1,
+        currentKeyContext: test.mode,
+        defaultMinWordLength: 1,
       };
 
       const testDenops = {
@@ -575,7 +575,7 @@ Deno.test("Visual mode integration tests", async (t) => {
       };
 
       // Visual modeのコンテキストを渡す
-      const context = { currentKey: test.mode, minWordLength: 1 };
+      const context = { currentKey: test.mode, defaultMinWordLength: 1 };
       const result = await detectWordsWithManager(testDenops, testConfig, context);
 
       assertEquals(result.success, true, `${test.description} should succeed`);
@@ -603,8 +603,8 @@ Deno.test("Visual mode integration tests", async (t) => {
 
     const testConfig = {
       ...config,
-      current_key_context: "V",
-      min_word_length: 1,
+      currentKeyContext: "V",
+      defaultMinWordLength: 1,
     };
 
     const testDenops = {
@@ -624,7 +624,7 @@ Deno.test("Visual mode integration tests", async (t) => {
     };
 
     // Visual line modeのコンテキストを渡す
-    const context = { currentKey: "V", minWordLength: 1 };
+    const context = { currentKey: "V", defaultMinWordLength: 1 };
     const result = await detectWordsWithManager(testDenops, testConfig, context);
 
     assertEquals(result.success, true, "Visual line mode should succeed");
@@ -652,8 +652,8 @@ Deno.test("Visual mode integration tests", async (t) => {
 
     const testConfig = {
       ...config,
-      current_key_context: "<C-v>",
-      min_word_length: 1,
+      currentKeyContext: "<C-v>",
+      defaultMinWordLength: 1,
     };
 
     const testDenops = {
@@ -712,8 +712,8 @@ Deno.test("Visual mode integration tests", async (t) => {
     for (const pattern of textPatterns) {
       const testConfig = {
         ...config,
-        current_key_context: "v",
-        min_word_length: 1,
+        currentKeyContext: "v",
+        defaultMinWordLength: 1,
       };
 
       const testDenops = {

@@ -118,7 +118,7 @@ Deno.test("Phase 5 型定義の整理 - 成功検証", async (t) => {
 
     // 型安全性の確認
     assert(Array.isArray(config.markers), "markers should be array");
-    assert(typeof config.motionCount === "number", "motion_count should be number");
+    assert(typeof config.motionCount === "number", "motionCount should be number");
     assert(typeof config.enabled === "boolean", "enabled should be boolean");
   });
 

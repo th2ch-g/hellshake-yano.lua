@@ -28,7 +28,7 @@ function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | un
   if (config && 'useJapanese' in config) {
     return [config as UnifiedConfig, undefined];
   }
-  return [undefined, config as Config];
+  return [undefined, config as unknown as Config];
 }
 
 /**
@@ -49,7 +49,7 @@ export interface WordDetectionManagerConfig extends WordDetectionConfig {
   /** キャッシュの最大サイズ */
   cacheMaxSize?: number;
   /** キャッシュエントリの有効期限（ミリ秒） */
-  cache_ttl_ms?: number;
+  cacheTtlMs?: number;
 
   /** 最大リトライ回数 */
   maxRetries?: number;
@@ -59,9 +59,9 @@ export interface WordDetectionManagerConfig extends WordDetectionConfig {
   /** 処理タイムアウト時間（ミリ秒） */
   timeoutMs?: number;
   /** バッチ処理を有効にするか */
-  batch_processing?: boolean;
+  batchProcessing?: boolean;
   /** 同時実行可能な検出数の上限 */
-  max_concurrent_detections?: number;
+  maxConcurrentDetections?: number;
 }
 
 /**

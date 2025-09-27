@@ -18,18 +18,18 @@ Deno.test("Integration - 実際の設定使用例のテスト", () => {
   const configs = [
     {
       // 新形式：オブジェクトで fg/bg を指定
-      highlight_hint_marker: { fg: "#00ff00", bg: "#000000" },
-      highlight_hint_marker_current: { fg: "Yellow", bg: "Blue" },
+      highlightHintMarker: { fg: "#00ff00", bg: "#000000" },
+      highlightHintMarkerCurrent: { fg: "Yellow", bg: "Blue" },
     },
     {
       // 既存形式：ハイライトグループ名（後方互換性）
-      highlight_hint_marker: "Search",
-      highlight_hint_marker_current: "IncSearch",
+      highlightHintMarker: "Search",
+      highlightHintMarkerCurrent: "IncSearch",
     },
     {
       // 混在も可能
-      highlight_hint_marker: { fg: "Green", bg: "NONE" },
-      highlight_hint_marker_current: "IncSearch",
+      highlightHintMarker: { fg: "Green", bg: "NONE" },
+      highlightHintMarkerCurrent: "IncSearch",
     },
   ];
 
@@ -51,8 +51,8 @@ Deno.test("Integration - 完全な設定オブジェクトのテスト", () => {
     debounceDelay: 50,
     useNumbers: false,
     highlightSelected: true,
-    highlight_hint_marker: { fg: "Red", bg: "White" },
-    highlight_hint_marker_current: { fg: "#ffff00", bg: "#000080" },
+    highlightHintMarker: { fg: "Red", bg: "White" },
+    highlightHintMarkerCurrent: { fg: "#ffff00", bg: "#000080" },
   };
 
   const result = validateConfig(fullConfig);
@@ -202,7 +202,7 @@ Deno.test("Integration - パフォーマンスと限界値テスト", () => {
 
   // 多数の設定項目を持つ設定オブジェクト
   const largeConfig = {highlightHintMarker: { fg: "Red", bg: "Blue" },
-    highlight_hint_marker_current: { fg: "Green", bg: "Yellow" },
+    highlightHintMarkerCurrent: { fg: "Green", bg: "Yellow" },
     markers: Array.from({ length: 100 }, (_, i) => String.fromCharCode(65 + (i % 26))),
     maxHints: 10000,
     debounceDelay: 0,

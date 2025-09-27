@@ -11,18 +11,18 @@ test("デフォルト設定値が正しく設定される", async (denops) => {
   // デフォルト値の確認（まだ実装されていないのでundefinedになる）
   try {
     const suppressOnKeyRepeat = await denops.eval(
-      "get(g:hellshake_yano, 'suppress_on_key_repeat', 'NOT_FOUND')",
+      "get(g:hellshake_yano, 'suppressOnKeyRepeat', 'NOT_FOUND')",
     );
     const keyRepeatThreshold = await denops.eval(
-      "get(g:hellshake_yano, 'key_repeat_threshold', 'NOT_FOUND')",
+      "get(g:hellshake_yano, 'keyRepeatThreshold', 'NOT_FOUND')",
     );
     const keyRepeatResetDelay = await denops.eval(
       "get(g:hellshake_yano, 'key_repeat_reset_delay', 'NOT_FOUND')",
     );
 
     // GREEN段階: デフォルト値が正しく設定されることを確認
-    assertEquals(suppressOnKeyRepeat, true, "suppress_on_key_repeat should default to true");
-    assertEquals(keyRepeatThreshold, 50, "key_repeat_threshold should default to 50ms");
+    assertEquals(suppressOnKeyRepeat, true, "suppressOnKeyRepeat should default to true");
+    assertEquals(keyRepeatThreshold, 50, "keyRepeatThreshold should default to 50ms");
     assertEquals(keyRepeatResetDelay, 300, "key_repeat_reset_delay should default to 300ms");
   } catch (error) {
     // TDD RED段階なのでエラーが発生することを期待
@@ -49,8 +49,8 @@ test("カスタム設定値が正しく上書きされる", async (denops) => {
   const keyRepeatThreshold = await denops.eval("g:hellshake_yano.keyRepeatThreshold");
   const keyRepeatResetDelay = await denops.eval("g:hellshake_yano.key_repeat_reset_delay");
 
-  assertEquals(suppressOnKeyRepeat, false, "Custom suppress_on_key_repeat should be preserved");
-  assertEquals(keyRepeatThreshold, 100, "Custom key_repeat_threshold should be preserved");
+  assertEquals(suppressOnKeyRepeat, false, "Custom suppressOnKeyRepeat should be preserved");
+  assertEquals(keyRepeatThreshold, 100, "Custom keyRepeatThreshold should be preserved");
   assertEquals(keyRepeatResetDelay, 500, "Custom key_repeat_reset_delay should be preserved");
 });
 
@@ -71,8 +71,8 @@ test("部分的なカスタム設定でデフォルト値が保持される", as
   const keyRepeatThreshold = await denops.eval("g:hellshake_yano.keyRepeatThreshold");
   const keyRepeatResetDelay = await denops.eval("g:hellshake_yano.key_repeat_reset_delay");
 
-  assertEquals(suppressOnKeyRepeat, false, "Custom suppress_on_key_repeat should be preserved");
-  assertEquals(keyRepeatThreshold, 50, "key_repeat_threshold should use default 50ms");
+  assertEquals(suppressOnKeyRepeat, false, "Custom suppressOnKeyRepeat should be preserved");
+  assertEquals(keyRepeatThreshold, 50, "keyRepeatThreshold should use default 50ms");
   assertEquals(keyRepeatResetDelay, 300, "key_repeat_reset_delay should use default 300ms");
 });
 
@@ -95,8 +95,8 @@ test("設定がdenops側に正しく伝播される", async (denops) => {
     // 設定が正しく含まれていることを確認
     const configKeys = await denops.eval("keys(g:hellshake_yano)");
     const hasNewOptions = (configKeys as string[]).some((key) =>
-      key.includes("suppress_on_key_repeat") ||
-      key.includes("key_repeat_threshold") ||
+      key.includes("suppressOnKeyRepeat") ||
+      key.includes("keyRepeatThreshold") ||
       key.includes("key_repeat_reset_delay")
     );
     assert(hasNewOptions, "New config options should be present");

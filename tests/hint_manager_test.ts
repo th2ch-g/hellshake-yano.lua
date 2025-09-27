@@ -35,7 +35,7 @@ describe("HintManager Tests", () => {
         "b": 4,
       },
       defaultMinWordLength: 2,
-      current_key_context: "f",
+      currentKeyContext: "f",
     };
 
     hintManager = new HintManager(config);
@@ -93,7 +93,7 @@ describe("HintManager Tests", () => {
 
   describe("getMinLengthForKey Method", () => {
     it("should delegate to main.ts getMinLengthForKey function", () => {
-      // per_key_min_lengthに定義されたキー
+      // perKeyMinLengthに定義されたキー
       assertEquals(hintManager.getMinLengthForKey("f"), 2);
       assertEquals(hintManager.getMinLengthForKey("t"), 3);
       assertEquals(hintManager.getMinLengthForKey("w"), 1);
@@ -101,16 +101,16 @@ describe("HintManager Tests", () => {
     });
 
     it("should return default value for undefined keys", () => {
-      // per_key_min_lengthに定義されていないキー
-      assertEquals(hintManager.getMinLengthForKey("x"), 2); // default_min_word_length
+      // perKeyMinLengthに定義されていないキー
+      assertEquals(hintManager.getMinLengthForKey("x"), 2); // defaultMinWordLength
     });
 
-    it("should handle missing per_key_min_length", () => {
+    it("should handle missing perKeyMinLength", () => {
       const configWithoutPerKey = { ...config };
       delete configWithoutPerKey.perKeyMinLength;
 
       const manager = new HintManager(configWithoutPerKey);
-      assertEquals(manager.getMinLengthForKey("f"), 2); // default_min_word_length
+      assertEquals(manager.getMinLengthForKey("f"), 2); // defaultMinWordLength
     });
   });
 
@@ -183,11 +183,11 @@ describe("HintManager Tests", () => {
         ...config,
         perKeyMinLength: {},
         defaultMinWordLength: undefined,
-        min_word_length: 1, // 後方互換性
+        defaultMinWordLength: 1, // 後方互換性
       };
 
       const manager = new HintManager(edgeConfig);
-      assertEquals(manager.getMinLengthForKey("any"), 1); // min_word_lengthフォールバック
+      assertEquals(manager.getMinLengthForKey("any"), 1); // minWordLengthフォールバック
     });
 
     it("should provide readonly access to config", () => {

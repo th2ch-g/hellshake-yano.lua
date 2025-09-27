@@ -18,7 +18,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
   describe("Non-overlapping hint generation", () => {
     it("should generate hints without overlap between single and multi char keys", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
-        multi_char_keys: [
+        multiCharKeys: [
           "B",
           "C",
           "E",
@@ -35,19 +35,19 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
           "Y",
           "Z",
         ],
-        max_single_char_hints: 11,
+        maxSingleCharHints: 11,
       };
 
       const hints = generateHintsWithGroups(50, config);
 
-      // 最初の11個は single_char_keys
+      // 最初の11個は singleCharKeys
       const singleCharHints = hints.slice(0, 11);
       assertEquals(singleCharHints, ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"]);
 
-      // 12個目以降は multi_char_keys のみの組み合わせ
+      // 12個目以降は multiCharKeys のみの組み合わせ
       const multiCharHints = hints.slice(11, 30);
 
-      // multi_char_keys の文字のみで構成されているか確認
+      // multiCharKeys の文字のみで構成されているか確認
       for (const hint of multiCharHints) {
         if (hint.length === 2) {
           for (const char of hint) {
@@ -60,7 +60,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         }
       }
 
-      // single_char_keys の文字が2文字ヒントに含まれていないことを確認
+      // singleCharKeys の文字が2文字ヒントに含まれていないことを確認
       for (const hint of multiCharHints) {
         if (hint.length === 2) {
           for (const singleChar of config.singleCharKeys!) {
@@ -76,17 +76,17 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
 
     it("should NOT generate number hints after alphabet exhaustion", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
-        multi_char_keys: ["B", "C"], // 2×2 = 4通りのみ
-        max_single_char_hints: 3,
+        multiCharKeys: ["B", "C"], // 2×2 = 4通りのみ
+        maxSingleCharHints: 3,
       };
 
       // 3 + 4 = 7個のアルファベットヒントのみ（数字フォールバックなし）
       const hints = generateHintsWithGroups(20, config);
 
-      // 最初の3個は single_char_keys
+      // 最初の3個は singleCharKeys
       assertEquals(hints.slice(0, 3), ["A", "S", "D"]);
 
-      // 次の4個は multi_char_keys の組み合わせ
+      // 次の4個は multiCharKeys の組み合わせ
       assertEquals(hints.slice(3, 7), ["BB", "BC", "CB", "CC"]);
 
       // 8個目以降は生成されない（数字フォールバックなし）
@@ -100,7 +100,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
 
     it("should support up to 236 hints (11 single + 225 double-alpha)", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
-        multi_char_keys: [
+        multiCharKeys: [
           "B",
           "C",
           "E",
@@ -117,7 +117,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
           "Y",
           "Z",
         ],
-        max_single_char_hints: 11,
+        maxSingleCharHints: 11,
       };
 
       // 11 + 225 = 236個のヒントのみ生成（数字フォールバックなし）
@@ -154,8 +154,8 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       ];
 
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
-        multi_char_keys: ["B", "C"],
-        max_single_char_hints: 3,
+        multiCharKeys: ["B", "C"],
+        maxSingleCharHints: 3,
       };
 
       const hints = generateHintsWithGroups(words.length, config);
@@ -214,7 +214,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       }
 
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M"],
-        multi_char_keys: [
+        multiCharKeys: [
           "B",
           "C",
           "E",
@@ -231,7 +231,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
           "Y",
           "Z",
         ],
-        max_single_char_hints: 11,
+        maxSingleCharHints: 11,
       };
 
       const hints = generateHintsWithGroups(words.length, config);
@@ -264,8 +264,8 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
 
     it("should handle very large word counts", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"],
-        multi_char_keys: ["B", "C"], // 2×2 = 4通り
-        max_single_char_hints: 1,
+        multiCharKeys: ["B", "C"], // 2×2 = 4通り
+        maxSingleCharHints: 1,
       };
 
       // 1 + 4 = 5個のみ対応可能（数字フォールバックなし）
@@ -280,8 +280,8 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
 
     it("should NOT generate 3-char hints anymore", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"],
-        multi_char_keys: ["B"], // 1×1 = 1通りのみ
-        max_single_char_hints: 1,
+        multiCharKeys: ["B"], // 1×1 = 1通りのみ
+        maxSingleCharHints: 1,
       };
 
       // 1 + 1 = 2個のみ対応可能（数字フォールバックなし、３文字ヒントなし）

@@ -16,7 +16,7 @@ Deno.test("Config interface - should have perKeyMinLength property", () => {
     },
     defaultMinWordLength: 2,
     enable: true,
-    min_word_length: 2, // 後方互換性のため残す
+    defaultMinWordLength: 2, // 後方互換性のため残す
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -40,7 +40,7 @@ Deno.test("Config interface - should have perKeyMinLength property", () => {
 Deno.test("Config interface - should support optional perKeyMinLength", () => {
   const config: Config = {
     enable: true,
-    min_word_length: 2,
+    defaultMinWordLength: 2,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -59,11 +59,11 @@ Deno.test("Config interface - should support optional perKeyMinLength", () => {
   assertEquals(config.perKeyMinLength, undefined);
 });
 
-Deno.test("Config interface - should have current_key_context for internal use", () => {
+Deno.test("Config interface - should have currentKeyContext for internal use", () => {
   const config: Config = {
     enable: true,
-    min_word_length: 2,
-    current_key_context: "v", // 内部使用のためのキーコンテキスト
+    defaultMinWordLength: 2,
+    currentKeyContext: "v", // 内部使用のためのキーコンテキスト
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -87,7 +87,7 @@ Deno.test("getMinLengthForKey - should return per-key setting when available", (
       "h": 2,
     },
     defaultMinWordLength: 3,
-    min_word_length: 4, // 後方互換性
+    defaultMinWordLength: 4, // 後方互換性
     enable: true,
     enabled: true,
     markers: [],
@@ -110,10 +110,10 @@ Deno.test("getMinLengthForKey - should return per-key setting when available", (
   assertEquals(getMinLengthForKey(config, "x"), 3); // defaultMinWordLengthを使用
 });
 
-Deno.test("Config validation - should handle legacy min_word_length", () => {
+Deno.test("Config validation - should handle legacy minWordLength", () => {
   const legacyConfig: Config = {
     enable: true,
-    min_word_length: 3, // 旧形式の設定
+    defaultMinWordLength: 3, // 旧形式の設定
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -128,8 +128,8 @@ Deno.test("Config validation - should handle legacy min_word_length", () => {
     debugCoordinates: false,
   };
 
-  // 後方互換性：min_word_lengthがすべてのキーに適用される
-  assertEquals(legacyConfig.min_word_length, 3);
+  // 後方互換性：minWordLengthがすべてのキーに適用される
+  assertEquals(legacyConfig.defaultMinWordLength, 3);
   assertEquals(legacyConfig.perKeyMinLength, undefined);
   assertEquals(legacyConfig.defaultMinWordLength, undefined);
 });
@@ -159,7 +159,7 @@ Deno.test("Per-key configuration - comprehensive settings", () => {
       "gg": 5, // ファイル先頭（2文字キー）
     },
     defaultMinWordLength: 2,
-    min_word_length: 3, // 後方互換性テスト用
+    defaultMinWordLength: 3, // 後方互換性テスト用
     enable: true,
     enabled: true,
     markers: [],
@@ -271,10 +271,10 @@ Deno.test("Per-key configuration - edge cases and validation", () => {
 // ========================================
 
 Deno.test("Fallback behavior - complete fallback chain", () => {
-  // パターン1: perKeyMinLength → defaultMinWordLength → min_word_length
+  // パターン1: perKeyMinLength → defaultMinWordLength → minWordLength
   const config1: Config = {perKeyMinLength: { "v": 1 },
     defaultMinWordLength: 3,
-    min_word_length: 5,
+    defaultMinWordLength: 5,
     enable: true,
     enabled: true,
     markers: [],
@@ -293,9 +293,9 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
   assertEquals(getMinLengthForKey(config1, "v"), 1); // per_key設定を使用
   assertEquals(getMinLengthForKey(config1, "h"), 3); // defaultMinWordLengthを使用
 
-  // パターン2: defaultMinWordLength → min_word_length
+  // パターン2: defaultMinWordLength → minWordLength
   const config2: Config = {defaultMinWordLength: 4,
-    min_word_length: 6,
+    defaultMinWordLength: 6,
     enable: true,
     enabled: true,
     markers: [],
@@ -313,9 +313,9 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
 
   assertEquals(getMinLengthForKey(config2, "any"), 4); // defaultMinWordLengthを使用
 
-  // パターン3: min_word_lengthのみ（レガシー）
+  // パターン3: minWordLengthのみ（レガシー）
   const config3: Config = {
-    min_word_length: 7,
+    defaultMinWordLength: 7,
     enable: true,
     enabled: true,
     markers: [],
@@ -331,7 +331,7 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
     debugCoordinates: false,
   };
 
-  assertEquals(getMinLengthForKey(config3, "any"), 7); // min_word_lengthを使用
+  assertEquals(getMinLengthForKey(config3, "any"), 7); // minWordLengthを使用
 
   // パターン4: 何も設定されていない場合のデフォルト
   const config4: Config = {
@@ -380,7 +380,7 @@ Deno.test("Fallback behavior - missing configurations", () => {
       // 'h'は設定されていない
     },
     defaultMinWordLength: 4,
-    min_word_length: 5,
+    defaultMinWordLength: 5,
     enable: true,
     enabled: true,
     markers: [],
@@ -480,7 +480,7 @@ Deno.test("Key switching recalculation - cache behavior verification", () => {
       "h": 2,
     },
     defaultMinWordLength: 3,
-    current_key_context: "initial", // 初期コンテキスト
+    currentKeyContext: "initial", // 初期コンテキスト
     enable: true,
     enabled: true,
     markers: [],
@@ -733,9 +733,9 @@ Deno.test("Performance test - memory usage patterns", () => {
 // 後方互換性テスト
 // ========================================
 
-Deno.test("Backward compatibility - legacy min_word_length only", () => {
+Deno.test("Backward compatibility - legacy minWordLength only", () => {
   const legacyConfig: Config = {
-    min_word_length: 4, // 旧形式のみ
+    defaultMinWordLength: 4, // 旧形式のみ
     enable: true,
     enabled: true,
     markers: [],
@@ -767,7 +767,7 @@ Deno.test("Backward compatibility - mixed old and new configurations", () => {
       "h": 2,
     },
     defaultMinWordLength: 3, // 新形式のデフォルト
-    min_word_length: 5, // 旧形式（使用されないはず）
+    defaultMinWordLength: 5, // 旧形式（使用されないはず）
     enable: true,
     enabled: true,
     markers: [],
@@ -793,13 +793,13 @@ Deno.test("Backward compatibility - mixed old and new configurations", () => {
   assertEquals(hintManager.getMinLengthForKey("h"), 2); // perKeyMinLength
 
   hintManager.onKeyPress("x");
-  assertEquals(hintManager.getMinLengthForKey("x"), 3); // defaultMinWordLength（min_word_lengthではない）
+  assertEquals(hintManager.getMinLengthForKey("x"), 3); // defaultMinWordLength（minWordLengthではない）
 });
 
 Deno.test("Backward compatibility - migration scenarios", () => {
   // シナリオ1: 旧設定から新設定への段階的移行
   const migrationStep1: Config = {
-    min_word_length: 3, // 既存設定
+    defaultMinWordLength: 3, // 既存設定
     defaultMinWordLength: 3, // 新設定を追加（同じ値）
     enable: true,
     enabled: true,
@@ -824,7 +824,7 @@ Deno.test("Backward compatibility - migration scenarios", () => {
       "v": 1, // 精密移動のみ新設定
     },
     defaultMinWordLength: 3, // 他はデフォルト
-    min_word_length: 3, // 後方互換性のため残す
+    defaultMinWordLength: 3, // 後方互換性のため残す
     enable: true,
     enabled: true,
     markers: [],
@@ -844,7 +844,7 @@ Deno.test("Backward compatibility - migration scenarios", () => {
   assertEquals(manager2.getMinLengthForKey("v"), 1); // 新設定
   assertEquals(manager2.getMinLengthForKey("h"), 3); // デフォルト
 
-  // シナリオ3: 完全移行（min_word_length削除）
+  // シナリオ3: 完全移行（minWordLength削除）
   const migrationStep3: Config = {perKeyMinLength: {
       "v": 1,
       "h": 2,
@@ -853,7 +853,7 @@ Deno.test("Backward compatibility - migration scenarios", () => {
       "l": 2,
     },
     defaultMinWordLength: 2,
-    // min_word_lengthは削除済み
+    // minWordLengthは削除済み
     enable: true,
     enabled: true,
     markers: [],

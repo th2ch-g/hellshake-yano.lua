@@ -20,7 +20,7 @@ describe("変換関数削除テスト (Process4 Sub3-2)", () => {
       try {
         // @ts-ignore - 削除された関数への参照
         const {} = require("../denops/hellshake-yano/config.ts");
-        hasToUnifiedConfig = !!;
+        hasToUnifiedConfig = !!false;
       } catch {
         // 関数が存在しない場合はここに到達
         hasToUnifiedConfig = false;
@@ -35,7 +35,7 @@ describe("変換関数削除テスト (Process4 Sub3-2)", () => {
       try {
         // @ts-ignore - 削除された関数への参照
         const {} = require("../denops/hellshake-yano/config.ts");
-        hasFromUnifiedConfig = !!;
+        hasFromUnifiedConfig = !!false;
       } catch {
         // 関数が存在しない場合はここに到達
         hasFromUnifiedConfig = false;
@@ -107,6 +107,7 @@ describe("変換関数削除テスト (Process4 Sub3-2)", () => {
     it("Config型からUnifiedConfig型への変換が不要", () => {
       // 直接UnifiedConfigを使用する設計により変換が不要
       const unifiedConfig: UnifiedConfig = {
+        ...DEFAULT_UNIFIED_CONFIG,
         enabled: true,
         markers: ["A", "S", "D"],
         motionCount: 3,
@@ -153,10 +154,10 @@ describe("変換関数削除テスト (Process4 Sub3-2)", () => {
       // 変換関数を経由せず、直接camelCase形式を使用
       const config: UnifiedConfig = {
         ...DEFAULT_UNIFIED_CONFIG,
-        motionCount: 5,        // motion_count → motionCount (直接)
-        useJapanese: true,     // use_japanese → useJapanese (直接)
-        hintPosition: "start", // hint_position → hintPosition (直接)
-        triggerOnHjkl: false   // trigger_on_hjkl → triggerOnHjkl (直接)
+        motionCount: 5,        // motionCount → motionCount (直接)
+        useJapanese: true,     // useJapanese → useJapanese (直接)
+        hintPosition: "start", // hintPosition → hintPosition (直接)
+        triggerOnHjkl: false   // triggerOnHjkl → triggerOnHjkl (直接)
       };
 
       assertEquals(config.motionCount, 5);

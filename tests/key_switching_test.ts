@@ -160,7 +160,7 @@ test({
       await denops.dispatcher.showHintsWithKey("j");
       await denops.dispatcher.showHintsWithKey("j");
 
-      // Different min_word_length should trigger recalculation
+      // Different minWordLength should trigger recalculation
       await denops.dispatcher.showHintsWithKey("v"); // Different min_length
     } catch (error) {
       // Expected failure in RED phase

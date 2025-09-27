@@ -12,7 +12,7 @@ import type { Config } from "../denops/hellshake-yano/types.ts";
 import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("Unified min_length: Context overrides GlobalConfig", async () => {
-  // グローバル設定でper_key_min_lengthを設定
+  // グローバル設定でperKeyMinLengthを設定
   const globalConfig: Partial<Config> = {perKeyMinLength: { "f": 3, "t": 2 },
     defaultMinWordLength: 4,
   };
@@ -20,15 +20,15 @@ Deno.test("Unified min_length: Context overrides GlobalConfig", async () => {
   const managerConfig: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 1, // ローカル設定
-    max_word_length: 20,
+    defaultMinWordLength: 1, // ローカル設定
+    maxWordLength: 20,
   };
 
   const manager = new WordDetectionManager(managerConfig, globalConfig as Config);
 
   const testText = "a bb ccc dddd";
 
-  // Contextなし: グローバル設定のper_key_min_lengthが効く
+  // Contextなし: グローバル設定のperKeyMinLengthが効く
   const contextF: DetectionContext = {
     currentKey: "f", // globalConfig.perKeyMinLength["f"] = 3
   };
@@ -61,23 +61,23 @@ Deno.test("Unified min_length: GlobalConfig fallback hierarchy", async () => {
   // フォールバック階層のテスト
   const globalConfig: Partial<Config> = {perKeyMinLength: { "f": 3 }, // "t"は未定義
     defaultMinWordLength: 2,
-    min_word_length: 5, // 後方互換性
+    defaultMinWordLength: 5, // 後方互換性
   };
 
   const managerConfig: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 1, // ローカル設定
+    defaultMinWordLength: 1, // ローカル設定
   };
 
   const manager = new WordDetectionManager(managerConfig, globalConfig as Config);
 
   const testText = "a bb ccc dddd";
 
-  // 定義されているキー: per_key_min_lengthを使用
+  // 定義されているキー: perKeyMinLengthを使用
   const contextF: DetectionContext = { currentKey: "f" };
 
-  // 未定義のキー: default_min_word_lengthを使用
+  // 未定義のキー: defaultMinWordLengthを使用
   const contextUnknown: DetectionContext = { currentKey: "x" };
 
   const resultF = await manager.detectWords(testText, 0, undefined, contextF);
@@ -86,20 +86,20 @@ Deno.test("Unified min_length: GlobalConfig fallback hierarchy", async () => {
   console.log(`Key "f" (min=3): ${resultF.words.map((w) => w.text).join(", ")}`);
   console.log(`Key "x" (default=2): ${resultUnknown.words.map((w) => w.text).join(", ")}`);
 
-  assertEquals(resultF.words.length, 2, 'Key "f": per_key_min_length[f]=3を使用');
-  assertEquals(resultUnknown.words.length, 3, 'Key "x": default_min_word_length=2を使用');
+  assertEquals(resultF.words.length, 2, 'Key "f": perKeyMinLength[f]=3を使用');
+  assertEquals(resultUnknown.words.length, 3, 'Key "x": defaultMinWordLength=2を使用');
 });
 
 Deno.test("Unified min_length: Legacy compatibility", async () => {
-  // 旧形式min_word_lengthのみの場合の動作確認
+  // 旧形式minWordLengthのみの場合の動作確認
   const globalConfig: Partial<Config> = {
-    min_word_length: 3, // 旧形式のみ
+    defaultMinWordLength: 3, // 旧形式のみ
   };
 
   const managerConfig: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 1, // ローカル設定（上書きされる）
+    defaultMinWordLength: 1, // ローカル設定（上書きされる）
   };
 
   const manager = new WordDetectionManager(managerConfig, globalConfig as Config);
@@ -109,9 +109,9 @@ Deno.test("Unified min_length: Legacy compatibility", async () => {
   const context: DetectionContext = { currentKey: "any" };
   const result = await manager.detectWords(testText, 0, undefined, context);
 
-  console.log(`Legacy min_word_length=3: ${result.words.map((w) => w.text).join(", ")}`);
+  console.log(`Legacy defaultMinWordLength =3: ${result.words.map((w) => w.text).join(", ")}`);
 
-  assertEquals(result.words.length, 2, "旧形式min_word_length=3が適用される");
+  assertEquals(result.words.length, 2, "旧形式defaultMinWordLength =3が適用される");
 });
 
 Deno.test("Unified min_length: No GlobalConfig fallback", async () => {
@@ -119,7 +119,7 @@ Deno.test("Unified min_length: No GlobalConfig fallback", async () => {
   const managerConfig: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 2,
+    defaultMinWordLength: 2,
   };
 
   const manager = new WordDetectionManager(managerConfig); // globalConfig未指定
@@ -131,7 +131,7 @@ Deno.test("Unified min_length: No GlobalConfig fallback", async () => {
 
   console.log(`No GlobalConfig (local=2): ${result.words.map((w) => w.text).join(", ")}`);
 
-  assertEquals(result.words.length, 3, "ローカル設定min_word_length=2を使用");
+  assertEquals(result.words.length, 3, "ローカル設定defaultMinWordLength =2を使用");
 });
 
 Deno.test("Unified min_length: Performance impact verification", async () => {
@@ -143,7 +143,7 @@ Deno.test("Unified min_length: Performance impact verification", async () => {
   const managerConfig: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 1,
+    defaultMinWordLength: 1,
   };
 
   const manager = new WordDetectionManager(managerConfig, globalConfig as Config);

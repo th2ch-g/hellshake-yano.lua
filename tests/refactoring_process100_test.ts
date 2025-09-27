@@ -16,33 +16,33 @@ import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   // 各パターンでのgetMinLengthForKey関数の動作を記録
 
-  // パターン1: per_key_min_length優先
+  // パターン1: perKeyMinLength優先
   const config1: Partial<Config> = {perKeyMinLength: { "f": 1, "t": 3 },
     defaultMinWordLength: 2,
-    min_word_length: 4,
+    defaultMinWordLength: 4,
   };
 
-  assertEquals(getMinLengthForKey(config1 as Config, "f"), 1, "per_key_min_lengthが最優先");
-  assertEquals(getMinLengthForKey(config1 as Config, "t"), 3, "per_key_min_lengthが最優先");
+  assertEquals(getMinLengthForKey(config1 as Config, "f"), 1, "perKeyMinLengthが最優先");
+  assertEquals(getMinLengthForKey(config1 as Config, "t"), 3, "perKeyMinLengthが最優先");
   assertEquals(
     getMinLengthForKey(config1 as Config, "x"),
     2,
-    "default_min_word_lengthが使用される",
+    "defaultMinWordLengthが使用される",
   );
 
-  // パターン2: default_min_word_lengthフォールバック
+  // パターン2: defaultMinWordLengthフォールバック
   const config2: Partial<Config> = {defaultMinWordLength: 3,
-    min_word_length: 5,
+    defaultMinWordLength: 5,
   };
 
-  assertEquals(getMinLengthForKey(config2 as Config, "any"), 3, "default_min_word_lengthを使用");
+  assertEquals(getMinLengthForKey(config2 as Config, "any"), 3, "defaultMinWordLengthを使用");
 
-  // パターン3: 旧形式のmin_word_lengthのみ
+  // パターン3: 旧形式のminWordLengthのみ
   const config3: Partial<Config> = {
-    min_word_length: 4,
+    defaultMinWordLength: 4,
   };
 
-  assertEquals(getMinLengthForKey(config3 as Config, "any"), 4, "旧形式min_word_lengthを使用");
+  assertEquals(getMinLengthForKey(config3 as Config, "any"), 4, "旧形式minWordLengthを使用");
 
   // パターン4: デフォルト値
   const config4: Partial<Config> = {};
@@ -59,8 +59,8 @@ Deno.test("Process100: Baseline behavior - HintManager min length handling", () 
 
   const hintManager = new HintManager(baseConfig as Config);
 
-  assertEquals(hintManager.getMinLengthForKey("f"), 1, "HintManagerでper_key_min_length使用");
-  assertEquals(hintManager.getMinLengthForKey("t"), 3, "HintManagerでper_key_min_length使用");
+  assertEquals(hintManager.getMinLengthForKey("f"), 1, "HintManagerでperKeyMinLength使用");
+  assertEquals(hintManager.getMinLengthForKey("t"), 3, "HintManagerでperKeyMinLength使用");
   assertEquals(hintManager.getMinLengthForKey("x"), 2, "HintManagerでdefault使用");
 });
 
@@ -70,25 +70,25 @@ Deno.test("Process100: Baseline behavior - WordDetectionManager config hash", ()
   const config1: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 2,
-    max_word_length: 20,
+    defaultMinWordLength: 2,
+    maxWordLength: 20,
   };
 
   const config2: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 3, // 変更
-    max_word_length: 20,
+    defaultMinWordLength: 3, // 変更
+    maxWordLength: 20,
   };
 
   const manager1 = new WordDetectionManager(config1);
   const manager2 = new WordDetectionManager(config2);
 
-  // 異なるmin_word_lengthは異なるハッシュを生成すること
+  // 異なるminWordLengthは異なるハッシュを生成すること
   const hash1 = (manager1 as any).generateConfigHash();
   const hash2 = (manager2 as any).generateConfigHash();
 
-  assertNotEquals(hash1, hash2, "異なるmin_word_lengthは異なるハッシュを生成");
+  assertNotEquals(hash1, hash2, "異なるminWordLengthは異なるハッシュを生成");
 });
 
 Deno.test("Process100: Baseline behavior - Detection context propagation", async () => {
@@ -97,8 +97,8 @@ Deno.test("Process100: Baseline behavior - Detection context propagation", async
   const config: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 2,
-    max_word_length: 20,
+    defaultMinWordLength: 2,
+    maxWordLength: 20,
   };
 
   const manager = new WordDetectionManager(config);
@@ -131,8 +131,8 @@ Deno.test("Process100: Baseline behavior - Cache invalidation triggers", async (
   const initialConfig: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 2,
-    max_word_length: 20,
+    defaultMinWordLength: 2,
+    maxWordLength: 20,
   };
 
   const manager = new WordDetectionManager(initialConfig);
@@ -141,8 +141,8 @@ Deno.test("Process100: Baseline behavior - Cache invalidation triggers", async (
   const result1 = await manager.detectWords("test hello world", 0);
   assertEquals(result1.words.length > 0, true, "単語が検出される");
 
-  // min_word_lengthを変更
-  manager.updateConfig({ min_word_length: 5 });
+  // minWordLengthを変更
+  manager.updateConfig({ defaultMinWordLength: 5 });
 
   // キャッシュが無効化され、新しいmin_lengthが適用されることを確認
   const result2 = await manager.detectWords("test hello world", 0);
@@ -161,8 +161,8 @@ Deno.test("Process100: Baseline behavior - Performance baseline", async () => {
   const config: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
-    min_word_length: 2,
-    max_word_length: 20,
+    defaultMinWordLength: 2,
+    maxWordLength: 20,
   };
 
   const manager = new WordDetectionManager(config);

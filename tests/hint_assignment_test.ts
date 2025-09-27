@@ -15,30 +15,30 @@ describe("Hint Assignment with Character Groups", () => {
   describe("Single Character Hints", () => {
     it("should use only specified keys for single-char hints", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-        multi_char_keys: ["Q", "W", "E", "R"],
-        max_single_char_hints: 9,
+        multiCharKeys: ["Q", "W", "E", "R"],
+        maxSingleCharHints: 9,
       };
 
       const hints = generateHintsWithGroups(12, config);
 
-      // 最初の9個は single_char_keys から
+      // 最初の9個は singleCharKeys から
       assertEquals(hints.slice(0, 9), ["A", "S", "D", "F", "G", "H", "J", "K", "L"]);
 
-      // 10個目以降は multi_char_keys を使った2文字ヒント
+      // 10個目以降は multiCharKeys を使った2文字ヒント
       assertEquals(hints[9], "QQ");
       assertEquals(hints[10], "QW");
       assertEquals(hints[11], "QE");
     });
 
-    it("should limit single-char hints by max_single_char_hints", () => {
+    it("should limit single-char hints by maxSingleCharHints", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-        multi_char_keys: ["Q", "W"],
-        max_single_char_hints: 5, // 9個使えるが5個に制限
+        multiCharKeys: ["Q", "W"],
+        maxSingleCharHints: 5, // 9個使えるが5個に制限
       };
 
       const hints = generateHintsWithGroups(8, config);
 
-      // 最初の5個のみ single_char_keys から
+      // 最初の5個のみ singleCharKeys から
       assertEquals(hints.slice(0, 5), ["A", "S", "D", "F", "G"]);
 
       // 6個目以降は2文字ヒント
@@ -51,15 +51,15 @@ describe("Hint Assignment with Character Groups", () => {
   describe("Multi Character Hints", () => {
     it("should generate multi-char hints from specified keys", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S"],
-        multi_char_keys: ["Q", "W", "E"],
+        multiCharKeys: ["Q", "W", "E"],
       };
 
       const hints = generateHintsWithGroups(7, config);
 
-      // 最初の2個は single_char_keys
+      // 最初の2個は singleCharKeys
       assertEquals(hints.slice(0, 2), ["A", "S"]);
 
-      // 残りは multi_char_keys の組み合わせ
+      // 残りは multiCharKeys の組み合わせ
       const multiCharHints = hints.slice(2);
       assertEquals(multiCharHints.length, 5);
 
@@ -73,7 +73,7 @@ describe("Hint Assignment with Character Groups", () => {
 
     it("should handle number hints after alphabet exhaustion", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A"],
-        multi_char_keys: ["Q", "W"], // 2文字で最大4通り
+        multiCharKeys: ["Q", "W"], // 2文字で最大4通り
       };
 
       const hints = generateHintsWithGroups(7, config);
@@ -94,9 +94,9 @@ describe("Hint Assignment with Character Groups", () => {
   });
 
   describe("Configuration Validation", () => {
-    it("should validate single_char_keys are single characters", () => {
+    it("should validate singleCharKeys are single characters", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "AB", "C"], // ABは無効
-        multi_char_keys: ["Q"],
+        multiCharKeys: ["Q"],
       };
 
       const result = validateHintKeyConfig(config);
@@ -108,7 +108,7 @@ describe("Hint Assignment with Character Groups", () => {
 
     it("should detect overlapping keys between groups", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
-        multi_char_keys: ["A", "Q", "W"], // Aが重複
+        multiCharKeys: ["A", "Q", "W"], // Aが重複
       };
 
       const result = validateHintKeyConfig(config);
@@ -120,8 +120,8 @@ describe("Hint Assignment with Character Groups", () => {
 
     it("should accept valid configuration", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D", "F"],
-        multi_char_keys: ["Q", "W", "E", "R"],
-        max_single_char_hints: 4,
+        multiCharKeys: ["Q", "W", "E", "R"],
+        maxSingleCharHints: 4,
       };
 
       const result = validateHintKeyConfig(config);
@@ -141,21 +141,21 @@ describe("Hint Assignment with Character Groups", () => {
       assertEquals(hints, ["A", "B", "C", "D", "E"]);
     });
 
-    it("should use single_char_keys for multi-char if multi_char_keys not specified", () => {
+    it("should use singleCharKeys for multi-char if multiCharKeys not specified", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
       };
 
       const hints = generateHintsWithGroups(6, config);
 
-      // single_char_keysのみが定義されている場合、multi_char_keysは生成されない
+      // singleCharKeysのみが定義されている場合、multiCharKeysは生成されない
       // 代わりにデフォルトのマーカーが使用される
       assertEquals(hints.slice(0, 3), ["A", "S", "D"]);
 
       // 追加のヒントは数字になるか、デフォルトマーカーから生成される
-      // single_char_keysからは2文字ヒントを生成しない（厳密分離のため）
+      // singleCharKeysからは2文字ヒントを生成しない（厳密分離のため）
       const additionalHints = hints.slice(3);
       for (const hint of additionalHints) {
-        // 2文字ヒントはsingle_char_keysからは生成されない
+        // 2文字ヒントはsingleCharKeysからは生成されない
         if (hint.length === 2) {
           const [first] = hint.split("");
           assertEquals(["A", "S", "D"].includes(first), false);

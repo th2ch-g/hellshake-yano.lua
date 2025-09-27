@@ -13,7 +13,7 @@ test({
   mode: "all",
   name: "Motion Integration: VimScript to Denops key information passing",
   fn: async (denops: Denops) => {
-    // Create test configuration with per_key_min_length
+    // Create test configuration with perKeyMinLength
     const testConfig: Config = {
       markers: ["A", "B", "C"],
       motionCount: 3,
@@ -126,7 +126,7 @@ test({
     // This should also fail initially as the integration is not implemented
 
     try {
-      // Visual mode should also support key-specific min_word_length
+      // Visual mode should also support key-specific minWordLength
       await denops.dispatcher.showHintsWithKey("V"); // Visual line mode
       await denops.dispatcher.showHintsWithKey("v"); // Visual character mode
     } catch (error) {

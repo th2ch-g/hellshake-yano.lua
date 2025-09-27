@@ -89,7 +89,7 @@ Deno.test("TDD Red Phase: Unified Function Interface Definition", async (t) => {
     // Current behavior: EnhancedWordConfig interface
     const config: EnhancedWordConfig = {useJapanese: true,
       strategy: "regex",
-      min_word_length: 2
+      defaultMinWordLength: 2
     };
     const expected = extractWordsFromLineWithEnhancedConfig(testText, lineNumber, config);
 
@@ -137,7 +137,7 @@ Deno.test("TDD Red Phase: Configuration Unification", async (t) => {
     // EnhancedWordConfig format
     const enhancedConfig: EnhancedWordConfig = {useJapanese: true,
       strategy: "hybrid",
-      min_word_length: 3
+      defaultMinWordLength: 3
     };
 
     // Direct parameters format (like extractWordsFromLine)
@@ -238,11 +238,11 @@ export const EXPECTED_UNIFIED_BEHAVIOR = {
 
     // WordConfig compatibility
     useJapanese: "boolean",
-    use_improved_detection: "boolean",
+    useImprovedDetection: "boolean",
 
     // EnhancedWordConfig compatibility
     strategy: ["regex", "tinysegmenter", "hybrid"],
-    min_word_length: "number",
+    defaultMinWordLength: "number",
     enableTinySegmenter: "boolean",
   },
 

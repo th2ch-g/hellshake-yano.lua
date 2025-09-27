@@ -96,6 +96,10 @@ export interface WordDetectionConfig {
   cacheMaxSize?: number;
   batchSize?: number;
 
+  // Word length settings (from UnifiedConfig)
+  defaultMinWordLength?: number;
+  currentKey?: string;
+
   // Filtering options
   minWordLength?: number;
   maxWordLength?: number;
@@ -119,7 +123,7 @@ function resolveConfigType(
   if (config && "useJapanese" in config) {
     return [config as UnifiedConfig, undefined];
   }
-  return [undefined, config as Config];
+  return [undefined, config as unknown as Config];
 }
 
 // ==================== Word Cache Classes ====================
@@ -1278,7 +1282,6 @@ export interface UnifiedWordExtractionConfig {
 
   // Legacy WordConfig compatibility
   useJapanese?: boolean;
-  useImprovedDetection?: boolean;
 
   // Enhanced config compatibility
   strategy?: "regex" | "tinysegmenter" | "hybrid";

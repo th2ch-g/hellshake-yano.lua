@@ -38,9 +38,9 @@ Deno.test("README.md contains per-key configuration section", async () => {
   // Check for new section header
   assertStringIncludes(readme, "Per-Key Minimum Word Length");
 
-  // Check for per_key_min_length configuration
-  assertStringIncludes(readme, "per_key_min_length");
-  assertStringIncludes(readme, "default_min_word_length");
+  // Check for perKeyMinLength configuration
+  assertStringIncludes(readme, "perKeyMinLength");
+  assertStringIncludes(readme, "defaultMinWordLength");
 });
 
 Deno.test("README.md contains configuration examples", async () => {
@@ -96,9 +96,9 @@ Deno.test("README_ja.md contains Japanese documentation", async () => {
   assertStringIncludes(readmeJa, "最小文字数");
   assertStringIncludes(readmeJa, "設定");
 
-  // Check for per_key_min_length configuration in Japanese
-  assertStringIncludes(readmeJa, "per_key_min_length");
-  assertStringIncludes(readmeJa, "default_min_word_length");
+  // Check for perKeyMinLength configuration in Japanese
+  assertStringIncludes(readmeJa, "perKeyMinLength");
+  assertStringIncludes(readmeJa, "defaultMinWordLength");
 });
 
 Deno.test("README_ja.md contains configuration examples", async () => {
@@ -133,7 +133,7 @@ Deno.test("Documentation consistency between English and Japanese", async () => 
     `Configuration examples count differs too much: EN=${englishConfigs}, JA=${japaneseConfigs}`);
 
   // Check for key configuration options in both
-  const keyOptions = ["per_key_min_length", "default_min_word_length", "markers", "motion_count"];
+  const keyOptions = ["perKeyMinLength", "defaultMinWordLength", "markers", "motionCount"];
 
   for (const option of keyOptions) {
     assertStringIncludes(readme, option, `Missing ${option} in English README`);
@@ -145,8 +145,8 @@ Deno.test("Configuration table completeness", async () => {
   const readme = await readFile("README.md");
 
   // Check that new configuration options are in the table
-  assertStringIncludes(readme, "per_key_min_length");
-  assertStringIncludes(readme, "default_min_word_length");
+  assertStringIncludes(readme, "perKeyMinLength");
+  assertStringIncludes(readme, "defaultMinWordLength");
 
   // Check table structure
   assertStringIncludes(readme, "| Option");

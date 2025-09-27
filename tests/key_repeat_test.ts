@@ -9,7 +9,7 @@ test("通常のhjkl操作でヒント表示される", async (denops) => {
   await denops.cmd("call setline(1, ['hello world foo bar baz', 'second line here'])");
   await denops.cmd("normal! gg0");
 
-  // motion_count = 3 に設定
+  // motionCount = 3 に設定
   await denops.cmd("let g:hellshake_yano.motionCount = 3");
 
   // 通常速度でhjklキーを3回押下（間隔100ms以上）
@@ -37,7 +37,7 @@ test("高速連続入力(50ms以下)でヒント表示が抑制される", async
   await denops.cmd("call setline(1, ['hello world foo bar baz'])");
   await denops.cmd("normal! gg0");
 
-  // motion_count = 3, キーリピート抑制を有効に設定
+  // motionCount = 3, キーリピート抑制を有効に設定
   await denops.cmd("let g:hellshake_yano.motionCount = 3");
   await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:true");
   await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 50");
@@ -96,7 +96,7 @@ test("リピート終了後300ms経過で通常動作に復帰", async (denops) 
   assert(hintsRestored, "リピート終了後は通常動作に復帰するべき");
 });
 
-test("suppress_on_key_repeat=falseで機能が無効化される", async (denops) => {
+test("suppressOnKeyRepeat=falseで機能が無効化される", async (denops) => {
   await denops.cmd("enew!");
   await denops.cmd("call setline(1, ['hello world foo bar baz'])");
   await denops.cmd("normal! gg0");

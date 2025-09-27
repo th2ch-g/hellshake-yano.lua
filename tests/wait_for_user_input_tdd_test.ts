@@ -69,12 +69,12 @@ const createMockDenops = (
 
 // Create test config with reasonable defaults
 const createTestConfig = (overrides: Partial<Config> = {}): Partial<Config> => ({motionCount: 1,
-  use_hint_groups: false,
-  single_char_keys: ["A", "S", "D", "F"],
-  multi_char_keys: ["B", "C", "E", "I"],
+  useHintGroups: false,
+  singleCharKeys: ["A", "S", "D", "F"],
+  multiCharKeys: ["B", "C", "E", "I"],
   highlightSelected: true,
   useNumbers: false,
-  debug_mode: false,
+  debugMode: false,
   motionTimeout: 2000,
   ...overrides
 });
@@ -229,7 +229,7 @@ Deno.test("TDD GREEN Phase: waitForUserInput should handle timeout with single c
 
   // Assert - Should now handle timeout properly
   assertEquals(callTracker.hideHintsOptimizedCalls, 1, "Should call hideHintsOptimized on timeout");
-  // For single hint timeout, should auto-select if motion_count === 1
+  // For single hint timeout, should auto-select if motionCount === 1
   assertEquals(callTracker.cursorCalls.length, 1, "Should auto-select single hint on timeout");
 });
 
@@ -246,8 +246,8 @@ Deno.test("TDD GREEN Phase: waitForUserInput should handle multi-character hints
   // B (multiOnlyKey) + A = BA hint
   const mockDenops = createMockDenops([66, 65], callTracker); // 'B', 'A'
   const config = createTestConfig({useHintGroups: true,
-    multi_char_keys: ["B", "C", "E", "I"],
-    single_char_keys: ["A", "S", "D", "F"]
+    multiCharKeys: ["B", "C", "E", "I"],
+    singleCharKeys: ["A", "S", "D", "F"]
   });
   const core = Core.getInstance(config);
 

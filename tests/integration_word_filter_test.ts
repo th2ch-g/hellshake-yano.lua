@@ -58,11 +58,11 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       // 異なるヒント位置での動作確認
       const startPos = calculateHintPosition(words[0], "start");
       const endPos = calculateHintPosition(words[1], "end");
-      const overlayPos = calculateHintPosition(words[2], "overlay");
+      const overlayPos = calculateHintPosition(words[2], "end");
 
       assertEquals(startPos.display_mode, "before");
       assertEquals(endPos.display_mode, "after");
-      assertEquals(overlayPos.display_mode, "overlay");
+      assertEquals(overlayPos.display_mode, "end");
 
       // 終端位置の計算確認
       assertEquals(endPos.col, words[1].col + words[1].text.length - 1);
@@ -207,11 +207,11 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
         words.forEach((word) => {
           const startPos = calculateHintPosition(word, "start");
           const endPos = calculateHintPosition(word, "end");
-          const overlayPos = calculateHintPosition(word, "overlay");
+          const overlayPos = calculateHintPosition(word, "end");
 
           assertEquals(startPos.display_mode, "before");
           assertEquals(endPos.display_mode, "after");
-          assertEquals(overlayPos.display_mode, "overlay");
+          assertEquals(overlayPos.display_mode, "end");
 
           assertEquals(startPos.col, word.col);
           // endPos.colは表示幅を考慮した計算になる

@@ -17,7 +17,7 @@ describe("Japanese Word Position Issue", () => {
   describe("RegexWordDetector with useJapanese: false", () => {
     it("should not detect Japanese characters as words", async () => {
       const config: WordDetectionConfig = {useJapanese: false,
-        use_improved_detection: true,
+        useImprovedDetection: true,
       };
       const detector = new RegexWordDetector(config);
       const words = await detector.detectWords(vimConfigText, 1);
@@ -37,7 +37,7 @@ describe("Japanese Word Position Issue", () => {
       assertEquals(hasJapanese, false, "Should not detect Japanese characters");
 
       // 英単語は検出される
-      const hasUseJapanese = words.some((w) => w.text === "use_japanese");
+      const hasUseJapanese = words.some((w) => w.text === "useJapanese");
       const hasV = words.some((w) => w.text === "v");
       const hasFalse = words.some((w) => w.text === "false");
     });
@@ -45,13 +45,13 @@ describe("Japanese Word Position Issue", () => {
     it("should show what's being detected at each position", async () => {
       const testTexts = [
         "日本語",
-        "use_japanese",
+        "useJapanese",
         "'useJapanese': v:false",
         "    \\ 'useJapanese': v:false,  \" 日本語を除外",
       ];
 
       const config: WordDetectionConfig = {useJapanese: false,
-        use_improved_detection: true,
+        useImprovedDetection: true,
       };
       const detector = new RegexWordDetector(config);
 
@@ -72,7 +72,7 @@ describe("Japanese Word Position Issue", () => {
   describe("HybridWordDetector behavior", () => {
     it("should properly handle mixed Japanese-English text", async () => {
       const config: WordDetectionConfig = {useJapanese: false,
-        use_improved_detection: true,
+        useImprovedDetection: true,
       };
       const detector = new HybridWordDetector(config);
       const words = await detector.detectWords(vimConfigText, 1);
@@ -87,7 +87,7 @@ describe("Japanese Word Position Issue", () => {
       assertEquals(
         hasJapanese,
         false,
-        "HybridWordDetector should not detect Japanese when use_japanese is false",
+        "HybridWordDetector should not detect Japanese when useJapanese is false",
       );
     });
   });

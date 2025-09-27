@@ -106,7 +106,7 @@ describe("変換関数簡素化テスト (Process4 Sub2-4)", () => {
       // const functionStr = fromUnifiedConfig.toString(); // Function removed
 
       // 複雑なレガシー処理が削除されていることを確認
-      // const hasLegacyComplexity = functionStr.includes("c.min_word_length") ||
+      // const hasLegacyComplexity = functionStr.includes("c.minWordLength") ||
       //                            functionStr.includes("c.defaultMotionCount === undefined && c.defaultMotionCount === undefined");
       // assertEquals(hasLegacyComplexity, false, "複雑なレガシー互換性処理は削除されるべき");
     });
@@ -120,8 +120,8 @@ describe("変換関数簡素化テスト (Process4 Sub2-4)", () => {
       // fromUnifiedConfig関数は削除されたため、直接マッピングを使用
       const result = { ...unifiedConfig };
 
-      // min_word_lengthやenableなどの重複プロパティが削除されている
-      assertEquals("min_word_length" in result, false, "min_word_lengthプロパティは削除されるべき");
+      // minWordLengthやenableなどの重複プロパティが削除されている
+      assertEquals("minWordLength" in result, false, "minWordLengthプロパティは削除されるべき");
       assertEquals("enable" in result, false, "enableプロパティは削除されるべき");
       assertEquals("key_repeat_reset_delay" in result, false, "key_repeat_reset_delayプロパティは削除されるべき");
     });

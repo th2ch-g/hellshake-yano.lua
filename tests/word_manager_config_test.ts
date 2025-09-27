@@ -69,9 +69,9 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
   const config: WordDetectionManagerConfig = {
     // These should map to UnifiedConfig properties (currently uses snake_case)
     useJapanese: mockUnifiedConfig.useJapanese,
-    default_strategy: mockUnifiedConfig.wordDetectionStrategy,
-    cache_enabled: true,
-    cache_max_size: 500
+    defaultStrategy: mockUnifiedConfig.wordDetectionStrategy,
+    cacheEnabled: true,
+    cacheMaxSize: 500
   };
 
   const manager = new WordDetectionManager(config, mockUnifiedConfig);
@@ -80,7 +80,7 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
   // Test that manager can access UnifiedConfig properties
   const result = await manager.detectWords("test word", 1, undefined, {
     currentKey: 'f',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
+    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
   });
 
   // Should be able to detect words with proper min length from UnifiedConfig
@@ -95,7 +95,7 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
 
 Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead of Config", async () => {
   const config: WordDetectionManagerConfig = {useJapanese: mockUnifiedConfig.useJapanese,
-    default_strategy: mockUnifiedConfig.wordDetectionStrategy,
+    defaultStrategy: mockUnifiedConfig.wordDetectionStrategy,
     enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter
   };
 
@@ -106,7 +106,7 @@ Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead o
   // Test Japanese text detection with UnifiedConfig settings
   const result = await manager.detectWords("これはテストです", 1, undefined, {
     currentKey: 't',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
+    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
   });
 
   assertExists(result);
@@ -120,7 +120,7 @@ Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead o
 
 Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with UnifiedConfig", async () => {
   const config: WordDetectionManagerConfig = {useJapanese: mockUnifiedConfig.useJapanese,
-    default_strategy: 'hybrid', // Force hybrid strategy
+    defaultStrategy: 'hybrid', // Force hybrid strategy
     enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter
   };
 
@@ -130,7 +130,7 @@ Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with U
   // Test hybrid detection with mixed content
   const result = await manager.detectWords("Hello こんにちは world", 1, undefined, {
     currentKey: 'F',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
+    defaultMinWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
   });
 
   assertExists(result);

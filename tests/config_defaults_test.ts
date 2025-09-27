@@ -141,7 +141,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertEquals(oldConfig.markers[0], newConfig.markers[0]);
     });
 
-    it("should have consistent use_numbers/useNumbers values", () => {
+    it("should have consistent useNumbers/useNumbers values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
       assertEquals(oldConfig.useNumbers, newConfig.useNumbers);

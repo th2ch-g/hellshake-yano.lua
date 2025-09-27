@@ -48,7 +48,7 @@ function resolveConfigType(config?: Config | UnifiedConfig): [UnifiedConfig | un
   if (config && 'useJapanese' in config) {
     return [config as UnifiedConfig, undefined];
   }
-  return [undefined, config as Config];
+  return [undefined, config as unknown as Config];
 }
 
 /**
