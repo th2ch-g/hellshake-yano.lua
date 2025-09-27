@@ -133,107 +133,68 @@ export interface CoreState {
 }
 
 /**
- * 設定情報インターフェース（Phase 5: 型定義の整理で最適化）
+ * 後方互換性のための設定型エイリアス
+ * Process4 Sub3-1: 設定型の統合と型定義の整理
  *
- * @description プラグインの動作設定を定義する包括的なインターフェース
- * 不要なオプショナルプロパティを削除し、より厳密な型定義を提供
+ * @deprecated この型は統合され、ConfigTypeを使用してください
+ * snake_case形式の設定項目を保持する後方互換性型
  *
- * ### 改善点：
- * - 実質的に必須の項目からオプショナル修飾子を除去
- * - デフォルト値が明確な項目の型安全性を向上
- * - 後方互換性を保持しながら型精度を向上
+ * @description ConfigTypeからsnake_case形式へのマッピング型
+ * 既存コードとの互換性を維持しながら、新しい統合型への移行を促進
  */
-export interface Config {
+export type Config = {
   // === 基本設定（必須項目） ===
-  /** ヒント文字として使用するマーカー配列（必須、空配列不可） */
   markers: string[];
-  /** モーション実行に必要な移動回数（必須、正の整数） */
   motion_count: number;
-  /** モーションタイムアウト（ミリ秒、必須、正の整数） */
   motion_timeout: number;
-  /** ヒント表示位置（必須） */
   hint_position: HintPositionType;
-  /** hjklキーでのトリガー有効化（必須、デフォルト値明確） */
   trigger_on_hjkl: boolean;
-  /** カウント対象のモーション配列（必須、空配列可） */
   counted_motions: string[];
-  /** プラグインの有効/無効（必須） */
   enabled: boolean;
-  /** 最大ヒント数（必須、正の整数） */
   maxHints: number;
-  /** デバウンス遅延時間（ミリ秒、必須、非負整数） */
   debounceDelay: number;
-  /** 数字をヒント文字として使用（必須、デフォルト値明確） */
   use_numbers: boolean;
-  /** 選択中のヒントをハイライト（必須、デフォルト値明確） */
   highlight_selected: boolean;
-  /** 座標系デバッグログの有効/無効（必須、デフォルト値明確） */
   debug_coordinates: boolean;
 
   // === オプション設定 ===
-  /** Visual Modeでのヒント位置（デフォルト: 'end'） */
   visual_hint_position?: HintPositionType;
-  /** 1文字ヒント専用キー */
   single_char_keys?: string[];
-  /** 2文字以上ヒント専用キー */
   multi_char_keys?: string[];
-  /** 1文字ヒントの最大数 */
   max_single_char_hints?: number;
-  /** ヒントグループ機能を使用するか */
   use_hint_groups?: boolean;
 
   // === 単語検出設定 ===
-  /** 日本語を含む単語検出を行うか */
   use_japanese?: boolean;
-  /** 単語検出アルゴリズム */
   word_detection_strategy?: DetectionStrategy;
-  /** TinySegmenterを有効にするか */
   enable_tinysegmenter?: boolean;
-  /** TinySegmenterを使用する最小文字数 */
   segmenter_threshold?: number;
-  /** 日本語の最小単語長 */
   japanese_min_word_length?: number;
-  /** 助詞や接続詞を前の単語と結合 */
   japanese_merge_particles?: boolean;
-  /** 結合する最大文字数 */
   japanese_merge_threshold?: number;
 
   // === ハイライト設定 ===
-  /** ヒントマーカーのハイライト色 */
   highlight_hint_marker?: string | HighlightColor;
-  /** 選択中ヒントのハイライト色 */
   highlight_hint_marker_current?: string | HighlightColor;
 
   // === パフォーマンス設定 ===
-  /** キーリピート時のヒント表示抑制 */
   suppress_on_key_repeat?: boolean;
-  /** リピート判定の閾値（ミリ秒） */
   key_repeat_threshold?: number;
-  /** リピート終了判定の遅延（ミリ秒） */
   key_repeat_reset_delay?: number;
 
   // === キー別設定 ===
-  /** キー別の最小文字数設定 */
   per_key_min_length?: Record<string, number>;
-  /** per_key_min_lengthに存在しないキーのデフォルト値 */
   default_min_word_length?: number;
-  /** キー別のmotion_count設定 */
   per_key_motion_count?: Record<string, number>;
-  /** per_key_motion_countに存在しないキーのデフォルト値 */
   default_motion_count?: number;
-  /** 内部使用：現在のキーコンテキスト */
   current_key_context?: string;
 
   // === 後方互換性 ===
-  /** 旧形式の最小文字数設定 */
   min_word_length?: number;
-  /** enabled のエイリアス */
   enable?: boolean;
-  /** デバッグモードの有効/無効 */
   debug_mode?: boolean;
-  /** パフォーマンスログの有効/無効 */
   performance_log?: boolean;
-}
+};
 
 /**
  * ハイライト色設定インターフェース
@@ -575,10 +536,11 @@ export function isHintMapping(obj: unknown): obj is HintMapping {
 }
 
 /**
- * Config型の型ガード関数
+ * Config型の型ガード関数（後方互換性用）
+ * Process4 Sub3-1: 設定型の統合と型定義の整理
  *
- * @description オブジェクトがConfig型の最小要件を満たしているかを判定
- * すべてのプロパティを厳密にチェックするのではなく、必須項目のみ確認
+ * @deprecated この関数は後方互換性のために残されています。新しいコードではisConfigType()を使用してください
+ * @description オブジェクトがConfig型（snake_case形式）の最小要件を満たしているかを判定
  *
  * @param obj 判定対象のオブジェクト
  * @returns Configインターフェースの必須項目を満たしている場合true
@@ -790,6 +752,181 @@ export type SafeKeys<T> = keyof T;
  */
 export type ValueOf<T> = T[keyof T];
 
+// ===== 統合設定型（TDD Green Phase） =====
+
+/**
+ * 統合設定型 (ConfigType)
+ * Process4 Sub3-1: 設定型の統合と型定義の整理
+ *
+ * Config, UnifiedConfig, CamelCaseConfigを統合した単一の型
+ * TDD Red-Green-Refactor方式で実装
+ *
+ * @description 既存のすべての設定インターフェースを統合し、
+ * 型安全性と保守性を向上させる統一設定型
+ */
+export interface UnifiedConfig {
+  // Core settings (6 properties)
+  enabled: boolean;
+  markers: string[];
+  motionCount: number;
+  motionTimeout: number;
+  hintPosition: "start" | "end" | "same";
+  visualHintPosition?: "start" | "end" | "same" | "both";
+
+  // Hint settings (8 properties)
+  triggerOnHjkl: boolean;
+  countedMotions: string[];
+  maxHints: number;
+  debounceDelay: number;
+  useNumbers: boolean;
+  highlightSelected: boolean;
+  debugCoordinates: boolean;
+  singleCharKeys: string[];
+
+  // Extended hint settings (4 properties)
+  multiCharKeys: string[];
+  maxSingleCharHints?: number;
+  useHintGroups: boolean;
+  highlightHintMarker: string | HighlightColor;
+
+  // Word detection settings (7 properties)
+  highlightHintMarkerCurrent: string | HighlightColor;
+  suppressOnKeyRepeat: boolean;
+  keyRepeatThreshold: number;
+  useJapanese: boolean;
+  wordDetectionStrategy: "regex" | "tinysegmenter" | "hybrid";
+  enableTinySegmenter: boolean;
+  segmenterThreshold: number;
+
+  // Japanese word settings (7 properties)
+  japaneseMinWordLength: number;
+  japaneseMergeParticles: boolean;
+  japaneseMergeThreshold: number;
+  perKeyMinLength?: Record<string, number>;
+  defaultMinWordLength: number;
+  perKeyMotionCount?: Record<string, number>;
+  defaultMotionCount: number;
+  currentKeyContext?: string;
+
+  // Debug settings (2 properties)
+  debugMode: boolean;
+  performanceLog: boolean;
+
+  // Additional settings for backward compatibility
+  useImprovedDetection?: boolean;
+}
+
+/**
+ * 統合設定型エイリアス
+ * すべての設定型を統合した型
+ */
+export type ConfigType = UnifiedConfig;
+
+/**
+ * 統合設定型の型ガード関数
+ * TDD Green Phase実装
+ */
+export function isConfigType(obj: unknown): obj is ConfigType {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as ConfigType).enabled === "boolean" &&
+    Array.isArray((obj as ConfigType).markers) &&
+    typeof (obj as ConfigType).motionCount === "number" &&
+    typeof (obj as ConfigType).motionTimeout === "number" &&
+    typeof (obj as ConfigType).hintPosition === "string" &&
+    typeof (obj as ConfigType).triggerOnHjkl === "boolean" &&
+    Array.isArray((obj as ConfigType).countedMotions) &&
+    typeof (obj as ConfigType).maxHints === "number" &&
+    typeof (obj as ConfigType).debounceDelay === "number" &&
+    typeof (obj as ConfigType).useNumbers === "boolean" &&
+    typeof (obj as ConfigType).highlightSelected === "boolean" &&
+    typeof (obj as ConfigType).debugCoordinates === "boolean"
+  );
+}
+
+/**
+ * 統合設定型のファクトリ関数
+ * TDD Green Phase実装
+ */
+export function createConfigType(partialConfig: Partial<ConfigType> = {}): ConfigType {
+  const defaults: ConfigType = {
+    enabled: true,
+    markers: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"],
+    motionCount: 3,
+    motionTimeout: 2000,
+    hintPosition: "start",
+    triggerOnHjkl: true,
+    countedMotions: [],
+    maxHints: 100,
+    debounceDelay: 50,
+    useNumbers: false,
+    highlightSelected: false,
+    debugCoordinates: false,
+    singleCharKeys: [],
+    multiCharKeys: [],
+    useHintGroups: false,
+    highlightHintMarker: "HellshakeYanoHintMarker",
+    highlightHintMarkerCurrent: "HellshakeYanoHintMarkerCurrent",
+    suppressOnKeyRepeat: true,
+    keyRepeatThreshold: 50,
+    useJapanese: false,
+    wordDetectionStrategy: "hybrid",
+    enableTinySegmenter: true,
+    segmenterThreshold: 4,
+    japaneseMinWordLength: 2,
+    japaneseMergeParticles: true,
+    japaneseMergeThreshold: 2,
+    defaultMinWordLength: 3,
+    defaultMotionCount: 3,
+    debugMode: false,
+    performanceLog: false
+  };
+
+  return { ...defaults, ...partialConfig };
+}
+
+/**
+ * 統合設定型のバリデーション関数
+ * TDD Green Phase実装
+ */
+export function validateConfigType(config: unknown): ValidationResult<ConfigType> {
+  const errors: string[] = [];
+
+  if (!isConfigType(config)) {
+    errors.push("Invalid ConfigType structure");
+    return { isValid: false, errors };
+  }
+
+  // 基本的なバリデーション
+  if (config.motionCount <= 0) {
+    errors.push("motionCount must be positive");
+  }
+
+  if (config.motionTimeout <= 0) {
+    errors.push("motionTimeout must be positive");
+  }
+
+  if (config.maxHints <= 0) {
+    errors.push("maxHints must be positive");
+  }
+
+  if (config.debounceDelay < 0) {
+    errors.push("debounceDelay must be non-negative");
+  }
+
+  const validHintPositions = ["start", "end", "same"];
+  if (!validHintPositions.includes(config.hintPosition)) {
+    errors.push("hintPosition must be 'start', 'end', or 'same'");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    value: errors.length === 0 ? config : undefined,
+    errors
+  };
+}
+
 // ===== デフォルト値とファクトリ関数 =====
 
 /**
@@ -821,9 +958,11 @@ export function createDefaultHintMapping(word: Word, hint: string): HintMapping 
 }
 
 /**
- * 空のConfig値を作成する
+ * 空のConfig値を作成する（後方互換性用）
+ * Process4 Sub3-1: 設定型の統合と型定義の整理
  *
- * @returns 最小限の必須プロパティを持つConfigオブジェクト
+ * @deprecated この関数は後方互換性のために残されています。新しいコードではcreateConfigType()を使用してください
+ * @returns 最小限の必須プロパティを持つConfigオブジェクト（snake_case形式）
  */
 export function createMinimalConfig(): Config {
   return {
@@ -880,13 +1019,15 @@ export function createValidationResult<T>(
 // ===== エクスポート統合 =====
 
 /**
- * よく使用される型のエイリアス
- * 短縮名での参照を可能にする
+ * よく使用される型のエイリアス（REFACTORフェーズで整理）
+ * Process4 Sub3-1: 設定型の統合と型定義の整理
  */
 export type {
   Word as W,
   HintMapping as HM,
-  Config as C,
+  ConfigType as CT,     // 新しい統合型のエイリアス
+  Config as C,          // 後方互換性のため保持
+  UnifiedConfig as UC,  // 統合型のエイリアス
   HintPosition as HP,
   DetectionContext as DC,
   WordDetectionResult as WDR,
