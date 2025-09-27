@@ -16,7 +16,7 @@ import {
   type WordDetectionResult,
   type WordDetector,
 } from "./detector.ts";
-import type { UnifiedConfig } from "../config.ts";
+import { DEFAULT_UNIFIED_CONFIG, type UnifiedConfig } from "../config.ts";
 import type { Config } from "../main.ts";
 
 /**
@@ -494,7 +494,8 @@ export class WordDetectionManager {
       // useImprovedDetection: 統合済み（常に有効）
       minWordLength: this.config.minWordLength,
       maxWordLength: this.config.maxWordLength,
-      defaultMinWordLength: (this.globalConfig as Config | undefined)?.defaultMinWordLength,
+      defaultMinWordLength: this.config.defaultMinWordLength ||
+                           (this.globalConfig as Config | undefined)?.defaultMinWordLength,
       perKeyMinLength: (this.globalConfig as Config | undefined)?.perKeyMinLength,
     };
     return this.simpleHash(JSON.stringify(relevantConfig));
@@ -833,13 +834,16 @@ export class WordDetectionManager {
   private mergeWithDefaults(
     config: WordDetectionManagerConfig,
   ): Required<WordDetectionManagerConfig> {
-    // デフォルト値
+    // デフォルト値 (DEFAULT_UNIFIED_CONFIGを含む)
     const defaults = {
+      // From DEFAULT_UNIFIED_CONFIG
+      defaultMinWordLength: DEFAULT_UNIFIED_CONFIG.defaultMinWordLength,
+
       // Detection settings
       strategy: "hybrid" as "regex" | "tinysegmenter" | "hybrid",
-      useJapanese: false, // デフォルトはfalse、但し明示的な設定を優先
-      enableTinySegmenter: true,
-      segmenterThreshold: 4,
+      useJapanese: DEFAULT_UNIFIED_CONFIG.useJapanese,
+      enableTinySegmenter: DEFAULT_UNIFIED_CONFIG.enableTinySegmenter,
+      segmenterThreshold: DEFAULT_UNIFIED_CONFIG.segmenterThreshold,
       segmenterCacheSize: 1000,
 
       // Manager settings

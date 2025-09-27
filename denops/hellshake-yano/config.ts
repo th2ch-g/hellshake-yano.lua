@@ -119,7 +119,7 @@ export interface UnifiedConfig {
   /** モーションのタイムアウト時間（ミリ秒） */
   motionTimeout: number;
   /** 通常モードでのヒント表示位置 */
-  hintPosition: "start" | "end" | "same";
+  hintPosition: "start" | "end" | "overlay";
   /** Visualモードでのヒント表示位置 */
   visualHintPosition?: "start" | "end" | "same" | "both";
 
@@ -456,11 +456,11 @@ export function validateUnifiedConfig(
     }
   }
 
-  // hintPosition - 列挙値 (Process4 sub3-2-3: "same"を正しい値として認識)
+  // hintPosition - 列挙値 (Process4 sub3-2-3: "overlay"を正しい値として認識)
   if (config.hintPosition !== undefined) {
-    const validPositions = ["start", "end", "same"];
+    const validPositions = ["start", "end", "overlay"];
     if (config.hintPosition === null || !validPositions.includes(config.hintPosition)) {
-      errors.push("hintPosition must be one of: start, end, same");
+      errors.push("hintPosition must be one of: start, end, overlay");
     }
   }
 

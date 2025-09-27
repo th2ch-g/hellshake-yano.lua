@@ -77,7 +77,7 @@ describe("変換関数簡素化テスト (Process4 Sub2-4)", () => {
       const unifiedConfig: Partial<UnifiedConfig> = {
         motionCount: 7,
         useJapanese: false,
-        hintPosition: "same"
+        hintPosition: "overlay"
       };
 
       // fromUnifiedConfig関数は削除されたため、直接マッピングを使用
@@ -86,7 +86,7 @@ describe("変換関数簡素化テスト (Process4 Sub2-4)", () => {
       // 直接的な逆マッピング
       assertEquals(result.motionCount, 7);
       assertEquals(result.useJapanese, false);
-      assertEquals(result.hintPosition, "same");
+      assertEquals(result.hintPosition, "overlay");
 
       // 関数が簡潔であることを確認
       // const functionLines = fromUnifiedConfig.toString().split('\n').length; // Function removed

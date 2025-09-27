@@ -129,7 +129,7 @@ Deno.test("validateUnifiedConfig - debounceDelay バリデーション", () => {
 
 Deno.test("validateUnifiedConfig - hintPosition バリデーション", () => {
   // 正常系
-  const validPositions = ["start", "end", "same"];
+  const validPositions = ["start", "end", "overlay"];
   for (const position of validPositions) {
     const result = validateUnifiedConfig({ hintPosition: position as any });
     assertEquals(result.valid, true);
@@ -279,5 +279,5 @@ Deno.test("validateUnifiedConfig - エラーメッセージの一貫性", () => 
   // camelCase形式のエラーメッセージを確認
   const errorMessage = result.errors[0];
   assertEquals(errorMessage.includes("motionCount"), true, "Error message should use camelCase");
-  assertEquals(errorMessage.includes("motionCount"), false, "Error message should not use snake_case");
+  assertEquals(errorMessage.includes("motion_count"), false, "Error message should not use snake_case");
 });

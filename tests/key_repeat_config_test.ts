@@ -38,7 +38,7 @@ test("カスタム設定値が正しく上書きされる", async (denops) => {
   // カスタム設定を定義
   await denops.cmd("let g:hellshake_yano = {}");
   await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:false");
-  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 100");
+  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 100");
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 500");
 
   // プラグインファイルを読み込み
@@ -46,7 +46,7 @@ test("カスタム設定値が正しく上書きされる", async (denops) => {
 
   // GREEN段階: extend()の'keep'により既存カスタム設定が保持されることを確認
   const suppressOnKeyRepeat = await denops.eval("g:hellshake_yano.suppressOnKeyRepeat");
-  const keyRepeatThreshold = await denops.eval("g:hellshake_yano.keyRepeatThreshold");
+  const keyRepeatThreshold = await denops.eval("g:hellshake_yano.key_repeat_threshold");
   const keyRepeatResetDelay = await denops.eval("g:hellshake_yano.key_repeat_reset_delay");
 
   assertEquals(suppressOnKeyRepeat, false, "Custom suppressOnKeyRepeat should be preserved");
@@ -68,7 +68,7 @@ test("部分的なカスタム設定でデフォルト値が保持される", as
 
   // GREEN段階: 部分カスタマイズでデフォルト値が保持されることを確認
   const suppressOnKeyRepeat = await denops.eval("g:hellshake_yano.suppressOnKeyRepeat");
-  const keyRepeatThreshold = await denops.eval("g:hellshake_yano.keyRepeatThreshold");
+  const keyRepeatThreshold = await denops.eval("g:hellshake_yano.key_repeat_threshold");
   const keyRepeatResetDelay = await denops.eval("g:hellshake_yano.key_repeat_reset_delay");
 
   assertEquals(suppressOnKeyRepeat, false, "Custom suppressOnKeyRepeat should be preserved");
@@ -84,7 +84,7 @@ test("設定がdenops側に正しく伝播される", async (denops) => {
   // テスト用設定
   await denops.cmd("let g:hellshake_yano = {}");
   await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:false");
-  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 75");
+  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 75");
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 250");
 
   await denops.cmd("source plugin/hellshake-yano.vim");
@@ -118,7 +118,7 @@ test("autoload/hellshake_yano.vimで設定値が使用される", async (denops)
 
   // カスタム閾値で設定
   await denops.cmd("let g:hellshake_yano = {}");
-  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 100"); // 100msに設定
+  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 100"); // 100msに設定
   await denops.cmd("let g:hellshake_yano.motionCount = 2");
 
   await denops.cmd("source plugin/hellshake-yano.vim");

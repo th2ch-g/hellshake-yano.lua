@@ -54,12 +54,12 @@ Deno.test("Phase 3 sub1: camelCase統一 - Snake caseからCamel caseへの変�
   await t.step("camelCase統一 - snake_caseは廃止", () => {
     const modernConfig = createModernConfig({
       motionCount: 7,
-      hintPosition: "same",
+      hintPosition: "overlay",
       useNumbers: true});
 
     // camelCase のみサポート
     assertEquals(modernConfig.motionCount, 7);
-    assertEquals(modernConfig.hintPosition, "same");
+    assertEquals(modernConfig.hintPosition, "overlay");
     assertEquals(modernConfig.useNumbers, true);
   });
 

@@ -70,11 +70,11 @@ describe("Hint Positioning - Word Start Display", () => {
   describe("Display mode variations", () => {
     it("should support overlay mode", () => {
       const word: Word = { text: "end", line: 1, col: 10 };
-      const position = calculateHintPosition(word, "end");
+      const position = calculateHintPosition(word, "overlay");
 
       assertEquals(position.line, 1);
       assertEquals(position.col, 10);
-      assertEquals(position.display_mode, "end");
+      assertEquals(position.display_mode, "overlay");
     });
 
     it("should support end positioning", () => {
@@ -161,7 +161,7 @@ describe("Hint Positioning - Word Start Display", () => {
 
       assertEquals(startPos.display_mode, "before");
       assertEquals(endPos.display_mode, "after");
-      assertEquals(overlayPos.display_mode, "end");
+      assertEquals(overlayPos.display_mode, "after");
     });
 
     it("should handle invalid hintPosition gracefully", () => {

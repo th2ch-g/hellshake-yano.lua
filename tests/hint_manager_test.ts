@@ -176,7 +176,7 @@ describe("HintManager Tests", () => {
       const newManager = new HintManager(newConfig);
       assertEquals(newManager.getMinLengthForKey("f"), 5);
       assertEquals(newManager.getMinLengthForKey("t"), 6);
-      assertEquals(newManager.getMinLengthForKey("x"), 3); // default
+      assertEquals(newManager.getMinLengthForKey("x"), 2); // defaultMinWordLength from config
     });
 
     it("should handle edge cases in config", () => {
@@ -186,7 +186,7 @@ describe("HintManager Tests", () => {
       };
 
       const manager = new HintManager(edgeConfig);
-      assertEquals(manager.getMinLengthForKey("any"), 1); // minWordLengthフォールバック
+      assertEquals(manager.getMinLengthForKey("any"), 2); // defaultMinWordLengthフォールバック
     });
 
     it("should provide readonly access to config", () => {

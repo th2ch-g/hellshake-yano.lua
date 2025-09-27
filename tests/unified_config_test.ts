@@ -144,7 +144,7 @@ describe("UnifiedConfig Tests", () => {
       const _enabled: boolean = config.enabled;
       const _markers: string[] = config.markers;
       const _motionCount: number = config.motionCount;
-      const _hintPosition: "start" | "end" | "same" = config.hintPosition;
+      const _hintPosition: "start" | "end" | "overlay" = config.hintPosition;
 
       // Verify runtime types match
       assertEquals(typeof config.enabled, "boolean");

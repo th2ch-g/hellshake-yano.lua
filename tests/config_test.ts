@@ -92,14 +92,14 @@ describe("Config Tests", () => {
       const result2 = validateConfig({ hintPosition: "end" });
       assertEquals(result2.valid, true);
 
-      const result3 = validateConfig({ hintPosition: "same" });
+      const result3 = validateConfig({ hintPosition: "overlay" });
       assertEquals(result3.valid, true);
     });
 
     it("should reject invalid hintPosition values", () => {
       const result1 = validateConfig({ hintPosition: "middle" as any });
       assertEquals(result1.valid, false);
-      assertEquals(result1.errors[0], "hintPosition must be one of: start, end, same");
+      assertEquals(result1.errors[0], "hintPosition must be one of: start, end, overlay");
 
       const result2 = validateConfig({ hintPosition: "top" as any });
       assertEquals(result2.valid, false);
@@ -210,7 +210,7 @@ describe("Config Tests", () => {
       assertEquals(result.errors.includes("motionCount must be a positive integer"), true);
       assertEquals(result.errors.includes("motionTimeout must be at least 100ms"), true);
       assertEquals(
-        result.errors.includes("hintPosition must be one of: start, end, same"),
+        result.errors.includes("hintPosition must be one of: start, end, overlay"),
         true,
       );
       assertEquals(result.errors.includes("markers must not be empty"), true);
@@ -241,7 +241,7 @@ describe("Config Tests", () => {
         markers: ["1", "2", "3"],
         motionCount: 1,
         motionTimeout: 500,
-        hintPosition: "same",
+        hintPosition: "overlay",
         triggerOnHjkl: false,
         enabled: false,
         useNumbers: true,
@@ -255,7 +255,7 @@ describe("Config Tests", () => {
       assertEquals(merged.markers, ["1", "2", "3"]);
       assertEquals(merged.motionCount, 1);
       assertEquals(merged.motionTimeout, 500);
-      assertEquals(merged.hintPosition, "same");
+      assertEquals(merged.hintPosition, "overlay");
       assertEquals(merged.triggerOnHjkl, false);
       assertEquals(merged.enabled, false);
       assertEquals(merged.useNumbers, true);

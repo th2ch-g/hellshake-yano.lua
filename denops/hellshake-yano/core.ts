@@ -2053,8 +2053,8 @@ export class Core {
       return unifiedConfig.motionCount;
     }
 
-    // 最終的なデフォルト値
-    return 2;
+    // 最終的なデフォルト値（DEFAULT_UNIFIED_CONFIG.motionCount と同じ）
+    return 3;
   }
 
   // ========================================

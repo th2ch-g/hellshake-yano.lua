@@ -128,6 +128,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
       maxWordLength: 100,
       exclude_numbers: true,
       exclude_single_chars: true,
+      defaultMinWordLength: 2,
     };
 
     // RegexWordDetector
@@ -237,7 +238,8 @@ Deno.test("設定の完全な伝播フロー", async (t) => {
     assertEquals(config.useJapanese, true, "カスタム値が設定される");
 
     // 他の値はデフォルトが使用される
-    assertEquals(config.defaultMinWordLength, 1, "デフォルト値が使用される");
+    // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLengthは3
+    assertEquals(config.defaultMinWordLength, 3, "デフォルト値が使用される");
     assertEquals(config.cacheEnabled, true, "デフォルト値が使用される");
   });
 });

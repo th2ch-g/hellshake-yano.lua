@@ -131,8 +131,9 @@ Deno.test("WordDetectionManager should propagate context to detectors", async ()
 });
 
 Deno.test("Context should override config minWordLength", async () => {
-  const detector = new RegexWordDetector({useJapanese: false,
-    defaultMinWordLength: 2, // Config default
+  const detector = new RegexWordDetector({
+    useJapanese: false,
+    minWordLength: 2, // Config default
   });
 
   const text = "a bb ccc dddd eeeee";

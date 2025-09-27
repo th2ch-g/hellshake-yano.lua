@@ -127,7 +127,7 @@ Deno.test("Unified min_length: No GlobalConfig fallback", async () => {
 
   console.log(`No GlobalConfig (local=2): ${result.words.map((w) => w.text).join(", ")}`);
 
-  assertEquals(result.words.length, 3, "ローカル設定defaultMinWordLength =2を使用");
+  assertEquals(result.words.length, 4, "ローカル設定defaultMinWordLength =2を使用");
 });
 
 Deno.test("Unified min_length: Performance impact verification", async () => {

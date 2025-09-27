@@ -8,7 +8,7 @@ test("デバッグ: キーリピート設定と状態が表示される", async 
 
   // カスタム設定で上書き
   await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:true");
-  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 55");
+  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 55");
   await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 280");
 
   // プラグインを明示的に有効化

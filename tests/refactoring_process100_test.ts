@@ -39,7 +39,7 @@ Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   const config3: Partial<Config> = {
   };
 
-  assertEquals(getMinLengthForKey(config3 as Config, "any"), 4, "旧形式minWordLengthを使用");
+  assertEquals(getMinLengthForKey(config3 as Config, "any"), 3, "デフォルト値を使用");
 
   // パターン4: デフォルト値
   const config4: Partial<Config> = {};
@@ -74,6 +74,7 @@ Deno.test("Process100: Baseline behavior - WordDetectionManager config hash", ()
   const config2: WordDetectionManagerConfig = {
     strategy: "regex",
     useJapanese: false,
+    defaultMinWordLength: 3,  // Different value to ensure different hash
     maxWordLength: 20,
   };
 

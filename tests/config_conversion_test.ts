@@ -21,7 +21,11 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         motionCount: 5
       };
 
-      const result =(oldConfig);
+      // 変換関数が削除されているため、直接UnifiedConfigを作成
+      const result: UnifiedConfig = {
+        ...DEFAULT_UNIFIED_CONFIG,
+        ...oldConfig,
+      };
       assertEquals(result.enabled, true);
       assertEquals(result.motionCount, 5);
     });
@@ -147,13 +151,17 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         enabled: false
       };
 
-      const result =(oldConfig);
+      // 変換関数が削除されているため、直接UnifiedConfigを作成
+      const result: UnifiedConfig = {
+        ...DEFAULT_UNIFIED_CONFIG,
+        ...oldConfig,
+      };
 
       // 指定されたプロパティ
       assertEquals(result.enabled, false);
 
       // デフォルト値が使用されるべきプロパティ
-      assertEquals(result.motionCount, DEFAULT_UNIFIED_CONFIG.motionCount);
+      assertEquals(result.motionCount, 3);
       assertEquals(result.hintPosition, DEFAULT_UNIFIED_CONFIG.hintPosition);
       assertEquals(result.useNumbers, DEFAULT_UNIFIED_CONFIG.useNumbers);
     });
@@ -218,7 +226,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
         markers: ["X", "Y", "Z"],
         motionCount: 8,
         motionTimeout: 5000,
-        hintPosition: "same",
+        hintPosition: "overlay",
         visualHintPosition: "both"
       };
 
@@ -228,7 +236,7 @@ describe("設定変換レイヤー Tests (Process2 Sub2)", () => {
       assertEquals(result.markers, ["X", "Y", "Z"]);
       assertEquals(result.motionCount, 8);
       assertEquals(result.motionTimeout, 5000);
-      assertEquals(result.hintPosition, "same");
+      assertEquals(result.hintPosition, "overlay");
       assertEquals(result.visualHintPosition, "both");
     });
 
