@@ -8,7 +8,6 @@ import { describe, it } from "@std/testing/bdd";
 import {
   getDefaultUnifiedConfig,
   getDefaultConfig,
-  getDefaultHierarchicalConfig,
   createMinimalConfig,
   DEFAULT_UNIFIED_CONFIG,
   type UnifiedConfig,
@@ -89,17 +88,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
     });
   });
 
-  describe("getDefaultHierarchicalConfig deprecation", () => {
-    it("should still return valid HierarchicalConfig but be marked as deprecated", () => {
-      // @deprecatedマークされているが動作はする
-      const config = getDefaultHierarchicalConfig();
-      assertExists(config.core);
-      assertExists(config.hint);
-      assertExists(config.word);
-      assertExists(config.performance);
-      assertExists(config.debug);
-    });
-  });
+  // getDefaultHierarchicalConfig removed as part of Process4 Sub2-4
 
   describe("createMinimalConfig with UnifiedConfig", () => {
     it("should accept UnifiedConfig partial input", () => {
@@ -126,42 +115,28 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
     });
   });
 
-  describe("Default value consistency across all config types", () => {
+  describe("Default value consistency between config types", () => {
     it("should have consistent enabled values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      const hierarchical = getDefaultHierarchicalConfig();
-
       assertEquals(oldConfig.enabled, newConfig.enabled);
-      assertEquals(oldConfig.enabled, hierarchical.core?.enabled);
     });
 
     it("should have consistent motion count values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      const hierarchical = getDefaultHierarchicalConfig();
-
-      assertEquals(oldConfig.motion_count, newConfig.motionCount);
-      // CoreConfig削除により、motionCountはUnifiedConfigから取得
       assertEquals(oldConfig.motion_count, newConfig.motionCount);
     });
 
     it("should have consistent hint position values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      const hierarchical = getDefaultHierarchicalConfig();
-
       assertEquals(oldConfig.hint_position, newConfig.hintPosition);
-      assertEquals(oldConfig.hint_position, hierarchical.hint.hintPosition);
     });
 
     it("should have consistent marker values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      const hierarchical = getDefaultHierarchicalConfig();
-
-      assertEquals(oldConfig.markers.length, newConfig.markers.length);
-      // CoreConfig削除により、markersはUnifiedConfigから取得
       assertEquals(oldConfig.markers.length, newConfig.markers.length);
       assertEquals(oldConfig.markers[0], newConfig.markers[0]);
     });
@@ -169,10 +144,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
     it("should have consistent use_numbers/useNumbers values", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultUnifiedConfig();
-      const hierarchical = getDefaultHierarchicalConfig();
-
       assertEquals(oldConfig.use_numbers, newConfig.useNumbers);
-      assertEquals(oldConfig.use_numbers, hierarchical.hint.useNumbers);
     });
   });
 });
