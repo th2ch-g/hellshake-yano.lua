@@ -521,7 +521,7 @@ export class WordDetectionManager {
     if (!entry) return null;
 
     // Check TTL
-    if (Date.now() - entry.timestamp > this.config.cache_ttl_ms) {
+    if (Date.now() - entry.timestamp > this.config.cacheTtlMs) {
       this.cache.delete(key);
       return null;
     }
@@ -850,7 +850,7 @@ export class WordDetectionManager {
       // Cache settings
       cacheEnabled: true,
       cacheMaxSize: 500,
-      cache_ttl_ms: 300000, // 5 minutes
+      cacheTtlMs: 300000, // 5 minutes
 
       // Error handling
       enableFallback: true,

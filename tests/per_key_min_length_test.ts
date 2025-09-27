@@ -15,8 +15,6 @@ Deno.test("Config interface - should have perKeyMinLength property", () => {
       "l": 2,
     },
     defaultMinWordLength: 2,
-    enable: true,
-    defaultMinWordLength: 2, // 後方互換性のため残す
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -39,7 +37,7 @@ Deno.test("Config interface - should have perKeyMinLength property", () => {
 
 Deno.test("Config interface - should support optional perKeyMinLength", () => {
   const config: Config = {
-    enable: true,
+    enabled: true,
     defaultMinWordLength: 2,
     enabled: true,
     markers: [],
@@ -61,7 +59,7 @@ Deno.test("Config interface - should support optional perKeyMinLength", () => {
 
 Deno.test("Config interface - should have currentKeyContext for internal use", () => {
   const config: Config = {
-    enable: true,
+    enabled: true,
     defaultMinWordLength: 2,
     currentKeyContext: "v", // 内部使用のためのキーコンテキスト
     enabled: true,
@@ -87,8 +85,6 @@ Deno.test("getMinLengthForKey - should return per-key setting when available", (
       "h": 2,
     },
     defaultMinWordLength: 3,
-    defaultMinWordLength: 4, // 後方互換性
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -112,7 +108,7 @@ Deno.test("getMinLengthForKey - should return per-key setting when available", (
 
 Deno.test("Config validation - should handle legacy minWordLength", () => {
   const legacyConfig: Config = {
-    enable: true,
+    enabled: true,
     defaultMinWordLength: 3, // 旧形式の設定
     enabled: true,
     markers: [],
@@ -159,8 +155,6 @@ Deno.test("Per-key configuration - comprehensive settings", () => {
       "gg": 5, // ファイル先頭（2文字キー）
     },
     defaultMinWordLength: 2,
-    defaultMinWordLength: 3, // 後方互換性テスト用
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -214,7 +208,6 @@ Deno.test("Per-key configuration - edge cases and validation", () => {
       "empty": 0, // 空文字相当
     },
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -244,7 +237,6 @@ Deno.test("Per-key configuration - edge cases and validation", () => {
       "<Esc>": 2, // エスケープ
     },
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -274,8 +266,6 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
   // パターン1: perKeyMinLength → defaultMinWordLength → minWordLength
   const config1: Config = {perKeyMinLength: { "v": 1 },
     defaultMinWordLength: 3,
-    defaultMinWordLength: 5,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -295,8 +285,6 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
 
   // パターン2: defaultMinWordLength → minWordLength
   const config2: Config = {defaultMinWordLength: 4,
-    defaultMinWordLength: 6,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -316,7 +304,6 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
   // パターン3: minWordLengthのみ（レガシー）
   const config3: Config = {
     defaultMinWordLength: 7,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -335,7 +322,6 @@ Deno.test("Fallback behavior - complete fallback chain", () => {
 
   // パターン4: 何も設定されていない場合のデフォルト
   const config4: Config = {
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -357,7 +343,6 @@ Deno.test("Fallback behavior - missing configurations", () => {
   // perKeyMinLengthが空のオブジェクト
   const config1: Config = {perKeyMinLength: {},
     defaultMinWordLength: 3,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -380,8 +365,6 @@ Deno.test("Fallback behavior - missing configurations", () => {
       // 'h'は設定されていない
     },
     defaultMinWordLength: 4,
-    defaultMinWordLength: 5,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -404,7 +387,6 @@ Deno.test("Fallback behavior - missing configurations", () => {
       "v": undefined as any, // 明示的にundefined
     },
     defaultMinWordLength: 6,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -433,7 +415,6 @@ Deno.test("Key switching recalculation - HintManager integration", () => {
       "f": 3,
     },
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -481,7 +462,6 @@ Deno.test("Key switching recalculation - cache behavior verification", () => {
     },
     defaultMinWordLength: 3,
     currentKeyContext: "initial", // 初期コンテキスト
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -536,7 +516,6 @@ Deno.test("Key switching recalculation - rapid switching stress test", () => {
       "F": 3,
     },
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -587,7 +566,6 @@ Deno.test("Performance test - large configuration handling", () => {
   const config: Config = {
     perKeyMinLength,
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -631,7 +609,6 @@ Deno.test("Performance test - key switching with large word lists", () => {
       "h": 3,
     },
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -683,7 +660,6 @@ Deno.test("Performance test - memory usage patterns", () => {
       "l": 2,
     },
     defaultMinWordLength: 2,
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -736,7 +712,6 @@ Deno.test("Performance test - memory usage patterns", () => {
 Deno.test("Backward compatibility - legacy minWordLength only", () => {
   const legacyConfig: Config = {
     defaultMinWordLength: 4, // 旧形式のみ
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -767,8 +742,6 @@ Deno.test("Backward compatibility - mixed old and new configurations", () => {
       "h": 2,
     },
     defaultMinWordLength: 3, // 新形式のデフォルト
-    defaultMinWordLength: 5, // 旧形式（使用されないはず）
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -800,8 +773,6 @@ Deno.test("Backward compatibility - migration scenarios", () => {
   // シナリオ1: 旧設定から新設定への段階的移行
   const migrationStep1: Config = {
     defaultMinWordLength: 3, // 既存設定
-    defaultMinWordLength: 3, // 新設定を追加（同じ値）
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -824,8 +795,6 @@ Deno.test("Backward compatibility - migration scenarios", () => {
       "v": 1, // 精密移動のみ新設定
     },
     defaultMinWordLength: 3, // 他はデフォルト
-    defaultMinWordLength: 3, // 後方互換性のため残す
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
@@ -854,7 +823,6 @@ Deno.test("Backward compatibility - migration scenarios", () => {
     },
     defaultMinWordLength: 2,
     // minWordLengthは削除済み
-    enable: true,
     enabled: true,
     markers: [],
     motionCount: 0,
