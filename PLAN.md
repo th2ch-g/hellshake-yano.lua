@@ -1029,7 +1029,7 @@ export interface UnifiedConfig {
   - [x] テスト: 9ファイルで62回使用
 - [x] **分析文書作成: tmp/claude/sub2-1-deprecated-analysis.md**
 
-##### sub2-2 段階的削除Phase1（安全な削除）
+##### sub2-2 段階的削除Phase1（安全な削除）【完了】
 @context: sub2-1分析で安全と判定された3インターフェース削除
 @target: CoreConfig, HintConfig, PerformanceConfig（実装コードで未使用）
 
@@ -1049,6 +1049,15 @@ export interface UnifiedConfig {
   - [x] 関連する変換関数削除
   - [x] `deno check`で型チェック
   - [x] `deno test tests/config*.ts`でテストパス
+- [x] **ConfigType統合型の作成と実装**
+  - [x] Config, UnifiedConfig, CamelCaseConfigを単一型に統合
+  - [x] 型エイリアス（CT, UC, C）の整理
+  - [x] 重複する型定義の削除
+  - [x] 後方互換性の維持（型エイリアスで実現）
+- [x] **テストの作成と実行**
+  - [x] config_type_unification_test.ts作成
+  - [x] 全テストがパス（654テスト）
+  - [x] 型チェック成功
 - [x] **削減効果確認**
   - [x] 削減行数計測（目標: 200-300行削減）
   - [x] 全72テストがパスすることを確認
@@ -1098,12 +1107,12 @@ export interface UnifiedConfig {
 @current: 902行 → 200行目標（78%削減）
 
 ##### sub3-1 未使用型の特定と削除
-- [ ] 全ファイルから型インポートをgrepして使用状況調査
-- [ ] 未参照の型定義リスト作成
-- [ ] 段階的に削除（50行ずつ）
-  - [ ] 第1バッチ削除後、`deno check denops/hellshake-yano/`で型チェック
-  - [ ] 第2バッチ削除後、型チェック
-  - [ ] 削除完了まで繰り返し
+- [x] 全ファイルから型インポートをgrepして使用状況調査
+- [x] 未参照の型定義リスト作成
+- [x] 段階的に削除（50行ずつ）
+  - [x] 第1バッチ削除後、`deno check denops/hellshake-yano/`で型チェック
+  - [x] 第2バッチ削除後、型チェック
+  - [x] 削除完了まで繰り返し
 
 ##### sub3-2 重複型の統合
 - [ ] 似た型定義を特定して統一
