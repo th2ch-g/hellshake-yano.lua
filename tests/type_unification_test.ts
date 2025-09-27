@@ -45,7 +45,11 @@ Deno.test("type unification - Config should be UnifiedConfig alias", () => {
     defaultMinWordLength: 3,
     defaultMotionCount: 3,
     debugMode: false,
-    performanceLog: false
+    performanceLog: false,
+    motionCounterEnabled: true,
+    motionCounterThreshold: 3,
+    motionCounterTimeout: 2000,
+    showHintOnMotionThreshold: true
   };
 
   // Config型とUnifiedConfig型が同じ構造を持つことを確認
@@ -101,7 +105,11 @@ Deno.test("type unification - Config uses camelCase consistently", () => {
     defaultMinWordLength: 3,
     defaultMotionCount: 3,
     debugMode: false,
-    performanceLog: false
+    performanceLog: false,
+    motionCounterEnabled: true,
+    motionCounterThreshold: 3,
+    motionCounterTimeout: 2000,
+    showHintOnMotionThreshold: true
   };
 
   // snake_caseプロパティは存在しないべき
@@ -146,7 +154,11 @@ Deno.test("type unification - no duplicate type definitions", () => {
     defaultMinWordLength: 3,
     defaultMotionCount: 3,
     debugMode: false,
-    performanceLog: false
+    performanceLog: false,
+    motionCounterEnabled: true,
+    motionCounterThreshold: 3,
+    motionCounterTimeout: 2000,
+    showHintOnMotionThreshold: true
   };
 
   const config: Config = unified; // 型の互換性を確認

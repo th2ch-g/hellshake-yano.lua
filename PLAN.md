@@ -458,20 +458,23 @@ sed -i 's/cache_ttl_ms/cacheTtlMs/g' denops/hellshake-yano/word/manager.ts
 - [x] `deno test tests/lifecycle*.ts`でテストパス
 - [x] **移行完了後、lifecycle.tsを削除**
 
-##### sub4-3 commands.ts統合（639行）
-- [ ] コマンド関連機能をCoreへ移行
-  - [ ] CommandFactoryクラス移行
-  - [ ] コマンドハンドラ移行
-- [ ] `deno check denops/hellshake-yano/core.ts`で型チェック
-- [ ] 関連テストパス確認
-- [ ] **移行完了後、commands.tsを削除**
+##### sub4-3 commands.ts統合（639行）【完了】
+- [x] コマンド関連機能をCoreへ移行
+  - [x] CommandFactoryクラス移行
+  - [x] コマンドハンドラ移行
+- [x] `deno check denops/hellshake-yano/core.ts`で型チェック
+- [x] 関連テストパス確認
+- [x] **移行完了後、commands.tsを削除**
 
-##### sub4-4 motion.ts統合（514行）
-- [ ] モーション関連ロジックをCoreへ移行
-  - [ ] countedMotions処理移行
-  - [ ] モーション検出ロジック移行
-- [ ] `deno test tests/*.ts`で関連テストパス
-- [ ] **移行完了後、motion.tsを削除**
+##### sub4-4 motion.ts統合（514行）【完了】
+- [x] モーション関連ロジックをCoreへ移行
+  - [x] countedMotions処理移行
+  - [x] モーション検出ロジック移行
+  - [x] MotionCounter/MotionManagerクラスをcore.tsに統合
+  - [x] motion設定をUnifiedConfigに追加
+- [x] `deno test tests/core_motion_integration_tdd_test.ts`でテストパス
+- [x] HellshakeYanoCore delegationメソッド実装
+- [ ] **移行完了後、motion.tsを削除**（保留中）
 
 ##### sub4-5 mainディレクトリ統合（831行）
 - [ ] dispatcher.ts（217行）をCoreへ統合

@@ -770,7 +770,12 @@ export function createConfigType(partialConfig: Partial<ConfigType> = {}): Confi
     defaultMinWordLength: 3,
     defaultMotionCount: 3,
     debugMode: false,
-    performanceLog: false
+    performanceLog: false,
+    // Motion counter settings
+    motionCounterEnabled: true,
+    motionCounterThreshold: 3,
+    motionCounterTimeout: 2000,
+    showHintOnMotionThreshold: true
   };
 
   return { ...defaults, ...partialConfig };
@@ -887,7 +892,12 @@ export function createMinimalConfig(): Config {
     defaultMinWordLength: 3,
     defaultMotionCount: 3,
     debugMode: false,
-    performanceLog: false
+    performanceLog: false,
+    // Motion counter settings
+    motionCounterEnabled: true,
+    motionCounterThreshold: 3,
+    motionCounterTimeout: 2000,
+    showHintOnMotionThreshold: true
   };
 }
 

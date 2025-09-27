@@ -58,6 +58,8 @@ import {
   getPluginStatistics
 } from "./lifecycle.ts";
 import { validateUnifiedConfig } from "./config.ts";
+// Motion counter integration
+import { MotionManager } from "./motion.ts";
 
 /**
  * Hellshake-Yano プラグインの中核クラス
@@ -89,6 +91,9 @@ export class Core {
 
   // タイマー管理（タイマーリーク対策）
   private _pendingHighlightTimerId?: number;
+
+  // Motion counter management
+  private motionManager: MotionManager = new MotionManager();
 
   /**
    * Coreクラスのプライベートコンストラクタ（シングルトン用）
@@ -288,6 +293,13 @@ export class Core {
    * @param newConfig 新しい設定（部分更新可能）
    */
   updateConfig(newConfig: Partial<UnifiedConfig>): void {
+    // motion設定のバリデーション
+    if (newConfig.motionCounterThreshold !== undefined && newConfig.motionCounterThreshold <= 0) {
+      throw new Error("threshold must be greater than 0");
+    }
+    if (newConfig.motionCounterTimeout !== undefined && newConfig.motionCounterTimeout <= 0) {
+      throw new Error("timeout must be greater than 0");
+    }
     this.config = { ...this.config, ...newConfig };
   }
 
@@ -2581,6 +2593,102 @@ export class Core {
     this.config.motionTimeout = timeout;
   }
 
+  // ========================================
+  // Motion Counter Methods (for HellshakeYanoCore delegation)
+  // ========================================
+
+  /**
+   * モーションカウンターをインクリメントします
+   * @param denops Denopsインスタンス
+   * @param bufnr バッファ番号
+   * @returns カウント結果（triggered: 閾値到達したか、count: 現在のカウント）
+   */
+  async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
+    if (!this.config.motionCounterEnabled) {
+      return { triggered: false, count: 0 };
+    }
+
+    const counter = this.motionManager.getCounter(
+      bufnr,
+      this.config.motionCounterThreshold,
+      this.config.motionCounterTimeout
+    );
+
+    const triggered = counter.increment();
+    const count = triggered ? 0 : counter.getCount(); // triggeredの時はリセットされるので0
+
+    // 閾値到達時にヒント表示をトリガー
+    if (triggered && this.config.showHintOnMotionThreshold) {
+      // 将来的にshowHintsと統合
+    }
+
+    return { triggered, count };
+  }
+
+  /**
+   * 指定バッファのモーションカウントを取得します
+   * @param bufnr バッファ番号
+   * @returns 現在のカウント
+   */
+  async getMotionCount(bufnr: number): Promise<number> {
+    const counter = this.motionManager.getCounter(bufnr);
+    return counter.getCount();
+  }
+
+  /**
+   * 指定バッファのモーションカウンターをリセットします
+   * @param bufnr バッファ番号
+   */
+  async resetMotionCounter(bufnr: number): Promise<void> {
+    this.motionManager.resetCounter(bufnr);
+  }
+
+  /**
+   * 指定バッファのモーションカウンターをクリアします
+   * @param bufnr バッファ番号
+   */
+  async clearMotionCounter(bufnr: number): Promise<void> {
+    this.motionManager.resetCounter(bufnr);
+  }
+
+  /**
+   * モーションカウンターの閾値を設定します
+   * @param threshold 新しい閾値
+   */
+  setMotionThreshold(threshold: number): void {
+    if (threshold < 1) {
+      throw new Error("Threshold must be at least 1");
+    }
+    this.config.motionCounterThreshold = threshold;
+  }
+
+  /**
+   * モーション設定を更新します
+   * @param updates 更新する設定
+   */
+  updateMotionConfig(updates: Partial<{
+    enabled: boolean;
+    threshold: number;
+    timeout: number;
+    showHintOnThreshold: boolean;
+  }>): void {
+    if (updates.enabled !== undefined) {
+      this.config.motionCounterEnabled = updates.enabled;
+    }
+    if (updates.threshold !== undefined) {
+      this.setMotionThreshold(updates.threshold);
+    }
+    if (updates.timeout !== undefined) {
+      if (updates.timeout < 100) {
+        throw new Error("Timeout must be at least 100ms");
+      }
+      this.config.motionCounterTimeout = updates.timeout;
+    }
+    if (updates.showHintOnThreshold !== undefined) {
+      this.config.showHintOnMotionThreshold = updates.showHintOnThreshold;
+    }
+  }
+
 }
 
 /**
@@ -2776,5 +2884,64 @@ export class HellshakeYanoCore {
     const state = getPluginState();
     state.caches.words.clear();
     state.caches.hints.clear();
+  }
+
+  // ========================================
+  // Motion Counter Integration Methods
+  // ========================================
+
+
+
+  /**
+   * モーションカウンターをインクリメントします
+   * @param denops Denops instance (unused but kept for compatibility)
+   * @param bufnr バッファ番号
+   * @returns カウンター状態
+   */
+  async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
+    const core = Core.getInstance();
+    return core.incrementMotionCounter(denops, bufnr);
+  }
+
+  /**
+   * 指定バッファのモーションカウントを取得します
+   * @param bufnr バッファ番号
+   * @returns 現在のカウント
+   */
+  async getMotionCount(bufnr: number): Promise<number> {
+    const core = Core.getInstance();
+    return core.getMotionCount(bufnr);
+  }
+
+  /**
+   * 指定バッファのモーションカウンターをリセットします
+   * @param bufnr バッファ番号
+   */
+  async resetMotionCounter(bufnr: number): Promise<void> {
+    const core = Core.getInstance();
+    return core.resetMotionCounter(bufnr);
+  }
+
+  /**
+   * モーションカウンターの閾値を設定します
+   * @param threshold 新しい閾値
+   */
+  setMotionThreshold(threshold: number): void {
+    const core = Core.getInstance();
+    core.setMotionThreshold(threshold);
+  }
+
+  /**
+   * モーション設定を更新します
+   * @param updates 更新する設定
+   */
+  updateMotionConfig(updates: Partial<{
+    enabled: boolean;
+    threshold: number;
+    timeout: number;
+    showHintOnThreshold: boolean;
+  }>): void {
+    const core = Core.getInstance();
+    core.updateMotionConfig(updates);
   }
 }

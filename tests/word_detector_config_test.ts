@@ -62,7 +62,13 @@ const mockUnifiedConfig: UnifiedConfig = {
 
   // Debug settings
   debugMode: false,
-  performanceLog: false
+  performanceLog: false,
+
+  // Motion counter settings
+  motionCounterEnabled: true,
+  motionCounterThreshold: 3,
+  motionCounterTimeout: 2000,
+  showHintOnMotionThreshold: true
 };
 
 Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Config", async () => {

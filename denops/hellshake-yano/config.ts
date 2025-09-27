@@ -185,6 +185,16 @@ export interface UnifiedConfig {
   /** 内部使用：現在のキーコンテキスト（オプション） */
   currentKeyContext?: string;
 
+  // Motion counter settings (4 properties)
+  /** モーションカウンター機能の有効/無効 */
+  motionCounterEnabled: boolean;
+  /** モーションカウンターの閾値 */
+  motionCounterThreshold: number;
+  /** モーションカウンターのタイムアウト時間（ミリ秒） */
+  motionCounterTimeout: number;
+  /** 閾値到達時にヒント表示するか */
+  showHintOnMotionThreshold: boolean;
+
   // Debug settings (2 properties)
   /** デバッグモードの有効/無効 */
   debugMode: boolean;
@@ -270,6 +280,12 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
   defaultMinWordLength: 3,
   perKeyMotionCount: {}, // Default empty record
   defaultMotionCount: 3, // Default motion count for keys not specified
+
+  // Motion counter settings
+  motionCounterEnabled: true,
+  motionCounterThreshold: 3,
+  motionCounterTimeout: 2000,
+  showHintOnMotionThreshold: true,
 
   // Debug settings
   debugMode: false,
