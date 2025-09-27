@@ -476,18 +476,23 @@ sed -i 's/cache_ttl_ms/cacheTtlMs/g' denops/hellshake-yano/word/manager.ts
 - [x] HellshakeYanoCore delegationメソッド実装
 - [ ] **移行完了後、motion.tsを削除**（保留中）
 
-##### sub4-5 mainディレクトリ統合（831行）
-- [ ] dispatcher.ts（217行）をCoreへ統合
-  - [ ] dispatcherメソッドの移行
-  - [ ] `deno check`で型チェック
-  - [ ] **移行完了後、main/dispatcher.tsを削除**
-- [ ] operations.ts（291行）をCoreへ統合
-  - [ ] **移行完了後、main/operations.tsを削除**
-- [ ] input.ts（281行）をCoreへ統合
-  - [ ] **移行完了後、main/input.tsを削除**
-- [ ] initialization.ts（42行）をCoreへ統合
-  - [ ] **移行完了後、main/initialization.tsを削除**
-- [ ] `deno test tests/*.ts`で関連テストパス
+##### sub4-5 mainディレクトリ統合（831行）【完了】
+- [x] dispatcher.ts（217行）をCoreへ統合
+  - [x] dispatcherメソッドの移行（updateConfigAdvanced, resetConfigExtended）
+  - [x] `deno check`で型チェック
+  - [ ] **移行完了後、main/dispatcher.tsを削除**（保留中）
+- [x] operations.ts（291行）をCoreへ統合
+  - [x] Vim操作メソッド移行（analyzeInputCharacter, isControlCharacter）
+  - [ ] **移行完了後、main/operations.tsを削除**（保留中）
+- [x] input.ts（281行）をCoreへ統合
+  - [x] 入力処理メソッド移行（findMatchingHints, findExactMatch）
+  - [x] マルチ文字入力管理（createMultiCharInputManager）
+  - [ ] **移行完了後、main/input.tsを削除**（保留中）
+- [x] initialization.ts（42行）をCoreへ統合
+  - [x] プラグイン初期化メソッド移行（initializePlugin, syncManagerConfig）
+  - [ ] **移行完了後、main/initialization.tsを削除**（保留中）
+- [x] `deno test tests/core_main_integration_tdd_test.ts`で関連テストパス
+- [x] TDD Red-Green-Refactorアプローチ適用
 
 ##### sub4-6 coreディレクトリ統合（180行）
 - [ ] detection.ts（31行）をcore.tsへ統合
