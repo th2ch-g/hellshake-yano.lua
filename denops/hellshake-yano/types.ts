@@ -205,6 +205,10 @@ export interface DetectionContext {
   minWordLength?: number;
   /** 追加のコンテキスト情報 */
   metadata?: Record<string, unknown>;
+  /** バッファ番号（オプショナル） */
+  bufnr?: number;
+  /** 設定オブジェクト（オプショナル） */
+  config?: any;
 
   // 新規追加フィールド（process4 sub3: コンテキスト認識による分割調整）
   /** Vimのfiletype（'typescript', 'python'等） */
@@ -951,6 +955,95 @@ export type {
   DetectionContext as DC,
   WordDetectionResult as WDR,
 };
+
+// ===== Core Directory Consolidation Types =====
+
+/**
+ * Word detection configuration
+ * Consolidated from core/detection.ts
+ */
+export interface WordDetectionConfig {
+  minLength?: number;
+  maxWords?: number;
+  pattern?: string;
+  bufnr?: number;
+  config?: any;
+}
+
+/**
+ * Parameters for word detection
+ * Consolidated from core/detection.ts
+ */
+export interface DetectWordsParams {
+  denops: import("@denops/std").Denops;
+  bufnr?: number;
+  config?: any;
+}
+
+/**
+ * Hint generation configuration
+ * Consolidated from core/generation.ts
+ */
+export interface HintGenerationConfig {
+  wordCount: number;
+  markers?: string;
+  config?: any;
+  words?: string[];
+  hintKeys?: string;
+}
+
+/**
+ * Parameters for hint generation
+ * Consolidated from core/generation.ts
+ */
+export interface GenerateHintsParams {
+  wordCount: number;
+  markers?: string | string[];
+  config?: any;
+}
+
+/**
+ * Show hints configuration
+ * Consolidated from core/operations.ts
+ */
+export interface ShowHintsConfig {
+  debounce?: number;
+  force?: boolean;
+  debounceDelay?: number;
+}
+
+/**
+ * Hint operations configuration
+ * Consolidated from core/operations.ts
+ */
+export interface HintOperationsConfig {
+  denops: import("@denops/std").Denops;
+  config?: any;
+  dependencies?: {
+    detectWordsOptimized?: any;
+    generateHintsOptimized?: any;
+    assignHintsToWords?: any;
+    displayHintsAsync?: any;
+    hideHints?: any;
+    recordPerformance?: any;
+    clearHintCache?: any;
+  };
+}
+
+/**
+ * Hint operations interface
+ * Consolidated from core/operations.ts
+ */
+export interface HintOperations {
+  show: (denops: import("@denops/std").Denops, config?: ShowHintsConfig) => Promise<void>;
+  hide: (denops: import("@denops/std").Denops) => Promise<void>;
+  clear: (denops: import("@denops/std").Denops) => Promise<void>;
+  showHints: () => Promise<void>;
+  showHintsImmediately: () => Promise<void>;
+  hideHints: () => Promise<void>;
+  isHintsVisible: () => boolean;
+  getCurrentHints: () => HintMapping[];
+}
 
 /**
  * 型定義バージョン情報

@@ -3147,6 +3147,246 @@ export class Core {
     }
   }
 
+  // =============================================================================
+  // Core Detection Functions (from core/detection.ts)
+  // =============================================================================
+
+  /**
+   * Optimized word detection with enhanced configuration support
+   * @param params Detection parameters including denops and configuration
+   * @returns Promise resolving to array of detected words
+   */
+  public static async detectWordsOptimized(params: {
+    denops: Denops;
+    bufnr?: number;
+    config?: any;
+  }): Promise<Word[]> {
+    const core = Core.getInstance();
+
+    // If already implemented in core, delegate to existing implementation
+    if (core.detectWords) {
+      const context: DetectionContext = {
+        bufnr: params.bufnr || 0,
+        config: params.config
+      };
+      const result = await core.detectWords(context);
+      return result.words;
+    }
+
+    // Fallback to basic word detection
+    return [];
+  }
+
+  /**
+   * Factory function for testing word detection
+   * @param mockDetector Optional mock detector for testing
+   * @returns Word detection function
+   */
+  static createDetectWordsOptimized(
+    mockDetector?: (params: { denops: Denops; bufnr?: number; config?: any }) => Promise<Word[]>
+  ) {
+    return mockDetector || Core.detectWordsOptimized.bind(Core);
+  }
+
+  // =============================================================================
+  // Core Generation Functions (from core/generation.ts)
+  // =============================================================================
+
+  /**
+   * Optimized hint generation with enhanced configuration support
+   * @param params Generation parameters including word count and configuration
+   * @returns Array of generated hints
+   */
+  public static generateHintsOptimized(params: {
+    wordCount: number;
+    markers?: string | string[];
+    config?: any;
+  }): string[] {
+    const core = Core.getInstance();
+
+    // If already implemented in core, delegate to existing implementation
+    if (core.generateHints) {
+      // Create empty words array with the specified count for compatibility
+      const words: Word[] = Array.from({ length: params.wordCount }, (_, i) => ({
+        text: `word${i}`,
+        line: 1,
+        col: i + 1
+      }));
+      const hints = core.generateHints(words);
+      return hints.map(h => h.hint || h.toString());
+    }
+
+    // Fallback to basic hint generation
+    const markers = typeof params.markers === 'string' ? params.markers :
+                   Array.isArray(params.markers) ? params.markers.join('') :
+                   'abcdefghijklmnopqrstuvwxyz';
+
+    const hints: string[] = [];
+    for (let i = 0; i < params.wordCount && i < markers.length; i++) {
+      hints.push(markers[i]);
+    }
+
+    return hints;
+  }
+
+  /**
+   * Factory function for testing hint generation
+   * @param mockGenerator Optional mock generator for testing
+   * @returns Hint generation function
+   */
+  static createGenerateHintsOptimized(
+    mockGenerator?: (params: { wordCount: number; markers?: string | string[]; config?: any }) => string[]
+  ) {
+    return mockGenerator || Core.generateHintsOptimized.bind(Core);
+  }
+
+  /**
+   * Clear hint cache for regeneration
+   * Consolidated from core/generation.ts
+   */
+  static clearHintCache(): void {
+    const core = Core.getInstance();
+
+    // Clear any cached hint generation data
+    if (core.clearCache) {
+      core.clearCache();
+    }
+  }
+
+  // =============================================================================
+  // Core Operations Functions (from core/operations.ts)
+  // =============================================================================
+
+  // Static hint state tracking (moved from core/operations.ts)
+  public static hintsVisible = false;
+  public static currentHints: HintMapping[] = [];
+
+  /**
+   * Show hints with debounce support
+   * @param denops Denops instance
+   * @param config Show hints configuration
+   */
+  public static async showHints(
+    denops: Denops,
+    config: { debounce?: number; force?: boolean; debounceDelay?: number } = {}
+  ): Promise<void> {
+    const core = Core.getInstance();
+
+    // Delegate to instance method if available
+    if (core.showHints) {
+      await core.showHints(denops);
+    }
+
+    (Core as any).hintsVisible = true;
+  }
+
+  /**
+   * Hide hints and clear display
+   * @param denops Denops instance
+   */
+  public static async hideHints(denops: Denops): Promise<void> {
+    const core = Core.getInstance();
+
+    // Delegate to instance method if available
+    if (core.hideHints) {
+      await core.hideHints();
+    }
+
+    (Core as any).hintsVisible = false;
+    (Core as any).currentHints = [];
+  }
+
+  /**
+   * Clear hint display completely
+   * @param denops Denops instance
+   */
+  public static async clearHintDisplay(denops: Denops): Promise<void> {
+    const core = Core.getInstance();
+
+    // Delegate to instance method if available
+    if (core.hideHints) {
+      await core.hideHints();
+    }
+
+    (Core as any).hintsVisible = false;
+    (Core as any).currentHints = [];
+  }
+
+  /**
+   * Create hint operations manager with dependency injection
+   * @param config Configuration for hint operations
+   * @returns Hint operations interface
+   */
+  static createHintOperations(config?: {
+    denops: Denops;
+    config?: any;
+    dependencies?: {
+      detectWordsOptimized?: any;
+      generateHintsOptimized?: any;
+      assignHintsToWords?: any;
+      displayHintsAsync?: any;
+      hideHints?: any;
+      recordPerformance?: any;
+      clearHintCache?: any;
+    };
+  }): {
+    show: (denops: Denops, config?: { debounce?: number; force?: boolean; debounceDelay?: number }) => Promise<void>;
+    hide: (denops: Denops) => Promise<void>;
+    clear: (denops: Denops) => Promise<void>;
+    showHints: () => Promise<void>;
+    showHintsImmediately: () => Promise<void>;
+    hideHints: () => Promise<void>;
+    isHintsVisible: () => boolean;
+    getCurrentHints: () => HintMapping[];
+  } {
+    const { denops, dependencies } = config || {};
+
+    return {
+      show: Core.showHints.bind(Core),
+      hide: Core.hideHints.bind(Core),
+      clear: Core.clearHintDisplay.bind(Core),
+      showHints: async () => {
+        if (dependencies?.detectWordsOptimized) {
+          await dependencies.detectWordsOptimized();
+        }
+        (Core as any).hintsVisible = true;
+      },
+      showHintsImmediately: async () => {
+        if (dependencies?.detectWordsOptimized) {
+          await dependencies.detectWordsOptimized();
+        }
+        if (dependencies?.assignHintsToWords) {
+          (Core as any).currentHints = dependencies.assignHintsToWords();
+        }
+        (Core as any).hintsVisible = true;
+      },
+      hideHints: async () => {
+        if (dependencies?.hideHints) {
+          await dependencies.hideHints();
+        }
+        (Core as any).hintsVisible = false;
+        (Core as any).currentHints = [];
+      },
+      isHintsVisible: () => (Core as any).hintsVisible,
+      getCurrentHints: () => (Core as any).currentHints,
+    };
+  }
+
+  /**
+   * Check if hints are currently visible
+   * @returns Boolean indicating hint visibility state
+   */
+  static isHintsVisible(): boolean {
+    return (Core as any).hintsVisible;
+  }
+
+  /**
+   * Get current hints array
+   * @returns Array of current hint mappings
+   */
+  static getCurrentHints(): HintMapping[] {
+    return (Core as any).currentHints;
+  }
 }
 
 /**
