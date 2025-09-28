@@ -1,6 +1,7 @@
 /**
  * Hellshake-Yano プラグインライフサイクル管理モジュール
  *
+ * @deprecated process4 sub8-2: このファイルは削除予定です
  * @fileoverview プラグインの初期化から終了まで全てのライフサイクルを管理するモジュール
  *
  * @description このモジュールは以下の機能を提供します：

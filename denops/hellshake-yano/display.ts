@@ -1,18 +1,32 @@
 /**
+ * @deprecated process4 sub8-2: このファイルは削除予定です
+ */
+
+/**
  * Display Utilities - Backward Compatibility Module
  *
- * utils/display.tsが削除された後の後方互換性を提供する。
- * 基本的な表示幅計算はhint.tsから再エクスポート。
+ * MOVED: utils/display.ts has been migrated to hint.ts and core.ts
  *
- * キャッシュ管理・統計・Vim統合などの高度な機能は、
- * Core.tsのstatic methodsとして直接利用してください：
- * - Core.createDisplayWidthCache()
- * - Core.getDisplayWidthCached()
- * - Core.getVimDisplayWidth()
- * - Core.clearDisplayWidthCache()
- * - Core.getDisplayWidthCacheStats()
- * - Core.hasWideCharacters()
+ * Process4 Sub6-3: display.ts分散完了
  *
+ * 移行先:
+ * - 基本表示幅計算関数 → hint.ts
+ *   - getCharDisplayWidth()
+ *   - getDisplayWidth()
+ *
+ * - 高度な表示機能 → core.ts (static methods)
+ *   - Core.createDisplayWidthCache()
+ *   - Core.getDisplayWidthCached()
+ *   - Core.clearDisplayWidthCache()
+ *   - Core.getDisplayWidthCacheStats()
+ *   - Core.hasWideCharacters()
+ *
+ * このファイルは削除予定です。
+ * 新しいインポートパスを使用してください:
+ * - hint.ts から基本表示幅計算関数をインポート
+ * - core.ts から高度な表示機能をインポート（Core.methodName() 形式）
+ *
+ * @deprecated Use functions from hint.ts and core.ts instead
  * @module display
  * @version 2.0.0 - Migrated from utils/display.ts
  */

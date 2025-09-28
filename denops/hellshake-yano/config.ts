@@ -41,9 +41,7 @@ export type { HighlightColor };
  * @deprecated このインターフェースはv3.0.0で削除される予定です。
  * 代わりにUnifiedConfigを使用してください。
  * 移行方法: CoreConfig → UnifiedConfigのフラット構造
- * @see UnifiedConfig - 統一設定インターフェース
- * @since 1.0.0
- * @remove v3.0.0
+ * @see UnifiedConfig - 統一設定インターフェース * @remove v3.0.0
  *
  * @interface CoreConfig
  * @example
@@ -77,7 +75,6 @@ export type { HighlightColor };
 
 // DebugConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
 // 代わりにUnifiedConfigを使用してください
-
 
 // CamelCaseConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
 // 代わりにUnifiedConfigを使用してください
@@ -719,10 +716,6 @@ export function validateConfig(
   const allErrors = [...errors, ...result.errors];
   return { valid: result.valid && errors.length === 0, errors: allErrors };
 }
-
-
-
-
 
 /**
  * 設定マージ関数

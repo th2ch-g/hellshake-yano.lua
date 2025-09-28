@@ -176,26 +176,26 @@ Deno.test("Character Display Width", async (t) => {
 });
 
 Deno.test("Display Width Cache", async (t) => {
-  await t.step("createDisplayWidthCache should return LRUCache", () => {
-    const cache = createDisplayWidthCache();
+  await t.step("createDisplayWidthCache should return LRUCache", async () => {
+    const cache = await createDisplayWidthCache();
     assertEquals(typeof cache.get, "function");
     assertEquals(typeof cache.set, "function");
     assertEquals(typeof cache.clear, "function");
   });
 
-  await t.step("cache should store and retrieve values", () => {
-    const cache = createDisplayWidthCache();
+  await t.step("cache should store and retrieve values", async () => {
+    const cache = await createDisplayWidthCache();
     cache.set("hello_8", 5);
     assertEquals(cache.get("hello_8"), 5);
   });
 
-  await t.step("cache should handle cache misses", () => {
-    const cache = createDisplayWidthCache();
+  await t.step("cache should handle cache misses", async () => {
+    const cache = await createDisplayWidthCache();
     assertEquals(cache.get("nonexistent"), undefined);
   });
 
-  await t.step("cache should respect maxSize", () => {
-    const cache = createDisplayWidthCache(2); // Small cache for testing
+  await t.step("cache should respect maxSize", async () => {
+    const cache = await createDisplayWidthCache(2); // Small cache for testing
     cache.set("key1", 1);
     cache.set("key2", 2);
     cache.set("key3", 3); // Should evict key1

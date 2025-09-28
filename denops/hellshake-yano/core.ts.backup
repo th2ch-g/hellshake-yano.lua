@@ -1,6 +1,13 @@
-/* * Hellshake-Yano Core Class * Phase1: 基盤作成
+/**
+ * Hellshake-Yano Core Class
+ *
+ * Phase1: 基盤作成
  * プラグインの中核となるロジックを統合管理するCoreクラス
- * TDD Red-Green-Refactor方法論に従って実装 */
+ * TDD Red-Green-Refactor方法論に従って実装
+ *
+ * @version 2.0.0
+ * @since Process3 Sub1 Phase1
+ */
 
 import type { Denops } from "@denops/std";
 import type {
@@ -24,6 +31,7 @@ import {
   detectWordsWithConfig,
   createPartialUnifiedConfig,
 } from "./word.ts";
+// 重複インポートを削除
 import {
   generateHints,
   generateHintsWithGroups,
@@ -52,7 +60,10 @@ import { validateUnifiedConfig } from "./config.ts";
 // Motion counter integration
 import { MotionManager } from "./motion.ts";
 
-/* * Hellshake-Yano プラグインの中核クラス * すべての主要機能を統合管理し、外部から使いやすいAPIを提供する
+/**
+ * Hellshake-Yano プラグインの中核クラス
+ *
+ * すべての主要機能を統合管理し、外部から使いやすいAPIを提供する
  * Phase 10.1: シングルトンパターンを実装
  * TDD Green Phase: テストをパスする最小限の実装
  */
@@ -83,15 +94,21 @@ export class Core {
   // Motion counter management
   private motionManager: MotionManager = new MotionManager();
 
-  /*   * Coreクラスのプライベートコンストラクタ（シングルトン用）   * @param config 初期設定（省略時はデフォルト設定を使用）
+  /**
+   * Coreクラスのプライベートコンストラクタ（シングルトン用）
+   *
+   * @param config 初期設定（省略時はデフォルト設定を使用）
    */
   private constructor(config?: Partial<UnifiedConfig>) {
     // UnifiedConfigのデフォルト設定を使用
     this.config = { ...getDefaultUnifiedConfig(), ...config };
   }
 
-  /*   * シングルトンインスタンスを取得
-   * Phase 10.1: TDD Green実装   * @param config 初期設定（初回のみ有効）
+  /**
+   * シングルトンインスタンスを取得
+   * Phase 10.1: TDD Green実装
+   *
+   * @param config 初期設定（初回のみ有効）
    * @returns Coreクラスのシングルトンインスタンス
    */
   public static getInstance(config?: Partial<UnifiedConfig>): Core {
@@ -101,7 +118,8 @@ export class Core {
     return Core.instance;
   }
 
-  /*   * テスト用リセットメソッド
+  /**
+   * テスト用リセットメソッド
    * テスト間でのインスタンス分離を実現
    * Phase 10.1: TDD Green実装
    */
@@ -109,14 +127,16 @@ export class Core {
     Core.instance = null;
   }
 
-  /*   * インスタンスリセット（テスト用）
+  /**
+   * インスタンスリセット（テスト用）
    * TDD Green Phase: lifecycle統合用
    */
   reset(): void {
     Core.instance = null;
   }
 
-  /*   * ライフサイクル管理 - プラグイン初期化
+  /**
+   * ライフサイクル管理 - プラグイン初期化
    * TDD Refactor Phase: lifecycle.tsに完全委譲し、エラーハンドリングとログを追加
    */
   async initialize(denops: Denops, options?: any): Promise<void> {
@@ -131,7 +151,8 @@ export class Core {
     }
   }
 
-  /*   * ライフサイクル管理 - プラグインクリーンアップ
+  /**
+   * ライフサイクル管理 - プラグインクリーンアップ
    * TDD Refactor Phase: lifecycle.tsの優先実行とエラーハンドリングを改善
    */
   async cleanup(denops?: Denops): Promise<void> {
@@ -165,7 +186,8 @@ export class Core {
     }
   }
 
-  /*   * ヘルスチェック機能
+  /**
+   * ヘルスチェック機能
    * TDD Refactor Phase: lifecycle.tsへの完全委譲とログ出力
    */
   async getHealthStatus(denops: Denops): Promise<{
@@ -189,7 +211,8 @@ export class Core {
     }
   }
 
-  /*   * 統計情報取得
+  /**
+   * 統計情報取得
    * TDD Refactor Phase: lifecycle.tsへの完全委譲と型安全性向上
    */
   getStatistics(): {
@@ -220,7 +243,8 @@ export class Core {
     }
   }
 
-  /*   * 状態更新
+  /**
+   * 状態更新
    * TDD Refactor Phase: lifecycle.tsへの完全委譲とエラーハンドリング
    */
   updateState(updates: any): void {
@@ -234,7 +258,8 @@ export class Core {
     }
   }
 
-  /*   * パフォーマンスメトリクス記録
+  /**
+   * パフォーマンスメトリクス記録
    * TDD Refactor Phase: lifecycle.tsの状態管理への完全移行
    */
   recordPerformanceMetric(operation: string, duration: number): void {
@@ -252,13 +277,19 @@ export class Core {
     }
   }
 
-  /*   * 現在の設定を取得   * @returns 現在のConfig設定
+  /**
+   * 現在の設定を取得
+   *
+   * @returns 現在のConfig設定
    */
   getConfig(): UnifiedConfig {
     return { ...this.config };
   }
 
-  /*   * 設定を更新   * @param newConfig 新しい設定（部分更新可能）
+  /**
+   * 設定を更新
+   *
+   * @param newConfig 新しい設定（部分更新可能）
    */
   updateConfig(newConfig: Partial<UnifiedConfig>): void {
     // motion設定のバリデーション
@@ -271,19 +302,28 @@ export class Core {
     this.config = { ...this.config, ...newConfig };
   }
 
-  /*   * プラグインの有効状態を取得   * @returns 有効状態
+  /**
+   * プラグインの有効状態を取得
+   *
+   * @returns 有効状態
    */
   isEnabled(): boolean {
     return this.config.enabled;
   }
 
-  /*   * ヒント表示中かどうかを確認   * @returns ヒント表示中の場合true
+  /**
+   * ヒント表示中かどうかを確認
+   *
+   * @returns ヒント表示中の場合true
    */
   isHintsVisible(): boolean {
     return this.isActive && this.currentHints.length > 0;
   }
 
-  /*   * 単語検出を実行   * @param context 検出コンテキスト
+  /**
+   * 単語検出を実行
+   *
+   * @param context 検出コンテキスト
    * @returns 検出結果
    */
   detectWords(context?: DetectionContext): WordDetectionResult {
@@ -300,7 +340,10 @@ export class Core {
     };
   }
 
-  /*   * ヒント生成を実行   * @param words 対象となる単語配列
+  /**
+   * ヒント生成を実行
+   *
+   * @param words 対象となる単語配列
    * @returns ヒントマッピング配列
    */
   generateHints(words: Word[]): HintMapping[] {
@@ -308,7 +351,10 @@ export class Core {
     return [];
   }
 
-  /*   * ヒント表示を実行（Legacy用）   * @param hints 表示するヒントマッピング配列
+  /**
+   * ヒント表示を実行（Legacy用）
+   *
+   * @param hints 表示するヒントマッピング配列
    */
   showHintsLegacy(hints: HintMapping[]): void {
     if (!this.isEnabled()) {
@@ -321,7 +367,8 @@ export class Core {
     // 実際のVim/Neovimとの連携は後で実装
   }
 
-  /*   * ヒント非表示を実行
+  /**
+   * ヒント非表示を実行
    */
   hideHints(): void {
     this.currentHints = [];
@@ -330,9 +377,16 @@ export class Core {
     // 実際のVim/Neovimとの連携は後で実装
   }
 
-  /*   * sub2-5-3: hideHintsOptimized - Vim/Neovimの実際のヒント表示をクリア   * main.ts の hideHints 関数をCoreクラスに移植
-   * ExtmarksとMatchesの両方をクリアしてヒントを非表示にする   * @param denops Denopsインスタンス
-   * @returns Promise<void> 非同期で完了   */
+  /**
+   * sub2-5-3: hideHintsOptimized - Vim/Neovimの実際のヒント表示をクリア
+   *
+   * main.ts の hideHints 関数をCoreクラスに移植
+   * ExtmarksとMatchesの両方をクリアしてヒントを非表示にする
+   *
+   * @param denops Denopsインスタンス
+   * @returns Promise<void> 非同期で完了
+   * @since sub2-5-3
+   */
   async hideHintsOptimized(denops: Denops): Promise<void> {
     try {
       // 状態をクリア
@@ -380,8 +434,14 @@ export class Core {
     }
   }
 
-  /*   * sub2-5-4: clearCache - キャッシュをクリア   * main.ts のキャッシュクリア機能をCoreクラスに移植
-   * 内部状態とヒントをリセットする   */
+  /**
+   * sub2-5-4: clearCache - キャッシュをクリア
+   *
+   * main.ts のキャッシュクリア機能をCoreクラスに移植
+   * 内部状態とヒントをリセットする
+   *
+   * @since sub2-5-4
+   */
   clearCache(): void {
     try {
       // ヒント関連の状態をクリア
@@ -404,13 +464,19 @@ export class Core {
     }
   }
 
-  /*   * 現在のヒント一覧を取得   * @returns 現在表示中のヒントマッピング配列
+  /**
+   * 現在のヒント一覧を取得
+   *
+   * @returns 現在表示中のヒントマッピング配列
    */
   getCurrentHints(): HintMapping[] {
     return [...this.currentHints];
   }
 
-  /*   * モーション処理を実行   * @param motion モーション種別
+  /**
+   * モーション処理を実行
+   *
+   * @param motion モーション種別
    * @param context 処理コンテキスト
    */
   handleMotion(motion: string, context?: DetectionContext): void {
@@ -418,7 +484,10 @@ export class Core {
     // モーション処理ロジックは後で実装
   }
 
-  /*   * Phase2: 状態管理の移行 - 現在の状態を取得   * @returns 現在のCoreState
+  /**
+   * Phase2: 状態管理の移行 - 現在の状態を取得
+   *
+   * @returns 現在のCoreState
    */
   getState(): CoreState {
     return {
@@ -429,7 +498,10 @@ export class Core {
     };
   }
 
-  /*   * Phase2: 状態管理の移行 - 状態を設定   * @param state 新しいCoreState
+  /**
+   * Phase2: 状態管理の移行 - 状態を設定
+   *
+   * @param state 新しいCoreState
    */
   setState(state: CoreState): void {
     // TDD Refactor Phase: 状態整合性の向上
@@ -445,7 +517,8 @@ export class Core {
     }
   }
 
-  /*   * Phase2: 状態管理の移行 - 状態を初期化
+  /**
+   * Phase2: 状態管理の移行 - 状態を初期化
    */
   initializeState(): void {
     // 既存の状態を初期値に戻す
@@ -454,7 +527,10 @@ export class Core {
     // configは既にコンストラクタで初期化済み
   }
 
-  /*   * 指定されたキーの最小文字数を取得   * @param key - 対象のキー
+  /**
+   * 指定されたキーの最小文字数を取得
+   *
+   * @param key - 対象のキー
    * @returns 最小文字数
    */
   private getMinLengthForKey(key: string): number {
@@ -470,7 +546,10 @@ export class Core {
     return unifiedConfig.defaultMinWordLength || 1;
   }
 
-  /*   * 単語検出用のEnhancedWordConfigを作成   * @returns 単語検出に最適化された設定オブジェクト
+  /**
+   * 単語検出用のEnhancedWordConfigを作成
+   *
+   * @returns 単語検出に最適化された設定オブジェクト
    */
   private createEnhancedWordConfig(): EnhancedWordConfig {
     return {
@@ -483,9 +562,14 @@ export class Core {
     };
   }
 
-  /*   * Phase4: 単語検出機能の移行 - 最適化された単語検出   * キャッシュを使用して高速に単語を検出する
+  /**
+   * Phase4: 単語検出機能の移行 - 最適化された単語検出
+   *
+   * キャッシュを使用して高速に単語を検出する
    * main.tsのdetectWordsOptimized関数と同等の機能を提供
-   *   * @param bufnr - バッファ番号
+   *
+   * @param denops - Denopsインスタンス
+   * @param bufnr - バッファ番号
    * @returns 検出された単語の配列
    */
   async detectWordsOptimized(denops: Denops, bufnr: number): Promise<Word[]> {
@@ -513,8 +597,11 @@ export class Core {
     }
   }
 
-  /*   * フォールバック用の単語検出
-   *   * @returns 検出された単語の配列
+  /**
+   * フォールバック用の単語検出
+   *
+   * @param denops - Denopsインスタンス
+   * @returns 検出された単語の配列
    */
   private async fallbackWordDetection(denops: Denops): Promise<Word[]> {
     const fallbackConfig = createPartialUnifiedConfig({
@@ -523,10 +610,17 @@ export class Core {
     return await detectWordsWithConfig(denops, fallbackConfig);
   }
 
-  /*   * Phase5: ヒント生成機能の移行 - 最適化されたヒント生成   * main.tsのgenerateHintsOptimized関数の機能をCoreクラスに統合した実装。
-   * ヒントグループ機能、キャッシュ、設定の検証を含む包括的なヒント生成機能を提供します。   * @param wordCount - 対象となる単語数（0以上の整数）
+  /**
+   * Phase5: ヒント生成機能の移行 - 最適化されたヒント生成
+   *
+   * main.tsのgenerateHintsOptimized関数の機能をCoreクラスに統合した実装。
+   * ヒントグループ機能、キャッシュ、設定の検証を含む包括的なヒント生成機能を提供します。
+   *
+   * @param wordCount - 対象となる単語数（0以上の整数）
    * @param markers - ヒントマーカーの文字配列（空配列の場合はデフォルトマーカーを使用）
-   * @returns 生成されたヒント文字列の配列（wordCountと同じ長さ）   * @example
+   * @returns 生成されたヒント文字列の配列（wordCountと同じ長さ）
+   *
+   * @example
    * ```typescript
    * const core = new Core();
    * const hints = core.generateHintsOptimized(5, ['a', 's', 'd', 'f']);
@@ -574,13 +668,20 @@ export class Core {
     return generateHints(wordCount, markers);
   }
 
-  /*   * Phase6: 表示処理系の移行 - 最適化されたヒント表示   * main.tsのdisplayHintsOptimized関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase6: 表示処理系の移行 - 最適化されたヒント表示
+   *
+   * main.tsのdisplayHintsOptimized関数の機能をCoreクラスに統合した実装。
    * バッファ検証、ExtmarksとMatchaddの使い分け、フォールバック処理を含む
    * 包括的なヒント表示機能を提供します。
-   *   * @param hints - 表示するヒントマッピング配列
+   *
+   * @param denops - Denopsインスタンス
+   * @param hints - 表示するヒントマッピング配列
    * @param mode - 表示モード（デフォルト: "normal"）
    * @param signal - 中断用のAbortSignal（オプション）
-   * @returns Promise<void> - 非同期で完了   * @example
+   * @returns Promise<void> - 非同期で完了
+   *
+   * @example
    * ```typescript
    * const core = new Core();
    * await core.displayHintsOptimized(denops, hintMappings, "normal");
@@ -625,13 +726,20 @@ export class Core {
     }
   }
 
-  /*   * Phase6: 表示処理系の移行 - 非同期ヒント表示   * main.tsのdisplayHintsAsync関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase6: 表示処理系の移行 - 非同期ヒント表示
+   *
+   * main.tsのdisplayHintsAsync関数の機能をCoreクラスに統合した実装。
    * Fire-and-forgetパターンで描画処理を実行し、ユーザー入力をブロックしない
    * パフォーマンス最適化により大量のヒントも効率的に処理します。
-   *   * @param hints - 表示するヒントマッピング配列
+   *
+   * @param denops - Denopsインスタンス
+   * @param hints - 表示するヒントマッピング配列
    * @param config - 表示設定オブジェクト（モード情報等）
    * @param onComplete - 表示完了時のコールバック関数（オプション）
-   * @returns Promise<void> - 非同期で完了   * @example
+   * @returns Promise<void> - 非同期で完了
+   *
+   * @example
    * ```typescript
    * const core = new Core();
    * await core.displayHintsAsync(denops, hintMappings, { mode: 'normal' });
@@ -688,9 +796,14 @@ export class Core {
     }
   }
 
-  /*   * Phase6: 表示処理系の移行 - Extmarksバッチ表示   * main.tsのdisplayHintsWithExtmarksBatch関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase6: 表示処理系の移行 - Extmarksバッチ表示
+   *
+   * main.tsのdisplayHintsWithExtmarksBatch関数の機能をCoreクラスに統合した実装。
    * Neovim用のextmarkを使ったバッチ処理でヒントを効率的に表示します。
-   *   * @param bufnr - バッファ番号
+   *
+   * @param denops - Denopsインスタンス
+   * @param bufnr - バッファ番号
    * @param hints - 表示するヒントマッピング配列
    * @param mode - 表示モード（デフォルト: "normal"）
    * @param signal - 中断用のAbortSignal（オプション）
@@ -786,9 +899,14 @@ export class Core {
     }
   }
 
-  /*   * Phase6: 表示処理系の移行 - MatchAddバッチ表示   * main.tsのdisplayHintsWithMatchAddBatch関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase6: 表示処理系の移行 - MatchAddバッチ表示
+   *
+   * main.tsのdisplayHintsWithMatchAddBatch関数の機能をCoreクラスに統合した実装。
    * Vim用のmatchaddを使ったバッチ処理でヒントを効率的に表示します。
-   *   * @param hints - 表示するヒントマッピング配列
+   *
+   * @param denops - Denopsインスタンス
+   * @param hints - 表示するヒントマッピング配列
    * @param mode - 表示モード（デフォルト: "normal"）
    * @param signal - 中断用のAbortSignal（オプション）
    * @returns Promise<void> - 非同期で完了
@@ -850,9 +968,14 @@ export class Core {
 
   // Phase7: showHints系の移行 - ヒント表示統合（デバウンス処理はmain.tsで管理）
 
-  /*   * Phase7: showHints系の移行 - ヒントを表示   * main.tsのshowHints関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase7: showHints系の移行 - ヒントを表示
+   *
+   * main.tsのshowHints関数の機能をCoreクラスに統合した実装。
    * デバウンス処理はmain.tsで管理し、Coreクラスは純粋なヒント表示ワークフローを提供します。
-   *   * @returns Promise<void> - 非同期で完了
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void> - 非同期で完了
    */
   async showHints(denops: Denops): Promise<void> {
     if (!this.isEnabled()) {
@@ -863,9 +986,14 @@ export class Core {
     await this.showHintsInternal(denops);
   }
 
-  /*   * Phase7: showHints系の移行 - 内部的なヒント表示処理（最適化版）   * main.tsのshowHintsInternal関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase7: showHints系の移行 - 内部的なヒント表示処理（最適化版）
+   *
+   * main.tsのshowHintsInternal関数の機能をCoreクラスに統合した実装。
    * 単語検出、ヒント生成、ヒント表示の完全なワークフローを提供します。
-   *   * @param mode - 表示モード（デフォルト: "normal"）
+   *
+   * @param denops - Denopsインスタンス
+   * @param mode - 表示モード（デフォルト: "normal"）
    * @returns Promise<void> - 非同期で完了
    */
   async showHintsInternal(denops: Denops, mode?: string): Promise<void> {
@@ -927,9 +1055,14 @@ export class Core {
     }
   }
 
-  /*   * Phase7: showHints系の移行 - キー指定でのヒント表示   * main.tsのshowHintsWithKey関数の機能をCoreクラスに統合した実装。
+  /**
+   * Phase7: showHints系の移行 - キー指定でのヒント表示
+   *
+   * main.tsのshowHintsWithKey関数の機能をCoreクラスに統合した実装。
    * 特定のキーコンテキストでのヒント表示機能を提供します。
-   *   * @param key - キー文字列
+   *
+   * @param denops - Denopsインスタンス
+   * @param key - キー文字列
    * @param mode - 表示モード（デフォルト: "normal"）
    * @returns Promise<void> - 非同期で完了
    */
@@ -948,7 +1081,10 @@ export class Core {
     }
   }
 
-  /*   * Phase 8: ユーティリティ機能 - パフォーマンス測定を記録   * @param operation 測定対象の操作名
+  /**
+   * Phase 8: ユーティリティ機能 - パフォーマンス測定を記録
+   *
+   * @param operation 測定対象の操作名
    * @param startTime 開始時刻（performance.now()の値）
    * @param endTime 終了時刻（performance.now()の値）
    */
@@ -973,7 +1109,10 @@ export class Core {
     }
   }
 
-  /*   * Phase 8: ユーティリティ機能 - デバッグ情報を収集   * @returns デバッグ情報オブジェクト
+  /**
+   * Phase 8: ユーティリティ機能 - デバッグ情報を収集
+   *
+   * @returns デバッグ情報オブジェクト
    */
   collectDebugInfo(): DebugInfo {
     return {
@@ -990,7 +1129,8 @@ export class Core {
     };
   }
 
-  /*   * Phase 8: ユーティリティ機能 - デバッグ情報をクリア
+  /**
+   * Phase 8: ユーティリティ機能 - デバッグ情報をクリア
    */
   clearDebugInfo(): void {
     this.performanceMetrics = {
@@ -1001,18 +1141,29 @@ export class Core {
     };
   }
 
-  /*   * Phase 8: ユーティリティ機能 - 現在のヒントを設定（テスト用）   * @param hints ヒントマッピングの配列
+  /**
+   * Phase 8: ユーティリティ機能 - 現在のヒントを設定（テスト用）
+   *
+   * @param hints ヒントマッピングの配列
    */
   setCurrentHints(hints: HintMapping[]): void {
     this.currentHints = hints;
     this.isActive = hints.length > 0;
   }
 
-  /*   * Phase 8: ユーティリティ機能 - ユーザー入力を待機   * ヒント表示後にユーザーの文字入力を待ち、対応するヒントの位置へジャンプする。
-   * main.tsのwaitForUserInput関数から移行した実装。   * @param denops Denopsインスタンス
+  /**
+   * Phase 8: ユーティリティ機能 - ユーザー入力を待機
+   *
+   * ヒント表示後にユーザーの文字入力を待ち、対応するヒントの位置へジャンプする。
+   * main.tsのwaitForUserInput関数から移行した実装。
+   *
+   * @param denops Denopsインスタンス
    */
-  /*   * ヒントターゲットへのジャンプ処理を実行（REFACTOR: 重複コードの共通化）
-   *   * @param target - ジャンプ対象のヒントマッピング
+  /**
+   * ヒントターゲットへのジャンプ処理を実行（REFACTOR: 重複コードの共通化）
+   *
+   * @param denops - Denopsインスタンス
+   * @param target - ジャンプ対象のヒントマッピング
    * @param context - ジャンプのコンテキスト情報（デバッグ用）
    */
   private async jumpToHintTarget(denops: Denops, target: HintMapping, context: string): Promise<void> {
@@ -1039,8 +1190,11 @@ export class Core {
     }
   }
 
-  /*   * エラーメッセージとフィードバック表示（REFACTOR: 重複コードの共通化）
-   *   * @param message - 表示するメッセージ
+  /**
+   * エラーメッセージとフィードバック表示（REFACTOR: 重複コードの共通化）
+   *
+   * @param denops - Denopsインスタンス
+   * @param message - 表示するメッセージ
    * @param withBell - ベル音を鳴らすかどうか（デフォルト: true）
    */
   private async showErrorFeedback(denops: Denops, message: string, withBell = true): Promise<void> {
@@ -1054,9 +1208,14 @@ export class Core {
     }
   }
 
-  /*   * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする   * main.tsから移行された完全版実装。hideHintsOptimizedを使用して
+  /**
+   * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする
+   *
+   * main.tsから移行された完全版実装。hideHintsOptimizedを使用して
    * 実際の表示を適切に非表示にする重要なバグ修正を含む。
-   *   * @throws ユーザーがESCでキャンセルした場合
+   *
+   * @param denops - Denopsインスタンス
+   * @throws ユーザーがESCでキャンセルした場合
    */
   async waitForUserInput(denops: Denops): Promise<void> {
     const config = this.config;
@@ -1353,12 +1512,16 @@ export class Core {
     }
   }
 
-  /*   * Phase 9: Dictionary System Migration
+  /**
+   * Phase 9: Dictionary System Migration
    * 辞書システムの移行 - TDD Green Phase Implementation
    */
 
-  /*   * Initialize dictionary system
-   *   * @returns Promise<void>
+  /**
+   * Initialize dictionary system
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void>
    */
   async initializeDictionarySystem(denops: Denops): Promise<void> {
     try {
@@ -1380,8 +1543,11 @@ export class Core {
     }
   }
 
-  /*   * Register dictionary-related Vim commands
-   *   * @returns Promise<void>
+  /**
+   * Register dictionary-related Vim commands
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void>
    */
   private async registerDictionaryCommands(denops: Denops): Promise<void> {
     // Add to dictionary command
@@ -1410,14 +1576,20 @@ export class Core {
     );
   }
 
-  /*   * Check if dictionary system is initialized   * @returns boolean - True if dictionary system is ready
+  /**
+   * Check if dictionary system is initialized
+   *
+   * @returns boolean - True if dictionary system is ready
    */
   hasDictionarySystem(): boolean {
     return this.dictionaryLoader !== null && this.vimConfigBridge !== null;
   }
 
-  /*   * Reload user dictionary
-   *   * @returns Promise<void>
+  /**
+   * Reload user dictionary
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void>
    */
   async reloadDictionary(denops: Denops): Promise<void> {
     try {
@@ -1439,8 +1611,11 @@ export class Core {
     }
   }
 
-  /*   * Edit dictionary file
-   *   * @returns Promise<void>
+  /**
+   * Edit dictionary file
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void>
    */
   async editDictionary(denops: Denops): Promise<void> {
     try {
@@ -1478,8 +1653,11 @@ export class Core {
     }
   }
 
-  /*   * Show dictionary contents in a new buffer
-   *   * @returns Promise<void>
+  /**
+   * Show dictionary contents in a new buffer
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void>
    */
   async showDictionary(denops: Denops): Promise<void> {
     try {
@@ -1505,8 +1683,11 @@ export class Core {
     }
   }
 
-  /*   * Validate dictionary format
-   *   * @returns Promise<void>
+  /**
+   * Validate dictionary format
+   *
+   * @param denops - Denopsインスタンス
+   * @returns Promise<void>
    */
   async validateDictionary(denops: Denops): Promise<void> {
     try {
@@ -1538,9 +1719,12 @@ export class Core {
     }
   }
 
-  /*   * Add word to user dictionary
+  /**
+   * Add word to user dictionary
    * TDD Green Phase: sub2-4-1 implementation
-   *   * @param word - 追加する単語
+   *
+   * @param denops - Denopsインスタンス
+   * @param word - 追加する単語
    * @param meaning - 単語の意味
    * @param type - 単語の種類（noun, verb, adjective等）
    * @returns Promise<void>
@@ -1647,9 +1831,12 @@ export class Core {
     }
   }
 
-  /*   * Vimのハイライトグループ名として有効かどうか検証する
+  /**
+   * Vimのハイライトグループ名として有効かどうか検証する
    * Phase 11: process3 sub2-1-1 - main.tsからCore classへの移行
-   * TDD Green Phase: 既存のvalidateHighlightGroupName関数のロジックを移植   * Vimのハイライトグループ名のルール：
+   * TDD Green Phase: 既存のvalidateHighlightGroupName関数のロジックを移植
+   *
+   * Vimのハイライトグループ名のルール：
    * - 英字またはアンダースコアで開始
    * - 英数字とアンダースコアのみ使用可能
    * - 100文字以下
@@ -1681,8 +1868,13 @@ export class Core {
     return true;
   }
 
-  /*   * 色名が有効なVim色名かどうか検証する（Process3 Sub2-1-2実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植   * @param colorName 検証する色名
+  /**
+   * 色名が有効なVim色名かどうか検証する（Process3 Sub2-1-2実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植
+   *
+   * @param colorName 検証する色名
    * @returns 有効な場合はtrue、無効な場合はfalse
    */
   public static isValidColorName(colorName: string): boolean {
@@ -1724,8 +1916,13 @@ export class Core {
     return validColorNames.includes(colorName.toLowerCase());
   }
 
-  /*   * 16進数色表記が有効かどうか検証する（Process3 Sub2-1-3実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
+  /**
+   * 16進数色表記が有効かどうか検証する（Process3 Sub2-1-3実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植
+   *
+   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
    * @returns 有効な場合はtrue、無効な場合はfalse
    */
   public static isValidHexColor(hexColor: string): boolean {
@@ -1750,8 +1947,13 @@ export class Core {
     return /^[0-9a-fA-F]+$/.test(hex);
   }
 
-  /*   * 色値を正規化する（大文字小文字を統一）（Process3 Sub2-1-4実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
+  /**
+   * 色値を正規化する（大文字小文字を統一）（Process3 Sub2-1-4実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植
+   *
+   * @param color 正規化する色値
    * @returns 正規化された色値
    */
   public static normalizeColorName(color: string): string {
@@ -1768,8 +1970,13 @@ export class Core {
     return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
   }
 
-  /*   * ハイライト色設定を検証する（Process3 Sub2-1-5実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の validateHighlightColor 関数の実装をCore.validateHighlightColor静的メソッドとして移植   * @param colorConfig 検証するハイライト色設定
+  /**
+   * ハイライト色設定を検証する（Process3 Sub2-1-5実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の validateHighlightColor 関数の実装をCore.validateHighlightColor静的メソッドとして移植
+   *
+   * @param colorConfig 検証するハイライト色設定
    * @returns 検証結果
    */
   public static validateHighlightColor(
@@ -1858,8 +2065,13 @@ export class Core {
     return { valid: false, errors };
   }
 
-  /*   * ハイライトコマンドを生成する（Process3 Sub2-1-6実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
+  /**
+   * ハイライトコマンドを生成する（Process3 Sub2-1-6実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植
+   *
+   * @param hlGroupName ハイライトグループ名
    * @param colorConfig 色設定
    * @returns 生成されたハイライトコマンド
    */
@@ -1903,8 +2115,13 @@ export class Core {
     return parts.join(" ");
   }
 
-  /*   * ハイライト設定を検証する（設定更新時に使用）（Process3 Sub2-1-7実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
+  /**
+   * ハイライト設定を検証する（設定更新時に使用）（Process3 Sub2-1-7実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植
+   *
+   * @param config 検証する設定オブジェクト
    * @returns 検証結果
    */
   public static validateHighlightConfig(
@@ -1934,8 +2151,13 @@ export class Core {
     return { valid: errors.length === 0, errors };
   }
 
-  /*   * キー別最小文字数設定を取得する（Process3 Sub2-2-1実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
+  /**
+   * キー別最小文字数設定を取得する（Process3 Sub2-2-1実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植
+   *
+   * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
    * @param key 対象のキー文字（例: 'f', 't', 'w'など）
    * @returns そのキーに対する最小文字数値（デフォルト: 2）
    */
@@ -1957,8 +2179,13 @@ export class Core {
     return 3;
   }
 
-  /*   * キー別motion_count設定を取得する（Process3 Sub2-2-2実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+  /**
+   * キー別motion_count設定を取得する（Process3 Sub2-2-2実装）
+   *
+   * TDD GREEN Phase: テストをパスする最小限の実装
+   * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植
+   *
+   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
    * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
    * @returns そのキーに対するmotion_count値（デフォルト: 3）
    */
@@ -1993,8 +2220,17 @@ export class Core {
   // sub2-3: Display Functions Implementation
   // ========================================
 
-  /*   * sub2-3-2: isRenderingHints - ヒントの描画処理中かどうかを取得   * 非同期描画の状態を外部から確認するためのステータス関数
-   * main.ts の isRenderingHints 関数をCoreクラスに移植   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse   * const core = Core.getInstance();
+  /**
+   * sub2-3-2: isRenderingHints - ヒントの描画処理中かどうかを取得
+   *
+   * 非同期描画の状態を外部から確認するためのステータス関数
+   * main.ts の isRenderingHints 関数をCoreクラスに移植
+   *
+   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse
+   * @since sub2-3-2
+   *
+   * @example
+   * const core = Core.getInstance();
    * if (!core.isRenderingHints()) {
    *   await core.displayHintsAsync(denops, hints, config);
    * }
@@ -2003,8 +2239,16 @@ export class Core {
     return this._isRenderingHints;
   }
 
-  /*   * sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断   * 進行中の非同期描画処理を安全に中断します
-   * main.ts の abortCurrentRendering 関数をCoreクラスに移植   * const core = Core.getInstance();
+  /**
+   * sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断
+   *
+   * 進行中の非同期描画処理を安全に中断します
+   * main.ts の abortCurrentRendering 関数をCoreクラスに移植
+   *
+   * @since sub2-3-3
+   *
+   * @example
+   * const core = Core.getInstance();
    * core.abortCurrentRendering();
    */
   abortCurrentRendering(): void {
@@ -2015,16 +2259,26 @@ export class Core {
     }
   }
 
-  /*   * sub2-3-4: highlightCandidateHintsAsync - 候補ヒントをハイライト   * 部分入力に基づいて、該当する候補ヒントをハイライト表示します
-   * main.ts の highlightCandidateHintsAsync 関数をCoreクラスに移植   * @param denops Denopsインスタンス
+  /**
+   * sub2-3-4: highlightCandidateHintsAsync - 候補ヒントをハイライト
+   *
+   * 部分入力に基づいて、該当する候補ヒントをハイライト表示します
+   * main.ts の highlightCandidateHintsAsync 関数をCoreクラスに移植
+   *
+   * @param denops Denopsインスタンス
    * @param hintMappings ヒントマッピング配列
    * @param partialInput 部分入力文字列
    * @param config 表示設定
    * @param signal 中断用のAbortSignal（オプション）
-   * @returns Promise<void> 非同期で完了   * const core = Core.getInstance();
+   * @returns Promise<void> 非同期で完了
+   * @since sub2-3-4
+   *
+   * @example
+   * const core = Core.getInstance();
    * await core.highlightCandidateHintsAsync(denops, hints, "A", { mode: "normal" });
    */
-  /*   * テスト環境の検出とバッファ時間の設定
+  /**
+   * テスト環境の検出とバッファ時間の設定
    * テスト環境では競合を防ぐため、より長いタイムアウトを使用
    */
   private getTimeoutDelay(): number {
@@ -2143,19 +2397,22 @@ export class Core {
 
   // ===== Commands Integration Methods (TDD Green Phase) =====
 
-  /*   * プラグインを有効化 (commands.ts HellshakeYanoController.enable() 統合)
+  /**
+   * プラグインを有効化 (commands.ts HellshakeYanoController.enable() 統合)
    */
   enablePlugin(): void {
     this.config.enabled = true;
   }
 
-  /*   * プラグインを無効化 (commands.ts HellshakeYanoController.disable() 統合)
+  /**
+   * プラグインを無効化 (commands.ts HellshakeYanoController.disable() 統合)
    */
   disablePlugin(): void {
     this.config.enabled = false;
   }
 
-  /*   * プラグインの有効/無効を切り替え (commands.ts HellshakeYanoController.toggle() 統合)
+  /**
+   * プラグインの有効/無効を切り替え (commands.ts HellshakeYanoController.toggle() 統合)
    * @returns 切り替え後の状態
    */
   togglePlugin(): boolean {
@@ -2163,14 +2420,16 @@ export class Core {
     return this.config.enabled;
   }
 
-  /*   * プラグインが有効かどうかを確認 (commands.ts HellshakeYanoController.isEnabled() 統合)
+  /**
+   * プラグインが有効かどうかを確認 (commands.ts HellshakeYanoController.isEnabled() 統合)
    * @returns プラグインの有効状態
    */
   isPluginEnabled(): boolean {
     return this.config.enabled;
   }
 
-  /*   * モーション回数を設定 (commands.ts HellshakeYanoConfigManager.setCount() 統合)
+  /**
+   * モーション回数を設定 (commands.ts HellshakeYanoConfigManager.setCount() 統合)
    * @param count 正の整数のモーション回数
    * @throws Error countが正の整数でない場合
    */
@@ -2181,7 +2440,8 @@ export class Core {
     this.config.motionCount = count;
   }
 
-  /*   * モーションタイムアウト時間を設定 (commands.ts HellshakeYanoConfigManager.setTimeout() 統合)
+  /**
+   * モーションタイムアウト時間を設定 (commands.ts HellshakeYanoConfigManager.setTimeout() 統合)
    * @param timeout 100以上の整数のタイムアウト時間（ミリ秒）
    * @throws Error timeoutが100未満の整数でない場合
    */
@@ -2192,7 +2452,8 @@ export class Core {
     this.config.motionTimeout = timeout;
   }
 
-  /*   * デバッグモードを切り替え (commands.ts DebugController.toggleDebugMode() 統合)
+  /**
+   * デバッグモードを切り替え (commands.ts DebugController.toggleDebugMode() 統合)
    * @returns 切り替え後のデバッグモード状態
    */
   toggleDebugMode(): boolean {
@@ -2200,7 +2461,8 @@ export class Core {
     return this.config.debugMode;
   }
 
-  /*   * パフォーマンスログを切り替え (commands.ts DebugController.togglePerformanceLog() 統合)
+  /**
+   * パフォーマンスログを切り替え (commands.ts DebugController.togglePerformanceLog() 統合)
    * @returns 切り替え後のパフォーマンスログ状態
    */
   togglePerformanceLog(): boolean {
@@ -2208,7 +2470,8 @@ export class Core {
     return this.config.performanceLog;
   }
 
-  /*   * 座標デバッグを切り替え (commands.ts DebugController.toggleCoordinateDebug() 統合)
+  /**
+   * 座標デバッグを切り替え (commands.ts DebugController.toggleCoordinateDebug() 統合)
    * @returns 切り替え後の座標デバッグ状態
    */
   toggleCoordinateDebug(): boolean {
@@ -2216,14 +2479,16 @@ export class Core {
     return this.config.debugCoordinates;
   }
 
-  /*   * コマンドファクトリーを取得 (commands.ts CommandFactory 統合)
+  /**
+   * コマンドファクトリーを取得 (commands.ts CommandFactory 統合)
    * @returns CommandFactoryインスタンス
    */
   getCommandFactory(): CommandFactory {
     return new CommandFactory(this.config);
   }
 
-  /*   * 設定を安全に更新 (commands.ts updateConfigSafely() 統合)
+  /**
+   * 設定を安全に更新 (commands.ts updateConfigSafely() 統合)
    * @param updates 更新する設定値
    * @param validator バリデーション関数（オプション）
    * @throws Error バリデーションが失敗した場合
@@ -2241,7 +2506,8 @@ export class Core {
     Object.assign(this.config, updates);
   }
 
-  /*   * 設定を元に戻す機能付きの更新 (commands.ts updateConfigWithRollback() 統合)
+  /**
+   * 設定を元に戻す機能付きの更新 (commands.ts updateConfigWithRollback() 統合)
    * @param updates 更新する設定値
    * @returns ロールバック関数を含むオブジェクト
    */
@@ -2269,7 +2535,8 @@ export class Core {
     };
   }
 
-  /*   * バッチ設定更新 (commands.ts batchUpdateConfig() 統合)
+  /**
+   * バッチ設定更新 (commands.ts batchUpdateConfig() 統合)
    * @param updateFunctions 設定更新関数の配列
    * @throws Error いずれかの更新関数でエラーが発生した場合
    */
@@ -2287,19 +2554,22 @@ export class Core {
     }
   }
 
-  /*   * レガシー有効化 (commands.ts enable() 統合)
+  /**
+   * レガシー有効化 (commands.ts enable() 統合)
    */
   enableLegacy(): void {
     this.config.enabled = true;
   }
 
-  /*   * レガシー無効化 (commands.ts disable() 統合)
+  /**
+   * レガシー無効化 (commands.ts disable() 統合)
    */
   disableLegacy(): void {
     this.config.enabled = false;
   }
 
-  /*   * レガシーモーション回数設定 (commands.ts setCount() 統合)
+  /**
+   * レガシーモーション回数設定 (commands.ts setCount() 統合)
    * @param count 正の整数のモーション回数
    * @throws Error countが正の整数でない場合
    */
@@ -2310,7 +2580,8 @@ export class Core {
     this.config.motionCount = count;
   }
 
-  /*   * レガシータイムアウト設定 (commands.ts setTimeout() 統合)
+  /**
+   * レガシータイムアウト設定 (commands.ts setTimeout() 統合)
    * @param timeout 100以上の整数のタイムアウト時間（ミリ秒）
    * @throws Error timeoutが100未満の整数でない場合
    */
@@ -2325,7 +2596,8 @@ export class Core {
   // Motion Counter Methods (for HellshakeYanoCore delegation)
   // ========================================
 
-  /*   * モーションカウンターをインクリメントします
+  /**
+   * モーションカウンターをインクリメントします
    * @param denops Denopsインスタンス
    * @param bufnr バッファ番号
    * @returns カウント結果（triggered: 閾値到達したか、count: 現在のカウント）
@@ -2352,7 +2624,8 @@ export class Core {
     return { triggered, count };
   }
 
-  /*   * 指定バッファのモーションカウントを取得します
+  /**
+   * 指定バッファのモーションカウントを取得します
    * @param bufnr バッファ番号
    * @returns 現在のカウント
    */
@@ -2361,21 +2634,24 @@ export class Core {
     return counter.getCount();
   }
 
-  /*   * 指定バッファのモーションカウンターをリセットします
+  /**
+   * 指定バッファのモーションカウンターをリセットします
    * @param bufnr バッファ番号
    */
   async resetMotionCounter(bufnr: number): Promise<void> {
     this.motionManager.resetCounter(bufnr);
   }
 
-  /*   * 指定バッファのモーションカウンターをクリアします
+  /**
+   * 指定バッファのモーションカウンターをクリアします
    * @param bufnr バッファ番号
    */
   async clearMotionCounter(bufnr: number): Promise<void> {
     this.motionManager.resetCounter(bufnr);
   }
 
-  /*   * モーションカウンターの閾値を設定します
+  /**
+   * モーションカウンターの閾値を設定します
    * @param threshold 新しい閾値
    */
   setMotionThreshold(threshold: number): void {
@@ -2385,7 +2661,8 @@ export class Core {
     this.config.motionCounterThreshold = threshold;
   }
 
-  /*   * モーション設定を更新します
+  /**
+   * モーション設定を更新します
    * @param updates 更新する設定
    */
   updateMotionConfig(updates: Partial<{
@@ -2416,7 +2693,8 @@ export class Core {
   // TDD Green Phase: dispatcher.ts, operations.ts, input.ts, initialization.ts
   // =============================================================================
 
-  /*   * 設定を更新（高度な検証処理付き）
+  /**
+   * 設定を更新（高度な検証処理付き）
    * dispatcher.ts の createConfigDispatcher 機能を統合
    */
   async updateConfigAdvanced(newConfig: Partial<UnifiedConfig>): Promise<void> {
@@ -2443,7 +2721,8 @@ export class Core {
     }
   }
 
-  /*   * 設定をリセット（拡張版）
+  /**
+   * 設定をリセット（拡張版）
    */
   resetConfigExtended(): void {
     try {
@@ -2454,7 +2733,8 @@ export class Core {
     }
   }
 
-  /*   * 詳細なデバッグ情報を取得
+  /**
+   * 詳細なデバッグ情報を取得
    */
   getExtendedDebugInfo(): any {
     const baseInfo = this.getDebugInfo();
@@ -2470,14 +2750,16 @@ export class Core {
     };
   }
 
-  /*   * ヒントを表示（デバウンス機能付き、拡張版）
+  /**
+   * ヒントを表示（デバウンス機能付き、拡張版）
    */
   async showHintsWithExtendedDebounce(denops: Denops): Promise<void> {
     // デバウンス処理は既存のshowHintsWithDebounceを活用
     await this.showHintsWithDebounce(denops);
   }
 
-  /*   * 入力待機をキャンセル
+  /**
+   * 入力待機をキャンセル
    */
   async cancelInput(denops: Denops): Promise<void> {
     // ヒント表示状態を非アクティブに設定
@@ -2487,7 +2769,8 @@ export class Core {
     this.currentHints = [];
   }
 
-  /*   * 入力文字の分類情報を分析
+  /**
+   * 入力文字の分類情報を分析
    */
   analyzeInputCharacter(char: number): {
     char: number;
@@ -2520,7 +2803,8 @@ export class Core {
     };
   }
 
-  /*   * 入力文字が制御文字かどうかをチェック
+  /**
+   * 入力文字が制御文字かどうかをチェック
    */
   isControlCharacter(char: number): boolean {
     // ESCキー
@@ -2532,7 +2816,8 @@ export class Core {
     return false;
   }
 
-  /*   * ヒント候補を検索
+  /**
+   * ヒント候補を検索
    */
   findMatchingHints(inputString: string, currentHints: HintMapping[]): HintMapping[] {
     return currentHints.filter(hint =>
@@ -2540,7 +2825,8 @@ export class Core {
     );
   }
 
-  /*   * 単文字マッチのヒントを検索
+  /**
+   * 単文字マッチのヒントを検索
    */
   findExactMatch(inputString: string, currentHints: HintMapping[]): HintMapping | undefined {
     return currentHints.find(hint =>
@@ -2548,7 +2834,8 @@ export class Core {
     );
   }
 
-  /*   * 複数文字入力管理を作成
+  /**
+   * 複数文字入力管理を作成
    */
   createMultiCharInputManager(): {
     appendInput: (inputString: string) => void;
@@ -2589,7 +2876,8 @@ export class Core {
     };
   }
 
-  /*   * プラグインの初期化処理
+  /**
+   * プラグインの初期化処理
    */
   async initializePlugin(denops: Denops): Promise<{ extmarkNamespace: number | null }> {
     let extmarkNamespace: number | null = null;
@@ -2610,7 +2898,8 @@ export class Core {
     }
   }
 
-  /*   * マネージャーとの設定同期
+  /**
+   * マネージャーとの設定同期
    */
   syncManagerConfig(config?: any): void {
     if (config) {
@@ -2623,7 +2912,8 @@ export class Core {
   // Private Helper Methods (dispatcher.ts からの移行)
   // =============================================================================
 
-  /*   * 後方互換性のあるフラグを正規化
+  /**
+   * 後方互換性のあるフラグを正規化
    */
   private normalizeBackwardCompatibleFlags(cfg: Partial<UnifiedConfig>): Partial<UnifiedConfig> {
     const normalized = { ...cfg };
@@ -2649,7 +2939,8 @@ export class Core {
     return normalized;
   }
 
-  /*   * カスタムマーカー設定の検証と適用
+  /**
+   * カスタムマーカー設定の検証と適用
    */
   private validateAndApplyMarkers(cfg: Partial<UnifiedConfig>): void {
     if (cfg.markers && Array.isArray(cfg.markers)) {
@@ -2662,7 +2953,8 @@ export class Core {
     }
   }
 
-  /*   * motion_count の検証と適用
+  /**
+   * motion_count の検証と適用
    */
   private validateAndApplyMotionCount(cfg: Partial<UnifiedConfig>): void {
     if (typeof cfg.motionCount === "number") {
@@ -2672,7 +2964,8 @@ export class Core {
     }
   }
 
-  /*   * motion_timeout の検証と適用
+  /**
+   * motion_timeout の検証と適用
    */
   private validateAndApplyMotionTimeout(cfg: Partial<UnifiedConfig>): void {
     if (typeof cfg.motionTimeout === "number") {
@@ -2682,7 +2975,8 @@ export class Core {
     }
   }
 
-  /*   * その他の設定項目の検証と適用
+  /**
+   * その他の設定項目の検証と適用
    */
   private validateAndApplyOtherConfigs(cfg: Partial<UnifiedConfig>): void {
     // enabled フラグの適用
@@ -2718,7 +3012,8 @@ export class Core {
     }
   }
 
-  /*   * 内部的なマネージャー設定同期処理
+  /**
+   * 内部的なマネージャー設定同期処理
    */
   private syncManagerConfigInternal(): void {
     try {
@@ -2734,19 +3029,22 @@ export class Core {
   // Additional Methods for sub4-5 Integration
   // ========================================
 
-  /*   * プラグインを有効化します
+  /**
+   * プラグインを有効化します
    */
   enable(): void {
     this.config.enabled = true;
   }
 
-  /*   * プラグインを無効化します
+  /**
+   * プラグインを無効化します
    */
   disable(): void {
     this.config.enabled = false;
   }
 
-  /*   * プラグインの有効/無効を切り替えます
+  /**
+   * プラグインの有効/無効を切り替えます
    * @returns 切り替え後の有効状態
    */
   toggle(): boolean {
@@ -2754,13 +3052,15 @@ export class Core {
     return this.config.enabled;
   }
 
-  /*   * 設定をデフォルト値にリセットします
+  /**
+   * 設定をデフォルト値にリセットします
    */
   resetConfig(): void {
     this.config = getDefaultUnifiedConfig();
   }
 
-  /*   * デバッグ情報を取得します
+  /**
+   * デバッグ情報を取得します
    * @returns デバッグ情報オブジェクト
    */
   getDebugInfo(): any {
@@ -2786,14 +3086,16 @@ export class Core {
     };
   }
 
-  /*   * パフォーマンスログをクリアします
+  /**
+   * パフォーマンスログをクリアします
    */
   clearPerformanceLog(): void {
     // パフォーマンスログのクリア実装
     // 現在は空実装
   }
 
-  /*   * デバウンス付きでヒントを表示します
+  /**
+   * デバウンス付きでヒントを表示します
    * @param denops Denopsインスタンス
    */
   async showHintsWithDebounce(denops: Denops): Promise<void> {
@@ -2801,7 +3103,8 @@ export class Core {
     await this.showHints(denops);
   }
 
-  /*   * 即座にヒントを表示します
+  /**
+   * 即座にヒントを表示します
    * @param denops Denopsインスタンス
    */
   async showHintsImmediately(denops: Denops): Promise<void> {
@@ -2832,7 +3135,8 @@ export class Core {
     }
   }
 
-  /*   * ヒントを非表示にします（オーバーロード対応）
+  /**
+   * ヒントを非表示にします（オーバーロード対応）
    * @param denops Denopsインスタンス（オプショナル）
    */
   async hideHintsAsync(denops?: Denops): Promise<void> {
@@ -2846,7 +3150,8 @@ export class Core {
   // Core Detection Functions (from core/detection.ts)
   // =============================================================================
 
-  /*   * Optimized word detection with enhanced configuration support
+  /**
+   * Optimized word detection with enhanced configuration support
    * @param params Detection parameters including denops and configuration
    * @returns Promise resolving to array of detected words
    */
@@ -2871,7 +3176,8 @@ export class Core {
     return [];
   }
 
-  /*   * Factory function for testing word detection
+  /**
+   * Factory function for testing word detection
    * @param mockDetector Optional mock detector for testing
    * @returns Word detection function
    */
@@ -2885,7 +3191,8 @@ export class Core {
   // Core Generation Functions (from core/generation.ts)
   // =============================================================================
 
-  /*   * Optimized hint generation with enhanced configuration support
+  /**
+   * Optimized hint generation with enhanced configuration support
    * @param params Generation parameters including word count and configuration
    * @returns Array of generated hints
    */
@@ -2921,7 +3228,8 @@ export class Core {
     return hints;
   }
 
-  /*   * Factory function for testing hint generation
+  /**
+   * Factory function for testing hint generation
    * @param mockGenerator Optional mock generator for testing
    * @returns Hint generation function
    */
@@ -2931,7 +3239,8 @@ export class Core {
     return mockGenerator || Core.generateHintsOptimized.bind(Core);
   }
 
-  /*   * Clear hint cache for regeneration
+  /**
+   * Clear hint cache for regeneration
    * Consolidated from core/generation.ts
    */
   static clearHintCache(): void {
@@ -2951,7 +3260,8 @@ export class Core {
   public static hintsVisible = false;
   public static currentHints: HintMapping[] = [];
 
-  /*   * Show hints with debounce support
+  /**
+   * Show hints with debounce support
    * @param denops Denops instance
    * @param config Show hints configuration
    */
@@ -2969,7 +3279,8 @@ export class Core {
     (Core as any).hintsVisible = true;
   }
 
-  /*   * Hide hints and clear display
+  /**
+   * Hide hints and clear display
    * @param denops Denops instance
    */
   public static async hideHints(denops: Denops): Promise<void> {
@@ -2984,7 +3295,8 @@ export class Core {
     (Core as any).currentHints = [];
   }
 
-  /*   * Clear hint display completely
+  /**
+   * Clear hint display completely
    * @param denops Denops instance
    */
   public static async clearHintDisplay(denops: Denops): Promise<void> {
@@ -2999,7 +3311,8 @@ export class Core {
     (Core as any).currentHints = [];
   }
 
-  /*   * Create hint operations manager with dependency injection
+  /**
+   * Create hint operations manager with dependency injection
    * @param config Configuration for hint operations
    * @returns Hint operations interface
    */
@@ -3058,14 +3371,16 @@ export class Core {
     };
   }
 
-  /*   * Check if hints are currently visible
+  /**
+   * Check if hints are currently visible
    * @returns Boolean indicating hint visibility state
    */
   static isHintsVisible(): boolean {
     return (Core as any).hintsVisible;
   }
 
-  /*   * Get current hints array
+  /**
+   * Get current hints array
    * @returns Array of current hint mappings
    */
   static getCurrentHints(): HintMapping[] {
@@ -3073,7 +3388,10 @@ export class Core {
   }
 }
 
-/* * API統合クラス (process4 sub4-1) * api.tsの機能をcore.tsに統合するために作成された専用クラス
+/**
+ * API統合クラス (process4 sub4-1)
+ *
+ * api.tsの機能をcore.tsに統合するために作成された専用クラス
  * 既存のCoreクラスのシングルトンパターンを維持しつつ、
  * 通常のコンストラクタでテスト可能なAPIインターフェースを提供
  */
@@ -3082,13 +3400,19 @@ export class Core {
 // Moved from utils/validation.ts as part of Process4 Sub6-2
 // ============================================================================
 
-/* * ハイライト色設定インターフェース
- * fg（前景色）とbg（背景色）を個別に指定するための型定義 * @interface HighlightColor - Already defined in types.ts, importing from there
+/**
+ * ハイライト色設定インターフェース
+ * fg（前景色）とbg（背景色）を個別に指定するための型定義
+ *
+ * @interface HighlightColor - Already defined in types.ts, importing from there
  */
 // Note: HighlightColor interface is already defined in types.ts and imported above
 
-/* * ハイライトグループ名の検証
- * Vimのハイライトグループ名の命名規則に従って検証を行う * @param {string} groupName - 検証するハイライトグループ名
+/**
+ * ハイライトグループ名の検証
+ * Vimのハイライトグループ名の命名規則に従って検証を行う
+ *
+ * @param {string} groupName - 検証するハイライトグループ名
  * @returns {boolean} 有効な場合true、無効な場合false
  * @throws {never} この関数は例外をスローしません
  * @example
@@ -3124,8 +3448,11 @@ export function validateHighlightGroupName(groupName: string): boolean {
   return true;
 }
 
-/* * 色名の検証
- * Vimで使用可能な標準色名かどうかを検証 * @param {string} colorName - 検証する色名
+/**
+ * 色名の検証
+ * Vimで使用可能な標準色名かどうかを検証
+ *
+ * @param {string} colorName - 検証する色名
  * @returns {boolean} 有効な色名の場合true、無効な場合false
  * @throws {never} この関数は例外をスローしません
  * @example
@@ -3154,8 +3481,11 @@ export function isValidColorName(colorName: string): boolean {
   return validColorNames.includes(colorName.toLowerCase());
 }
 
-/* * 16進数色表記の検証
- * 16進数カラーコード（#RRGGBB または #RGB 形式）の検証を行う * @param {string} hexColor - 検証する16進数色（例: "#ff0000", "#fff"）
+/**
+ * 16進数色表記の検証
+ * 16進数カラーコード（#RRGGBB または #RGB 形式）の検証を行う
+ *
+ * @param {string} hexColor - 検証する16進数色（例: "#ff0000", "#fff"）
  * @returns {boolean} 有効な16進数色の場合true、無効な場合false
  * @throws {never} この関数は例外をスローしません
  * @example
@@ -3190,15 +3520,20 @@ export function isValidHexColor(hexColor: string): boolean {
   return /^[0-9a-fA-F]+$/.test(hex);
 }
 
-/* * ハイライト色設定の総合検証
- * 文字列（ハイライトグループ名）またはオブジェクト（色設定）の検証を行う * @param {string | HighlightColor} colorConfig - 検証するハイライト色設定
+/**
+ * ハイライト色設定の総合検証
+ * 文字列（ハイライトグループ名）またはオブジェクト（色設定）の検証を行う
+ *
+ * @param {string | HighlightColor} colorConfig - 検証するハイライト色設定
  * @returns {{valid: boolean, errors: string[]}} 検証結果とエラーメッセージのリスト
  * @throws {never} この関数は例外をスローしません
  * @example
  * ```typescript
  * // ハイライトグループ名での設定
  * validateHighlightColor("Error"); // { valid: true, errors: [] }
- * validateHighlightColor("123invalid"); // { valid: false, errors: [...] } * // 色設定オブジェクトでの設定
+ * validateHighlightColor("123invalid"); // { valid: false, errors: [...] }
+ *
+ * // 色設定オブジェクトでの設定
  * validateHighlightColor({ fg: "red", bg: "white" }); // { valid: true, errors: [] }
  * validateHighlightColor({ fg: "#ff0000" }); // { valid: true, errors: [] }
  * validateHighlightColor({ fg: "invalidcolor" }); // { valid: false, errors: [...] }
@@ -3297,7 +3632,8 @@ export class HellshakeYanoCore {
   /** CommandFactoryインスタンス */
   private commandFactory: CommandFactory;
 
-  /*   * HellshakeYanoCoreのインスタンスを作成します
+  /**
+   * HellshakeYanoCoreのインスタンスを作成します
    * @param initialConfig - 初期設定（省略時はデフォルト設定を使用）
    */
   constructor(initialConfig: UnifiedConfig = getDefaultUnifiedConfig()) {
@@ -3305,42 +3641,48 @@ export class HellshakeYanoCore {
     this.commandFactory = new CommandFactory(this.config);
   }
 
-  /*   * プラグインを有効化します
+  /**
+   * プラグインを有効化します
    * 内部的にコマンドモジュールのenable関数を呼び出します
    */
   enable(): void {
     enable(this.config);
   }
 
-  /*   * プラグインを無効化します
+  /**
+   * プラグインを無効化します
    * 内部的にコマンドモジュールのdisable関数を呼び出します
    */
   disable(): void {
     disable(this.config);
   }
 
-  /*   * プラグインの有効/無効を切り替えます
+  /**
+   * プラグインの有効/無効を切り替えます
    * @returns 切り替え後の有効状態（true: 有効, false: 無効）
    */
   toggle(): boolean {
     return toggle(this.config);
   }
 
-  /*   * プラグインの現在の有効状態を取得します
+  /**
+   * プラグインの現在の有効状態を取得します
    * @returns プラグインが有効かどうか（true: 有効, false: 無効）
    */
   isEnabled(): boolean {
     return this.config.enabled;
   }
 
-  /*   * 現在の設定を取得します
+  /**
+   * 現在の設定を取得します
    * @returns 現在の設定のコピー（元の設定オブジェクトは変更されません）
    */
   getConfig(): UnifiedConfig {
     return { ...this.config };
   }
 
-  /*   * 設定を更新します
+  /**
+   * 設定を更新します
    * @param updates - 更新する設定項目（部分的な更新が可能）
    * @throws {Error} 無効な設定が指定された場合、バリデーションエラーメッセージを含む
    */
@@ -3353,7 +3695,8 @@ export class HellshakeYanoCore {
     this.config = { ...this.config, ...updates };
   }
 
-  /*   * 設定をデフォルト値にリセットします
+  /**
+   * 設定をデフォルト値にリセットします
    * CommandFactoryインスタンスも新しい設定で再作成されます
    */
   resetConfig(): void {
@@ -3361,21 +3704,26 @@ export class HellshakeYanoCore {
     this.commandFactory = new CommandFactory(this.config);
   }
 
-  /*   * ヒント表示の文字数を設定します
+  /**
+   * ヒント表示の文字数を設定します
    * @param count - 表示する文字数
    */
   setCount(count: number): void {
     setCount(this.config, count);
   }
 
-  /*   * タイムアウト時間を設定します
+  /**
+   * タイムアウト時間を設定します
    * @param timeout - タイムアウト時間（ミリ秒）
    */
   setTimeout(timeout: number): void {
     setTimeoutCommand(this.config, timeout);
   }
 
-  /*   * プラグインを初期化します   * @param options - 初期化オプション（省略可能、デフォルト: {}）
+  /**
+   * プラグインを初期化します
+   * @param denops - Denopsインスタンス
+   * @param options - 初期化オプション（省略可能、デフォルト: {}）
    * @returns 初期化完了のPromise
    * @throws {Error} 初期化処理でエラーが発生した場合
    */
@@ -3383,14 +3731,18 @@ export class HellshakeYanoCore {
     await initializePlugin(denops, { config: this.config, ...options });
   }
 
-  /*   * プラグインをクリーンアップします   * @returns クリーンアップ完了のPromise
+  /**
+   * プラグインをクリーンアップします
+   * @param denops - Denopsインスタンス
+   * @returns クリーンアップ完了のPromise
    * @throws {Error} クリーンアップ処理でエラーが発生した場合
    */
   async cleanup(denops: Denops): Promise<void> {
     await cleanupPlugin(denops);
   }
 
-  /*   * デバッグ情報を取得します
+  /**
+   * デバッグ情報を取得します
    * @returns 現在の設定、プラグイン状態、キャッシュ統計を含むデバッグ情報オブジェクト
    */
   getDebugInfo(): any {
@@ -3409,7 +3761,8 @@ export class HellshakeYanoCore {
     };
   }
 
-  /*   * プラグインの統計情報を取得します
+  /**
+   * プラグインの統計情報を取得します
    * ライフサイクルモジュールのgetPluginStatistics関数を呼び出します
    * @returns プラグインの統計情報オブジェクト
    */
@@ -3417,14 +3770,20 @@ export class HellshakeYanoCore {
     return getPluginStatistics();
   }
 
-  /*   * プラグインのヘルスチェックを実行します   * @returns ヘルスチェック結果のPromise
+  /**
+   * プラグインのヘルスチェックを実行します
+   * @param denops - Denopsインスタンス
+   * @returns ヘルスチェック結果のPromise
    * @throws {Error} ヘルスチェック実行中にエラーが発生した場合
    */
   async healthCheck(denops: Denops): Promise<any> {
     return await healthCheck(denops);
   }
 
-  /*   * ヒントを表示します   * @returns ヒント表示完了のPromise
+  /**
+   * ヒントを表示します
+   * @param denops - Denopsインスタンス
+   * @returns ヒント表示完了のPromise
    * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
    * @todo 既存のmain.tsから実装を移行する予定
    */
@@ -3433,7 +3792,10 @@ export class HellshakeYanoCore {
     throw new Error("showHints not yet implemented in modular architecture");
   }
 
-  /*   * ヒントを非表示にします   * @returns ヒント非表示完了のPromise
+  /**
+   * ヒントを非表示にします
+   * @param denops - Denopsインスタンス
+   * @returns ヒント非表示完了のPromise
    * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
    * @todo 既存のmain.tsから実装を移行する予定
    */
@@ -3442,7 +3804,8 @@ export class HellshakeYanoCore {
     throw new Error("hideHints not yet implemented in modular architecture");
   }
 
-  /*   * キャッシュをクリアします
+  /**
+   * キャッシュをクリアします
    * 単語キャッシュとヒントキャッシュの両方をクリアします
    */
   clearCache(): void {
@@ -3455,7 +3818,10 @@ export class HellshakeYanoCore {
   // Motion Counter Integration Methods
   // ========================================
 
-  /*   * モーションカウンターをインクリメントします
+
+
+  /**
+   * モーションカウンターをインクリメントします
    * @param denops Denops instance (unused but kept for compatibility)
    * @param bufnr バッファ番号
    * @returns カウンター状態
@@ -3465,7 +3831,8 @@ export class HellshakeYanoCore {
     return core.incrementMotionCounter(denops, bufnr);
   }
 
-  /*   * 指定バッファのモーションカウントを取得します
+  /**
+   * 指定バッファのモーションカウントを取得します
    * @param bufnr バッファ番号
    * @returns 現在のカウント
    */
@@ -3474,7 +3841,8 @@ export class HellshakeYanoCore {
     return core.getMotionCount(bufnr);
   }
 
-  /*   * 指定バッファのモーションカウンターをリセットします
+  /**
+   * 指定バッファのモーションカウンターをリセットします
    * @param bufnr バッファ番号
    */
   async resetMotionCounter(bufnr: number): Promise<void> {
@@ -3482,7 +3850,8 @@ export class HellshakeYanoCore {
     return core.resetMotionCounter(bufnr);
   }
 
-  /*   * モーションカウンターの閾値を設定します
+  /**
+   * モーションカウンターの閾値を設定します
    * @param threshold 新しい閾値
    */
   setMotionThreshold(threshold: number): void {
@@ -3490,7 +3859,8 @@ export class HellshakeYanoCore {
     core.setMotionThreshold(threshold);
   }
 
-  /*   * モーション設定を更新します
+  /**
+   * モーション設定を更新します
    * @param updates 更新する設定
    */
   updateMotionConfig(updates: Partial<{
@@ -3507,7 +3877,10 @@ export class HellshakeYanoCore {
   // Display Width Utilities (from utils/display.ts)
   // ========================================
 
-  /*   * Create a cache for display width calculations   * @param maxSize - Maximum number of entries in cache (default: 1000)
+  /**
+   * Create a cache for display width calculations
+   *
+   * @param maxSize - Maximum number of entries in cache (default: 1000)
    * @returns LRUCache instance for caching display width calculations
    */
   static async createDisplayWidthCache(maxSize = 1000): Promise<import("./cache.ts").LRUCache<string, number>> {
@@ -3515,12 +3888,14 @@ export class HellshakeYanoCore {
     return new LRUCache<string, number>(maxSize);
   }
 
-  /*   * 一般的な文字列のグローバルキャッシュ（遅延初期化）
+  /**
+   * 一般的な文字列のグローバルキャッシュ（遅延初期化）
    * 頻繁に計算される文字列の表示幅をキャッシュ
    */
   private static _globalDisplayWidthCache: import("./cache.ts").LRUCache<string, number> | null = null;
 
-  /*   * グローバルキャッシュのゲッター（遅延初期化）
+  /**
+   * グローバルキャッシュのゲッター（遅延初期化）
    */
   private static async getGlobalDisplayWidthCache(): Promise<import("./cache.ts").LRUCache<string, number>> {
     if (!this._globalDisplayWidthCache) {
@@ -3529,10 +3904,15 @@ export class HellshakeYanoCore {
     return this._globalDisplayWidthCache;
   }
 
-  /*   * Cached version of getDisplayWidth for improved performance
-   * Use this for repeated calculations of the same strings   * @param text - Text to calculate width for
+  /**
+   * Cached version of getDisplayWidth for improved performance
+   * Use this for repeated calculations of the same strings
+   *
+   * @param text - Text to calculate width for
    * @param tabWidth - Width of tab character (default: 8)
-   * @returns Total display width of the text (cached result if available)   * @example
+   * @returns Total display width of the text (cached result if available)
+   *
+   * @example
    * ```typescript
    * // 最初の呼び出しは計算してキャッシュ
    * const width1 = Core.getDisplayWidthCached("hello\tworld");
@@ -3561,10 +3941,15 @@ export class HellshakeYanoCore {
     return width;
   }
 
-  /*   * Get display width using Vim's strdisplaywidth() function
-   * Falls back to TypeScript implementation if Vim is not available   * @param denops - Denops instance for Vim integration
+  /**
+   * Get display width using Vim's strdisplaywidth() function
+   * Falls back to TypeScript implementation if Vim is not available
+   *
+   * @param denops - Denops instance for Vim integration
    * @param text - Text to calculate width for
-   * @returns Promise resolving to display width   * @example
+   * @returns Promise resolving to display width
+   *
+   * @example
    * ```typescript
    * const width = await Core.getVimDisplayWidth(denops, "hello\tworld");
    * console.log(width); // Vimのネイティブ計算またはフォールバックを使用
@@ -3583,8 +3968,11 @@ export class HellshakeYanoCore {
     }
   }
 
-  /*   * Clear the global display width cache
-   * Useful for memory management or when cache becomes stale   * @example
+  /**
+   * Clear the global display width cache
+   * Useful for memory management or when cache becomes stale
+   *
+   * @example
    * ```typescript
    * Core.clearDisplayWidthCache();
    * ```
@@ -3605,8 +3993,15 @@ export class HellshakeYanoCore {
     }
   }
 
-  /*   * 性能監視用キャッシュ統計の取得   * 文字列キャッシュと文字キャッシュの統計情報を提供。
-   * キャッシュヒット率やサイズを監視して性能調整に活用。   * @returns キャッシュヒット/ミス統計を含むオブジェクト   * @example
+  /**
+   * 性能監視用キャッシュ統計の取得
+   *
+   * 文字列キャッシュと文字キャッシュの統計情報を提供。
+   * キャッシュヒット率やサイズを監視して性能調整に活用。
+   *
+   * @returns キャッシュヒット/ミス統計を含むオブジェクト
+   *
+   * @example
    * ```typescript
    * const stats = Core.getDisplayWidthCacheStats();
    * console.log(`ヒット率: ${stats.stringCache.hitRate * 100}%`);
@@ -3624,10 +4019,19 @@ export class HellshakeYanoCore {
     };
   }
 
-  /*   * テキストに全角文字が含まれているかをチェックするユーティリティ関数   * コストの高い幅計算の前の高速スクリーニングに有用。
-   * ASCII文字のみのテキストを素早く識別し、最適化されたパスを選択可能。   * hellshake-yano.vimでの性能最適化において、日本語やCJK文字、絵文字が
-   * 含まれていない場合の高速処理パスの判定に使用。   * @param text - チェックするテキスト
-   * @returns 幅が1より大きい文字が含まれている場合true   * @example
+  /**
+   * テキストに全角文字が含まれているかをチェックするユーティリティ関数
+   *
+   * コストの高い幅計算の前の高速スクリーニングに有用。
+   * ASCII文字のみのテキストを素早く識別し、最適化されたパスを選択可能。
+   *
+   * hellshake-yano.vimでの性能最適化において、日本語やCJK文字、絵文字が
+   * 含まれていない場合の高速処理パスの判定に使用。
+   *
+   * @param text - チェックするテキスト
+   * @returns 幅が1より大きい文字が含まれている場合true
+   *
+   * @example
    * ```typescript
    * Core.hasWideCharacters("hello")     // false（ASCII文字のみ）
    * Core.hasWideCharacters("こんにちは") // true（日本語文字）
@@ -3660,7 +4064,8 @@ export class HellshakeYanoCore {
     return false;
   }
 
-  /*   * 最適化された範囲を使用したCJK文字の高速チェック
+  /**
+   * 最適化された範囲を使用したCJK文字の高速チェック
    * @param codePoint Unicodeコードポイント
    * @returns CJK文字の場合true
    */
@@ -3693,7 +4098,8 @@ export class HellshakeYanoCore {
     );
   }
 
-  /*   * 絵文字範囲の高速チェッカー
+  /**
+   * 絵文字範囲の高速チェッカー
    * @param codePoint Unicodeコードポイント
    * @returns 絵文字の場合true
    */
@@ -3719,7 +4125,8 @@ export class HellshakeYanoCore {
     );
   }
 
-  /*   * 拡張全角文字範囲チェッカー（矢印、記号など）
+  /**
+   * 拡張全角文字範囲チェッカー（矢印、記号など）
    * @param codePoint Unicodeコードポイント
    * @returns 幅が2の文字の場合true
    */
@@ -3737,7 +4144,8 @@ export class HellshakeYanoCore {
     );
   }
 
-  /*   * 幅が2であるべきLatin-1補助数学記号かチェック
+  /**
+   * 幅が2であるべきLatin-1補助数学記号かチェック
    * @param codePoint Unicodeコードポイント
    * @returns 数学記号の場合true
    */

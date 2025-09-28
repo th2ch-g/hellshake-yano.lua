@@ -1,6 +1,7 @@
 /**
  * 公開APIモジュール
  *
+ * @deprecated process4 sub8-2: このファイルは削除予定です
  * process4 sub4-1: api.tsの機能をcore.tsに統合済み
  * 後方互換性のため、このファイルはcore.tsの機能を再エクスポートします
  */

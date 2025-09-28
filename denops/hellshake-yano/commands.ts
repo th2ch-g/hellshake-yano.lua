@@ -1,5 +1,7 @@
 /**
  * コマンド処理モジュール
+ *
+ * @deprecated process4 sub8-2: このファイルは削除予定です
  */
 
 import type { Denops } from "@denops/std";

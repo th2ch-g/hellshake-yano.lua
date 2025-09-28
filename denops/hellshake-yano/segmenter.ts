@@ -1,6 +1,7 @@
 /**
  * TinySegmenter Integration Module for Hellshake-Yano
  *
+ * @deprecated process4 sub8-2: このファイルは削除予定です
  * This module provides Japanese text segmentation capabilities using TinySegmenter.
  * Uses the npm @birchill/tiny-segmenter package for accurate segmentation.
  * Integrated with UnifiedCache system for optimal performance.

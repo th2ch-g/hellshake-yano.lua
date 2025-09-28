@@ -10,10 +10,7 @@
  * - ユニオン型: 制限された値セットの表現
  * - ジェネリクス: 再利用可能な型パラメータ
  * - 型ガード関数: 実行時の型安全性確保
- *
- * @version 2.0.0
- * @since Phase 5 - Type Definition Consolidation
- */
+ * */
 
 import type { UnifiedConfig } from "./config.ts";
 
@@ -120,9 +117,7 @@ export interface HintPositionWithCoordinateSystem extends HintPosition {
  * - currentHints: 現在表示中のヒント配列
  * - hintsVisible: ヒント表示状態のフラグ
  * - isActive: プラグインのアクティブ状態
- *
- * @since Process3 Sub1 Phase2
- */
+ * */
 export interface CoreState {
   /** 現在の設定情報 */
   config: UnifiedConfig;
@@ -1045,12 +1040,8 @@ export interface HintOperations {
   getCurrentHints: () => HintMapping[];
 }
 
-/**
- * 型定義バージョン情報
- */
+/** */
 export const TYPES_VERSION = "2.0.0";
 
-/**
- * 型定義の更新日時
- */
+/** */
 export const TYPES_LAST_UPDATED = "2024-01-01T00:00:00Z";

@@ -1,4 +1,8 @@
 /**
+ * @deprecated process4 sub8-2: このファイルは削除予定です
+ */
+
+/**
  * MOVED: utils/validation.ts has been migrated to config.ts and core.ts
  *
  * Process4 Sub6-2: validation.ts分散完了
