@@ -137,7 +137,6 @@ export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<
     "motionCount": "motionCount",
     "motionTimeout": "motionTimeout",
     "hintPosition": "hintPosition",
-    "visualHintPosition": "visualHintPosition",
     "triggerOnHjkl": "triggerOnHjkl",
     "countedMotions": "countedMotions",
     "useNumbers": "useNumbers",

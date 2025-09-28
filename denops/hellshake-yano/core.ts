@@ -2857,7 +2857,6 @@ export class Core {
     const legacyMappings: Record<string, string> = {
       'motion_timeout': 'motionTimeout',
       'hint_position': 'hintPosition',
-      'visual_hint_position': 'visualHintPosition',
       'debug_mode': 'debugMode',
       'performance_log': 'performanceLog',
     };
@@ -2927,10 +2926,6 @@ export class Core {
     // ヒント位置設定
     if (typeof cfg.hintPosition === "string") {
       this.config.hintPosition = cfg.hintPosition;
-    }
-
-    if (typeof cfg.visualHintPosition === "string") {
-      this.config.visualHintPosition = cfg.visualHintPosition;
     }
 
     // その他の数値設定

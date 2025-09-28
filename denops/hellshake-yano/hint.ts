@@ -279,7 +279,6 @@ function getAssignmentCacheForMode(mode: string) {
  * @param cursorLine - 現在のカーソル行位置
  * @param cursorCol - 現在のカーソル列位置
  * @param hintPositionSetting - ヒント位置設定
- * @param visualHintPositionSetting - Visualモードのヒント位置設定
  * @param optimizationConfig - オプションの最適化設定
  * @returns string 割り当てcache用に生成されたキー
  * @since 1.0.0
@@ -290,14 +289,13 @@ function createAssignmentCacheKey(
   cursorLine: number,
   cursorCol: number,
   hintPositionSetting: string,
-  visualHintPositionSetting: string,
   optimizationConfig?: { skipOverlapDetection?: boolean },
 ): string {
   const positionSignature = hashString(
     words.map((w) => `${w.line},${w.col}`).join(";"),
   );
   const skipOverlap = optimizationConfig?.skipOverlapDetection ?? false;
-  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${visualHintPositionSetting}-${skipOverlap}-${positionSignature}`;
+  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${skipOverlap}-${positionSignature}`;
 }
 
 /**
@@ -500,16 +498,14 @@ export function assignHintsToWords(
   cursorLine: number,
   cursorCol: number,
   mode: string = "normal",
-  config?: { hintPosition?: string; visualHintPosition?: string },
+  config?: { hintPosition?: string },
   optimizationConfig?: { skipOverlapDetection?: boolean },
 ): HintMapping[] {
   if (words.length === 0 || hints.length === 0) {
     return [];
   }
 
-  const isVisualMode = mode === "visual";
   const hintPositionSetting = config?.hintPosition ?? "start";
-  const visualHintPositionSetting = config?.visualHintPosition ?? "end";
 
   const assignmentCache = getAssignmentCacheForMode(mode);
 
@@ -519,16 +515,13 @@ export function assignHintsToWords(
     cursorLine,
     cursorCol,
     hintPositionSetting,
-    visualHintPositionSetting,
     optimizationConfig,
   );
 
   // キャッシュヒットチェック
   const cachedWords = assignmentCache.get(cacheKey);
   if (cachedWords) {
-    const effectiveHintPosition = isVisualMode && visualHintPositionSetting !== "same"
-      ? visualHintPositionSetting
-      : hintPositionSetting;
+    const effectiveHintPosition = hintPositionSetting;
 
     // both モードの場合は各単語に対して2つのマッピングを作成
     if (effectiveHintPosition === "both") {
@@ -581,9 +574,7 @@ export function assignHintsToWords(
   const sortedWords = sortWordsByDistanceOptimized(filteredWords, cursorLine, cursorCol);
 
   // ヒントを割り当て（ヒント位置情報を含める）
-  const effectiveHintPosition = isVisualMode && visualHintPositionSetting !== "same"
-    ? visualHintPositionSetting
-    : hintPositionSetting;
+  const effectiveHintPosition = hintPositionSetting;
 
   // both モードの場合は各単語に対して2つのマッピングを作成
   const mappings: HintMapping[] = [];
@@ -994,8 +985,6 @@ export function getGlobalCacheStats() {
 export function calculateHintPosition(
   word: Word,
   hintPosition: string,
-  isVisualMode: boolean = false,
-  visualHintPosition?: string,
 ): HintPosition {
   let col: number;
   let display_mode: "before" | "after" | "overlay";
@@ -1003,30 +992,8 @@ export function calculateHintPosition(
   // Default tab width - should be retrieved from Vim settings in production
   const tabWidth = 8;
 
-  // Visual Mode専用処理（process3追加）
+  // ヒント位置の設定
   let effectiveHintPosition = hintPosition;
-  if (isVisualMode && visualHintPosition) {
-    switch (visualHintPosition) {
-      case "start":
-        effectiveHintPosition = "start";
-        break;
-      case "end":
-        effectiveHintPosition = "end";
-        break;
-      case "same":
-        // 通常のhint_positionに従う
-        effectiveHintPosition = hintPosition;
-        break;
-      case "both":
-        // bothモードは特別処理（後で2つの位置を返す）
-        effectiveHintPosition = "both";
-        break;
-      default:
-        // デフォルトはendを使用
-        effectiveHintPosition = "end";
-        break;
-    }
-  }
 
   // デバッグログ追加（パフォーマンスのためコメントアウト）
 
@@ -1085,34 +1052,13 @@ export function calculateHintPositionWithCoordinateSystem(
   word: Word,
   hintPosition: string,
   enableDebug: boolean = false,
-  isVisualMode: boolean = false,
-  visualHintPosition?: string,
 ): HintPositionWithCoordinateSystem {
   let col: number;
   let byteCol: number;
   let display_mode: "before" | "after" | "overlay";
 
-  // Visual Mode専用処理（process3追加）
+  // ヒント位置の設定
   let effectiveHintPosition = hintPosition;
-  if (isVisualMode && visualHintPosition) {
-    switch (visualHintPosition) {
-      case "start":
-        effectiveHintPosition = "start";
-        break;
-      case "end":
-        effectiveHintPosition = "end";
-        break;
-      case "same":
-        effectiveHintPosition = hintPosition;
-        break;
-      case "both":
-        effectiveHintPosition = "both";
-        break;
-      default:
-        effectiveHintPosition = "end";
-        break;
-    }
-  }
 
   // デバッグログ追加
   if (enableDebug) {

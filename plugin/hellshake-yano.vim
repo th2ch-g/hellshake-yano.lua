@@ -74,11 +74,6 @@ if !has_key(g:hellshake_yano, 'default_motion_count')
   let g:hellshake_yano.default_motion_count = 3
 endif
 
-" Visual Mode hint position 設定
-if !has_key(g:hellshake_yano, 'visual_hint_position')
-  let g:hellshake_yano.visual_hint_position = 'end'
-endif
-
 " 設定値の基本検証（TypeScript側でより詳細な検証を実施）
 function! s:validate_config() abort
   " key_repeat_threshold が設定されている場合のみ検証
@@ -157,16 +152,6 @@ function! s:validate_config() abort
     endif
   endif
 
-  " visual_hint_position の検証
-  if has_key(g:hellshake_yano, 'visual_hint_position')
-    let l:valid_values = ['start', 'end', 'same', 'both']
-    if type(g:hellshake_yano.visual_hint_position) != v:t_string || index(l:valid_values, g:hellshake_yano.visual_hint_position) == -1
-      echohl WarningMsg
-      echom '[hellshake-yano] Warning: visual_hint_position must be one of: ' . join(l:valid_values, ', ')
-      echohl None
-      unlet g:hellshake_yano.visual_hint_position
-    endif
-  endif
 endfunction
 
 call s:validate_config()

@@ -109,7 +109,6 @@ let g:hellshake_yano = {
   \ 'motion_count': 3,
   \ 'motion_timeout': 2000,
   \ 'hint_position': 'start',
-  \ 'visual_hint_position': 'end',
   \ 'trigger_on_hjkl': v:true,
   \ 'counted_motions': [],
   \ 'enabled': v:true,
@@ -135,7 +134,6 @@ let g:hellshake_yano = {
 | `per_key_motion_count`          | dict        | {}              | Per-key motion count settings                           |
 | `motion_timeout`                | number      | 2000            | Timeout for motion count in milliseconds                |
 | `hint_position`                 | string      | 'start'         | Where to display hints ('start' or 'end')               |
-| `visual_hint_position`          | string      | 'end'           | Hint position in Visual mode ('start', 'end', 'same', 'both') |
 | `trigger_on_hjkl`               | boolean     | v:true          | Enable triggering on hjkl movements                     |
 | `counted_motions`               | array       | []              | Custom motion keys to count (overrides trigger_on_hjkl) |
 | `enabled`                       | boolean     | v:true          | Enable/disable the plugin                               |
@@ -155,53 +153,6 @@ let g:hellshake_yano = {
 | `debug_mode`                    | boolean     | v:false         | Enable debug mode                                       |
 | `performance_log`               | boolean     | v:false         | Enable performance logging                              |
 
-### Visual Mode Hint Position
-
-  The `visual_hint_position` option allows you to customize hint placement specifically for Visual
-  mode operations, providing a more natural word selection experience.
-
-  #### Available Options
-
-  - **`'end'`** (default): Display hints at the end of words in Visual mode
-  - **`'start'`**: Always display hints at the beginning of words
-  - **`'same'`**: Use the same position as `hint_position` setting
-- **`'both'`**: Display hints at both the start and end of words (Visual mode only)
-
-#### Usage Examples
-
-```vim
-" Default behavior: end position in Visual mode, start in Normal mode
-let g:hellshake_yano = {
-  \ 'hint_position': 'start',
-  \ 'visual_hint_position': 'end'
-  \ }
-
-" Always use start position regardless of mode
-let g:hellshake_yano = {
-  \ 'visual_hint_position': 'start'
-  \ }
-
-" Follow normal mode settings in Visual mode too
-let g:hellshake_yano = {
-  \ 'hint_position': 'end',
-  \ 'visual_hint_position': 'same'
-  \ }
-
-" Show hints at both start and end in Visual mode
-let g:hellshake_yano = {
-  \ 'visual_hint_position': 'both'
-  \ }
-```
-
-#### Why This Matters
-
-In Visual mode, you typically:
-
-1. Position cursor at the end of a selection target
-2. Expand selection to include the entire word
-
-With `visual_hint_position: 'end'`, hints appear where your cursor will land, making word selection
-more intuitive and reducing cognitive load.
 
 ## UnifiedConfig System (New in v3.x)
 

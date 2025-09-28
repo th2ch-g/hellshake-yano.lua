@@ -117,8 +117,6 @@ export interface Config {
   motionTimeout: number;
   /** 通常モードでのヒント表示位置 */
   hintPosition: "start" | "end" | "overlay";
-  /** Visualモードでのヒント表示位置 */
-  visualHintPosition?: "start" | "end" | "same" | "both";
 
   // Hint settings (8 properties)
   /** hjklキーでのトリガーを有効にするか */
@@ -239,7 +237,6 @@ export const DEFAULT_CONFIG: Config = {
   motionCount: 3,
   motionTimeout: 2000,
   hintPosition: "start",
-  visualHintPosition: "end",
 
   // Hint settings
   triggerOnHjkl: true,
@@ -480,13 +477,6 @@ export function validateUnifiedConfig(
     }
   }
 
-  // visualHintPosition - 列挙値（オプショナル）
-  if (config.visualHintPosition !== undefined) {
-    const validPositions = ["start", "end", "same", "both"];
-    if (!validPositions.includes(config.visualHintPosition)) {
-      errors.push(`visualHintPosition must be one of: ${validPositions.join(", ")}`);
-    }
-  }
 
   // Hint settings validation (8 properties)
   // triggerOnHjkl, useNumbers, highlightSelected - boolean（型で保証）
