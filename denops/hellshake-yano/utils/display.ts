@@ -16,7 +16,7 @@
  * @version 1.0.0
  */
 
-import { LRUCache } from "./cache.ts";
+import { LRUCache } from "../cache.ts";
 import { UnifiedCache, CacheType } from "../cache.ts";
 import type { Denops } from "https://deno.land/x/denops_std@v5.0.1/mod.ts";
 import * as fn from "https://deno.land/x/denops_std@v5.0.1/function/mod.ts";

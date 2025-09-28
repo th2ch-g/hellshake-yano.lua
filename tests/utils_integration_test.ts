@@ -11,7 +11,7 @@ import {
   charIndexToByteIndex,
   getByteLength,
   isAscii,
-} from "../denops/hellshake-yano/utils/encoding.ts";
+} from "../denops/hellshake-yano/word.ts";
 
 // ソート関数をインライン化（utils/sort.ts から移植）
 function sortByIndex<T extends { index: number }>(items: T[]): T[] {

@@ -202,7 +202,6 @@ export class TinySegmenter {
         source: "tinysegmenter",
       };
     } catch (error) {
-      // console.warn("[TinySegmenter] Segmentation failed:", error);
 
       return {
         segments: await this.fallbackSegmentation(text),

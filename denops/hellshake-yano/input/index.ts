@@ -1,12 +1,2 @@
-// キー入力やイベント処理関連の責務を管理
-
-/**
- * input モジュールのエントリーポイント
- *
- * このファイルは main.ts から分離された input 関連の機能を
- * 統一的に管理するためのインデックスファイルです。
- */
-
-// TODO: main.ts から input 関連の機能を移行予定
-
-export {};
+// This file has been marked for deletion in process4 sub7-1
+// Directory cleanup in progress

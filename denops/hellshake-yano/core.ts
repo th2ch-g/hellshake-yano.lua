@@ -3884,8 +3884,8 @@ export class HellshakeYanoCore {
    * @param maxSize - Maximum number of entries in cache (default: 1000)
    * @returns LRUCache instance for caching display width calculations
    */
-  static async createDisplayWidthCache(maxSize = 1000): Promise<import("./utils/cache.ts").LRUCache<string, number>> {
-    const { LRUCache } = await import("./utils/cache.ts");
+  static async createDisplayWidthCache(maxSize = 1000): Promise<import("./cache.ts").LRUCache<string, number>> {
+    const { LRUCache } = await import("./cache.ts");
     return new LRUCache<string, number>(maxSize);
   }
 
@@ -3893,12 +3893,12 @@ export class HellshakeYanoCore {
    * 一般的な文字列のグローバルキャッシュ（遅延初期化）
    * 頻繁に計算される文字列の表示幅をキャッシュ
    */
-  private static _globalDisplayWidthCache: import("./utils/cache.ts").LRUCache<string, number> | null = null;
+  private static _globalDisplayWidthCache: import("./cache.ts").LRUCache<string, number> | null = null;
 
   /**
    * グローバルキャッシュのゲッター（遅延初期化）
    */
-  private static async getGlobalDisplayWidthCache(): Promise<import("./utils/cache.ts").LRUCache<string, number>> {
+  private static async getGlobalDisplayWidthCache(): Promise<import("./cache.ts").LRUCache<string, number>> {
     if (!this._globalDisplayWidthCache) {
       this._globalDisplayWidthCache = await this.createDisplayWidthCache(2000);
     }

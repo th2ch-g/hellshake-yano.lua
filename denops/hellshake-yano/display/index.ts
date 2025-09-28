@@ -1,12 +1,2 @@
-// ハイライト表示やUI関連の責務を管理
-
-/**
- * display モジュールのエントリーポイント
- *
- * このファイルは main.ts から分離された display 関連の機能を
- * 統一的に管理するためのインデックスファイルです。
- */
-
-// TODO: main.ts から display 関連の機能を移行予定
-
-export {};
+// This file has been marked for deletion in process4 sub7-1
+// Directory cleanup in progress
