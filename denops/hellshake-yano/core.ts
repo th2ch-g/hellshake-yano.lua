@@ -4,7 +4,6 @@
 
 import type { Denops } from "@denops/std";
 import type {
-  Config,
   CoreState,
   DebugInfo,
   DetectionContext,
@@ -16,14 +15,13 @@ import type {
   WordDetectionResult,
 } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
-import type { UnifiedConfig } from "./config.ts";
-import { getDefaultUnifiedConfig } from "./config.ts";
+import type { Config } from "./config.ts";
+import { getDefaultConfig } from "./config.ts";
 import { LRUCache } from "./cache.ts";
 import type { EnhancedWordConfig } from "./word.ts";
 import {
   detectWordsWithManager,
   detectWordsWithConfig,
-  createPartialUnifiedConfig,
 } from "./word.ts";
 import {
   generateHints,
@@ -34,7 +32,7 @@ import {
 import { DictionaryLoader, VimConfigBridge, type UserDictionary } from "./word.ts";
 // commands.ts は統合されたため削除（機能はcore.ts内部で実装済み）
 // lifecycle.ts は統合されたため削除（機能はcore.ts内部で実装済み）
-import { validateUnifiedConfig } from "./config.ts";
+import { validateConfig } from "./config.ts";
 // motion.ts は統合されたため削除（MotionManagerはcore.ts内部で実装済み）
 
 // 内部実装: 統合されたクラス群
@@ -109,7 +107,7 @@ class MotionManager {
 
 // commands.tsから統合したCommandFactory
 class CommandFactory {
-  constructor(private config: UnifiedConfig) {}
+  constructor(private config: Config) {}
 
   // 必要最小限の実装
   createCommand(command: string): any {
@@ -129,7 +127,7 @@ class CommandFactory {
   getConfigManager(): any {
     return {
       getConfig: () => this.config,
-      updateConfig: (newConfig: Partial<UnifiedConfig>) => {
+      updateConfig: (newConfig: Partial<Config>) => {
         Object.assign(this.config, newConfig);
       },
       setCount: (count: number) => {
@@ -279,7 +277,7 @@ function setTimeoutCommand(config: any, timeout: number): void {
 export class Core {
   private static instance: Core | null = null;
 
-  private config: UnifiedConfig;
+  private config: Config;
   private isActive: boolean = false;
   private currentHints: HintMapping[] = [];
   private performanceMetrics: PerformanceMetrics = {
@@ -305,16 +303,16 @@ export class Core {
 
   /*   * Coreクラスのプライベートコンストラクタ（シングルトン用）   * @param config 初期設定（省略時はデフォルト設定を使用）
    */
-  private constructor(config?: Partial<UnifiedConfig>) {
-    // UnifiedConfigのデフォルト設定を使用
-    this.config = { ...getDefaultUnifiedConfig(), ...config };
+  private constructor(config?: Partial<Config>) {
+    // Configのデフォルト設定を使用
+    this.config = { ...getDefaultConfig(), ...config };
   }
 
   /*   * シングルトンインスタンスを取得
    * Phase 10.1: TDD Green実装   * @param config 初期設定（初回のみ有効）
    * @returns Coreクラスのシングルトンインスタンス
    */
-  public static getInstance(config?: Partial<UnifiedConfig>): Core {
+  public static getInstance(config?: Partial<Config>): Core {
     if (!Core.instance) {
       Core.instance = new Core(config);
     }
@@ -474,13 +472,13 @@ export class Core {
 
   /*   * 現在の設定を取得   * @returns 現在のConfig設定
    */
-  getConfig(): UnifiedConfig {
+  getConfig(): Config {
     return { ...this.config };
   }
 
   /*   * 設定を更新   * @param newConfig 新しい設定（部分更新可能）
    */
-  updateConfig(newConfig: Partial<UnifiedConfig>): void {
+  updateConfig(newConfig: Partial<Config>): void {
     // motion設定のバリデーション
     if (newConfig.motionCounterThreshold !== undefined && newConfig.motionCounterThreshold <= 0) {
       throw new Error("threshold must be greater than 0");
@@ -678,8 +676,8 @@ export class Core {
    * @returns 最小文字数
    */
   private getMinLengthForKey(key: string): number {
-    // Config型をUnifiedConfigに変換
-    const unifiedConfig = this.config; // 既にUnifiedConfig形式
+    // Config型をConfigに変換
+    const unifiedConfig = this.config; // 既にConfig形式
 
     // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
@@ -737,9 +735,9 @@ export class Core {
    *   * @returns 検出された単語の配列
    */
   private async fallbackWordDetection(denops: Denops): Promise<Word[]> {
-    const fallbackConfig = createPartialUnifiedConfig({
+    const fallbackConfig = {
       useJapanese: this.config.useJapanese,
-    });
+    };
     return await detectWordsWithConfig(denops, fallbackConfig);
   }
 
@@ -763,8 +761,8 @@ export class Core {
       return [];
     }
 
-    // Config型をUnifiedConfigに変換
-    const unifiedConfig = this.config; // 既にUnifiedConfig形式
+    // Config型をConfigに変換
+    const unifiedConfig = this.config; // 既にConfig形式
 
     // ヒントグループ機能の判定
     const shouldUseHintGroups = unifiedConfig.useHintGroups !== false &&
@@ -777,7 +775,7 @@ export class Core {
         multiCharKeys: unifiedConfig.multiCharKeys,
         markers: markers.length > 0 ? markers : undefined,
         maxSingleCharHints: unifiedConfig.maxSingleCharHints,
-        useDistancePriority: undefined, // UnifiedConfigには存在しない
+        useDistancePriority: undefined, // Configには存在しない
       };
 
       // 設定の検証
@@ -1113,7 +1111,7 @@ export class Core {
       }
 
       // ヒント生成
-      const unifiedConfig = this.config; // 既にUnifiedConfig形式
+      const unifiedConfig = this.config; // 既にConfig形式
       const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
       const hints = this.generateHintsOptimized(words.length, markers);
 
@@ -2155,13 +2153,13 @@ export class Core {
   }
 
   /*   * キー別最小文字数設定を取得する（Process3 Sub2-2-1実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
+   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
    * @param key 対象のキー文字（例: 'f', 't', 'w'など）
    * @returns そのキーに対する最小文字数値（デフォルト: 2）
    */
-  public static getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
-    // 既にUnifiedConfig形式であることを前提
-    const unifiedConfig = config as UnifiedConfig;
+  public static getMinLengthForKey(config: Config | Config, key: string): number {
+    // 既にConfig形式であることを前提
+    const unifiedConfig = config as Config;
 
     // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
@@ -2179,12 +2177,12 @@ export class Core {
 
   /*   * キー別motion_count設定を取得する（Process3 Sub2-2-2実装）   * TDD GREEN Phase: テストをパスする最小限の実装
    * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
-   * @param config プラグインの設定オブジェクト（UnifiedConfig または Config）
+   * @param config プラグインの設定オブジェクト（Config または Config）
    * @returns そのキーに対するmotion_count値（デフォルト: 3）
    */
-  public static getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
-    // 既にUnifiedConfig形式であることを前提
-    const unifiedConfig = config as UnifiedConfig;
+  public static getMotionCountForKey(key: string, config: Config | Config): number {
+    // 既にConfig形式であることを前提
+    const unifiedConfig = config as Config;
 
     // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMotionCount && unifiedConfig.perKeyMotionCount[key] !== undefined) {
@@ -2456,8 +2454,8 @@ export class Core {
    * @throws Error バリデーションが失敗した場合
    */
   updateConfigSafely(
-    updates: Partial<UnifiedConfig>,
-    validator?: (config: Partial<UnifiedConfig>) => { valid: boolean; errors: string[] }
+    updates: Partial<Config>,
+    validator?: (config: Partial<Config>) => { valid: boolean; errors: string[] }
   ): void {
     if (validator) {
       const result = validator(updates);
@@ -2473,14 +2471,14 @@ export class Core {
    * @returns ロールバック関数を含むオブジェクト
    */
   updateConfigWithRollback(
-    updates: Partial<UnifiedConfig>
+    updates: Partial<Config>
   ): { rollback: () => void } {
-    const originalValues: Partial<UnifiedConfig> = {};
+    const originalValues: Partial<Config> = {};
 
     // 変更される値をバックアップ
     for (const key in updates) {
       if (key in this.config) {
-        const configKey = key as keyof UnifiedConfig;
+        const configKey = key as keyof Config;
         (originalValues as any)[configKey] = this.config[configKey];
       }
     }
@@ -2501,7 +2499,7 @@ export class Core {
    * @throws Error いずれかの更新関数でエラーが発生した場合
    */
   batchUpdateConfig(
-    updateFunctions: Array<(config: UnifiedConfig) => void>
+    updateFunctions: Array<(config: Config) => void>
   ): void {
     const backup = { ...this.config };
 
@@ -2646,7 +2644,7 @@ export class Core {
   /*   * 設定を更新（高度な検証処理付き）
    * dispatcher.ts の createConfigDispatcher 機能を統合
    */
-  async updateConfigAdvanced(newConfig: Partial<UnifiedConfig>): Promise<void> {
+  async updateConfigAdvanced(newConfig: Partial<Config>): Promise<void> {
     try {
       // 後方互換性のあるフラグを正規化
       const normalizedConfig = this.normalizeBackwardCompatibleFlags(newConfig);
@@ -2674,7 +2672,7 @@ export class Core {
    */
   resetConfigExtended(): void {
     try {
-      this.config = getDefaultUnifiedConfig();
+      this.config = getDefaultConfig();
       this.syncManagerConfigInternal();
     } catch (error) {
       console.error("[hellshake-yano] Config reset error:", error);
@@ -2852,7 +2850,7 @@ export class Core {
 
   /*   * 後方互換性のあるフラグを正規化
    */
-  private normalizeBackwardCompatibleFlags(cfg: Partial<UnifiedConfig>): Partial<UnifiedConfig> {
+  private normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
     const normalized = { ...cfg };
 
     // snake_case から camelCase への変換
@@ -2878,7 +2876,7 @@ export class Core {
 
   /*   * カスタムマーカー設定の検証と適用
    */
-  private validateAndApplyMarkers(cfg: Partial<UnifiedConfig>): void {
+  private validateAndApplyMarkers(cfg: Partial<Config>): void {
     if (cfg.markers && Array.isArray(cfg.markers)) {
       const validMarkers = cfg.markers.filter((m): m is string =>
         typeof m === "string" && m.length > 0
@@ -2891,7 +2889,7 @@ export class Core {
 
   /*   * motion_count の検証と適用
    */
-  private validateAndApplyMotionCount(cfg: Partial<UnifiedConfig>): void {
+  private validateAndApplyMotionCount(cfg: Partial<Config>): void {
     if (typeof cfg.motionCount === "number") {
       if (cfg.motionCount >= 1 && Number.isInteger(cfg.motionCount)) {
         this.config.motionCount = cfg.motionCount;
@@ -2901,7 +2899,7 @@ export class Core {
 
   /*   * motion_timeout の検証と適用
    */
-  private validateAndApplyMotionTimeout(cfg: Partial<UnifiedConfig>): void {
+  private validateAndApplyMotionTimeout(cfg: Partial<Config>): void {
     if (typeof cfg.motionTimeout === "number") {
       if (cfg.motionTimeout >= 100) {
         this.config.motionTimeout = cfg.motionTimeout;
@@ -2911,7 +2909,7 @@ export class Core {
 
   /*   * その他の設定項目の検証と適用
    */
-  private validateAndApplyOtherConfigs(cfg: Partial<UnifiedConfig>): void {
+  private validateAndApplyOtherConfigs(cfg: Partial<Config>): void {
     // enabled フラグの適用
     if (typeof cfg.enabled === "boolean") {
       this.config.enabled = cfg.enabled;
@@ -2984,7 +2982,7 @@ export class Core {
   /*   * 設定をデフォルト値にリセットします
    */
   resetConfig(): void {
-    this.config = getDefaultUnifiedConfig();
+    this.config = getDefaultConfig();
   }
 
   /*   * デバッグ情報を取得します
@@ -3520,14 +3518,14 @@ export function validateHighlightColor(
 
 export class HellshakeYanoCore {
   /** プラグインの設定 */
-  private config: UnifiedConfig;
+  private config: Config;
   /** CommandFactoryインスタンス */
   private commandFactory: CommandFactory;
 
   /*   * HellshakeYanoCoreのインスタンスを作成します
    * @param initialConfig - 初期設定（省略時はデフォルト設定を使用）
    */
-  constructor(initialConfig: UnifiedConfig = getDefaultUnifiedConfig()) {
+  constructor(initialConfig: Config = getDefaultConfig()) {
     this.config = initialConfig;
     this.commandFactory = new CommandFactory(this.config);
   }
@@ -3563,7 +3561,7 @@ export class HellshakeYanoCore {
   /*   * 現在の設定を取得します
    * @returns 現在の設定のコピー（元の設定オブジェクトは変更されません）
    */
-  getConfig(): UnifiedConfig {
+  getConfig(): Config {
     return { ...this.config };
   }
 
@@ -3571,8 +3569,8 @@ export class HellshakeYanoCore {
    * @param updates - 更新する設定項目（部分的な更新が可能）
    * @throws {Error} 無効な設定が指定された場合、バリデーションエラーメッセージを含む
    */
-  updateConfig(updates: Partial<UnifiedConfig>): void {
-    const validation = validateUnifiedConfig(updates);
+  updateConfig(updates: Partial<Config>): void {
+    const validation = validateConfig(updates);
     if (!validation.valid) {
       throw new Error(`Invalid configuration: ${validation.errors.join(", ")}`);
     }
@@ -3584,7 +3582,7 @@ export class HellshakeYanoCore {
    * CommandFactoryインスタンスも新しい設定で再作成されます
    */
   resetConfig(): void {
-    this.config = getDefaultUnifiedConfig();
+    this.config = getDefaultConfig();
     this.commandFactory = new CommandFactory(this.config);
   }
 

@@ -66,15 +66,15 @@
 #### sub1 UnifiedConfig → Config への置き換え
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
 @ref: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
-- [ ] UnifiedConfig インターフェース名を Config に変更
-- [ ] 既存の type Config = UnifiedConfig エイリアスを削除
-- [ ] type UnifiedConfig = Config として後方互換性エイリアスを追加（一時的）
+- [x] UnifiedConfig インターフェース名を Config に変更
+- [x] 既存の type Config = UnifiedConfig エイリアスを削除
+- [x] type UnifiedConfig = Config として後方互換性エイリアスを追加（一時的）
 
 #### sub2 関数名の更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
-- [ ] getDefaultUnifiedConfig() → getDefaultConfig() に変更
-- [ ] validateUnifiedConfig() → validateConfig() に変更
-- [ ] エクスポートの更新
+- [x] getDefaultUnifiedConfig() → getDefaultConfig() に変更
+- [x] validateUnifiedConfig() → validateConfig() に変更
+- [x] エクスポートの更新
 
 #### sub3 main.tsの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts`
@@ -86,17 +86,17 @@
 ### process2 UnifiedCache → GlobalCache への変更
 #### sub1 cache.tsのクラス名変更
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/cache.ts`
-- [ ] UnifiedCache クラス名を GlobalCache に変更
-- [ ] static instance の型を GlobalCache に更新
-- [ ] getInstance() メソッドの更新
-- [ ] JSDoc コメントの更新
+- [x] UnifiedCache クラス名を GlobalCache に変更
+- [x] static instance の型を GlobalCache に更新
+- [x] getInstance() メソッドの更新
+- [x] JSDoc コメントの更新
 
 #### sub2 使用箇所の更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
 @ref: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-- [ ] word.ts の UnifiedCache インポートと使用箇所を GlobalCache に変更
-- [ ] hint.ts の UnifiedCache インポートと使用箇所を GlobalCache に変更
-- [ ] unifiedCache 変数名を globalCache に変更
+- [x] word.ts の UnifiedCache インポートと使用箇所を GlobalCache に変更
+- [x] hint.ts の UnifiedCache インポートと使用箇所を GlobalCache に変更
+- [x] unifiedCache 変数名を globalCache に変更
 
 ### process3 types.tsの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`

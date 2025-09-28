@@ -12,7 +12,10 @@
  * - 型ガード関数: 実行時の型安全性確保
  * */
 
-import type { UnifiedConfig } from "./config.ts";
+import type { Config } from "./config.ts";
+
+// Config型を再エクスポート（テストファイルがインポートできるように）
+export type { Config } from "./config.ts";
 
 // ===== 基本インターフェース =====
 
@@ -120,7 +123,7 @@ export interface HintPositionWithCoordinateSystem extends HintPosition {
  * */
 export interface CoreState {
   /** 現在の設定情報 */
-  config: UnifiedConfig;
+  config: Config;
   /** 現在表示中のヒントマッピング配列 */
   currentHints: HintMapping[];
   /** ヒント表示状態フラグ */
@@ -131,15 +134,15 @@ export interface CoreState {
 
 /**
  * 統合設定型エイリアス
- * Process4 Sub3-2-2: 型定義の統合実装
+ * Process1: 型定義の統合実装により UnifiedConfig → Config に変更
  *
- * @description UnifiedConfigの型エイリアス
- * すべての設定はcamelCase形式に統一され、UnifiedConfigとして定義される
+ * @description Configインターフェースの型エイリアス
+ * すべての設定はcamelCase形式に統一され、Configインターフェースとして定義される
  *
- * @note この型は UnifiedConfig と完全に同一です
+ * @note この型は Config インターフェースと完全に同一です
  * snake_case形式は廃止され、camelCase形式に統一されました
  */
-export type Config = UnifiedConfig;
+export type UnifiedConfig = Config;
 
 /**
  * ハイライト色設定インターフェース
@@ -490,7 +493,7 @@ export function isHintMapping(obj: unknown): obj is HintMapping {
  * Config型の型ガード関数（統合後）
  * Process4 Sub3-2-2: 型定義の統合実装
  *
- * @description オブジェクトがConfig型（UnifiedConfigエイリアス）の最小要件を満たしているかを判定
+ * @description オブジェクトがConfig型の最小要件を満たしているかを判定
  * camelCase形式のプロパティをチェックします
  *
  * @param obj 判定対象のオブジェクト
@@ -705,13 +708,13 @@ export type ValueOf<T> = T[keyof T];
 
 // ===== 統合設定型（TDD Green Phase） =====
 
-// UnifiedConfigの定義はconfig.tsに移動しました
+// Configインターフェースの定義はconfig.tsに移動しました
 
 /**
  * 統合設定型エイリアス
  * すべての設定型を統合した型
  */
-export type ConfigType = UnifiedConfig;
+export type ConfigType = Config;
 
 /**
  * 統合設定型の型ガード関数

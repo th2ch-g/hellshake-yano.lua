@@ -25,7 +25,7 @@
  */
 
 // Import consolidated types from types.ts
-import type { Config as BaseConfig, HighlightColor, HintPositionType } from "./types.ts";
+import type { HighlightColor, HintPositionType } from "./types.ts";
 
 // Re-export HighlightColor for backward compatibility
 export type { HighlightColor };
@@ -88,7 +88,7 @@ export type { HighlightColor };
  * 階層構造を排除し、32個の設定項目をすべて一つの階層で定義します。
  * TDD Red-Green-Refactor方式で実装された型安全な設定システムです。
  *
- * @interface UnifiedConfig
+ * @interface Config
  * @example
  * ```typescript
  * const config: UnifiedConfig = {
@@ -105,7 +105,7 @@ export type { HighlightColor };
 // UnifiedConfigインターフェースに useImprovedDetection プロパティを追加
 // WordConfig削除後の後方互換性のため
 
-export interface UnifiedConfig {
+export interface Config {
   // Core settings (6 properties)
   /** プラグインの有効/無効状態 */
   enabled: boolean;
@@ -204,35 +204,35 @@ export interface UnifiedConfig {
 }
 
 // Type aliases for backward compatibility
-export type Config = UnifiedConfig;
-export type CamelCaseConfig = UnifiedConfig;
-export type ModernConfig = UnifiedConfig;
+export type UnifiedConfig = Config;
+export type CamelCaseConfig = Config;
+export type ModernConfig = Config;
 
-// Partial types for specific configurations (deprecated - use Partial<UnifiedConfig> instead)
-export type HintConfig = Pick<UnifiedConfig, 
+// Partial types for specific configurations (deprecated - use Partial<Config> instead)
+export type HintConfig = Pick<Config,
   'hintPosition' | 'maxHints' | 'highlightSelected'>;
-export type WordConfig = Pick<UnifiedConfig,
+export type WordConfig = Pick<Config,
   'useJapanese' | 'enableTinySegmenter' | 'perKeyMinLength' |
   'defaultMinWordLength'>;
-export type PerformanceConfig = Pick<UnifiedConfig,
+export type PerformanceConfig = Pick<Config,
   'maxHints' | 'debounceDelay' | 'performanceLog'>;
-export type DebugConfig = Pick<UnifiedConfig,
+export type DebugConfig = Pick<Config,
   'debugMode' | 'debugCoordinates' | 'performanceLog'>;
 
 /**
- * デフォルト統一設定定数
- * UnifiedConfigの型安全な初期値を定義します。
+ * デフォルト設定定数
+ * Configの型安全な初期値を定義します。
  * 既存のgetDefaultConfig()から値を継承し、完全にフラット化された構造で提供します。
  *
- * @constant {UnifiedConfig} DEFAULT_UNIFIED_CONFIG
+ * @constant {Config} DEFAULT_CONFIG
  * @example
  * ```typescript
- * const config = { ...DEFAULT_UNIFIED_CONFIG, motionCount: 5 };
+ * const config = { ...DEFAULT_CONFIG, motionCount: 5 };
  * console.log(config.enabled);     // true
  * console.log(config.motionCount); // 5
  * ```
  */
-export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
+export const DEFAULT_CONFIG: Config = {
   // Core settings
   enabled: true,
   markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
@@ -292,9 +292,12 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
   useImprovedDetection: true,
 };
 
-// Config interface削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
-// types.ts で type Config = UnifiedConfig として定義されています
+// Backward compatibility alias
+export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = DEFAULT_CONFIG;
+
+// UnifiedConfig interface削除: Process1で型定義の統合実装により削除
+// 代わりにConfigを使用してください
+// config.ts で interface Config として定義されています
 
 /**
  * デフォルト設定を取得する関数 (Process2 Sub4で統一)
@@ -312,9 +315,9 @@ export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = {
  * console.log(config.maxHints);         // 336
  * ```
  */
-export function getDefaultConfig(): UnifiedConfig {
-  // Process4 Sub3-2: 直接UnifiedConfigを返す
-  return getDefaultUnifiedConfig();
+export function getDefaultConfig(): Config {
+  // Process1: 直接Configを返す
+  return DEFAULT_CONFIG;
 }
 
 /**
@@ -355,8 +358,8 @@ export function getDefaultUnifiedConfig(): UnifiedConfig {
  * console.log(config.enabled);         // true (デフォルト値)
  * ```
  */
-export function createMinimalConfig(partialConfig: Partial<UnifiedConfig> = {}): UnifiedConfig {
-  const defaults = getDefaultUnifiedConfig();
+export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config {
+  const defaults = getDefaultConfig();
   return { ...defaults, ...partialConfig };
 }
 
@@ -429,7 +432,7 @@ export function isValidHighlightGroup(name: string): boolean {
  * ```
  */
 export function validateUnifiedConfig(
-  config: Partial<UnifiedConfig>,
+  config: Partial<Config>,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -639,7 +642,7 @@ export function validateUnifiedConfig(
  * @returns バリデーション結果
  */
 export function validateConfig(
-  config: Partial<UnifiedConfig>,
+  config: Partial<Config>,
 ): { valid: boolean; errors: string[] } {
   // 入力されたconfigが数値型のhighlightHintMarkerなどを含む場合、
   // 直接バリデーションする必要がある
@@ -707,9 +710,9 @@ export function validateConfig(
     return { valid: false, errors };
   }
 
-  // Process4 Sub3-2: 直接UnifiedConfigとして扱う
-  const unifiedConfig = config as UnifiedConfig;
-  const result = validateUnifiedConfig(unifiedConfig);
+  // Process1: 直接Configとして扱う
+  const configObj = config as Config;
+  const result = validateUnifiedConfig(configObj);
 
   // Process4 sub3-2-3: camelCase統一 - エラーメッセージはそのまま返す
   // snake_caseは完全に廃止されたため、変換は不要
@@ -747,7 +750,7 @@ export function validateConfig(
  * }
  * ```
  */
-export function mergeConfig(baseConfig: UnifiedConfig, updates: Partial<UnifiedConfig>): UnifiedConfig {
+export function mergeConfig(baseConfig: Config, updates: Partial<Config>): Config {
   // バリデーションを実行
   const validation = validateConfig(updates);
   if (!validation.valid) {
@@ -779,7 +782,7 @@ export function mergeConfig(baseConfig: UnifiedConfig, updates: Partial<UnifiedC
  * console.log(original.markers.length === copy.markers.length - 1); // true
  * ```
  */
-export function cloneConfig(config: UnifiedConfig): UnifiedConfig {
+export function cloneConfig(config: Config): Config {
   return JSON.parse(JSON.stringify(config));
 }
 
@@ -819,7 +822,7 @@ export function cloneConfig(config: UnifiedConfig): UnifiedConfig {
  * ```
  */
 export function getPerKeyValue<T>(
-  config: UnifiedConfig,
+  config: Config,
   key: string,
   perKeyRecord: Record<string, T> | undefined,
   defaultValue: T | undefined,
@@ -968,7 +971,7 @@ export interface NamingValidation {
  */
 // createModernConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
 // 代わりにcreateMinimalConfig()を使用してください
-export function createModernConfig(input: Partial<UnifiedConfig> = {}): UnifiedConfig {
+export function createModernConfig(input: Partial<Config> = {}): Config {
   return createMinimalConfig(input);
 }
 
@@ -1043,7 +1046,7 @@ export function validateNamingConvention(name: string): NamingValidation {
 // getDeprecationWarnings function simplified as part of Process4 Sub2-4
 // SNAKE_TO_CAMEL_MAPPING dependency removed
 export function getDeprecationWarnings(
-  config: Partial<UnifiedConfig>,
+  config: Partial<Config>,
 ): DeprecationWarning[] {
   // Simplified implementation - no longer checks for deprecated properties
   // as hierarchical config system has been removed

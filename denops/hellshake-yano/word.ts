@@ -58,7 +58,7 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   currentKeyContext?: string;
 }
 
-import { CacheType, UnifiedCache } from "./cache.ts";
+import { CacheType, GlobalCache } from "./cache.ts";
 // Segmenter import removed - integrated below
 import type { UnifiedConfig } from "./config.ts";
 import { type Config, getMinLengthForKey } from "./main.ts";
@@ -66,7 +66,7 @@ import { type Config, getMinLengthForKey } from "./main.ts";
 // パフォーマンス設定
 const LARGE_FILE_THRESHOLD = 1000;
 const MAX_WORDS_PER_FILE = 1000;
-const wordDetectionCache = UnifiedCache.getInstance().getCache<string, Word[]>(
+const wordDetectionCache = GlobalCache.getInstance().getCache<string, Word[]>(
   CacheType.WORD_DETECTION,
 );
 
@@ -150,13 +150,13 @@ function resolveConfigType(
 /**
  * KeyBasedWordCacheの統計情報インターフェース
  *
- * UnifiedCache統合版の統計情報を定義します。
- * レガシー互換性とUnifiedCacheの高度な統計の両方を提供します。
+ * GlobalCache統合版の統計情報を定義します。
+ * レガシー互換性とGlobalCacheの高度な統計の両方を提供します。
  */
 export interface KeyBasedWordCacheStats {
   /** 現在のキャッシュサイズ（レガシー互換） */
   size: number;
-  /** キー一覧（レガシー互換、UnifiedCacheでは空配列） */
+  /** キー一覧（レガシー互換、GlobalCacheでは空配列） */
   keys: string[];
   /** キャッシュヒット数 */
   hits: number;
@@ -170,31 +170,31 @@ export interface KeyBasedWordCacheStats {
   cacheType: CacheType;
   /** キャッシュの説明 */
   description: string;
-  /** UnifiedCache統合済みフラグ */
+  /** GlobalCache統合済みフラグ */
   unified: boolean;
 }
 
 /**
  * キーベースの単語キャッシュクラス
- * UnifiedCache統合版
+ * GlobalCache統合版
  */
 export class KeyBasedWordCache {
-  private unifiedCache: UnifiedCache;
-  private wordsCache: ReturnType<UnifiedCache["getCache"]>;
+  private globalCache: GlobalCache;
+  private wordsCache: ReturnType<GlobalCache["getCache"]>;
 
   /**
    * KeyBasedWordCacheのコンストラクタ
    *
-   * UnifiedCacheのWORDSタイプキャッシュを取得して初期化します。
+   * GlobalCacheのWORDSタイプキャッシュを取得して初期化します。
    * エラーが発生した場合はログを出力しますが、フォールバック機能は
-   * 提供しません（UnifiedCacheが利用できない環境では動作不能）。
+   * 提供しません（GlobalCacheが利用できない環境では動作不能）。
    */
   constructor() {
     try {
-      this.unifiedCache = UnifiedCache.getInstance();
-      this.wordsCache = this.unifiedCache.getCache<string, Word[]>(CacheType.WORDS);
+      this.globalCache = GlobalCache.getInstance();
+      this.wordsCache = this.globalCache.getCache<string, Word[]>(CacheType.WORDS);
     } catch (error) {
-      console.error("Failed to initialize KeyBasedWordCache with UnifiedCache:", error);
+      console.error("Failed to initialize KeyBasedWordCache with GlobalCache:", error);
       throw new Error(
         `KeyBasedWordCache initialization failed: ${
           error instanceof Error ? error.message : String(error)
@@ -209,7 +209,7 @@ export class KeyBasedWordCache {
    * @param words - キャッシュする単語リスト
    */
   set(key: string, words: Word[]): void {
-    // UnifiedCache のWORDSキャッシュに保存（浅いコピーで参照汚染防止）
+    // GlobalCache のWORDSキャッシュに保存（浅いコピーで参照汚染防止）
     this.wordsCache.set(key, [...words]);
   }
 
@@ -235,14 +235,14 @@ export class KeyBasedWordCache {
     if (key) {
       this.wordsCache.delete(key);
     } else {
-      this.unifiedCache.clearByType(CacheType.WORDS);
+      this.globalCache.clearByType(CacheType.WORDS);
     }
   }
 
   /**
-   * キャッシュ統計情報を取得（UnifiedCache統合版）
+   * キャッシュ統計情報を取得（GlobalCache統合版）
    *
-   * レガシー互換性を保ちながら、UnifiedCacheの高度な統計情報を提供します。
+   * レガシー互換性を保ちながら、GlobalCacheの高度な統計情報を提供します。
    * 将来的な拡張に備えてメタデータも含めて返します。
    * エラーが発生した場合は、基本的なフォールバック統計を返します。
    *
@@ -250,17 +250,17 @@ export class KeyBasedWordCache {
    */
   getStats(): KeyBasedWordCacheStats {
     try {
-      const unifiedStats = this.unifiedCache.getAllStats();
+      const unifiedStats = this.globalCache.getAllStats();
       const wordStats = unifiedStats.WORDS;
       if (!wordStats) {
         throw new Error("WORDS cache statistics not found");
       }
-      const config = this.unifiedCache.getCacheConfig(CacheType.WORDS);
+      const config = this.globalCache.getCacheConfig(CacheType.WORDS);
       return {
         // レガシー互換フィールド
         size: wordStats.size,
-        keys: [], // UnifiedCacheではキー一覧の取得は提供していないため空配列
-        // UnifiedCache統計情報
+        keys: [], // GlobalCacheではキー一覧の取得は提供していないため空配列
+        // GlobalCache統計情報
         hits: wordStats.hits,
         misses: wordStats.misses,
         hitRate: wordStats.hitRate,
@@ -268,10 +268,10 @@ export class KeyBasedWordCache {
         // メタデータ
         cacheType: CacheType.WORDS,
         description: config.description,
-        unified: true, // UnifiedCache統合済みであることを示すフラグ
+        unified: true, // GlobalCache統合済みであることを示すフラグ
       };
     } catch (error) {
-      console.warn("Failed to retrieve UnifiedCache statistics, returning fallback:", error);
+      console.warn("Failed to retrieve GlobalCache statistics, returning fallback:", error);
       // フォールバック統計情報
       return {
         size: 0,
@@ -1612,7 +1612,7 @@ export function getWordDetectionCacheStats(): {
   return {
     cacheSize: wordDetectionCache.size(),
     cacheKeys: Array.from(wordDetectionCache.keys()),
-    maxCacheSize: UnifiedCache.getInstance().getCacheConfig(CacheType.WORD_DETECTION).size,
+    maxCacheSize: GlobalCache.getInstance().getCacheConfig(CacheType.WORD_DETECTION).size,
     largeFileThreshold: LARGE_FILE_THRESHOLD,
     maxWordsPerFile: MAX_WORDS_PER_FILE,
   };
@@ -2025,7 +2025,7 @@ const sharedTextEncoder = new TextEncoder();
  * 頻繁に使用される文字列のバイト長をキャッシュして性能を向上
  * 統一キャッシュシステムによるLRUアルゴリズムで効率的にメモリ管理
  */
-const byteLengthCache = UnifiedCache.getInstance().getCache<string, number>(CacheType.BYTE_LENGTH);
+const byteLengthCache = GlobalCache.getInstance().getCache<string, number>(CacheType.BYTE_LENGTH);
 
 /**
  * ASCII文字のみかどうかを高速チェック
@@ -2485,7 +2485,7 @@ export enum CharType {
  * @description 文字種判定結果をキャッシュしてパフォーマンスを向上させます。
  * 統一キャッシュシステムのLRU（Least Recently Used）アルゴリズムでサイズ制限を管理します。
  */
-const charTypeCache = UnifiedCache.getInstance().getCache<string, CharType>(CacheType.CHAR_TYPE);
+const charTypeCache = GlobalCache.getInstance().getCache<string, CharType>(CacheType.CHAR_TYPE);
 
 /**
  * 隣接文字解析結果を表すインターフェース
@@ -2806,7 +2806,7 @@ export function clearCharTypeCache(): void {
  * @deprecated process4 sub8-2: このファイルは削除予定です
  * This module provides Japanese text segmentation capabilities using TinySegmenter.
  * Uses the npm @birchill/tiny-segmenter package for accurate segmentation.
- * Integrated with UnifiedCache system for optimal performance.
+ * Integrated with GlobalCache system for optimal performance.
  */
 /**
  * セグメンテーション結果インターフェース
@@ -2840,17 +2840,17 @@ interface SegmentationResult {
 export class TinySegmenter {
   private static instance: TinySegmenter;
   private segmenter: NpmTinySegmenter;
-  private unifiedCache: UnifiedCache;
+  private globalCache: GlobalCache;
   private enabled: boolean;
 
   /**
    * TinySegmenterのコンストラクタ
-   * @description TinySegmenterインスタンスを初期化し、UnifiedCacheとnpmパッケージの設定を行う
+   * @description TinySegmenterインスタンスを初期化し、GlobalCacheとnpmパッケージの設定を行う
    * @since 1.0.0
    */
   constructor() {
     this.segmenter = new NpmTinySegmenter();
-    this.unifiedCache = UnifiedCache.getInstance();
+    this.globalCache = GlobalCache.getInstance();
     this.enabled = true;
   }
 
@@ -2974,8 +2974,8 @@ export class TinySegmenter {
       };
     }
 
-    // Check UnifiedCache first
-    const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+    // Check GlobalCache first
+    const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
     if (cache.has(text)) {
       return {
         segments: cache.get(text)!,
@@ -2991,8 +2991,8 @@ export class TinySegmenter {
       // 後処理を適用
       const segments = this.postProcessSegments(rawSegments);
 
-      // Cache the result in UnifiedCache (LRU handles size limit automatically)
-      const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+      // Cache the result in GlobalCache (LRU handles size limit automatically)
+      const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
       cache.set(text, segments);
 
       return {
@@ -3107,7 +3107,7 @@ export class TinySegmenter {
    * ```
    */
   clearCache(): void {
-    const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+    const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
     cache.clear();
   }
 
@@ -3123,9 +3123,9 @@ export class TinySegmenter {
    * ```
    */
   getCacheStats(): { size: number; maxSize: number; hitRate: number } {
-    const cache = this.unifiedCache.getCache<string, string[]>(CacheType.ANALYSIS);
+    const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
     const stats = cache.getStats();
-    const config = this.unifiedCache.getCacheConfig(CacheType.ANALYSIS);
+    const config = this.globalCache.getCacheConfig(CacheType.ANALYSIS);
 
     return {
       size: stats.size,
@@ -3223,10 +3223,10 @@ export type { SegmentationResult };
 // ========== Integrated from word/context.ts ==========
 
 /**
- * @fileoverview コンテキスト認識による分割調整機能 with UnifiedCache統合
+ * @fileoverview コンテキスト認識による分割調整機能 with GlobalCache統合
  * ファイルタイプと構文コンテキストに基づいて適切な分割ルールを適用
  *
- * TDD Red-Green-Refactor サイクルで実装されたUnifiedCacheシステム統合により、
+ * TDD Red-Green-Refactor サイクルで実装されたGlobalCacheシステム統合により、
  * パフォーマンスとメモリ効率の最適化を実現しています。
  */
 /** 言語別パターン定義 */
@@ -3267,10 +3267,10 @@ export interface SplittingRules {
 }
 
 /**
- * コンテキスト検出器 - UnifiedCache統合版
+ * コンテキスト検出器 - GlobalCache統合版
  *
  * 言語別パターンとシンタックスコンテキストの検出を行い、
- * UnifiedCacheシステムで効率的なキャッシュ管理を実現します。
+ * GlobalCacheシステムで効率的なキャッシュ管理を実現します。
  *
  * ## 主な機能:
  * - 言語別パターンのキャッシュ管理 (CacheType.LANGUAGE_RULES)
@@ -3287,13 +3287,13 @@ export interface SplittingRules {
  */
 export class ContextDetector {
   private readonly defaultRules: SplittingRules;
-  /** UnifiedCacheシステムのインスタンス（シングルトン） */
-  private readonly unifiedCache: UnifiedCache;
+  /** GlobalCacheシステムのインスタンス（シングルトン） */
+  private readonly globalCache: GlobalCache;
 
   /**
    * ContextDetectorのコンストラクタ
    *
-   * デフォルトの分割ルールを設定し、UnifiedCacheシステムのインスタンスを取得します。
+   * デフォルトの分割ルールを設定し、GlobalCacheシステムのインスタンスを取得します。
    * 複数のContextDetectorインスタンスが作成されても、キャッシュは共有されます。
    */
   constructor() {
@@ -3305,7 +3305,7 @@ export class ContextDetector {
       preserveSpecialChars: false,
     };
     // シングルトンパターンによりアプリケーション全体で同一インスタンスを共有
-    this.unifiedCache = UnifiedCache.getInstance();
+    this.globalCache = GlobalCache.getInstance();
   }
 
   /**
@@ -3323,10 +3323,10 @@ export class ContextDetector {
   }
 
   /**
-   * 構文コンテキストの検出（UnifiedCache統合）
+   * 構文コンテキストの検出（GlobalCache統合）
    *
    * テキスト、行番号、ファイルタイプを元にシンタックスコンテキストを検出し、
-   * 結果をUnifiedCache.SYNTAX_CONTEXTにキャッシュします。
+   * 結果をGlobalCache.SYNTAX_CONTEXTにキャッシュします。
    *
    * @param text 対象テキスト
    * @param line 行番号
@@ -3347,8 +3347,8 @@ export class ContextDetector {
     // キャッシュキーを生成
     const cacheKey = `${fileType}:${line}:${text}`;
 
-    // UnifiedCacheから取得を試行
-    const syntaxContextCache = this.unifiedCache.getCache<string, SyntaxContext>(CacheType.SYNTAX_CONTEXT);
+    // GlobalCacheから取得を試行
+    const syntaxContextCache = this.globalCache.getCache<string, SyntaxContext>(CacheType.SYNTAX_CONTEXT);
     const cachedContext = syntaxContextCache.get(cacheKey);
     if (cachedContext !== undefined) {
       return cachedContext;
@@ -3365,7 +3365,7 @@ export class ContextDetector {
       language
     };
 
-    // UnifiedCacheに保存（LRU制限は自動で管理される）
+    // GlobalCacheに保存（LRU制限は自動で管理される）
     syntaxContextCache.set(cacheKey, context);
 
     return context;
@@ -3438,9 +3438,9 @@ export class ContextDetector {
   }
 
   /**
-   * 言語別パターンの取得（UnifiedCache統合）
+   * 言語別パターンの取得（GlobalCache統合）
    *
-   * 指定された言語のパターンをUnifiedCache.LANGUAGE_RULESから取得し、
+   * 指定された言語のパターンをGlobalCache.LANGUAGE_RULESから取得し、
    * キャッシュにない場合は新規作成してキャッシュします。
    *
    * @param language 言語名 (例: 'typescript', 'python', 'markdown')
@@ -3453,7 +3453,7 @@ export class ContextDetector {
    * ```
    */
   private getLanguagePatterns(language: string): LanguageRule {
-    const languageRulesCache = this.unifiedCache.getCache<string, LanguageRule>(CacheType.LANGUAGE_RULES);
+    const languageRulesCache = this.globalCache.getCache<string, LanguageRule>(CacheType.LANGUAGE_RULES);
     const cachedRule = languageRulesCache.get(language);
     if (cachedRule !== undefined) {
       return cachedRule;
@@ -3781,7 +3781,7 @@ export class ContextDetector {
   /**
    * キャッシュクリア（メモリ最適化用）
    *
-   * UnifiedCacheシステムでSYNTAX_CONTEXTキャッシュをクリアします。
+   * GlobalCacheシステムでSYNTAX_CONTEXTキャッシュをクリアします。
    * 言語ルールキャッシュは静的データのため保持されます。
    *
    * @example
@@ -3790,14 +3790,14 @@ export class ContextDetector {
    * ```
    */
   clearCache(): void {
-    this.unifiedCache.clearByType(CacheType.SYNTAX_CONTEXT);
+    this.globalCache.clearByType(CacheType.SYNTAX_CONTEXT);
     // 言語ルールキャッシュは保持（静的データのため）
   }
 
   /**
    * キャッシュ統計の取得（デバッグ用）
    *
-   * UnifiedCacheシステムからSYNTAX_CONTEXTとLANGUAGE_RULESの
+   * GlobalCacheシステムからSYNTAX_CONTEXTとLANGUAGE_RULESの
    * キャッシュ統計情報を取得し、従来のインターフェースと互換性を保ちます。
    *
    * @returns キャッシュ統計情報（従来のインターフェースと互換）
@@ -3809,8 +3809,8 @@ export class ContextDetector {
    * ```
    */
   getCacheStats(): { contextCacheSize: number; languageRuleCacheSize: number } {
-    const syntaxContextStats = this.unifiedCache.getCache(CacheType.SYNTAX_CONTEXT).getStats();
-    const languageRulesStats = this.unifiedCache.getCache(CacheType.LANGUAGE_RULES).getStats();
+    const syntaxContextStats = this.globalCache.getCache(CacheType.SYNTAX_CONTEXT).getStats();
+    const languageRulesStats = this.globalCache.getCache(CacheType.LANGUAGE_RULES).getStats();
 
     return {
       contextCacheSize: syntaxContextStats.size,
@@ -3870,7 +3870,7 @@ export class ContextDetector {
  * Dictionary-based Word Correction System
  *
  * TDD Green Phase Stage 1: Interface definitions and basic implementation
- * Following PLAN.md process1 sub6 - Dictionary cache integration with UnifiedCache
+ * Following PLAN.md process1 sub6 - Dictionary cache integration with GlobalCache
  */
 /**
  * 辞書の設定オプション
@@ -3960,7 +3960,7 @@ export interface WordDictionary {
 /**
  * 単語辞書の実装クラス
  *
- * UnifiedCache.DICTIONARYを使用して効率的なキャッシュ管理を行います。
+ * GlobalCache.DICTIONARYを使用して効率的なキャッシュ管理を行います。
  * キャッシュが有効な場合、hasCustomWord()の結果をLRUアルゴリズムで管理します。
  */
 export class WordDictionaryImpl implements WordDictionary {
@@ -3970,7 +3970,7 @@ export class WordDictionaryImpl implements WordDictionary {
   public mergeRules: Map<string, number> = new Map();
 
   private config: DictionaryConfig;
-  private unifiedCache?: UnifiedCache;
+  private globalCache?: GlobalCache;
   private cacheStats?: CacheStats;
 
   constructor(config: DictionaryConfig = {}) {
@@ -3988,8 +3988,8 @@ export class WordDictionaryImpl implements WordDictionary {
   }
 
   private initializeCache(): void {
-    // UnifiedCache.DICTIONARYを使用してキャッシュを初期化
-    this.unifiedCache = UnifiedCache.getInstance();
+    // GlobalCache.DICTIONARYを使用してキャッシュを初期化
+    this.globalCache = GlobalCache.getInstance();
     this.cacheStats = {
       hits: 0,
       misses: 0,
@@ -4013,14 +4013,14 @@ export class WordDictionaryImpl implements WordDictionary {
   addCustomWord(word: string): void {
     this.customWords.add(word);
     // DICTIONARYキャッシュをクリア（新しい単語の追加により既存キャッシュが無効になる）
-    if (this.unifiedCache) {
-      this.unifiedCache.clearByType(CacheType.DICTIONARY);
+    if (this.globalCache) {
+      this.globalCache.clearByType(CacheType.DICTIONARY);
     }
   }
 
   hasCustomWord(word: string): boolean {
-    if (this.unifiedCache) {
-      const dictionaryCache = this.unifiedCache.getCache<string, boolean>(CacheType.DICTIONARY);
+    if (this.globalCache) {
+      const dictionaryCache = this.globalCache.getCache<string, boolean>(CacheType.DICTIONARY);
 
       // キャッシュヒットの場合
       if (dictionaryCache.has(word)) {
@@ -4044,8 +4044,8 @@ export class WordDictionaryImpl implements WordDictionary {
   removeCustomWord(word: string): void {
     this.customWords.delete(word);
     // DICTIONARYキャッシュから該当単語を削除
-    if (this.unifiedCache) {
-      const dictionaryCache = this.unifiedCache.getCache<string, boolean>(CacheType.DICTIONARY);
+    if (this.globalCache) {
+      const dictionaryCache = this.globalCache.getCache<string, boolean>(CacheType.DICTIONARY);
       dictionaryCache.delete(word);
     }
   }
@@ -4159,13 +4159,13 @@ export class WordDictionaryImpl implements WordDictionary {
   getCacheStats(): CacheStats | null {
     if (!this.cacheStats) return null;
 
-    // UnifiedCacheの統計も含める
-    if (this.unifiedCache) {
-      const unifiedStats = this.unifiedCache.getAllStats();
+    // GlobalCacheの統計も含める
+    if (this.globalCache) {
+      const unifiedStats = this.globalCache.getAllStats();
       const dictionaryStats = unifiedStats.DICTIONARY;
 
-      // UnifiedCacheとローカル統計をマージして返す
-      // 既存APIの互換性を維持しつつ、UnifiedCacheの正確な統計を活用
+      // GlobalCacheとローカル統計をマージして返す
+      // 既存APIの互換性を維持しつつ、GlobalCacheの正確な統計を活用
       return {
         hits: Math.max(this.cacheStats.hits, dictionaryStats.hits),
         misses: Math.max(this.cacheStats.misses, dictionaryStats.misses),

@@ -112,7 +112,7 @@ Deno.test("countedMotions should be strongly typed", () => {
   assertEquals(Array.isArray(config.countedMotions), true);
 
   // 全ての要素が文字列であることを確認（型安全性テスト）
-  config.countedMotions.forEach((key, index) => {
+  config.countedMotions.forEach((key: string, index: number) => {
     assertEquals(typeof key, "string", `countedMotions[${index}] should be string, got ${typeof key}`);
     assertEquals(key.length > 0, true, `countedMotions[${index}] should not be empty`);
   });

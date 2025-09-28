@@ -17,26 +17,27 @@ import {
 } from "./hint.ts";
 import { Core } from "./core.ts";
 import type {
-  Config,
   DebugInfo,
   HighlightColor,
   HintMapping,
   PerformanceMetrics,
   Word,
 } from "./types.ts";
-// Re-export types for backward compatibility
-export type { Config, HighlightColor };
 import {
-  getDefaultUnifiedConfig,
   getPerKeyValue,
   mergeConfig,
-  UnifiedConfig,
-  validateUnifiedConfig,
+  Config,
+  DEFAULT_CONFIG,
+  validateConfig as validateConfigFromConfig,
 } from "./config.ts";
+// Re-export types for backward compatibility
+export type { Config, HighlightColor };
+// Re-export functions for tests
+export { getDefaultConfig } from "./config.ts";
 // commands.ts は core.ts に統合されたため削除
 // lifecycle.ts は core.ts に統合されたため削除
 import { LRUCache } from "./cache.ts";
-let config: UnifiedConfig = getDefaultUnifiedConfig();
+let config: Config = DEFAULT_CONFIG;
 let currentHints: HintMapping[] = [];
 let hintsVisible = false;
 let extmarkNamespace: number | undefined;
@@ -59,7 +60,7 @@ function recordPerformance(
     metrics.shift();
   }
 }
-export function getMinLengthForKey(config: UnifiedConfig | Config, key: string): number {
+export function getMinLengthForKey(config: Config, key: string): number {
   // Check for perKeyMinLength first (highest priority)
   if ('perKeyMinLength' in config && config.perKeyMinLength && typeof config.perKeyMinLength === 'object') {
     const perKeyValue = (config.perKeyMinLength as Record<string, number>)[key];
@@ -89,7 +90,7 @@ export function getMinLengthForKey(config: UnifiedConfig | Config, key: string):
   // Default fallback
   return 3;
 }
-export function getMotionCountForKey(key: string, config: UnifiedConfig | Config): number {
+export function getMotionCountForKey(key: string, config: Config): number {
   // Check for perKeyMotionCount first (highest priority)
   if ('perKeyMotionCount' in config && config.perKeyMotionCount && typeof config.perKeyMotionCount === 'object') {
     const perKeyValue = (config.perKeyMotionCount as Record<string, number>)[key];
@@ -103,7 +104,7 @@ export function getMotionCountForKey(key: string, config: UnifiedConfig | Config
     return config.defaultMotionCount;
   }
 
-  // Check for motionCount (UnifiedConfig)
+  // Check for motionCount (Config)
   if ('motionCount' in config && typeof config.motionCount === 'number') {
     return config.motionCount;
   }
@@ -133,23 +134,11 @@ function clearDebugInfo(): void {
     hintGeneration: [],
   };
 }
-function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
-  const normalized = { ...cfg };
-  if ('enable_word_detection' in normalized) {
-    (normalized as any).enableWordDetection = normalized.enable_word_detection;
-    delete normalized.enable_word_detection;
-  }
-  if ('disable_visual_mode' in normalized) {
-    (normalized as any).disableVisualMode = normalized.disable_visual_mode;
-    delete normalized.disable_visual_mode;
-  }
-  return normalized;
-}
 
-function normalizeBackwardCompatibleFlagsUnified(cfg: Partial<UnifiedConfig>): Partial<UnifiedConfig> {
+export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
   const normalized = { ...cfg };
 
-  // UnifiedConfig では camelCase 形式で直接処理
+  // Config では camelCase 形式で直接処理
   // snake_case から camelCase への変換を行う
   const snakeToCamelMap: Record<string, string> = {
     'motionCount': 'motionCount',
@@ -205,27 +194,27 @@ function normalizeBackwardCompatibleFlagsUnified(cfg: Partial<UnifiedConfig>): P
 
   return normalized;
 }
-function convertConfigForManager(config: UnifiedConfig): WordDetectionManagerConfig {
-  // UnifiedConfigから必要なプロパティを取得（デフォルト値を使用）
+function convertConfigForManager(config: Config): WordDetectionManagerConfig {
+  // Configから必要なプロパティを取得（デフォルト値を使用）
   return {
     // デフォルト値を返す
   } as WordDetectionManagerConfig;
 }
-function syncManagerConfig(config: UnifiedConfig): void {
+function syncManagerConfig(config: Config): void {
   // resetWordDetectionManagerは引数を受け取らない
   resetWordDetectionManager();
 }
 export async function main(denops: Denops): Promise<void> {
   try {
     // initializePluginはcore.tsに統合されているのでCoreクラス経由で呼び出し
-    const core = Core.getInstance(getDefaultUnifiedConfig());
+    const core = Core.getInstance(DEFAULT_CONFIG);
     await core.initializePlugin(denops);
     // g:hellshake_yano_configが未定義の場合は空のオブジェクトをフォールバック
-    const userConfig = await denops.eval('g:hellshake_yano_config').catch(() => ({})) as Partial<UnifiedConfig>;
-    const normalizedUserConfig = normalizeBackwardCompatibleFlagsUnified(userConfig);
-    // UnifiedConfigを直接使用
-    const defaultConfig = getDefaultUnifiedConfig();
-    config = { ...defaultConfig, ...normalizedUserConfig } as UnifiedConfig;
+    const userConfig = await denops.eval('g:hellshake_yano_config').catch(() => ({})) as Partial<Config>;
+    const normalizedUserConfig = normalizeBackwardCompatibleFlags(userConfig);
+    // Configを直接使用
+    const defaultConfig = DEFAULT_CONFIG;
+    config = { ...defaultConfig, ...normalizedUserConfig } as Config;
     // Coreインスタンスの設定を更新（use_japanese, enable_tinysegmenterなどが反映される）
     core.updateConfig(config);
     syncManagerConfig(config);
@@ -308,7 +297,7 @@ export async function main(denops: Denops): Promise<void> {
       async clearDebugInfo(): Promise<void> {
         clearDebugInfo();
       },
-      async getConfig(): Promise<UnifiedConfig> {
+      async getConfig(): Promise<Config> {
         return config;
       },
       async validateConfig(cfg: unknown): Promise<{ valid: boolean; errors: string[] }> {
@@ -362,10 +351,10 @@ export async function main(denops: Denops): Promise<void> {
       async updateConfig(cfg: unknown): Promise<void> {
         if (typeof cfg === "object" && cfg !== null) {
           const core = Core.getInstance(config);
-          const unifiedConfig = cfg as Partial<UnifiedConfig>;
-          core.updateConfig(unifiedConfig);
-          // グローバル設定も更新（直接UnifiedConfigを使用）
-          config = { ...config, ...unifiedConfig };
+          const configUpdate = cfg as Partial<Config>;
+          core.updateConfig(configUpdate);
+          // グローバル設定も更新（直接Configを使用）
+          config = { ...config, ...configUpdate };
           syncManagerConfig(config);
         }
       },
@@ -419,7 +408,7 @@ export async function displayHintsOptimized(
   denops: Denops,
   words: Word[],
   hints: string[],
-  config: UnifiedConfig,
+  config: Config,
   extmarkNamespace?: number,
   fallbackMatchIds?: number[],
 ): Promise<void> {
@@ -434,7 +423,7 @@ let _isRenderingHints = false;
 const HIGHLIGHT_BATCH_SIZE = 15;
 export function displayHintsAsync(
   denops: Denops,
-  config: UnifiedConfig,
+  config: Config,
   hints: HintMapping[],
   extmarkNamespace?: number,
   fallbackMatchIds?: number[],
@@ -450,7 +439,7 @@ export function abortCurrentRendering(): void {
 async function displayHintsBatched(
   denops: Denops,
   hints: HintMapping[],
-  config: UnifiedConfig,
+  config: Config,
   extmarkNamespace?: number,
   fallbackMatchIds?: number[],
 ): Promise<void> {
@@ -532,7 +521,7 @@ export function highlightCandidateHintsAsync(
   denops: Denops,
   input: string,
   hints: HintMapping[],
-  config: UnifiedConfig,
+  config: Config,
   onComplete?: () => void,
 ): void {
   // 既存のタイマーをクリア
@@ -566,7 +555,7 @@ async function highlightCandidateHintsOptimized(
   denops: Denops,
   input: string,
   hints: HintMapping[],
-  config: UnifiedConfig,
+  config: Config,
 ): Promise<void> {
   const candidates = hints.filter(h => h.hint.startsWith(input));
   await clearHintDisplay(denops);
@@ -575,7 +564,7 @@ async function highlightCandidateHintsOptimized(
 async function processExtmarksBatched(
   denops: Denops,
   hints: HintMapping[],
-  config: UnifiedConfig,
+  config: Config,
   extmarkNamespace: number,
 ): Promise<void> {
   for (const hint of hints) {
@@ -589,7 +578,7 @@ async function processExtmarksBatched(
 async function processMatchaddBatched(
   denops: Denops,
   hints: HintMapping[],
-  config: UnifiedConfig,
+  config: Config,
   fallbackMatchIds: number[],
 ): Promise<void> {
   for (const hint of hints) {
@@ -678,16 +667,13 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
     return { valid: false, errors };
   }
 
-  // UnifiedConfigを直接バリデーション
-  const unifiedConfig = cfg as UnifiedConfig;
-  const result = validateUnifiedConfig(unifiedConfig);
+  // Configを直接バリデーション
+  const configObj = cfg as Config;
+  const result = validateConfigFromConfig(configObj);
 
   // Process4 sub3-2-3: camelCase統一 - エラーメッセージはそのまま返す
   // snake_caseは完全に廃止されたため、変換は不要
   return { valid: result.valid, errors: result.errors };
-}
-export function getDefaultConfig(): UnifiedConfig {
-  return getDefaultUnifiedConfig();
 }
 export function validateHighlightGroupName(groupName: string): boolean {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(groupName);

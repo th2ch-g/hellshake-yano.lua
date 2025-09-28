@@ -4,11 +4,11 @@ import type {
   HintPosition,
   HintPositionWithCoordinateSystem,
   Word,
-  Config,
 } from "./types.ts";
+import type { Config } from "./config.ts";
 // Utility functions migrated from hint-utils.ts are now defined in this file
 // Display width calculation functions integrated from utils/display.ts
-import { UnifiedCache, CacheType } from "./cache.ts";
+import { CacheType, GlobalCache } from "./cache.ts";
 import { getMinLengthForKey } from "./main.ts";
 
 // Re-export types for backward compatibility
@@ -20,14 +20,14 @@ export type { HintKeyConfig, HintMapping, HintPosition };
 // HintPositionWithCoordinateSystem interface moved to types.ts for consolidation
 // Use: import type { HintPositionWithCoordinateSystem } from "./types.ts";
 
-const unifiedCache = UnifiedCache.getInstance();
-const hintCache = unifiedCache.getCache<string, string[]>(CacheType.HINTS);
-const assignmentCacheNormal = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_NORMAL);
-const assignmentCacheVisual = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
-const assignmentCacheOther = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
+const globalCache = GlobalCache.getInstance();
+const hintCache = globalCache.getCache<string, string[]>(CacheType.HINTS);
+const assignmentCacheNormal = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_NORMAL);
+const assignmentCacheVisual = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
+const assignmentCacheOther = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
 
 // ===== Display Width Functions (from utils/display.ts) =====
-const CHAR_WIDTH_CACHE = unifiedCache.getCache<number, number>(CacheType.CHAR_WIDTH);
+const CHAR_WIDTH_CACHE = globalCache.getCache<number, number>(CacheType.CHAR_WIDTH);
 const CJK_RANGES = [[0x3000, 0x303F], [0x3040, 0x309F], [0x30A0, 0x30FF], [0x4E00, 0x9FFF], [0xFF00, 0xFFEF]] as const;
 const EMOJI_RANGES = [[0x1F600, 0x1F64F], [0x1F300, 0x1F5FF], [0x1F680, 0x1F6FF], [0x1F1E6, 0x1F1FF]] as const;
 
@@ -409,18 +409,18 @@ function createSingleHintMapping(
 
 /**
  * 割り当てキャッシュに保存
- * @param cache - 保存先のUnifiedCache LRUCacheインスタンス
+ * @param cache - 保存先のGlobalCache LRUCacheインスタンス
  * @param cacheKey - cacheエントリのキー
  * @param sortedWords - cacheする並び替え済み単語配列
  * @since 1.0.0
  * @internal
  */
 function storeAssignmentCache(
-  cache: ReturnType<typeof unifiedCache.getCache>,
+  cache: ReturnType<typeof globalCache.getCache>,
   cacheKey: string,
   sortedWords: Word[],
 ): void {
-  // UnifiedCacheのLRUアルゴリズムが自動的にサイズ管理を行う
+  // GlobalCacheのLRUアルゴリズムが自動的にサイズ管理を行う
   cache.set(cacheKey, sortedWords.slice());
 }
 
@@ -935,18 +935,18 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
 }
 
 /**
- * UnifiedCacheを使用したhintシステムの詳細統計情報を取得
- * @returns UnifiedCacheからの詳細な統計情報とパフォーマンス指標
+ * GlobalCacheを使用したhintシステムの詳細統計情報を取得
+ * @returns GlobalCacheからの詳細な統計情報とパフォーマンス指標
  * @since 1.0.0
  * @example
  * ```typescript
- * const stats = getUnifiedCacheStats();
+ * const stats = getGlobalCacheStats();
  * console.log(`HINTS ヒット率: ${stats.HINTS.hitRate}`);
  * console.log(`キャッシュ総サイズ: ${stats.totalSize}`);
  * ```
  */
-export function getUnifiedCacheStats() {
-  const allStats = unifiedCache.getAllStats();
+export function getGlobalCacheStats() {
+  const allStats = globalCache.getAllStats();
   const hintRelatedTypes = [
     'HINTS',
     'HINT_ASSIGNMENT_NORMAL',
@@ -1445,7 +1445,7 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
  * @since 1.0.0
  * @internal
  */
-let adjacencyCache = UnifiedCache.getInstance().getCache<string, { word: Word; adjacentWords: Word[] }[]>(CacheType.ADJACENCY);
+let adjacencyCache = GlobalCache.getInstance().getCache<string, { word: Word; adjacentWords: Word[] }[]>(CacheType.ADJACENCY);
 
 /**
  * 隣接する単語を検出する

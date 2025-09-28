@@ -1,5 +1,5 @@
 /**
- * 統一キャッシュシステム
+ * グローバルキャッシュシステム
  * 複数のキャッシュ実装を1つに統合し、型安全なアクセスを提供します。
  *
  * TDD (Test-Driven Development) により開発され、Red-Green-Refactor サイクルに従って
@@ -14,7 +14,7 @@
  *
  * @example
  * ```typescript
- * const cache = UnifiedCache.getInstance();
+ * const cache = GlobalCache.getInstance();
  * const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
  * wordsCache.set("buffer1", ["word1", "word2"]);
  * const words = wordsCache.get("buffer1");
@@ -269,9 +269,9 @@ interface CacheConfig {
 }
 
 /**
- * 統一キャッシュクラス（シングルトンパターン）
+ * グローバルキャッシュクラス（シングルトンパターン）
  *
- * 各CacheTypeに対応するLRUCacheインスタンスを統一管理し、
+ * 各CacheTypeに対応するLRUCacheインスタンスをグローバルに管理し、
  * 型安全で効率的なキャッシュシステムを提供します。
  *
  * ## 設計原則
@@ -282,7 +282,7 @@ interface CacheConfig {
  *
  * @example
  * ```typescript
- * const cache = UnifiedCache.getInstance();
+ * const cache = GlobalCache.getInstance();
  *
  * // 型安全な操作
  * const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
@@ -293,8 +293,8 @@ interface CacheConfig {
  * console.log(`Words cache hit rate: ${stats.WORDS.hitRate}`);
  * ```
  */
-export class UnifiedCache {
-  private static instance: UnifiedCache;
+export class GlobalCache {
+  private static instance: GlobalCache;
   private readonly caches: Map<CacheType, LRUCache<any, any>>;
   private readonly cacheConfigs: Record<CacheType, CacheConfig>;
 
@@ -340,13 +340,13 @@ export class UnifiedCache {
 
   /**
    * シングルトンインスタンスを取得
-   * @returns UnifiedCacheのインスタンス
+   * @returns GlobalCacheのインスタンス
    */
-  public static getInstance(): UnifiedCache {
-    if (!UnifiedCache.instance) {
-      UnifiedCache.instance = new UnifiedCache();
+  public static getInstance(): GlobalCache {
+    if (!GlobalCache.instance) {
+      GlobalCache.instance = new GlobalCache();
     }
-    return UnifiedCache.instance;
+    return GlobalCache.instance;
   }
 
   /**
@@ -375,7 +375,7 @@ export class UnifiedCache {
    *
    * @example
    * ```typescript
-   * const cache = UnifiedCache.getInstance();
+   * const cache = GlobalCache.getInstance();
    * const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
    * wordsCache.set("file1", ["word1", "word2"]);
    * ```
@@ -401,7 +401,7 @@ export class UnifiedCache {
    *
    * @example
    * ```typescript
-   * const cache = UnifiedCache.getInstance();
+   * const cache = GlobalCache.getInstance();
    * const stats = cache.getAllStats();
    * console.log(`Words cache hit rate: ${stats.WORDS.hitRate}`);
    * console.log(`Total caches: ${Object.keys(stats).length}`);
@@ -425,7 +425,7 @@ export class UnifiedCache {
    *
    * @example
    * ```typescript
-   * const cache = UnifiedCache.getInstance();
+   * const cache = GlobalCache.getInstance();
    * cache.clearAll(); // 全キャッシュをリセット
    * ```
    */
@@ -445,7 +445,7 @@ export class UnifiedCache {
    *
    * @example
    * ```typescript
-   * const cache = UnifiedCache.getInstance();
+   * const cache = GlobalCache.getInstance();
    * cache.clearByType(CacheType.TEMP); // 一時キャッシュのみクリア
    * ```
    */
@@ -482,3 +482,9 @@ export class UnifiedCache {
     return config;
   }
 }
+
+/**
+ * 後方互換性のためのエイリアス
+ * @deprecated GlobalCacheを使用してください
+ */
+export const UnifiedCache = GlobalCache;
