@@ -5039,6 +5039,7 @@ export class WordDetectionManager {
     this.detectors.set(detector.name, detector);
   }
 
+
   /**
    * メイン単語検出メソッド
    * @description テキストから単語を検出し、キャッシュ、エラーハンドリング、フォールバック機能を活用して結果を返す

@@ -108,9 +108,13 @@
 - [ ] deno testでの動作確認
 
 ### process10 ユニットテスト
-- [ ] TinySegmenterWordDetectorのテスト作成
-- [ ] 日本語・英語混在テキストでの動作確認
-- [ ] 各strategyでの切り替え動作確認
+- [x] TinySegmenterWordDetectorのテスト作成
+- [x] 日本語・英語混在テキストでの動作確認
+- [x] 各strategyでの切り替え動作確認
+- [x] TDD Red-Green-Refactorアプローチでの統合テスト実装
+- [x] 実用的なシナリオテスト（プログラミングコード、技術文書）
+- [x] エラーハンドリングと境界条件テスト
+- [x] パフォーマンステスト
 
 ### process50 フォローアップ
 #### sub1 暫定対応の修正
