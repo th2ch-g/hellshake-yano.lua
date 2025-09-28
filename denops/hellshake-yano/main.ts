@@ -141,6 +141,7 @@ export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<
     "countedMotions": "countedMotions",
     "useNumbers": "useNumbers",
     "highlightSelected": "highlightSelected",
+    "highlight_selected": "highlightSelected",
     "debugCoordinates": "debugCoordinates",
     "singleCharKeys": "singleCharKeys",
     "multiCharKeys": "multiCharKeys",
@@ -201,8 +202,8 @@ export async function main(denops: Denops): Promise<void> {
     // initializePluginはcore.tsに統合されているのでCoreクラス経由で呼び出し
     const core = Core.getInstance(DEFAULT_CONFIG);
     await core.initializePlugin(denops);
-    // g:hellshake_yano_configが未定義の場合は空のオブジェクトをフォールバック
-    const userConfig = await denops.eval("g:hellshake_yano_config").catch(() => ({})) as Partial<
+    // g:hellshake_yanoが未定義の場合は空のオブジェクトをフォールバック
+    const userConfig = await denops.eval("g:hellshake_yano").catch(() => ({})) as Partial<
       Config
     >;
     const normalizedUserConfig = normalizeBackwardCompatibleFlags(userConfig);
@@ -346,9 +347,11 @@ export async function main(denops: Denops): Promise<void> {
         if (typeof cfg === "object" && cfg !== null) {
           const core = Core.getInstance(config);
           const configUpdate = cfg as Partial<Config>;
-          core.updateConfig(configUpdate);
+          // 正規化を追加（snake_case -> camelCase変換）
+          const normalizedConfig = normalizeBackwardCompatibleFlags(configUpdate);
+          core.updateConfig(normalizedConfig);
           // グローバル設定も更新（直接Configを使用）
-          config = { ...config, ...configUpdate };
+          config = { ...config, ...normalizedConfig };
           syncManagerConfig(config);
         }
       },
@@ -570,7 +573,7 @@ async function processExtmarksBatched(
       position.line - 1,
       position.col - 1,
       {
-        virt_text: [[hint.hint, "Search"]],
+        virt_text: [[hint.hint, "HellshakeYanoMarker"]],
         virt_text_pos: "overlay",
       },
     );
@@ -585,7 +588,7 @@ async function processMatchaddBatched(
   for (const hint of hints) {
     const position = calculateHintPosition(hint.word, "offset");
     const pattern = `\\%${position.line}l\\%${position.col}c.\\{${hint.hint.length}}`;
-    const matchId = await denops.call("matchadd", "Search", pattern) as number;
+    const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern) as number;
     fallbackMatchIds.push(matchId);
   }
 }

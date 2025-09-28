@@ -571,10 +571,7 @@ export class Core {
         try {
           const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
           await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
-
-          // 候補ハイライトもクリア
-          const candidateNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_candidate_highlights") as number;
-          await denops.call("nvim_buf_clear_namespace", bufnr, candidateNamespace, 0, -1);
+          // 注：候補ハイライトも同じnamespaceを使用するため、上記のクリアで両方削除される
         } catch (error) {
           // extmarkのクリアに失敗した場合はログに記録するが処理は続行
           console.warn("[Core] hideHintsOptimized extmark clear error:", error);
@@ -1445,9 +1442,8 @@ export class Core {
       const shouldHighlight = config.highlightSelected && !singleCharTarget;
 
       if (shouldHighlight) {
-        // 非同期版を使用してメインスレッドをブロックしない
-        // awaitを使用せず非同期実行することで、ユーザー入力の応答性を維持
-        this.highlightCandidateHintsAsync(denops, currentHints, inputChar, { mode: "normal" });
+        // 同期的に即座に実行してハイライトを確実に適用
+        await this.highlightCandidateHintsSync(denops, currentHints, inputChar, { mode: "normal" });
       }
 
       // 第2文字の入力を待機
@@ -2292,27 +2288,12 @@ export class Core {
           return;
         }
 
-        // 候補ヒントをフィルタリング
-        const candidateHints = hintMappings.filter(mapping =>
-          mapping.hint.startsWith(partialInput)
-        );
-
-        // 中断チェック
-        if (signal?.aborted) {
-          return;
-        }
-
-        // 候補がない場合は何もしない
-        if (candidateHints.length === 0) {
-          return;
-        }
-
         const mode = config.mode || "normal";
         const bufnr = await denops.call("bufnr", "%") as number;
 
         // 候補ヒントをハイライト表示
-        // extmarkを使って候補をハイライト
-        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_candidate_highlights") as number;
+        // 元のヒントと同じnamespaceを使って全ヒントを再描画（重複を防ぐため）
+        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
 
         // 既存のハイライトをクリア
         await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
@@ -2322,8 +2303,11 @@ export class Core {
           return;
         }
 
-        // 候補ヒントにハイライトを適用
-        for (const mapping of candidateHints) {
+        // 全ヒントを再描画（候補かどうかでハイライトグループを切り替え）
+        let candidateCount = 0;
+        let nonCandidateCount = 0;
+
+        for (const mapping of hintMappings) {
           // 中断チェック
           if (signal?.aborted) {
             return;
@@ -2333,6 +2317,13 @@ export class Core {
           const hintLine = word.line;
           const hintCol = mapping.hintCol || word.col;
           const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+          // 候補かどうか判定
+          const isCandidate = hint.startsWith(partialInput);
+          const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+
+          if (isCandidate) candidateCount++;
+          else nonCandidateCount++;
 
           // Neovim用の0ベース座標に変換
           const nvimLine = hintLine - 1;
@@ -2346,9 +2337,9 @@ export class Core {
               nvimLine,
               nvimCol,
               {
-                "end_col": nvimCol + hint.length,
-                "hl_group": "HellshakeYanoCandidateHighlight", // 候補用ハイライトグループ
-                "priority": 1001, // 通常のヒントより高い優先度
+                "virt_text": [[hint, highlightGroup]], // 候補かどうかでハイライトグループを切り替え
+                "virt_text_pos": "overlay",
+                "priority": isCandidate ? 1001 : 1000, // 候補は高優先度
               }
             );
           } catch (error) {
@@ -2364,6 +2355,81 @@ export class Core {
         console.error("[Core] highlightCandidateHintsAsync error:", error);
       }
     }, delay) as unknown as number;
+  }
+
+  /**
+   * 候補ヒントを同期的にハイライト表示（即座に反映）
+   * @param denops - Denops インスタンス
+   * @param hintMappings - ヒントマッピングの配列
+   * @param partialInput - 部分的な入力文字列
+   * @param config - 設定オプション
+   */
+  async highlightCandidateHintsSync(
+    denops: Denops,
+    hintMappings: HintMapping[],
+    partialInput: string,
+    config: { mode?: "normal" | "visual" | "operator" } = {}
+  ): Promise<void> {
+    try {
+      // 空の部分入力の場合は何もしない
+      if (!partialInput) {
+        return;
+      }
+
+      const mode = config.mode || "normal";
+      const bufnr = await denops.call("bufnr", "%") as number;
+
+      // 候補ヒントをハイライト表示
+      // 元のヒントと同じnamespaceを使って全ヒントを再描画（重複を防ぐため）
+      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+
+      // 既存のハイライトをクリア
+      await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+
+      // 全ヒントを再描画（候補かどうかでハイライトグループを切り替え）
+      let candidateCount = 0;
+      let nonCandidateCount = 0;
+
+      for (const mapping of hintMappings) {
+        const { word, hint } = mapping;
+        const hintLine = word.line;
+        const hintCol = mapping.hintCol || word.col;
+        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+        // 候補かどうか判定
+        const isCandidate = hint.startsWith(partialInput);
+        const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+
+        if (isCandidate) candidateCount++;
+        else nonCandidateCount++;
+
+        // Neovim用の0ベース座標に変換
+        const nvimLine = hintLine - 1;
+        const nvimCol = hintByteCol - 1;
+
+        try {
+          await denops.call(
+            "nvim_buf_set_extmark",
+            bufnr,
+            extmarkNamespace,
+            nvimLine,
+            nvimCol,
+            {
+              "virt_text": [[hint, highlightGroup]], // 候補かどうかでハイライトグループを切り替え
+              "virt_text_pos": "overlay",
+              "priority": isCandidate ? 1001 : 1000, // 候補は高優先度
+            }
+          );
+        } catch (error) {
+          // 個別のextmarkエラーは無視（バッファが変更された可能性）
+          console.warn("[Core] highlightCandidateHintsSync extmark error:", error);
+        }
+      }
+
+      console.log(`[Core] highlightCandidateHintsSync completed: candidates=${candidateCount}, non-candidates=${nonCandidateCount}`);
+    } catch (error) {
+      console.error("[Core] highlightCandidateHintsSync error:", error);
+    }
   }
 
   // ===== Commands Integration Methods (TDD Green Phase) =====

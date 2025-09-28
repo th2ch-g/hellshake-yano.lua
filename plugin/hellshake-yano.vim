@@ -160,6 +160,81 @@ call s:validate_config()
 highlight default link HellshakeYanoMarker DiffAdd
 highlight default link HellshakeYanoMarkerCurrent DiffText
 
+" HEXカラーを256色に変換する関数
+function! s:hex_to_256(hex) abort
+  " #記号を除去
+  let l:hex_value = substitute(a:hex, '^#', '', '')
+
+  " RGBに変換
+  let l:r = str2nr(l:hex_value[0:1], 16)
+  let l:g = str2nr(l:hex_value[2:3], 16)
+  let l:b = str2nr(l:hex_value[4:5], 16)
+
+  " 256色パレットの最も近い色を見つける
+  " 簡易的な実装：16-231の色キューブから選択
+  if l:r == l:g && l:g == l:b
+    " グレースケール
+    if l:r < 8
+      return 16
+    elseif l:r < 18
+      return 232
+    elseif l:r < 28
+      return 233
+    elseif l:r < 38
+      return 234
+    elseif l:r < 48
+      return 235
+    elseif l:r < 58
+      return 236
+    elseif l:r < 68
+      return 237
+    elseif l:r < 78
+      return 238
+    elseif l:r < 88
+      return 239
+    elseif l:r < 98
+      return 240
+    elseif l:r < 108
+      return 241
+    elseif l:r < 118
+      return 242
+    elseif l:r < 128
+      return 243
+    elseif l:r < 138
+      return 244
+    elseif l:r < 148
+      return 245
+    elseif l:r < 158
+      return 246
+    elseif l:r < 168
+      return 247
+    elseif l:r < 178
+      return 248
+    elseif l:r < 188
+      return 249
+    elseif l:r < 198
+      return 250
+    elseif l:r < 208
+      return 251
+    elseif l:r < 218
+      return 252
+    elseif l:r < 228
+      return 253
+    elseif l:r < 238
+      return 254
+    else
+      return 255
+    endif
+  endif
+
+  " 色キューブから最も近い色を選択
+  let l:r_index = l:r < 48 ? 0 : l:r < 115 ? 1 : l:r < 155 ? 2 : l:r < 195 ? 3 : l:r < 235 ? 4 : 5
+  let l:g_index = l:g < 48 ? 0 : l:g < 115 ? 1 : l:g < 155 ? 2 : l:g < 195 ? 3 : l:g < 235 ? 4 : 5
+  let l:b_index = l:b < 48 ? 0 : l:b < 115 ? 1 : l:b < 155 ? 2 : l:b < 195 ? 3 : l:b < 235 ? 4 : 5
+
+  return 16 + (36 * l:r_index) + (6 * l:g_index) + l:b_index
+endfunction
+
 " カスタムハイライト色を適用する関数（fg/bg対応）
 function! s:apply_custom_highlights() abort
   " highlight_hint_marker の設定適用
@@ -212,8 +287,9 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
         call s:validate_color_value(a:color_config.fg)
         let l:fg_color = hellshake_yano#normalize_color_name(a:color_config.fg)
         if a:color_config.fg =~# '^#'
-          " 16進数色の場合はguifgのみ
+          " 16進数色の場合はguifgとctermfgの両方を設定
           call add(l:cmd_parts, 'guifg=' . a:color_config.fg)
+          call add(l:cmd_parts, 'ctermfg=' . s:hex_to_256(a:color_config.fg))
         else
           " 色名の場合はctermfgとguifgの両方
           call add(l:cmd_parts, 'ctermfg=' . l:fg_color)
@@ -231,8 +307,9 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
         call s:validate_color_value(a:color_config.bg)
         let l:bg_color = hellshake_yano#normalize_color_name(a:color_config.bg)
         if a:color_config.bg =~# '^#'
-          " 16進数色の場合はguibgのみ
+          " 16進数色の場合はguibgとctermbgの両方を設定
           call add(l:cmd_parts, 'guibg=' . a:color_config.bg)
+          call add(l:cmd_parts, 'ctermbg=' . s:hex_to_256(a:color_config.bg))
         else
           " 色名の場合はctermbgとguibgの両方
           call add(l:cmd_parts, 'ctermbg=' . l:bg_color)
@@ -348,6 +425,10 @@ function! s:on_denops_ready() abort
   " ユーザー設定をdenops側に送信（TypeScript側でデフォルト値とマージ）
   call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
 endfunction
+
+" プラグインの初期化を遅延実行
+" 初回起動時にハイライトを適用
+call s:apply_custom_highlights()
 
 " プラグインの初期化を遅延実行
 " denopsが起動してから初期化する

@@ -52,7 +52,6 @@ let g:hellshake_yano = {
   \ 'motion_count': 3,
   \ 'motion_timeout': 2000,
   \ 'hint_position': 'start',
-  \ 'visual_hint_position': 'end',
   \ 'trigger_on_hjkl': v:true,
   \ 'counted_motions': [],
   \ 'enabled': v:true,
@@ -78,7 +77,6 @@ let g:hellshake_yano = {
 | `per_key_motion_count`          | 辞書        | {}              | キーごとのモーションカウント設定                  |
 | `motion_timeout`                | 数値        | 2000            | モーションカウントのタイムアウト（ミリ秒）        |
 | `hint_position`                 | 文字列      | 'start'         | ヒントの表示位置（'start'または'end'）            |
-| `visual_hint_position`          | 文字列      | 'end'           | Visual modeでのヒント表示位置                     |
 | `trigger_on_hjkl`               | 真偽値      | v:true          | hjkl移動でのトリガーを有効化                      |
 | `counted_motions`               | 配列        | []              | カスタムモーションキー（trigger_on_hjklを上書き） |
 | `enabled`                       | 真偽値      | v:true          | プラグインの有効/無効                             |
@@ -348,24 +346,6 @@ modeでは単語の語尾からヤンクすることが多いため、この機�
 
 #### 設定例
 
-```vim
-let g:hellshake_yano = {
-  \ 'hint_position': 'start',         " Normal modeでは単語の先頭
-  \ 'visual_hint_position': 'end',    " Visual modeでは単語の語尾（デフォルト）
-  \ }
-```
-
-#### visual_hint_positionの値
-
-- `'end'`（デフォルト）: Visual modeで単語の語尾にヒントを表示し、ジャンプも語尾へ
-- `'start'`: 常に単語の先頭にヒントを表示
-- `'same'`: Normal modeと同じ設定（`hint_position`）に従う
-
-#### ユースケース
-
-**語尾からの選択（推奨）**
-
-- Visual modeで単語を選択する際、カーソルは通常語尾に位置
 
 ### 辞書システム
 
@@ -458,14 +438,6 @@ let g:hellshake_yano_dictionary_path = '~/.config/my-dict.json'
 let g:hellshake_yano_use_builtin_dict = v:true
 let g:hellshake_yano_dictionary_merge = 'merge'  " または 'override'
 ```
-- 語尾にヒントが表示されることで、自然な選択フローを実現
-- 特に日本語テキストで有効
-
-**統一された表示**
-
-- `visual_hint_position: 'same'`を設定すると、モードに関係なく一貫した表示
-- 混乱を避けたいユーザー向け
-
 ### キーごとのモーションカウント設定
 
 プラグインは**キーごとのモーションカウント**設定をサポートし、異なるキーが異なる押下回数でヒントをトリガーできます。これにより、異なるモーションタイプに最適なユーザー体験を実現します。
