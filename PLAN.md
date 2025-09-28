@@ -147,11 +147,11 @@ denops/hellshake-yano/
 
 #### sub5 最終確認と調整
 @target: denops/hellshake-yano/
-- [ ] 不要なimport文のクリーンアップ
-- [ ] `deno check denops/hellshake-yano/*.ts`で型チェック
-- [ ] `deno test tests/*.ts`でテスト実行（503/563パス維持）
-- [ ] 7ファイルのみ存在することを確認
-  - [ ] `ls -la denops/hellshake-yano/*.ts | wc -l`で確認
+- [x] 不要なimport文のクリーンアップ
+- [x] `deno check denops/hellshake-yano/*.ts`で型チェック
+- [x] `deno test tests/*.ts`でテスト実行（504/563パス達成）
+- [x] 7ファイルのみ存在することを確認
+  - [x] `ls -la denops/hellshake-yano/*.ts | wc -l`で確認
 
 ### process10 ユニットテスト
 #### sub1 テストファイルのimportパス修正
@@ -169,6 +169,7 @@ denops/hellshake-yano/
 ### process100 リファクタリング
 #### sub1 各ファイルの最適化
 @target: 7つの統合ファイル
+- [ ] 統合により不要になったファイルの削除
 - [ ] 重複コードの削除
 - [ ] 未使用関数の削除
 - [ ] 型定義の整理

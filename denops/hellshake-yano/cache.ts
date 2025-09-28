@@ -254,7 +254,7 @@ export enum CacheType {
   /** 隣接単語のキャッシュ */
   ADJACENCY = "ADJACENCY",
   /** 単語検出のキャッシュ */
-  WORD_DETECTION = "WORD_DETECTION"
+  WORD_DETECTION = "WORD_DETECTION",
 }
 
 /**
@@ -311,11 +311,23 @@ export class UnifiedCache {
       [CacheType.DISPLAY]: { size: 200, description: "表示情報のキャッシュ" },
       [CacheType.ANALYSIS]: { size: 300, description: "解析結果のキャッシュ" },
       [CacheType.TEMP]: { size: 100, description: "一時的なデータのキャッシュ" },
-      [CacheType.HINT_ASSIGNMENT_NORMAL]: { size: 100, description: "ノーマルモード用ヒント割り当てキャッシュ" },
-      [CacheType.HINT_ASSIGNMENT_VISUAL]: { size: 100, description: "ビジュアルモード用ヒント割り当てキャッシュ" },
-      [CacheType.HINT_ASSIGNMENT_OTHER]: { size: 100, description: "その他モード用ヒント割り当てキャッシュ" },
+      [CacheType.HINT_ASSIGNMENT_NORMAL]: {
+        size: 100,
+        description: "ノーマルモード用ヒント割り当てキャッシュ",
+      },
+      [CacheType.HINT_ASSIGNMENT_VISUAL]: {
+        size: 100,
+        description: "ビジュアルモード用ヒント割り当てキャッシュ",
+      },
+      [CacheType.HINT_ASSIGNMENT_OTHER]: {
+        size: 100,
+        description: "その他モード用ヒント割り当てキャッシュ",
+      },
       [CacheType.LANGUAGE_RULES]: { size: 50, description: "言語ルールのキャッシュ" },
-      [CacheType.SYNTAX_CONTEXT]: { size: 200, description: "シンタックスコンテキストのキャッシュ" },
+      [CacheType.SYNTAX_CONTEXT]: {
+        size: 200,
+        description: "シンタックスコンテキストのキャッシュ",
+      },
       [CacheType.DICTIONARY]: { size: 2000, description: "辞書データのキャッシュ" },
       [CacheType.CHAR_WIDTH]: { size: 500, description: "文字幅計算のキャッシュ" },
       [CacheType.CHAR_TYPE]: { size: 1000, description: "文字種判定のキャッシュ" },
@@ -373,7 +385,7 @@ export class UnifiedCache {
     if (!cache) {
       const availableTypes = Array.from(this.caches.keys()).join(", ");
       throw new Error(
-        `Cache for type '${type}' not found. Available types: ${availableTypes}`
+        `Cache for type '${type}' not found. Available types: ${availableTypes}`,
       );
     }
     return cache as LRUCache<K, V>;
