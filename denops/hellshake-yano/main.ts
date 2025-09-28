@@ -1,5 +1,5 @@
 /**
- * @fileoverview Hellshake-Yano.vim main entry point
+ * @fileoverview Hellshake-Yano.vim メインエントリーポイント
  */
 import type { Denops } from "@denops/std";
 import { detectWordsWithManager } from "./word.ts";
@@ -19,24 +19,44 @@ import {
   mergeConfig,
   validateConfig as validateConfigFromConfig,
 } from "./config.ts";
-// Re-export types for backward compatibility
+// 後方互換性のための型の再エクスポート
 export type { Config, HighlightColor };
-// Re-export functions for tests
+// テスト用関数の再エクスポート
 export { getDefaultConfig } from "./config.ts";
 import { LRUCache } from "./cache.ts";
+/** プラグインの設定 */
 let config: Config = DEFAULT_CONFIG;
+
+/** 現在のヒントのマッピング */
 let currentHints: HintMapping[] = [];
+
+/** ヒントが表示されているかどうか */
 let hintsVisible = false;
+
+/** Neovim の extmark 名前空間 */
 let extmarkNamespace: number | undefined;
+
+/** matchadd のフォールバック用 ID リスト */
 let fallbackMatchIds: number[] = [];
+
+/** 単語キャッシュ（最大100エントリ） */
 const wordsCache = new LRUCache<string, Word[]>(100);
+
+/** ヒントキャッシュ（最大50エントリ） */
 const hintsCache = new LRUCache<string, string[]>(50);
+
+/** パフォーマンス計測データ */
 let performanceMetrics: PerformanceMetrics = {
   showHints: [],
   hideHints: [],
   wordDetection: [],
   hintGeneration: [],
 };
+/**
+ * パフォーマンス計測データを記録する
+ * @param operation - 計測対象の操作種別
+ * @param duration - 実行時間（ミリ秒）
+ */
 function recordPerformance(
   operation: keyof PerformanceMetrics,
   duration: number,
@@ -47,6 +67,12 @@ function recordPerformance(
     metrics.shift();
   }
 }
+/**
+ * 指定されたキーの最小単語長を取得する
+ * @param config - プラグイン設定
+ * @param key - 対象のキー
+ * @returns 最小単語長（デフォルト: 3）
+ */
 export function getMinLengthForKey(config: Config, key: string): number {
   // Check for perKeyMinLength first (highest priority)
   if (
@@ -80,6 +106,12 @@ export function getMinLengthForKey(config: Config, key: string): number {
   // Default fallback
   return 3;
 }
+/**
+ * 指定されたキーのモーション回数を取得する
+ * @param key - 対象のキー
+ * @param config - プラグイン設定
+ * @returns モーション回数（デフォルト: 2）
+ */
 export function getMotionCountForKey(key: string, config: Config): number {
   // Check for perKeyMotionCount first (highest priority)
   if (
@@ -110,6 +142,10 @@ export function getMotionCountForKey(key: string, config: Config): number {
   // Default fallback
   return 2;
 }
+/**
+ * デバッグ情報を収集する
+ * @returns 現在のデバッグ情報
+ */
 function collectDebugInfo(): DebugInfo {
   return {
     hintsVisible,
@@ -119,6 +155,9 @@ function collectDebugInfo(): DebugInfo {
     timestamp: Date.now(),
   };
 }
+/**
+ * デバッグ情報をクリアする
+ */
 function clearDebugInfo(): void {
   performanceMetrics = {
     showHints: [],
@@ -128,6 +167,12 @@ function clearDebugInfo(): void {
   };
 }
 
+/**
+ * 後方互換性のある設定フラグを正規化する
+ * snake_case から camelCase への変換を行う
+ * @param cfg - 部分的な設定オブジェクト
+ * @returns 正規化された設定オブジェクト
+ */
 export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
   const normalized = { ...cfg };
 
@@ -187,16 +232,30 @@ export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<
 
   return normalized;
 }
+/**
+ * Config から WordDetectionManagerConfig に変換する
+ * @param config - プラグイン設定
+ * @returns WordDetectionManager 用の設定
+ */
 function convertConfigForManager(config: Config): WordDetectionManagerConfig {
   // Configから必要なプロパティを取得（デフォルト値を使用）
   return {
     // デフォルト値を返す
   } as WordDetectionManagerConfig;
 }
+/**
+ * WordDetectionManager の設定を同期する
+ * @param config - プラグイン設定
+ */
 function syncManagerConfig(config: Config): void {
   // resetWordDetectionManagerは引数を受け取らない
   resetWordDetectionManager();
 }
+/**
+ * プラグインのメインエントリーポイント
+ * @param denops - Denops インスタンス
+ * @throws {Error} プラグインの初期化に失敗した場合
+ */
 export async function main(denops: Denops): Promise<void> {
   try {
     // initializePluginはcore.tsに統合されているのでCoreクラス経由で呼び出し
@@ -379,6 +438,12 @@ export async function main(denops: Denops): Promise<void> {
     throw error;
   }
 }
+/**
+ * 最適化された単語検出（キャッシュ機能付き）
+ * @param denops - Denops インスタンス
+ * @param bufnr - バッファ番号
+ * @returns 検出された単語の配列
+ */
 export async function detectWordsOptimized(denops: Denops, bufnr: number): Promise<Word[]> {
   const cacheKey = `detectWords:${bufnr}`;
   const cached = wordsCache.get(cacheKey);
@@ -391,6 +456,12 @@ export async function detectWordsOptimized(denops: Denops, bufnr: number): Promi
   wordsCache.set(cacheKey, words);
   return words;
 }
+/**
+ * 最適化されたヒント生成（キャッシュ機能付き）
+ * @param wordCount - 生成するヒントの数
+ * @param markers - ヒント生成に使用するマーカー文字
+ * @returns 生成されたヒントの配列
+ */
 export function generateHintsOptimized(wordCount: number, markers: string[]): string[] {
   const cacheKey = `generateHints:${wordCount}:${markers.join("")}`;
   const cached = hintsCache.get(cacheKey);
@@ -401,6 +472,15 @@ export function generateHintsOptimized(wordCount: number, markers: string[]): st
   hintsCache.set(cacheKey, hints);
   return hints;
 }
+/**
+ * 最適化されたヒント表示
+ * @param denops - Denops インスタンス
+ * @param words - 対象の単語配列
+ * @param hints - ヒント配列
+ * @param config - プラグイン設定
+ * @param extmarkNamespace - Neovim の extmark 名前空間（オプション）
+ * @param fallbackMatchIds - matchadd のフォールバック ID 配列（オプション）
+ */
 export async function displayHintsOptimized(
   denops: Denops,
   words: Word[],
@@ -416,8 +496,20 @@ export async function displayHintsOptimized(
   hintsVisible = true;
   await displayHintsBatched(denops, currentHints, config, extmarkNamespace, fallbackMatchIds);
 }
+/** ヒントレンダリング中フラグ */
 let _isRenderingHints = false;
+
+/** ハイライト処理のバッチサイズ */
 const HIGHLIGHT_BATCH_SIZE = 15;
+/**
+ * 非同期でヒントを表示する
+ * @param denops - Denops インスタンス
+ * @param config - プラグイン設定
+ * @param hints - ヒントマッピング配列
+ * @param extmarkNamespace - Neovim の extmark 名前空間（オプション）
+ * @param fallbackMatchIds - matchadd のフォールバック ID 配列（オプション）
+ * @returns Promise
+ */
 export function displayHintsAsync(
   denops: Denops,
   config: Config,
@@ -427,12 +519,27 @@ export function displayHintsAsync(
 ): Promise<void> {
   return displayHintsBatched(denops, hints, config, extmarkNamespace, fallbackMatchIds);
 }
+/**
+ * ヒントのレンダリング中かどうかを確認する
+ * @returns レンダリング中の場合 true
+ */
 export function isRenderingHints(): boolean {
   return _isRenderingHints;
 }
+/**
+ * 現在のレンダリングを中止する
+ */
 export function abortCurrentRendering(): void {
   _isRenderingHints = false;
 }
+/**
+ * バッチ処理でヒントを表示する
+ * @param denops - Denops インスタンス
+ * @param hints - ヒントマッピング配列
+ * @param config - プラグイン設定
+ * @param extmarkNamespace - Neovim の extmark 名前空間（オプション）
+ * @param fallbackMatchIds - matchadd のフォールバック ID 配列（オプション）
+ */
 async function displayHintsBatched(
   denops: Denops,
   hints: HintMapping[],
@@ -458,6 +565,10 @@ async function displayHintsBatched(
     _isRenderingHints = false;
   }
 }
+/**
+ * ヒント表示をクリアする
+ * @param denops - Denops インスタンス
+ */
 async function clearHintDisplay(denops: Denops): Promise<void> {
   if (denops.meta.host === "nvim" && extmarkNamespace !== undefined) {
     await denops.call("nvim_buf_clear_namespace", 0, extmarkNamespace, 0, -1);
@@ -472,6 +583,10 @@ async function clearHintDisplay(denops: Denops): Promise<void> {
     fallbackMatchIds.length = 0;
   }
 }
+/**
+ * ヒントを非表示にする
+ * @param denops - Denops インスタンス
+ */
 export async function hideHints(denops: Denops): Promise<void> {
   const startTime = performance.now();
   try {
@@ -484,12 +599,13 @@ export async function hideHints(denops: Denops): Promise<void> {
   }
 }
 
-// タイマー管理用の変数
+/** ハイライト処理のペンディングタイマー ID */
 let pendingHighlightTimerId: number | undefined;
 
 /**
  * テスト環境の検出とバッファ時間の設定
  * テスト環境では競合を防ぐため、より長いタイムアウトを使用
+ * @returns タイムアウト遅延時間（ミリ秒）
  */
 function getTimeoutDelay(): number {
   // Deno テスト環境またはCI環境を検出
@@ -507,6 +623,10 @@ function getTimeoutDelay(): number {
  * テスト用のクリーンアップ関数
  * ペンディング中のタイマーをクリアする
  */
+/**
+ * テスト用のクリーンアップ関数
+ * ペンディング中のタイマーをクリアする
+ */
 export function cleanupPendingTimers(): void {
   if (pendingHighlightTimerId !== undefined) {
     clearTimeout(pendingHighlightTimerId);
@@ -514,6 +634,14 @@ export function cleanupPendingTimers(): void {
   }
 }
 
+/**
+ * 候補ヒントの非同期ハイライト処理
+ * @param denops - Denops インスタンス
+ * @param input - 入力文字列
+ * @param hints - ヒントマッピング配列
+ * @param config - プラグイン設定
+ * @param onComplete - 処理完了時のコールバック関数（オプション）
+ */
 export function highlightCandidateHintsAsync(
   denops: Denops,
   input: string,
@@ -548,6 +676,13 @@ export function highlightCandidateHintsAsync(
       });
   }, delay) as unknown as number;
 }
+/**
+ * 最適化された候補ヒントのハイライト処理
+ * @param denops - Denops インスタンス
+ * @param input - 入力文字列
+ * @param hints - ヒントマッピング配列
+ * @param config - プラグイン設定
+ */
 async function highlightCandidateHintsOptimized(
   denops: Denops,
   input: string,
@@ -558,6 +693,13 @@ async function highlightCandidateHintsOptimized(
   await clearHintDisplay(denops);
   await displayHintsBatched(denops, candidates, config, extmarkNamespace, fallbackMatchIds);
 }
+/**
+ * Neovim extmarks を使用したバッチ処理
+ * @param denops - Denops インスタンス
+ * @param hints - ヒントマッピング配列
+ * @param config - プラグイン設定
+ * @param extmarkNamespace - extmark 名前空間
+ */
 async function processExtmarksBatched(
   denops: Denops,
   hints: HintMapping[],
@@ -579,6 +721,13 @@ async function processExtmarksBatched(
     );
   }
 }
+/**
+ * matchadd を使用したバッチ処理（フォールバック）
+ * @param denops - Denops インスタンス
+ * @param hints - ヒントマッピング配列
+ * @param config - プラグイン設定
+ * @param fallbackMatchIds - matchadd ID 配列
+ */
 async function processMatchaddBatched(
   denops: Denops,
   hints: HintMapping[],
@@ -592,6 +741,11 @@ async function processMatchaddBatched(
     fallbackMatchIds.push(matchId);
   }
 }
+/**
+ * プラグイン設定を検証する
+ * @param cfg - 部分的な設定オブジェクト
+ * @returns 検証結果（有効性とエラーメッセージ）
+ */
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
   // null値の明示的チェック
   const errors: string[] = [];
@@ -677,9 +831,19 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
   // snake_caseは完全に廃止されたため、変換は不要
   return { valid: result.valid, errors: result.errors };
 }
+/**
+ * ハイライトグループ名の妥当性を検証する
+ * @param groupName - ハイライトグループ名
+ * @returns 有効な場合 true
+ */
 export function validateHighlightGroupName(groupName: string): boolean {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(groupName);
 }
+/**
+ * 標準的な色名の妥当性を検証する
+ * @param colorName - 色名
+ * @returns 有効な色名の場合 true
+ */
 export function isValidColorName(colorName: string): boolean {
   if (typeof colorName !== "string") return false;
   const standardColors = [
@@ -697,17 +861,32 @@ export function isValidColorName(colorName: string): boolean {
   ];
   return standardColors.includes(colorName.toLowerCase());
 }
+/**
+ * 16進数色コードの妥当性を検証する
+ * @param hexColor - 16進数色コード
+ * @returns 有効な16進数色コードの場合 true（3桁・6桁をサポート）
+ */
 export function isValidHexColor(hexColor: string): boolean {
   if (typeof hexColor !== "string") return false;
   // Support both 3-digit and 6-digit hex colors
   return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexColor);
 }
+/**
+ * 色名を正規化する（Vim の標準形式に合わせる）
+ * @param color - 色名
+ * @returns 正規化された色名
+ */
 export function normalizeColorName(color: string): string {
   if (typeof color !== "string") return "";
   // Capitalize first letter for standard Vim color names
   if (color.toLowerCase() === "none") return "None";
   return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
 }
+/**
+ * ハイライト色設定の妥当性を検証する
+ * @param color - ハイライト色設定オブジェクト
+ * @returns 検証結果（有効性とエラーメッセージ）
+ */
 export function validateHighlightColor(
   color: HighlightColor,
 ): { valid: boolean; errors: string[] } {
@@ -755,6 +934,12 @@ export function validateHighlightColor(
 
   return { valid: errors.length === 0, errors };
 }
+/**
+ * ハイライトコマンドを生成する
+ * @param groupName - ハイライトグループ名
+ * @param color - ハイライト色設定
+ * @returns Vim ハイライトコマンド文字列
+ */
 export function generateHighlightCommand(groupName: string, color: HighlightColor): string {
   const parts = [`highlight ${groupName}`];
 
@@ -788,6 +973,11 @@ export function generateHighlightCommand(groupName: string, color: HighlightColo
 
   return parts.join(" ");
 }
+/**
+ * ハイライト設定の妥当性を検証する
+ * @param config - ハイライト設定オブジェクト
+ * @returns 検証結果（有効性とエラーメッセージ）
+ */
 export function validateHighlightConfig(
   config: { [key: string]: any },
 ): { valid: boolean; errors: string[] } {
@@ -871,9 +1061,18 @@ export function validateHighlightConfig(
 
   return { valid: errors.length === 0, errors };
 }
+/**
+ * 辞書機能用の Core インスタンスを取得する
+ * @param denops - Denops インスタンス
+ * @returns Core インスタンス
+ */
 async function getCoreForDictionary(denops: Denops): Promise<Core> {
   return Core.getInstance();
 }
+/**
+ * 辞書システムを初期化する
+ * @param denops - Denops インスタンス
+ */
 async function initializeDictionarySystem(denops: Denops): Promise<void> {
   try {
     const core = await getCoreForDictionary(denops);
@@ -882,6 +1081,11 @@ async function initializeDictionarySystem(denops: Denops): Promise<void> {
     console.error("Failed to initialize dictionary system:", error);
   }
 }
+/**
+ * 辞書を再読み込みする
+ * @param denops - Denops インスタンス
+ * @throws {Error} 辞書の再読み込みに失敗した場合
+ */
 export async function reloadDictionary(denops: Denops): Promise<void> {
   try {
     const core = await getCoreForDictionary(denops);
@@ -890,6 +1094,14 @@ export async function reloadDictionary(denops: Denops): Promise<void> {
     await denops.cmd(`echoerr "Failed to reload dictionary: ${error}"`);
   }
 }
+/**
+ * 辞書に単語を追加する
+ * @param denops - Denops インスタンス
+ * @param word - 追加する単語
+ * @param meaning - 単語の意味（オプション）
+ * @param type - 単語の種類（オプション）
+ * @throws {Error} 辞書への追加に失敗した場合
+ */
 export async function addToDictionary(
   denops: Denops,
   word: string,
@@ -903,6 +1115,11 @@ export async function addToDictionary(
     await denops.cmd(`echoerr "Failed to add to dictionary: ${error}"`);
   }
 }
+/**
+ * 辞書を編集する
+ * @param denops - Denops インスタンス
+ * @throws {Error} 辞書の編集に失敗した場合
+ */
 export async function editDictionary(denops: Denops): Promise<void> {
   try {
     const core = await getCoreForDictionary(denops);
@@ -911,6 +1128,11 @@ export async function editDictionary(denops: Denops): Promise<void> {
     await denops.cmd(`echoerr "Failed to edit dictionary: ${error}"`);
   }
 }
+/**
+ * 辞書を表示する
+ * @param denops - Denops インスタンス
+ * @throws {Error} 辞書の表示に失敗した場合
+ */
 export async function showDictionary(denops: Denops): Promise<void> {
   try {
     const core = await getCoreForDictionary(denops);
@@ -919,6 +1141,11 @@ export async function showDictionary(denops: Denops): Promise<void> {
     await denops.cmd(`echoerr "Failed to show dictionary: ${error}"`);
   }
 }
+/**
+ * 辞書の妥当性を検証する
+ * @param denops - Denops インスタンス
+ * @throws {Error} 辞書の検証に失敗した場合
+ */
 export async function validateDictionary(denops: Denops): Promise<void> {
   try {
     const core = await getCoreForDictionary(denops);
@@ -927,5 +1154,5 @@ export async function validateDictionary(denops: Denops): Promise<void> {
     await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
   }
 }
-// Export necessary functions for dispatcher and testing
+// ディスパッチャーとテスト用の必要な関数をエクスポート
 export { clearDebugInfo, collectDebugInfo, syncManagerConfig };

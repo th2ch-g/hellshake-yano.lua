@@ -224,21 +224,26 @@ export interface SyntaxContext {
   syntaxGroups?: string[];
 }
 
-/** 行コンテキスト情報 */
+/**
+ * 行コンテキスト情報インターフェース
+ *
+ * @description 個別の行レベルでのコンテキスト情報を表現
+ * 行の種類、インデント、前後の文字などの詳細情報を保持
+ */
 export interface LineContext {
-  /** コメント行か */
+  /** コメント行かを示すフラグ */
   isComment: boolean;
-  /** ドキュメント文字列か */
+  /** ドキュメント文字列かを示すフラグ */
   isDocString: boolean;
-  /** import/require文か */
+  /** import/require文かを示すフラグ */
   isImport: boolean;
-  /** インデントレベル（スペース数） */
+  /** インデントレベル（スペース数で計算） */
   indentLevel: number;
-  /** 行の種類（'code', 'comment', 'string'等） */
+  /** 行の種類（'code', 'comment', 'string'等の分類） */
   lineType: string;
-  /** 直前の文字（文脈判定用） */
+  /** 直前の文字（文脈判定用、オプション） */
   precedingChar?: string;
-  /** 直後の文字（文脈判定用） */
+  /** 直後の文字（文脈判定用、オプション） */
   followingChar?: string;
 }
 
@@ -948,94 +953,180 @@ export type {
 // ===== Core Directory Consolidation Types =====
 
 /**
- * Word detection configuration
- * Consolidated from core/detection.ts
+ * 単語検出設定インターフェース
+ *
+ * @description 単語検出処理の設定パラメータを定義
+ * core/detection.tsから統合された設定項目
  */
 export interface WordDetectionConfig {
+  /** 最小単語長（オプション） */
   minLength?: number;
+  /** 最大検出単語数（オプション） */
   maxWords?: number;
+  /** 検索パターン（正規表現、オプション） */
   pattern?: string;
+  /** バッファ番号（オプション） */
   bufnr?: number;
+  /** 設定オブジェクト（任意の型、オプション） */
   config?: any;
 }
 
 /**
- * Parameters for word detection
- * Consolidated from core/detection.ts
+ * 単語検出パラメータインターフェース
+ *
+ * @description 単語検出関数に渡されるパラメータセット
+ * core/detection.tsから統合されたパラメータ定義
  */
 export interface DetectWordsParams {
+  /** Denopsインスタンス（必須） */
   denops: import("@denops/std").Denops;
+  /** バッファ番号（オプション） */
   bufnr?: number;
+  /** 設定オブジェクト（任意の型、オプション） */
   config?: any;
 }
 
 /**
- * Hint generation configuration
- * Consolidated from core/generation.ts
+ * ヒント生成設定インターフェース
+ *
+ * @description ヒント生成処理の設定パラメータを定義
+ * core/generation.tsから統合された設定項目
  */
 export interface HintGenerationConfig {
+  /** 単語数（必須） */
   wordCount: number;
+  /** マーカー文字列（オプション） */
   markers?: string;
+  /** 設定オブジェクト（任意の型、オプション） */
   config?: any;
+  /** 単語配列（オプション） */
   words?: string[];
+  /** ヒントキー文字列（オプション） */
   hintKeys?: string;
 }
 
 /**
- * Parameters for hint generation
- * Consolidated from core/generation.ts
+ * ヒント生成パラメータインターフェース
+ *
+ * @description ヒント生成関数に渡されるパラメータセット
+ * core/generation.tsから統合されたパラメータ定義
  */
 export interface GenerateHintsParams {
+  /** 単語数（必須） */
   wordCount: number;
+  /** マーカー（文字列または文字列配列、オプション） */
   markers?: string | string[];
+  /** 設定オブジェクト（任意の型、オプション） */
   config?: any;
 }
 
 /**
- * Show hints configuration
- * Consolidated from core/operations.ts
+ * ヒント表示設定インターフェース
+ *
+ * @description ヒント表示処理の設定パラメータを定義
+ * core/operations.tsから統合された設定項目
  */
 export interface ShowHintsConfig {
+  /** デバウンス時間（ミリ秒、オプション） */
   debounce?: number;
+  /** 強制実行フラグ（オプション） */
   force?: boolean;
+  /** デバウンス遅延時間（ミリ秒、オプション） */
   debounceDelay?: number;
 }
 
 /**
- * Hint operations configuration
- * Consolidated from core/operations.ts
+ * ヒント操作設定インターフェース
+ *
+ * @description ヒント操作処理の設定とDI（依存性注入）パラメータを定義
+ * core/operations.tsから統合された設定項目
  */
 export interface HintOperationsConfig {
+  /** Denopsインスタンス（必須） */
   denops: import("@denops/std").Denops;
+  /** 設定オブジェクト（任意の型、オプション） */
   config?: any;
+  /** 依存関数群（DI用、オプション） */
   dependencies?: {
+    /** 最適化された単語検出関数 */
     detectWordsOptimized?: any;
+    /** 最適化されたヒント生成関数 */
     generateHintsOptimized?: any;
+    /** ヒント割り当て関数 */
     assignHintsToWords?: any;
+    /** 非同期ヒント表示関数 */
     displayHintsAsync?: any;
+    /** ヒント非表示関数 */
     hideHints?: any;
+    /** パフォーマンス記録関数 */
     recordPerformance?: any;
+    /** ヒントキャッシュクリア関数 */
     clearHintCache?: any;
   };
 }
 
 /**
- * Hint operations interface
- * Consolidated from core/operations.ts
+ * ヒント操作インターフェース
+ *
+ * @description ヒント操作に関する全ての機能を提供するメソッド群
+ * core/operations.tsから統合されたオペレーション定義
  */
 export interface HintOperations {
+  /**
+   * ヒント表示メソッド
+   * @param denops Denopsインスタンス
+   * @param config 表示設定（オプション）
+   * @returns Promise<void>
+   */
   show: (denops: import("@denops/std").Denops, config?: ShowHintsConfig) => Promise<void>;
+
+  /**
+   * ヒント非表示メソッド
+   * @param denops Denopsインスタンス
+   * @returns Promise<void>
+   */
   hide: (denops: import("@denops/std").Denops) => Promise<void>;
+
+  /**
+   * ヒントクリアメソッド
+   * @param denops Denopsインスタンス
+   * @returns Promise<void>
+   */
   clear: (denops: import("@denops/std").Denops) => Promise<void>;
+
+  /**
+   * ヒント表示メソッド（デバウンス適用）
+   * @returns Promise<void>
+   */
   showHints: () => Promise<void>;
+
+  /**
+   * ヒント即座表示メソッド
+   * @returns Promise<void>
+   */
   showHintsImmediately: () => Promise<void>;
+
+  /**
+   * ヒント非表示メソッド（内部用）
+   * @returns Promise<void>
+   */
   hideHints: () => Promise<void>;
+
+  /**
+   * ヒント表示状態確認メソッド
+   * @returns ヒントが表示中の場合true
+   */
   isHintsVisible: () => boolean;
+
+  /**
+   * 現在のヒント取得メソッド
+   * @returns 現在表示中のヒントマッピング配列
+   */
   getCurrentHints: () => HintMapping[];
 }
 
-/** */
+/** 型定義ファイルのバージョン番号 */
 export const TYPES_VERSION = "2.0.0";
 
-/** */
+/** 型定義ファイルの最終更新日時（ISO 8601形式） */
 export const TYPES_LAST_UPDATED = "2024-01-01T00:00:00Z";

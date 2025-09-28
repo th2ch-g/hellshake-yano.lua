@@ -27,7 +27,10 @@
 // Import consolidated types from types.ts
 import type { HighlightColor, HintPositionType } from "./types.ts";
 
-// Re-export HighlightColor for backward compatibility
+/**
+ * 後方互換性のためのHighlightColor型の再エクスポート
+ * types.tsから型定義をインポートして再エクスポートしています。
+ */
 export type { HighlightColor };
 
 // HighlightColor interface moved to types.ts for consolidation
@@ -201,7 +204,10 @@ export interface Config {
   useImprovedDetection?: boolean;
 }
 
-// Type aliases for backward compatibility
+/**
+ * 後方互換性のための型エイリアス
+ * 旧バージョンとの互換性を保つために提供されています。
+ */
 export type UnifiedConfig = Config;
 export type CamelCaseConfig = Config;
 export type ModernConfig = Config;
@@ -289,7 +295,10 @@ export const DEFAULT_CONFIG: Config = {
   useImprovedDetection: true,
 };
 
-// Backward compatibility alias
+/**
+ * 後方互換性のためのデフォルト設定定数エイリアス
+ * DEFAULT_CONFIGと同じ値を参照します。
+ */
 export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = DEFAULT_CONFIG;
 
 // UnifiedConfig interface削除: Process1で型定義の統合実装により削除
@@ -863,6 +872,10 @@ export function getPerKeyValue<T>(
  * };
  * ```
  */
+/**
+ * 非推奨プロパティの警告情報を表すインターフェース
+ * snake_caseプロパティからcamelCaseプロパティへの移行を支援します。
+ */
 export interface DeprecationWarning {
   /** 非推奨のプロパティ名 */
   property: string;
@@ -887,6 +900,10 @@ export interface DeprecationWarning {
  *   hasBooleanPrefix: false
  * };
  * ```
+ */
+/**
+ * 命名規則バリデーション結果を表すインターフェース
+ * TypeScript/JavaScriptの命名規則に従っているかの検証結果を格納します。
  */
 export interface NamingValidation {
   /** 命名規則に従っているかの全体的な結果 */
@@ -961,6 +978,15 @@ export interface NamingValidation {
  */
 // createModernConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
 // 代わりにcreateMinimalConfig()を使用してください
+/**
+ * モダン設定オブジェクトを作成する関数
+ * createMinimalConfig()の薄いラッパー関数です。
+ *
+ * @param {Partial<Config>} [input={}] - 初期設定値（オプション）
+ * @returns {Config} 作成された設定オブジェクト
+ * @throws {Error} 設定値のバリデーションに失敗した場合
+ * @deprecated 内部的にcreateMinimalConfig()を使用します。新しいコードでは直接createMinimalConfig()を使用してください。
+ */
 export function createModernConfig(input: Partial<Config> = {}): Config {
   return createMinimalConfig(input);
 }
@@ -1035,6 +1061,16 @@ export function validateNamingConvention(name: string): NamingValidation {
  */
 // getDeprecationWarnings function simplified as part of Process4 Sub2-4
 // SNAKE_TO_CAMEL_MAPPING dependency removed
+/**
+ * 非推奨警告を取得する関数（簡素化済み）
+ * Process4 Sub2-4で簡素化され、常に空配列を返します。
+ * 階層設定システムの削除により、非推奨プロパティのチェックは不要になりました。
+ *
+ * @param {Partial<Config>} config - チェックする設定オブジェクト
+ * @returns {DeprecationWarning[]} 非推奨警告の配列（常に空配列）
+ * @throws {never} この関数は例外をスローしません
+ * @deprecated 階層設定システムの削除により、この関数は常に空配列を返します。
+ */
 export function getDeprecationWarnings(
   config: Partial<Config>,
 ): DeprecationWarning[] {
@@ -1076,8 +1112,12 @@ export function getDeprecationWarnings(
  *
  * @interface ValidationRules
  */
+/**
+ * バリデーションルールを定義するインターフェース
+ * 設定値の検証に使用される各種ルールを定義します。
+ */
 export interface ValidationRules {
-  /** 期待される型名 */
+  /** 期待される型名（string, number, boolean, array, object） */
   type?: "string" | "number" | "boolean" | "array" | "object";
   /** 必須フィールドかどうか */
   required?: boolean;
@@ -1100,6 +1140,10 @@ export interface ValidationRules {
  * バリデーション関数の戻り値として使用される
  *
  * @interface ValidationResult
+ */
+/**
+ * バリデーション結果を表すインターフェース
+ * バリデーション関数の戻り値として使用されます。
  */
 export interface ValidationResult {
   /** バリデーションが成功したかどうか */
@@ -1341,7 +1385,8 @@ export function validateConfigValue(
 
 /**
  * 複数の設定値を一括でバリデーション
- * オブジェクトの各プロパティに対してルールを適用
+ * オブジェクトの各プロパティに対してルールを適用して、まとめて検証を行います。
+ * 個別のエラーメッセージと全体の結果を同時に取得できます。
  *
  * @param {Record<string, any>} config - バリデーション対象の設定オブジェクト
  * @param {Record<string, ValidationRules>} rulesMap - 各キーに対するバリデーションルールのマップ

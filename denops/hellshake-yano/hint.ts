@@ -11,7 +11,9 @@ import type { Config } from "./config.ts";
 import { CacheType, GlobalCache } from "./cache.ts";
 import { getMinLengthForKey } from "./main.ts";
 
-// Re-export types for backward compatibility
+/**
+ * 後方互換性のための型の再エクスポート
+ */
 export type { HintKeyConfig, HintMapping, HintPosition };
 
 // HintPosition interface moved to types.ts for consolidation
@@ -20,17 +22,28 @@ export type { HintKeyConfig, HintMapping, HintPosition };
 // HintPositionWithCoordinateSystem interface moved to types.ts for consolidation
 // Use: import type { HintPositionWithCoordinateSystem } from "./types.ts";
 
+/** グローバルキャッシュインスタンス */
 const globalCache = GlobalCache.getInstance();
+/** ヒント文字列キャッシュ */
 const hintCache = globalCache.getCache<string, string[]>(CacheType.HINTS);
+/** ノーマルモード用ヒント割り当てキャッシュ */
 const assignmentCacheNormal = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_NORMAL);
+/** ビジュアルモード用ヒント割り当てキャッシュ */
 const assignmentCacheVisual = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
+/** その他モード用ヒント割り当てキャッシュ */
 const assignmentCacheOther = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
 
 // ===== Display Width Functions (from utils/display.ts) =====
+/** 文字幅キャッシュ */
 const CHAR_WIDTH_CACHE = globalCache.getCache<number, number>(CacheType.CHAR_WIDTH);
+/** CJK文字範囲の定義 */
 const CJK_RANGES = [[0x3000, 0x303F], [0x3040, 0x309F], [0x30A0, 0x30FF], [0x4E00, 0x9FFF], [0xFF00, 0xFFEF]] as const;
+/** 絵文字範囲の定義 */
 const EMOJI_RANGES = [[0x1F600, 0x1F64F], [0x1F300, 0x1F5FF], [0x1F680, 0x1F6FF], [0x1F1E6, 0x1F1FF]] as const;
 
+/**
+ * ASCII文字幅キャッシュを初期化する
+ */
 function initializeASCIICache(): void {
   for (let i = 0x20; i <= 0x7E; i++) {
     if (CHAR_WIDTH_CACHE.get(i) === undefined) {
@@ -40,6 +53,11 @@ function initializeASCIICache(): void {
 }
 initializeASCIICache();
 
+/**
+ * ラテン文字の数学記号かどうかを判定する
+ * @param codePoint - 判定対象のコードポイント
+ * @returns ラテン文字の数学記号の場合true
+ */
 function isLatinMathSymbol(codePoint: number): boolean {
   return (codePoint >= 0x00B0 && codePoint <= 0x00B1) || (codePoint >= 0x00B7 && codePoint <= 0x00B7) ||
          (codePoint >= 0x00D7 && codePoint <= 0x00D7) || (codePoint >= 0x00F7 && codePoint <= 0x00F7) ||
@@ -48,6 +66,11 @@ function isLatinMathSymbol(codePoint: number): boolean {
          (codePoint >= 0x2600 && codePoint <= 0x26FF) || (codePoint >= 0x2700 && codePoint <= 0x27BF);
 }
 
+/**
+ * コードポイントがCJK文字範囲内かどうかを判定する
+ * @param codePoint - 判定対象のコードポイント
+ * @returns CJK文字範囲内の場合true
+ */
 function isInCJKRange(codePoint: number): boolean {
   for (const [start, end] of CJK_RANGES) {
     if (codePoint >= start && codePoint <= end) return true;
@@ -55,6 +78,11 @@ function isInCJKRange(codePoint: number): boolean {
   return false;
 }
 
+/**
+ * コードポイントが絵文字範囲内かどうかを判定する
+ * @param codePoint - 判定対象のコードポイント
+ * @returns 絵文字範囲内の場合true
+ */
 function isInEmojiRange(codePoint: number): boolean {
   for (const [start, end] of EMOJI_RANGES) {
     if (codePoint >= start && codePoint <= end) return true;
@@ -62,6 +90,11 @@ function isInEmojiRange(codePoint: number): boolean {
   return false;
 }
 
+/**
+ * コードポイントが拡張全角文字範囲内かどうかを判定する
+ * @param codePoint - 判定対象のコードポイント
+ * @returns 拡張全角文字範囲内の場合true
+ */
 function isInExtendedWideRange(codePoint: number): boolean {
   return isLatinMathSymbol(codePoint) || (codePoint >= 0x2460 && codePoint <= 0x24FF) ||
          (codePoint >= 0x2E80 && codePoint <= 0x2EFF) || (codePoint >= 0x2F00 && codePoint <= 0x2FDF) ||
@@ -72,6 +105,12 @@ function isInExtendedWideRange(codePoint: number): boolean {
          (codePoint >= 0xFE30 && codePoint <= 0xFE4F);
 }
 
+/**
+ * 文字の表示幅を計算する
+ * @param codePoint - 文字のコードポイント
+ * @param tabWidth - タブ文字の表示幅
+ * @returns 文字の表示幅
+ */
 function calculateCharWidth(codePoint: number, tabWidth: number): number {
   if (codePoint === 0x09) return tabWidth;
   if (codePoint >= 0x20 && codePoint <= 0x7E) return 1;
@@ -83,6 +122,12 @@ function calculateCharWidth(codePoint: number, tabWidth: number): number {
   return 1;
 }
 
+/**
+ * 文字の表示幅を取得する（キャッシュ機能付き）
+ * @param char - 表示幅を取得したい文字
+ * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
+ * @returns 文字の表示幅
+ */
 export function getCharDisplayWidth(char: string, tabWidth = 8): number {
   if (!char || char.length === 0) return 0;
   const codePoint = char.codePointAt(0);
@@ -98,12 +143,23 @@ export function getCharDisplayWidth(char: string, tabWidth = 8): number {
   return width;
 }
 
+/**
+ * テキストが絵文字シーケンスかどうかを判定する
+ * @param text - 判定対象のテキスト
+ * @returns 絵文字シーケンスの場合true
+ */
 function isEmojiSequence(text: string): boolean {
   return /[\u{1F1E6}-\u{1F1FF}]{2}/u.test(text) || /[\u{1F600}-\u{1F64F}]/u.test(text) ||
          /[\u{1F300}-\u{1F5FF}]/u.test(text) || /[\u{1F680}-\u{1F6FF}]/u.test(text) ||
          /[\u{1F900}-\u{1F9FF}]/u.test(text);
 }
 
+/**
+ * テキストの表示幅を計算する（フォールバック版）
+ * @param text - 表示幅を計算するテキスト
+ * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
+ * @returns テキストの表示幅
+ */
 function getDisplayWidthFallback(text: string, tabWidth = 8): number {
   let totalWidth = 0;
   for (let i = 0; i < text.length;) {
@@ -119,6 +175,12 @@ function getDisplayWidthFallback(text: string, tabWidth = 8): number {
   return totalWidth;
 }
 
+/**
+ * テキストの表示幅を計算する（グラフェムクラスター対応）
+ * @param text - 表示幅を計算するテキスト
+ * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
+ * @returns テキストの表示幅
+ */
 export function getDisplayWidth(text: string, tabWidth = 8): number {
   if (text == null || text.length === 0) return 0;
   let totalWidth = 0;
@@ -170,7 +232,13 @@ export const BATCH_BATCH_SIZE = 250;
 // 統一されたエンコーディングユーティリティを使用
 import { getByteLength } from "./word.ts";
 
-/** 文字インデックスを表示column位置に変換（0ベース→1ベース、tab対応） */
+/**
+ * 文字インデックスを表示column位置に変換（0ベース→1ベース、tab対応）
+ * @param line - 対象行のテキスト
+ * @param charIndex - 文字インデックス（0ベース）
+ * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
+ * @returns 表示column位置（1ベース）
+ */
 export function convertToDisplayColumn(line: string, charIndex: number, tabWidth = 8): number {
   if (charIndex <= 0) {
     return 1;
@@ -181,13 +249,25 @@ export function convertToDisplayColumn(line: string, charIndex: number, tabWidth
   return getDisplayWidth(substring, tabWidth);
 }
 
-/** 単語の表示終了column位置を取得（tab・マルチバイト対応） */
+/**
+ * 単語の表示終了column位置を取得（tab・マルチバイト対応）
+ * @param word - 対象の単語
+ * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
+ * @returns 単語の表示終了column位置
+ */
 export function getWordDisplayEndCol(word: Word, tabWidth = 8): number {
   const textWidth = getDisplayWidth(word.text, tabWidth);
   return word.col + textWidth - 1;
 }
 
 /** 2つの単語が表示幅で隣接しているかチェック（gap <= 0で隣接判定） */
+/**
+ * 2つの単語が表示幅で隣接しているかチェック（gap <= 0で隣接判定）
+ * @param word1 - 第一の単語
+ * @param word2 - 第二の単語
+ * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
+ * @returns 単語が隣接している場合true
+ */
 export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolean {
   // Must be on the same line
   if (word1.line !== word2.line) {
@@ -1386,8 +1466,7 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
 // ===== Hint Overlap Detection Functions =====
 
 /**
- * オーバーラップ検出用のキャッシュ（統一キャッシュ）
- * Cache for adjacent words detection to optimize overlap detection
+ * 隣接単語検出結果のキャッシュ - オーバーラップ検出の最適化用
  * @since 1.0.0
  * @internal
  */
@@ -1395,18 +1474,16 @@ let adjacencyCache = GlobalCache.getInstance().getCache<string, { word: Word; ad
 
 /**
  * 隣接する単語を検出する
- * Detect adjacent words on the same line for overlap detection
  *
- * @description 同一行で隣接している単語（1カラム以内の間隔）を特定
- * Identifies words that are adjacent (within 1 column spacing) on the same line
- * to prevent hint display overlaps. Uses display width calculation for accurate
- * positioning with tab characters and multi-byte characters.
+ * @description 同一行で隣接している単語（1カラム以内の間隔）を特定し、
+ * ヒント表示の重複を防ぐ。タブ文字とマルチバイト文字の正確な
+ * 位置計算に表示幅計算を使用する。
  *
- * ## Algorithm Details
- * - **Same-line filtering**: Only checks words on identical line numbers
- * - **Display width aware**: Considers tab expansion and multi-byte character width
- * - **Proximity detection**: Uses areWordsAdjacent utility for precise adjacency
- * - **Performance optimization**: Results are cached for repeated calls
+ * ## アルゴリズムの詳細
+ * - **同一行フィルタリング**: 同じ行番号の単語のみをチェック
+ * - **表示幅対応**: タブ展開とマルチバイト文字幅を考慮
+ * - **近接検出**: areWordsAdjacent ユーティリティを使用した正確な隣接判定
+ * - **パフォーマンス最適化**: 繰り返し呼び出し用にキャッシュされる結果
  *
  * @param words - 検出対象の単語配列
  * @returns {{ word: Word; adjacentWords: Word[] }[]} 各単語とその隣接単語の配列
@@ -1999,7 +2076,9 @@ export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number
  * - 設定値の委譲とアクセス
  */
 export class HintManager {
+  /** ヒント管理に必要な設定オブジェクト */
   private config: Config;
+  /** 現在のキーコンテキスト */
   private currentKeyContext?: string;
 
   /**

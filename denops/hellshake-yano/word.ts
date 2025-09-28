@@ -9,20 +9,37 @@ import { DEFAULT_UNIFIED_CONFIG, getDefaultUnifiedConfig } from "./config.ts";
 // Re-export Word for backward compatibility
 export type { Word };
 
-// Missing type definitions from context integration
+/**
+ * コンテキスト統合から欠落した型定義 - 構文コンテキスト
+ * 現在のカーソル位置の構文的な状況を表現します
+ */
 interface SyntaxContext {
+  /** コメント内かどうか */
   inComment: boolean;
+  /** 文字列内かどうか */
   inString: boolean;
+  /** 関数内かどうか */
   inFunction: boolean;
+  /** クラス内かどうか */
   inClass: boolean;
+  /** プログラミング言語の種類 */
   language: string;
 }
 
+/**
+ * 行コンテキスト情報
+ * 現在の行の特性と状況を表現します
+ */
 interface LineContext {
+  /** コメント行かどうか */
   isComment: boolean;
+  /** ドキュメント文字列行かどうか */
   isDocString: boolean;
+  /** インポート文行かどうか */
   isImport: boolean;
+  /** インデントレベル */
   indentLevel: number;
+  /** 行のタイプ（文字列表現） */
   lineType: string;
 }
 
@@ -73,61 +90,96 @@ const wordDetectionCache = GlobalCache.getInstance().getCache<string, Word[]>(
 // ==================== Word Detector Interfaces and Types ====================
 
 /**
- * WordDetectorインターフェース
  * 単語検出器の基底インターフェース
+ * 様々な単語検出アルゴリズムを統一的に扱うためのインターフェースです
  */
 export interface WordDetector {
+  /** 検出器の名前 */
   readonly name: string;
-  readonly priority: number; // Higher priority = preferred detector
-  readonly supportedLanguages: string[]; // e.g., ['ja', 'en', 'any']
+  /** 優先度（値が高いほど優先される） */
+  readonly priority: number;
+  /** サポートする言語リスト（例: ['ja', 'en', 'any']） */
+  readonly supportedLanguages: string[];
+  /**
+   * テキストから単語を検出します
+   * @param text - 検出対象のテキスト
+   * @param startLine - 開始行番号
+   * @param context - 検出コンテキスト（オプション）
+   * @param denops - Denopsインスタンス（オプション）
+   * @returns 検出された単語のリスト
+   */
   detectWords(
     text: string,
     startLine: number,
     context?: DetectionContext,
     denops?: Denops,
   ): Promise<Word[]>;
+  /**
+   * 指定されたテキストを処理できるかどうかを判定します
+   * @param text - 判定対象のテキスト
+   * @returns 処理可能な場合はtrue
+   */
   canHandle(text: string): boolean;
+  /**
+   * この検出器が利用可能かどうかを確認します
+   * @returns 利用可能な場合はtrue
+   */
   isAvailable(): Promise<boolean>;
 }
 
 /**
- * WordDetectionConfig interface
  * 単語検出設定インターフェース
+ * 単語検出の動作を制御するための設定項目を定義します
  */
 export interface WordDetectionConfig {
+  /** 使用する検出戦略（regex、tinysegmenter、またはhybrid） */
   strategy?: "regex" | "tinysegmenter" | "hybrid";
+  /** 日本語処理を有効にするかどうか */
   useJapanese?: boolean;
-  // Backward compatibility toggle (ignored in implementation)
+  /** 後方互換性のためのフラグ（実装では無視される） */
   useImprovedDetection?: boolean;
 
-  // TinySegmenter specific options
+  /** TinySegmenterを有効にするかどうか */
   enableTinySegmenter?: boolean;
-  segmenterThreshold?: number; // minimum characters for segmentation
+  /** セグメンテーションのための最小文字数 */
+  segmenterThreshold?: number;
+  /** セグメンターのキャッシュサイズ */
   segmenterCacheSize?: number;
 
-  // Fallback and error handling
+  /** フォールバック処理を有効にするかどうか */
+  /** フォールバック処理を有効にするかどうか */
   enableFallback?: boolean;
+  /** 正規表現にフォールバックするかどうか */
   fallbackToRegex?: boolean;
+  /** 最大リトライ回数 */
   maxRetries?: number;
 
-  // Performance settings
+  /** キャッシュを有効にするかどうか */
   cacheEnabled?: boolean;
+  /** キャッシュの最大サイズ */
   cacheMaxSize?: number;
+  /** バッチ処理のサイズ */
   batchSize?: number;
 
-  // Word length settings (from UnifiedConfig)
+  /** デフォルトの最小単語長（UnifiedConfigから） */
   defaultMinWordLength?: number;
+  /** 現在のキー（グローバル設定用） */
   currentKey?: string;
 
-  // Filtering options
+  /** 最小単語長 */
   minWordLength?: number;
+  /** 最大単語長 */
   maxWordLength?: number;
+  /** 数字を除外するかどうか */
   exclude_numbers?: boolean;
+  /** 単一文字を除外するかどうか */
   exclude_single_chars?: boolean;
 
-  // Japanese-specific options
+  /** 日本語の助詞をマージするかどうか */
   japanese_merge_particles?: boolean;
+  /** 日本語マージの闾値 */
   japanese_merge_threshold?: number;
+  /** 日本語の最小単語長 */
   japanese_min_word_length?: number;
 }
 
@@ -354,6 +406,14 @@ export class RegexWordDetector implements WordDetector {
     return this.config.minWordLength || 1;
   }
 
+  /**
+   * テキストから単語を検出します
+   * @param text - 検出対象のテキスト
+   * @param startLine - 開始行番号
+   * @param context - 検出コンテキスト（オプション）
+   * @param denops - Denopsインスタンス（オプション）
+   * @returns 検出された単語のリスト
+   */
   async detectWords(
     text: string,
     startLine: number,
@@ -376,15 +436,28 @@ export class RegexWordDetector implements WordDetector {
     return this.applyFilters(words, context);
   }
 
+  /**
+   * 指定されたテキストを処理できるかどうかを判定します
+   * @param text - 判定対象のテキスト
+   * @returns 常にtrue（正規表現ディテクターはあらゆるテキストを処理可能）
+   */
   canHandle(text: string): boolean {
     return true; // Regex detector can handle any text
   }
 
+  /**
+   * この検出器が利用可能かどうかを確認します
+   * @returns 常にtrue（この検出器は常に利用可能）
+   */
   async isAvailable(): Promise<boolean> {
     return true; // Always available
   }
 
-  // Private methods will be added here
+  /**
+   * 設定をデフォルト値とマージします
+   * @param config - ユーザーが指定した設定
+   * @returns デフォルト値とマージされた設定
+   */
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
     return {
       strategy: "regex",
@@ -424,6 +497,12 @@ export class RegexWordDetector implements WordDetector {
     return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
 
+  /**
+   * 検出された単語にフィルターを適用します
+   * @param words - フィルター対象の単語リスト
+   * @param context - 検出コンテキスト（オプション）
+   * @returns フィルターされた単語リスト
+   */
   private applyFilters(words: Word[], context?: DetectionContext): Word[] {
     let filtered = words;
 
@@ -942,12 +1021,32 @@ export class HybridWordDetector implements WordDetector {
 }
 
 /** @deprecated Use detectWordsWithManager instead */
+/**
+ * 単語検出のメイン関数（オーバーロード版）
+ * @param text - 検出対象のテキスト
+ * @param startLine - 開始行番号
+ * @param excludeJapanese - 日本語を除外するかどうか
+ * @returns 検出された単語のリスト
+ */
 export function detectWords(
   text: string,
   startLine: number,
   excludeJapanese: boolean,
 ): Promise<Word[]>;
+/**
+ * 単語検出のメイン関数（Denops版）
+ * @param denops - Denopsインスタンス
+ * @returns 検出された単語のリスト
+ * @deprecated detectWordsWithManagerを使用してください
+ */
 export function detectWords(denops: Denops): Promise<Word[]>;
+/**
+ * 単語検出のメイン関数（実装）
+ * @param arg1 - Denopsインスタンスまたはテキスト
+ * @param arg2 - 開始行番号（オプション）
+ * @param arg3 - 日本語除外フラグ（オプション）
+ * @returns 検出された単語のリスト
+ */
 export async function detectWords(
   arg1: Denops | string,
   arg2?: number,
@@ -1367,7 +1466,15 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
   return displayCol;
 }
 
-/** @deprecated Use extractWordsUnified instead */
+/**
+ * 行から単語を抽出します
+ * @param lineText - 処理対象の行テキスト
+ * @param lineNumber - 行番号
+ * @param useImprovedDetection - 改善版検出を使用するかどうか（デフォルト: false）
+ * @param excludeJapanese - 日本語を除外するかどうか（デフォルト: false）
+ * @returns 抽出された単語のリスト
+ * @deprecated extractWordsUnifiedを使用してください
+ */
 export function extractWordsFromLine(
   lineText: string,
   lineNumber: number,
@@ -1602,11 +1709,20 @@ export function clearWordDetectionCache(): void {
  * console.log(`Large file threshold: ${stats.largeFileThreshold} lines`);
  * ```
  */
+/**
+ * 単語検出キャッシュの統計情報を取得します
+ * @returns キャッシュの統計情報オブジェクト
+ */
 export function getWordDetectionCacheStats(): {
+  /** キャッシュサイズ */
   cacheSize: number;
+  /** キャッシュキーのリスト */
   cacheKeys: string[];
+  /** 最大キャッシュサイズ */
   maxCacheSize: number;
+  /** 大きなファイルの闾値 */
   largeFileThreshold: number;
+  /** ファイルあたりの最大単語数 */
   maxWordsPerFile: number;
 } {
   return {
@@ -4681,11 +4797,22 @@ export async function registerDictionaryCommands(denops: Denops) {
 /**
  * 辞書管理機能
  */
+/**
+ * 辞書管理クラス
+ * ユーザー辞書の読み込み、編集、表示を管理します
+ */
 export class DictionaryManager {
+  /** 辞書ローダー */
   private loader: DictionaryLoader;
+  /** 辞書マージャー */
   private merger: DictionaryMerger;
+  /** Vim設定ブリッジ */
   private bridge: VimConfigBridge;
 
+  /**
+   * DictionaryManagerのコンストラクタ
+   * @description 必要なコンポーネントを初期化します
+   */
   constructor() {
     this.loader = new DictionaryLoader();
     this.merger = new DictionaryMerger();
@@ -4693,7 +4820,9 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書を再読み込み
+   * 辞書を再読み込みします
+   * @param denops - Denopsインスタンス
+   * @throws 辞書の読み込みに失敗した場合
    */
   async reloadDictionary(denops: Denops): Promise<void> {
     try {
@@ -4707,7 +4836,9 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書ファイルを編集
+   * 辞書ファイルを編集します
+   * @param denops - Denopsインスタンス
+   * @throws 辞書ファイルのオープンに失敗した場合
    */
   async editDictionary(denops: Denops): Promise<void> {
     try {
@@ -4721,7 +4852,9 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書の内容を表示
+   * 辞書の内容を表示します
+   * @param denops - Denopsインスタンス
+   * @throws 辞書情報の取得に失敗した場合
    */
   async showDictionary(denops: Denops): Promise<void> {
     try {

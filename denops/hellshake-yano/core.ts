@@ -36,14 +36,28 @@ import { validateConfig } from "./config.ts";
 // motion.ts は統合されたため削除（MotionManagerはcore.ts内部で実装済み）
 
 // 内部実装: 統合されたクラス群
-// motion.tsから統合したMotionCounter
+/**
+ * モーション操作をカウントして闾値に達した時にイベントを発生させるクラス
+ * motion.tsから統合
+ */
 class MotionCounter {
+  /** 現在のモーションカウント */
   private count: number = 0;
+  /** 最後にモーションが実行された時刻（ミリ秒） */
   private lastMotionTime: number = 0;
+  /** タイムアウト時間（ミリ秒） */
   private timeoutMs: number;
+  /** 闾値（この回数に達するとイベント発生） */
   private threshold: number;
+  /** 闾値に達した時に実行されるコールバック関数 */
   private onThresholdReached?: () => void;
 
+  /**
+   * MotionCounterのコンストラクタ
+   * @param threshold - モーション回数の闾値（デフォルト: 3）
+   * @param timeoutMs - タイムアウト時間（ミリ秒、デフォルト: 2000）
+   * @param onThresholdReached - 闾値に達した時に実行されるコールバック関数
+   */
   constructor(
     threshold: number = 3,
     timeoutMs: number = 2000,
@@ -54,6 +68,10 @@ class MotionCounter {
     this.onThresholdReached = onThresholdReached;
   }
 
+  /**
+   * モーションカウントをインクリメントする
+   * @returns 闾値に達した場合はtrue、そうでなければfalse
+   */
   increment(): boolean {
     const now = Date.now();
     if (this.lastMotionTime && now - this.lastMotionTime > this.timeoutMs) {
@@ -72,20 +90,38 @@ class MotionCounter {
     return false;
   }
 
+  /**
+   * 現在のモーションカウントを取得する
+   * @returns 現在のカウント数
+   */
   getCount(): number {
     return this.count;
   }
 
+  /**
+   * モーションカウントをリセットする
+   */
   reset(): void {
     this.count = 0;
     this.lastMotionTime = 0;
   }
 }
 
-// motion.tsから統合したMotionManager
+/**
+ * バッファ別のモーションカウンターを管理するクラス
+ * motion.tsから統合
+ */
 class MotionManager {
+  /** バッファ番号をキーとしたMotionCounterのマップ */
   private counters: Map<number, MotionCounter> = new Map();
 
+  /**
+   * 指定されたバッファのMotionCounterを取得する（なければ新規作成）
+   * @param bufnr - バッファ番号
+   * @param threshold - 闾値（オプション）
+   * @param timeout - タイムアウト時間（オプション）
+   * @returns MotionCounterインスタンス
+   */
   getCounter(bufnr: number, threshold?: number, timeout?: number): MotionCounter {
     if (!this.counters.has(bufnr)) {
       this.counters.set(bufnr, new MotionCounter(threshold, timeout));
@@ -93,6 +129,10 @@ class MotionManager {
     return this.counters.get(bufnr)!;
   }
 
+  /**
+   * 指定されたバッファのMotionCounterをリセットする
+   * @param bufnr - バッファ番号
+   */
   resetCounter(bufnr: number): void {
     const counter = this.counters.get(bufnr);
     if (counter) {
@@ -100,21 +140,38 @@ class MotionManager {
     }
   }
 
+  /**
+   * すべてのMotionCounterをクリアする
+   */
   clearAll(): void {
     this.counters.clear();
   }
 }
 
-// commands.tsから統合したCommandFactory
+/**
+ * コマンドとコントローラーを作成するファクトリークラス
+ * commands.tsから統合
+ */
 class CommandFactory {
+  /**
+   * CommandFactoryのコンストラクタ
+   * @param config - プラグインの設定
+   */
   constructor(private config: Config) {}
 
-  // 必要最小限の実装
+  /**
+   * コマンドオブジェクトを作成する（必要最小限の実装）
+   * @param command - コマンド文字列
+   * @returns コマンドと設定を含むオブジェクト
+   */
   createCommand(command: string): any {
     return { command, config: this.config };
   }
 
-  // Test compatibility methods
+  /**
+   * テスト互換性のためのコントローラーを取得する
+   * @returns enable/disable/toggleメソッドを持つコントローラー
+   */
   getController(): any {
     const core = Core.getInstance(this.config);
     return {
@@ -124,6 +181,10 @@ class CommandFactory {
     };
   }
 
+  /**
+   * 設定管理オブジェクトを取得する
+   * @returns 設定の取得、更新、個別設定メソッドを持つオブジェクト
+   */
   getConfigManager(): any {
     return {
       getConfig: () => this.config,
@@ -139,6 +200,10 @@ class CommandFactory {
     };
   }
 
+  /**
+   * デバッグ用コントローラーを取得する
+   * @returns 統計情報取得、キャッシュクリア、デバッグモード切り替えメソッドを持つオブジェクト
+   */
   getDebugController(): any {
     return {
       getStatistics: () => Core.getInstance(this.config).getStatistics(),
@@ -150,7 +215,10 @@ class CommandFactory {
   }
 }
 
-// lifecycle.tsから統合した簡易プラグイン状態管理
+/**
+ * プラグインの状態を管理するグローバルオブジェクト
+ * lifecycle.tsから統合した簡易プラグイン状態管理
+ */
 let pluginState: any = {
   status: "uninitialized",
   initialized: false,
@@ -169,6 +237,12 @@ let pluginState: any = {
   }
 };
 
+/**
+ * プラグインを初期化する
+ * @param denops - Denopsインスタンス
+ * @param options - 初期化オプション（キャッシュサイズなど）
+ * @returns extmarkNamespaceとcachesを含むPromise
+ */
 function initializePlugin(denops: any, options?: any): Promise<any> {
   pluginState.status = "initialized";
   pluginState.initialized = true;
@@ -189,6 +263,11 @@ function initializePlugin(denops: any, options?: any): Promise<any> {
   });
 }
 
+/**
+ * プラグインをクリーンアップする
+ * @param denops - Denopsインスタンス
+ * @returns クリーンアップ完了を示すPromise
+ */
 function cleanupPlugin(denops: any): Promise<void> {
   pluginState.status = "cleaned";
   pluginState.initialized = false;
@@ -199,6 +278,11 @@ function cleanupPlugin(denops: any): Promise<void> {
   return Promise.resolve();
 }
 
+/**
+ * プラグインのヘルスチェックを実行する
+ * @param denops - Denopsインスタンス
+ * @returns ヘルスチェック結果を含むPromise
+ */
 function healthCheck(denops: any): Promise<any> {
   return Promise.resolve({
     healthy: true,
@@ -207,6 +291,10 @@ function healthCheck(denops: any): Promise<any> {
   });
 }
 
+/**
+ * プラグインの統計情報を取得する
+ * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
+ */
 function getPluginStatistics(): any {
   // Calculate statistics from performance metrics
   const calculateStats = (metrics: number[]) => {
@@ -240,46 +328,83 @@ function getPluginStatistics(): any {
   };
 }
 
+/**
+ * プラグインの状態を更新する
+ * @param updates - 更新する状態のプロパティ
+ */
 function updatePluginState(updates: any): void {
   Object.assign(pluginState, updates);
 }
 
+/**
+ * 現在のプラグイン状態を取得する
+ * @returns プラグインの状態オブジェクト
+ */
 function getPluginState(): any {
   return pluginState;
 }
 
-// commands.tsから統合した簡易関数
+/**
+ * プラグインを有効化する
+ * commands.tsから統合した簡易関数
+ * @param config - プラグイン設定
+ */
 function enable(config: any): void {
   config.enabled = true;
 }
 
+/**
+ * プラグインを無効化する
+ * @param config - プラグイン設定
+ */
 function disable(config: any): void {
   config.enabled = false;
 }
 
+/**
+ * プラグインの有効/無効を切り替える
+ * @param config - プラグイン設定
+ * @returns 切り替え後の有効状態
+ */
 function toggle(config: any): boolean {
   config.enabled = !config.enabled;
   return config.enabled;
 }
 
+/**
+ * モーションカウントを設定する
+ * @param config - プラグイン設定
+ * @param count - 設定するカウント数
+ */
 function setCount(config: any, count: number): void {
   config.motionCount = count;
 }
 
+/**
+ * モーションタイムアウトを設定する
+ * @param config - プラグイン設定
+ * @param timeout - 設定するタイムアウト値（ミリ秒）
+ */
 function setTimeoutCommand(config: any, timeout: number): void {
   config.motionTimeout = timeout;
 }
 
-/* * Hellshake-Yano プラグインの中核クラス * すべての主要機能を統合管理し、外部から使いやすいAPIを提供する
- * Phase 10.1: シングルトンパターンを実装
- * TDD Green Phase: テストをパスする最小限の実装
+/**
+ * Hellshake-Yano プラグインの中核クラス
+ * すべての主要機能を統合管理し、外部から使いやすいAPIを提供する
+ * シングルトンパターンで実装され、TDD方法論に従って開発
  */
 export class Core {
+  /** シングルトンインスタンス */
   private static instance: Core | null = null;
 
+  /** プラグインの設定 */
   private config: Config;
+  /** プラグインのアクティブ状態 */
   private isActive: boolean = false;
+  /** 現在表示中のヒントマッピング */
   private currentHints: HintMapping[] = [];
+  /** パフォーマンス測定のメトリクス */
   private performanceMetrics: PerformanceMetrics = {
     showHints: [],
     hideHints: [],
@@ -287,28 +412,31 @@ export class Core {
     hintGeneration: [],
   };
 
-  // Dictionary system variables
+  /** 辞書システムのローダー */
   private dictionaryLoader: DictionaryLoader | null = null;
+  /** Vim設定ブリッジ */
   private vimConfigBridge: VimConfigBridge | null = null;
 
-  // Display rendering state management (sub2-3)
+  /** ヒント描画中かどうかの状態 */
   private _isRenderingHints: boolean = false;
+  /** 描画処理を中断するためのAbortController */
   private _renderingAbortController: AbortController | null = null;
 
-  // タイマー管理（タイマーリーク対策）
-
-  // Motion counter management
+  /** モーションカウンターの管理クラス */
   private motionManager: MotionManager = new MotionManager();
 
-  /*   * Coreクラスのプライベートコンストラクタ（シングルトン用）   * @param config 初期設定（省略時はデフォルト設定を使用）
+  /**
+   * Coreクラスのプライベートコンストラクタ（シングルトン用）
+   * @param config - 初期設定（省略時はデフォルト設定を使用）
    */
   private constructor(config?: Partial<Config>) {
     // Configのデフォルト設定を使用
     this.config = { ...getDefaultConfig(), ...config };
   }
 
-  /*   * シングルトンインスタンスを取得
-   * Phase 10.1: TDD Green実装   * @param config 初期設定（初回のみ有効）
+  /**
+   * シングルトンインスタンスを取得する
+   * @param config - 初期設定（初回のみ有効）
    * @returns Coreクラスのシングルトンインスタンス
    */
   public static getInstance(config?: Partial<Config>): Core {
@@ -318,23 +446,27 @@ export class Core {
     return Core.instance;
   }
 
-  /*   * テスト用リセットメソッド
-   * テスト間でのインスタンス分離を実現
-   * Phase 10.1: TDD Green実装
+  /**
+   * テスト用リセットメソッド
+   * テスト間でのインスタンス分離を実現する
    */
   public static resetForTesting(): void {
     Core.instance = null;
   }
 
-  /*   * インスタンスリセット（テスト用）
-   * TDD Green Phase: lifecycle統合用
+  /**
+   * インスタンスリセット（テスト用）
+   * lifecycle統合用
    */
   reset(): void {
     Core.instance = null;
   }
 
-  /*   * ライフサイクル管理 - プラグイン初期化
-   * TDD Refactor Phase: lifecycle.tsに完全委譲し、エラーハンドリングとログを追加
+  /**
+   * プラグインを初期化する
+   * @param denops - Denopsインスタンス
+   * @param options - 初期化オプション
+   * @throws {Error} 初期化に失敗した場合
    */
   async initialize(denops: Denops, options?: any): Promise<void> {
     try {
@@ -348,8 +480,9 @@ export class Core {
     }
   }
 
-  /*   * ライフサイクル管理 - プラグインクリーンアップ
-   * TDD Refactor Phase: lifecycle.tsの優先実行とエラーハンドリングを改善
+  /**
+   * プラグインをクリーンアップする
+   * @param denops - Denopsインスタンス（オプション）
    */
   async cleanup(denops?: Denops): Promise<void> {
     try {
@@ -377,8 +510,10 @@ export class Core {
     }
   }
 
-  /*   * ヘルスチェック機能
-   * TDD Refactor Phase: lifecycle.tsへの完全委譲とログ出力
+  /**
+   * プラグインのヘルスチェックを実行する
+   * @param denops - Denopsインスタンス
+   * @returns ヘルスチェック結果を含むPromise
    */
   async getHealthStatus(denops: Denops): Promise<{
     healthy: boolean;
@@ -401,8 +536,9 @@ export class Core {
     }
   }
 
-  /*   * 統計情報取得
-   * TDD Refactor Phase: lifecycle.tsへの完全委譲と型安全性向上
+  /**
+   * プラグインの統計情報を取得する
+   * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
    */
   getStatistics(): {
     cacheStats: { words: any; hints: any };
@@ -432,8 +568,9 @@ export class Core {
     }
   }
 
-  /*   * 状態更新
-   * TDD Refactor Phase: lifecycle.tsへの完全委譲とエラーハンドリング
+  /**
+   * プラグインの状態を更新する
+   * @param updates - 更新する状態のプロパティ
    */
   updateState(updates: any): void {
     try {
@@ -446,8 +583,10 @@ export class Core {
     }
   }
 
-  /*   * パフォーマンスメトリクス記録
-   * TDD Refactor Phase: lifecycle.tsの状態管理への完全移行
+  /**
+   * パフォーマンスメトリクスを記録する
+   * @param operation - 操作名
+   * @param duration - 実行時間（ミリ秒）
    */
   recordPerformanceMetric(operation: string, duration: number): void {
     try {
@@ -464,13 +603,18 @@ export class Core {
     }
   }
 
-  /*   * 現在の設定を取得   * @returns 現在のConfig設定
+  /**
+   * 現在の設定を取得する
+   * @returns 現在のConfig設定のコピー
    */
   getConfig(): Config {
     return { ...this.config };
   }
 
-  /*   * 設定を更新   * @param newConfig 新しい設定（部分更新可能）
+  /**
+   * 設定を更新する
+   * @param newConfig - 新しい設定（部分更新可能）
+   * @throws {Error} 不正な設定値の場合
    */
   updateConfig(newConfig: Partial<Config>): void {
     // motion設定のバリデーション
@@ -483,19 +627,25 @@ export class Core {
     this.config = { ...this.config, ...newConfig };
   }
 
-  /*   * プラグインの有効状態を取得   * @returns 有効状態
+  /**
+   * プラグインの有効状態を取得する
+   * @returns 有効な場合true、無効な場合false
    */
   isEnabled(): boolean {
     return this.config.enabled;
   }
 
-  /*   * ヒント表示中かどうかを確認   * @returns ヒント表示中の場合true
+  /**
+   * ヒント表示中かどうかを確認する
+   * @returns ヒント表示中の場合true、そうでなければfalse
    */
   isHintsVisible(): boolean {
     return this.isActive && this.currentHints.length > 0;
   }
 
-  /*   * 単語検出を実行   * @param context 検出コンテキスト
+  /**
+   * 単語検出を実行する
+   * @param context - 検出コンテキスト（オプション）
    * @returns 検出結果
    */
   detectWords(context?: DetectionContext): WordDetectionResult {
@@ -512,7 +662,9 @@ export class Core {
     };
   }
 
-  /*   * ヒント生成を実行   * @param words 対象となる単語配列
+  /**
+   * ヒント生成を実行する
+   * @param words - 対象となる単語配列
    * @returns ヒントマッピング配列
    */
   generateHints(words: Word[]): HintMapping[] {
@@ -520,7 +672,9 @@ export class Core {
     return [];
   }
 
-  /*   * ヒント表示を実行（Legacy用）   * @param hints 表示するヒントマッピング配列
+  /**
+   * ヒント表示を実行する（Legacy用）
+   * @param hints - 表示するヒントマッピング配列
    */
   showHintsLegacy(hints: HintMapping[]): void {
     if (!this.isEnabled()) {
@@ -533,7 +687,8 @@ export class Core {
     // 実際のVim/Neovimとの連携は後で実装
   }
 
-  /*   * ヒント非表示を実行
+  /**
+   * ヒント非表示を実行する
    */
   hideHints(): void {
     this.currentHints = [];
@@ -542,9 +697,12 @@ export class Core {
     // 実際のVim/Neovimとの連携は後で実装
   }
 
-  /*   * sub2-5-3: hideHintsOptimized - Vim/Neovimの実際のヒント表示をクリア   * main.ts の hideHints 関数をCoreクラスに移植
-   * ExtmarksとMatchesの両方をクリアしてヒントを非表示にする   * @param denops Denopsインスタンス
-   * @returns Promise<void> 非同期で完了   */
+  /**
+   * Vim/Neovimの実際のヒント表示を最適化してクリアする
+   * ExtmarksとMatchesの両方をクリアしてヒントを非表示にする
+   * @param denops - Denopsインスタンス
+   * @returns 非同期で完了するPromise
+   */
   async hideHintsOptimized(denops: Denops): Promise<void> {
     try {
       // 状態をクリア
@@ -3442,13 +3600,18 @@ export function validateHighlightColor(
   return { valid: false, errors };
 }
 
+/**
+ * HellshakeYanoプラグインのユーザー向けインターフェースクラス
+ * シンプルなAPIでCoreクラスの機能にアクセスできる
+ */
 export class HellshakeYanoCore {
   /** プラグインの設定 */
   private config: Config;
   /** CommandFactoryインスタンス */
   private commandFactory: CommandFactory;
 
-  /*   * HellshakeYanoCoreのインスタンスを作成します
+  /**
+   * HellshakeYanoCoreのインスタンスを作成する
    * @param initialConfig - 初期設定（省略時はデフォルト設定を使用）
    */
   constructor(initialConfig: Config = getDefaultConfig()) {
@@ -3456,44 +3619,48 @@ export class HellshakeYanoCore {
     this.commandFactory = new CommandFactory(this.config);
   }
 
-  /*   * プラグインを有効化します
-   * 内部的にコマンドモジュールのenable関数を呼び出します
+  /**
+   * プラグインを有効化する
    */
   enable(): void {
     enable(this.config);
   }
 
-  /*   * プラグインを無効化します
-   * 内部的にコマンドモジュールのdisable関数を呼び出します
+  /**
+   * プラグインを無効化する
    */
   disable(): void {
     disable(this.config);
   }
 
-  /*   * プラグインの有効/無効を切り替えます
+  /**
+   * プラグインの有効/無効を切り替える
    * @returns 切り替え後の有効状態（true: 有効, false: 無効）
    */
   toggle(): boolean {
     return toggle(this.config);
   }
 
-  /*   * プラグインの現在の有効状態を取得します
+  /**
+   * プラグインの現在の有効状態を取得する
    * @returns プラグインが有効かどうか（true: 有効, false: 無効）
    */
   isEnabled(): boolean {
     return this.config.enabled;
   }
 
-  /*   * 現在の設定を取得します
-   * @returns 現在の設定のコピー（元の設定オブジェクトは変更されません）
+  /**
+   * 現在の設定を取得する
+   * @returns 現在の設定のコピー（元の設定オブジェクトは変更されない）
    */
   getConfig(): Config {
     return { ...this.config };
   }
 
-  /*   * 設定を更新します
+  /**
+   * 設定を更新する
    * @param updates - 更新する設定項目（部分的な更新が可能）
-   * @throws {Error} 無効な設定が指定された場合、バリデーションエラーメッセージを含む
+   * @throws {Error} 無効な設定が指定された場合
    */
   updateConfig(updates: Partial<Config>): void {
     const validation = validateConfig(updates);
@@ -3504,29 +3671,34 @@ export class HellshakeYanoCore {
     this.config = { ...this.config, ...updates };
   }
 
-  /*   * 設定をデフォルト値にリセットします
-   * CommandFactoryインスタンスも新しい設定で再作成されます
+  /**
+   * 設定をデフォルト値にリセットする
    */
   resetConfig(): void {
     this.config = getDefaultConfig();
     this.commandFactory = new CommandFactory(this.config);
   }
 
-  /*   * ヒント表示の文字数を設定します
+  /**
+   * ヒント表示の文字数を設定する
    * @param count - 表示する文字数
    */
   setCount(count: number): void {
     setCount(this.config, count);
   }
 
-  /*   * タイムアウト時間を設定します
+  /**
+   * タイムアウト時間を設定する
    * @param timeout - タイムアウト時間（ミリ秒）
    */
   setTimeout(timeout: number): void {
     setTimeoutCommand(this.config, timeout);
   }
 
-  /*   * プラグインを初期化します   * @param options - 初期化オプション（省略可能、デフォルト: {}）
+  /**
+   * プラグインを初期化する
+   * @param denops - Denopsインスタンス
+   * @param options - 初期化オプション（省略可能、デフォルト: {}）
    * @returns 初期化完了のPromise
    * @throws {Error} 初期化処理でエラーが発生した場合
    */
@@ -3534,14 +3706,18 @@ export class HellshakeYanoCore {
     await initializePlugin(denops, { config: this.config, ...options });
   }
 
-  /*   * プラグインをクリーンアップします   * @returns クリーンアップ完了のPromise
+  /**
+   * プラグインをクリーンアップする
+   * @param denops - Denopsインスタンス
+   * @returns クリーンアップ完了のPromise
    * @throws {Error} クリーンアップ処理でエラーが発生した場合
    */
   async cleanup(denops: Denops): Promise<void> {
     await cleanupPlugin(denops);
   }
 
-  /*   * デバッグ情報を取得します
+  /**
+   * デバッグ情報を取得する
    * @returns 現在の設定、プラグイン状態、キャッシュ統計を含むデバッグ情報オブジェクト
    */
   getDebugInfo(): any {
@@ -3560,23 +3736,29 @@ export class HellshakeYanoCore {
     };
   }
 
-  /*   * プラグインの統計情報を取得します
-   * ライフサイクルモジュールのgetPluginStatistics関数を呼び出します
+  /**
+   * プラグインの統計情報を取得する
    * @returns プラグインの統計情報オブジェクト
    */
   getStatistics(): any {
     return getPluginStatistics();
   }
 
-  /*   * プラグインのヘルスチェックを実行します   * @returns ヘルスチェック結果のPromise
+  /**
+   * プラグインのヘルスチェックを実行する
+   * @param denops - Denopsインスタンス
+   * @returns ヘルスチェック結果のPromise
    * @throws {Error} ヘルスチェック実行中にエラーが発生した場合
    */
   async healthCheck(denops: Denops): Promise<any> {
     return await healthCheck(denops);
   }
 
-  /*   * ヒントを表示します   * @returns ヒント表示完了のPromise
-   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
+  /**
+   * ヒントを表示する
+   * @param denops - Denopsインスタンス
+   * @returns ヒント表示完了のPromise
+   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローする
    * @todo 既存のmain.tsから実装を移行する予定
    */
   async showHints(denops: Denops): Promise<void> {
@@ -3584,8 +3766,11 @@ export class HellshakeYanoCore {
     throw new Error("showHints not yet implemented in modular architecture");
   }
 
-  /*   * ヒントを非表示にします   * @returns ヒント非表示完了のPromise
-   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローします
+  /**
+   * ヒントを非表示にする
+   * @param denops - Denopsインスタンス
+   * @returns ヒント非表示完了のPromise
+   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローする
    * @todo 既存のmain.tsから実装を移行する予定
    */
   async hideHints(denops: Denops): Promise<void> {
@@ -3593,8 +3778,9 @@ export class HellshakeYanoCore {
     throw new Error("hideHints not yet implemented in modular architecture");
   }
 
-  /*   * キャッシュをクリアします
-   * 単語キャッシュとヒントキャッシュの両方をクリアします
+  /**
+   * キャッシュをクリアする
+   * 単語キャッシュとヒントキャッシュの両方をクリアする
    */
   clearCache(): void {
     const state = getPluginState();
@@ -3606,9 +3792,10 @@ export class HellshakeYanoCore {
   // Motion Counter Integration Methods
   // ========================================
 
-  /*   * モーションカウンターをインクリメントします
-   * @param denops Denops instance (unused but kept for compatibility)
-   * @param bufnr バッファ番号
+  /**
+   * モーションカウンターをインクリメントする
+   * @param denops - Denopsインスタンス（互換性のため保持）
+   * @param bufnr - バッファ番号
    * @returns カウンター状態
    */
   async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
