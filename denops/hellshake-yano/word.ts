@@ -464,6 +464,219 @@ export class RegexWordDetector implements WordDetector {
   }
 }
 
+/**
+ * TinySegmenter-based Word Detector
+ *
+ * 日本語テキストに特化した単語検出器。TinySegmenterを使用して
+ * 日本語の形態素解析による正確な単語境界の検出を行います。
+ *
+ * @description
+ * - 日本語文章を形態素単位で分割
+ * - 英数字との混在テキストにも対応
+ * - RegexWordDetectorより高い優先度（priority: 10）
+ * - 日本語を含むテキストのみ処理対象
+ *
+ * @example
+ * ```typescript
+ * const detector = new TinySegmenterWordDetector();
+ * const words = await detector.detectWords("これはテストです", 1);
+ * // => [
+ * //   { text: "これ", line: 1, col: 1 },
+ * //   { text: "は", line: 1, col: 3 },
+ * //   { text: "テスト", line: 1, col: 4 },
+ * //   { text: "です", line: 1, col: 7 }
+ * // ]
+ * ```
+ *
+ * @since 2.0.0
+ */
+export class TinySegmenterWordDetector implements WordDetector {
+  readonly name = "TinySegmenterWordDetector";
+  readonly priority = 10; // RegexWordDetectorより高い優先度
+  readonly supportedLanguages = ["ja"];
+
+  /** 日本語文字判定用の正規表現（パフォーマンス最適化のためキャッシュ） */
+  private readonly japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
+
+  /**
+   * TinySegmenterを使用して日本語テキストから単語を検出
+   *
+   * @description
+   * 日本語テキストをTinySegmenterで形態素解析し、単語単位で分割します。
+   * 各単語の正確な位置（行番号、列番号、バイト位置）を計算して返します。
+   *
+   * ### 特徴
+   * - 日本語の形態素解析による正確な単語境界検出
+   * - 複数行テキストの処理
+   * - 最小文字数によるフィルタリング
+   * - エラーハンドリングによる堅牢性
+   * - UTF-8バイト位置の正確な計算
+   *
+   * ### 処理の流れ
+   * 1. テキストを行単位で分割
+   * 2. 各行をTinySegmenterで分割
+   * 3. セグメントの位置を正確に計算
+   * 4. 最小文字数フィルタを適用
+   * 5. Word配列として返却
+   *
+   * @param text - 検出対象のテキスト（複数行対応）
+   * @param startLine - 開始行番号（1ベース）
+   * @param context - 検出コンテキスト（最小文字数など）
+   * @param denops - Denopsインスタンス（未使用、互換性のため）
+   * @returns Promise<Word[]> 検出された単語の配列
+   *
+   * @throws エラーが発生した場合はログに記録し、その行の処理をスキップ
+   *
+   * @example
+   * ```typescript
+   * const detector = new TinySegmenterWordDetector();
+   * const words = await detector.detectWords("私は日本語を学習中です", 1);
+   * // => [
+   * //   { text: "私", line: 1, col: 1, byteCol: 1 },
+   * //   { text: "は", line: 1, col: 2, byteCol: 4 },
+   * //   { text: "日本語", line: 1, col: 3, byteCol: 7 },
+   * //   // ...
+   * // ]
+   * ```
+   *
+   * @since 2.0.0
+   */
+  async detectWords(
+    text: string,
+    startLine: number,
+    context?: DetectionContext,
+    denops?: Denops,
+  ): Promise<Word[]> {
+    const words: Word[] = [];
+    const lines = text.split("\n");
+    const minWordLength = context?.minWordLength || 1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineText = lines[i];
+      const lineNumber = startLine + i;
+
+      if (lineText.trim().length === 0) {
+        continue; // 空行をスキップ
+      }
+
+      try {
+        // TinySegmenterで分割
+        const segmentResult = await tinysegmenter.segment(lineText);
+
+        if (segmentResult.success && segmentResult.segments) {
+          let currentIndex = 0;
+
+          for (const segment of segmentResult.segments) {
+            // 空のセグメントをスキップ
+            if (segment.trim().length === 0) {
+              currentIndex += segment.length;
+              continue;
+            }
+
+            // 最小文字数フィルタ
+            if (segment.length < minWordLength) {
+              currentIndex += segment.length;
+              continue;
+            }
+
+            // セグメントの位置を計算
+            const index = lineText.indexOf(segment, currentIndex);
+            if (index !== -1) {
+              // 位置情報を計算
+              const col = index + 1; // 1ベース
+              let byteCol: number;
+
+              try {
+                byteCol = charIndexToByteIndex(lineText, index) + 1; // 1ベース
+              } catch (byteError) {
+                // バイト計算エラーの場合は文字位置を代用
+                byteCol = col;
+              }
+
+              words.push({
+                text: segment,
+                line: lineNumber,
+                col: col,
+                byteCol: byteCol,
+              });
+
+              currentIndex = index + segment.length;
+            } else {
+              // セグメントが見つからない場合（理論的には発生しないはず）
+              // 安全のため文字数分進める
+              currentIndex += segment.length;
+            }
+          }
+        } else if (!segmentResult.success) {
+          // セグメンテーション失敗の場合はログに記録して次の行へ
+          console.warn(`TinySegmenter segmentation failed for line ${lineNumber}: ${segmentResult.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        // 予期しないエラーが発生した場合
+        if (error instanceof Error) {
+          console.error(`TinySegmenterWordDetector error for line ${lineNumber}: ${error.message}`);
+        } else {
+          console.error(`TinySegmenterWordDetector unexpected error for line ${lineNumber}:`, error);
+        }
+        continue; // エラーが発生した行はスキップして処理を続行
+      }
+    }
+
+    return words;
+  }
+
+  /**
+   * 指定されたテキストを処理可能かどうかを判定
+   *
+   * @description
+   * テキストに日本語文字（ひらがな、カタカナ、漢字）が含まれているかを
+   * 高速で判定します。日本語が含まれている場合のみTinySegmenterによる
+   * 処理が有効になります。
+   *
+   * ### 対応文字
+   * - ひらがな: \u3040-\u309F
+   * - カタカナ: \u30A0-\u30FF
+   * - 漢字: \u4E00-\u9FAF
+   *
+   * @param text - 判定対象のテキスト
+   * @returns 日本語を含む場合はtrue、そうでなければfalse
+   *
+   * @example
+   * ```typescript
+   * detector.canHandle("これはテスト"); // => true
+   * detector.canHandle("Hello World");   // => false
+   * detector.canHandle("私はJavaScript"); // => true (混在でもOK)
+   * ```
+   *
+   * @since 2.0.0
+   */
+  canHandle(text: string): boolean {
+    // 日本語文字（ひらがな、カタカナ、漢字）が含まれているかチェック
+    return this.japaneseRegex.test(text);
+  }
+
+  /**
+   * この検出器が利用可能かどうかを確認
+   *
+   * @description
+   * TinySegmenterWordDetectorの利用可能性を確認します。
+   * このDetectorはTinySegmenterライブラリに依存していますが、
+   * 外部依存関係のため常にtrueを返します。
+   *
+   * 将来的には以下の確認を追加する可能性があります：
+   * - TinySegmenterライブラリの初期化状態
+   * - メモリ使用量の確認
+   * - パフォーマンス制限の確認
+   *
+   * @returns Promise<boolean> 常にtrue（TinySegmenterは常に利用可能）
+   *
+   * @since 2.0.0
+   */
+  async isAvailable(): Promise<boolean> {
+    return true;
+  }
+}
+
 /** @deprecated Use detectWordsWithManager instead */
 export function detectWords(
   text: string,
