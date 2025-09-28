@@ -1,6 +1,6 @@
 import type { Denops } from "@denops/std";
 import type { DetectionContext, Word, WordDetectionResult } from "./types.ts";
-import { TinySegmenter as NpmTinySegmenter } from "@birchill/tiny-segmenter";
+import { TinySegmenter as NpmTinySegmenter } from "https://esm.sh/@birchill/tiny-segmenter@1.0.0";
 import { exists } from "https://deno.land/std@0.212.0/fs/exists.ts";
 import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
