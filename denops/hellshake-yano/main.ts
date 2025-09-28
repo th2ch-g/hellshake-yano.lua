@@ -226,6 +226,8 @@ export async function main(denops: Denops): Promise<void> {
     // UnifiedConfigを直接使用
     const defaultConfig = getDefaultUnifiedConfig();
     config = { ...defaultConfig, ...normalizedUserConfig } as UnifiedConfig;
+    // Coreインスタンスの設定を更新（use_japanese, enable_tinysegmenterなどが反映される）
+    core.updateConfig(config);
     syncManagerConfig(config);
     if (denops.meta.host === "nvim") {
       extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake-yano") as number;

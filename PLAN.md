@@ -1,180 +1,124 @@
-# title: hellshake-yano.vim v2 - 7ファイル体制への統合
+# title: TinySegmenterによる日本語分かち書き機能の実装
 
 ## 概要
-- 現在37ファイルのコードベースを7ファイルに統合し、保守性とパフォーマンスを向上
-- 後方互換性を考慮せずv2として新規実装
-- コード量は15,000行程度を許容（現在19,794行から約24%削減）
+- hellshake-yano.vimプラグインで日本語テキストに対してもヒント表示を可能にする機能
+- TinySegmenterを使用した日本語形態素解析により、日本語の単語単位でヒントを設定
 
 ### goal
-- ファイル構成をシンプルな7ファイル体制に統合
-- ディレクトリ構造のフラット化による依存関係の簡素化
-- re-exportの完全排除による循環参照リスクの解消
+- 日本語を含むテキストで、単語単位にヒントが表示される
+- 英数字と日本語が混在するテキストでも適切にヒントが表示される
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- バージョン2として後方互換性は不要
-- テストが壊れないよう慎重に作業を進める（503/563パス維持）
-- 各段階で `deno check` を実行し、型エラーを防ぐ
+- 単一責任の原則に従い、各Detectorの責務を明確に分離する
 
 ## 開発のゴール
-- 7ファイル体制によるシンプルな構造の実現
-- re-exportファイルの完全削除
-- 明確な責務分離の維持
+- TinySegmenterを使用した日本語単語検出機能の実装
+- 責務を明確に分離したアーキテクチャの実現
+- 既存の英数字検出機能との適切な統合
 
 ## 実装仕様
 
-### 現在の問題点
-1. **ファイル数の多さ（37ファイル）**
-   - 30ファイルが削除対象
-   - re-exportのみのファイルが15個
-   - 空のindex.tsファイルが5個
+### 現状の問題
+1. **設定の反映不具合**
+   - `use_japanese: true`と`enable_tinysegmenter: true`を設定しても日本語にヒントが表示されない
+   - 原因: Coreインスタンスの初期化時にデフォルト設定が使用され、ユーザー設定が反映されていない
 
-2. **ディレクトリ構造の複雑さ**
-   - word/, core/, main/, utils/, hint/等のディレクトリ
-   - 実質1-2ファイルしかないディレクトリが多数
+2. **アーキテクチャの問題**
+   - RegexWordDetectorにTinySegmenter処理が混在し、責務が不明確
+   - WordDetectionManagerのstrategyパターンが十分に活用されていない
 
-3. **re-exportによる依存関係の不明瞭さ**
-   - 後方互換性のためのre-exportが多数存在
-   - 実際の実装場所が分かりにくい
-
-### 新しいアーキテクチャ（7ファイル体制）
-```
-denops/hellshake-yano/
-├── main.ts      (~1,000行)  # エントリーポイント
-├── core.ts      (~4,500行)  # コア機能、API、ライフサイクル
-├── hint.ts      (~2,200行)  # ヒント生成と表示
-├── word.ts      (~5,000行)  # 単語検出、辞書、セグメンター
-├── config.ts    (~1,400行)  # 設定管理
-├── cache.ts     (~500行)    # キャッシュ管理
-└── types.ts     (~1,100行)  # 型定義
-```
+### 解決方針
+1. Coreインスタンスの設定更新処理を追加（実装済み）
+2. TinySegmenterWordDetectorを独立したクラスとして実装
+3. 各Detectorの責務を明確に分離
 
 ## 生成AIの学習用コンテキスト
 
-### 削除対象ファイル分析
-- **word/ディレクトリ（5ファイル、2,718行）**
-  - word.tsに統合予定
-  - manager.ts, context.ts, dictionary.ts, dictionary-loader.ts, detector.ts
+### 設定ファイル
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+  - UnifiedConfig インターフェースの定義
+  - useJapanese, enableTinySegmenter 設定項目
 
-- **re-exportのみファイル（15ファイル、約200行）**
-  - 即座に削除可能
-  - core/, main/, hint/配下のファイル
-  - 空のindex.tsファイル
+### メインロジック
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts`
+  - プラグイン初期化処理
+  - Core インスタンスの生成と設定
 
-- **統合済みファイル（7ファイル、2,955行）**
-  - api.ts, commands.ts, lifecycle.ts → core.tsに統合済み
-  - motion.ts → core.tsに統合済み
-  - segmenter.ts → word.tsに統合予定
-  - display.ts, hint-utils.ts → 削除マーク付き
+### 単語検出機能
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
+  - WordDetector インターフェース
+  - RegexWordDetector クラス
+  - TinySegmenter クラス
+  - WordDetectionManager クラス
+
+### コア機能
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/core.ts`
+  - Core クラス
+  - detectWordsOptimized メソッド
+  - showHintsInternal メソッド
 
 ## Process
 
-### process5 7ファイル体制への統合
+### process1 設定反映問題の修正
+#### sub1 Coreインスタンスへのユーザー設定反映
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts`
+@ref: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/core.ts`
+- [x] main.tsの初期化処理でユーザー設定取得後にcore.updateConfig()を追加
+  - 229-230行目に実装済み
 
-#### sub1 即座に削除可能なファイルの削除
-@target: denops/hellshake-yano/
-@context: re-exportのみ、または空ファイルの削除
-- [x] 空のindex.tsファイル削除（5ファイル）
-  - [x] dictionary/index.ts
-  - [x] display/index.ts
-  - [x] input/index.ts
-  - [x] performance/index.ts
-  - [x] validation/index.ts
-- [x] re-exportのみファイル削除（10ファイル）
-  - [x] core/配下4ファイル
-  - [x] main/配下4ファイル
-  - [x] hint/manager.ts
-  - [x] hint-utils.ts
+### process2 TinySegmenterWordDetectorの実装
+#### sub1 独立したDetectorクラスの作成
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
+- [ ] TinySegmenterWordDetectorクラスの新規作成
+  - WordDetectorインターフェースを実装
+  - 日本語専用の単語検出ロジック
+- [ ] detectWordsメソッドの実装
+  - TinySegmenter.segment()を使用した分かち書き処理
+- [ ] canHandleメソッドの実装
+  - 日本語テキストの判定ロジック
 
-#### sub2 統合済みファイルの削除とimport修正
-@target: denops/hellshake-yano/main.ts, denops/hellshake-yano/core.ts
-@ref: 削除対象ファイル
-- [x] main.ts, core.tsのimportパス修正
-  - [x] api.ts関連のimport削除
-  - [x] commands.ts関連のimport削除
-  - [x] lifecycle.ts関連のimport削除
-  - [x] motion.ts関連のimport削除
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
-- [x] ファイル削除（5ファイル）
-  - [x] api.ts
-  - [x] commands.ts
-  - [x] lifecycle.ts
-  - [x] motion.ts
-  - [x] display.ts
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
+#### sub2 RegexWordDetectorのリファクタリング
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
+- [ ] extractWordsImprovedからTinySegmenter処理を削除
+  - 正規表現ベースの処理のみに専念
+- [ ] 日本語処理の適切な分離
 
-#### sub3 word/配下とsegmenter.tsの統合
-@target: denops/hellshake-yano/word.ts
-@ref: word/配下の全ファイル、segmenter.ts
-- [x] word.ts内のre-export文削除
-- [x] 実装コードの統合
-  - [x] word/manager.ts (942行) → word.tsへ
-  - [x] word/context.ts (645行) → word.tsへ
-  - [x] word/dictionary.ts (432行) → word.tsへ
-  - [x] word/dictionary-loader.ts (575行) → word.tsへ
-  - [x] word/detector.ts (124行) → word.tsへ
-  - [x] segmenter.ts (422行) → word.tsへ
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
-- [x] importパス修正
-  - [x] main.tsのword/配下import修正
-  - [x] core.tsのword/配下import修正
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
-- [x] ディレクトリとファイル削除（手動実行が必要）
-  - [x] word/ディレクトリ削除
-  - [x] segmenter.ts削除
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
+### process3 HybridWordDetectorの実装（オプション）
+#### sub1 複合検出器の作成
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
+- [ ] HybridWordDetectorクラスの実装
+  - RegexとTinySegmenterの結果をマージ
+- [ ] 重複除去ロジックの実装
 
-#### sub4 utils/配下の統合と削除
-@target: 各統合先ファイル
-@ref: utils/配下のファイル
-- [x] utils/display.ts (95行) の統合
-  - [x] 表示関連 → hint.tsへ
-  - [x] 汎用関数 → core.tsへ
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
-- [x] utils/validation.ts (31行) → 削除（config.tsに統合済み）
-- [x] utils/cache.ts (6行) → 削除（cache.tsに統合済み）
-- [x] utils/sort.ts (6行) → 削除
-- [x] utils/ディレクトリ削除
-- [x] hint-utils.ts → 削除（後方互換re-export）
-- [x] deno checkで型エラー確認
-- [x] deno testでテスト実行
-
-#### sub5 最終確認と調整
-@target: denops/hellshake-yano/
-- [x] 不要なimport文のクリーンアップ
-- [x] `deno check denops/hellshake-yano/*.ts`で型チェック
-- [x] `deno test tests/*.ts`でテスト実行（504/563パス達成）
-- [x] 7ファイルのみ存在することを確認
-  - [x] `ls -la denops/hellshake-yano/*.ts | wc -l`で確認
+### process4 WordDetectionManagerの更新
+#### sub1 Detector登録処理の更新
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
+- [ ] registerStandardDetectorsメソッドの更新
+  - TinySegmenterWordDetectorの追加
+- [ ] getDetectorForContextメソッドの実装
+  - strategyに基づく適切なDetector選択
 
 ### process10 ユニットテスト
-#### sub1 テストファイルのimportパス修正
-@target: tests/
-- [ ] word/配下からのimportをword.tsに修正
-- [ ] 削除ファイルからのimportを統合先に修正
-- [ ] 全テストの実行確認
+- [ ] TinySegmenterWordDetectorのテスト作成
+- [ ] 日本語・英語混在テキストでの動作確認
+- [ ] 各strategyでの切り替え動作確認
 
 ### process50 フォローアップ
-#### sub1 パフォーマンス測定
-- [ ] 統合前後のメモリ使用量比較
-- [ ] 起動時間の測定
-- [ ] キャッシュヒット率の確認
+#### sub1 暫定対応の修正
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
+- [ ] RegexWordDetector内の暫定的なTinySegmenter統合を削除
+  - extractWordsImprovedメソッドを元の実装に戻す
 
 ### process100 リファクタリング
-#### sub1 各ファイルの最適化
-@target: 7つの統合ファイル
-- [ ] 統合により不要になったファイルの削除
-- [ ] 重複コードの削除
-- [ ] 未使用関数の削除
+- [ ] 不要なコードの削除
 - [ ] 型定義の整理
+- [ ] エラーハンドリングの改善
 
 ### process200 ドキュメンテーション
-- [ ] README.mdに新アーキテクチャの説明追加
-- [ ] 移行ガイドの作成（MIGRATION.md更新）
-- [ ] APIリファレンスの更新
+- [ ] README.mdへの日本語対応機能の追記
+- [ ] 設定項目の説明更新
+  - wordDetectionStrategy の説明
+  - enableTinySegmenter の使用方法
+- [ ] 日本語テキストでの使用例を追加
+

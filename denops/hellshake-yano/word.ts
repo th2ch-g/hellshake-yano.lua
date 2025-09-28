@@ -356,7 +356,7 @@ export class RegexWordDetector implements WordDetector {
       const lineNumber = startLine + i;
 
       // 常に改善版検出を使用（統合済み）
-      const lineWords = this.extractWordsImproved(lineText, lineNumber, context);
+      const lineWords = await this.extractWordsImproved(lineText, lineNumber, context);
 
       words.push(...lineWords);
     }
@@ -387,12 +387,53 @@ export class RegexWordDetector implements WordDetector {
     };
   }
 
-  private extractWordsImproved(
+  private async extractWordsImproved(
     lineText: string,
     lineNumber: number,
     context?: DetectionContext,
-  ): Word[] {
-    // Use existing extractWordsFromLine with improved detection
+  ): Promise<Word[]> {
+    // TinySegmenterが有効で日本語を使用する設定の場合
+    if (this.config.useJapanese && this.config.enableTinySegmenter) {
+      // 日本語が含まれているかチェック
+      const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(lineText);
+
+      if (hasJapanese) {
+        const words: Word[] = [];
+
+        // TinySegmenterで分割を試みる
+        const segmentResult = await tinysegmenter.segment(lineText);
+
+        if (segmentResult.success && segmentResult.segments) {
+          // TinySegmenterの結果を使用して単語を抽出
+          let currentIndex = 0;
+          for (const segment of segmentResult.segments) {
+            const index = lineText.indexOf(segment, currentIndex);
+            if (index !== -1 && segment.trim().length > 0) {
+              // 日本語と英数字の両方を許可（最小文字数制限も適用）
+              const minLength = context?.minWordLength || this.config.minWordLength || 1;
+              if (/[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+/.test(segment) && segment.length >= minLength) {
+                const byteIndex = charIndexToByteIndex(lineText, index);
+                const displayCol = getDisplayColumn(lineText, index);
+
+                words.push({
+                  text: segment,
+                  line: lineNumber,
+                  col: displayCol + 1,
+                  byteCol: byteIndex + 1,
+                });
+              }
+              currentIndex = index + segment.length;
+            }
+          }
+
+          if (words.length > 0) {
+            return words;
+          }
+        }
+      }
+    }
+
+    // フォールバック: 既存のextractWordsFromLineを使用
     const excludeJapanese = !this.config.useJapanese;
     return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
