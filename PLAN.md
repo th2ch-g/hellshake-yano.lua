@@ -132,17 +132,18 @@ denops/hellshake-yano/
 #### sub4 utils/配下の統合と削除
 @target: 各統合先ファイル
 @ref: utils/配下のファイル
-- [ ] utils/display.ts (95行) の統合
-  - [ ] 表示関連 → hint.tsへ
-  - [ ] 汎用関数 → core.tsへ
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
-- [ ] utils/validation.ts (31行) → 削除（config.tsに統合済み）
-- [ ] utils/cache.ts (6行) → 削除（cache.tsに統合済み）
-- [ ] utils/sort.ts (6行) → 削除
-- [ ] utils/ディレクトリ削除
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
+- [x] utils/display.ts (95行) の統合
+  - [x] 表示関連 → hint.tsへ
+  - [x] 汎用関数 → core.tsへ
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
+- [x] utils/validation.ts (31行) → 削除（config.tsに統合済み）
+- [x] utils/cache.ts (6行) → 削除（cache.tsに統合済み）
+- [x] utils/sort.ts (6行) → 削除
+- [x] utils/ディレクトリ削除
+- [x] hint-utils.ts → 削除（後方互換re-export）
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
 
 #### sub5 最終確認と調整
 @target: denops/hellshake-yano/

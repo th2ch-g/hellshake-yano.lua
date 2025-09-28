@@ -15,10 +15,10 @@ import {
   areWordsAdjacent,
   getWordDisplayStartCol,
   calculateHintDisplayPosition,
-  getByteLength,
   isPositionWithinWord,
   calculateWordGap,
-} from "../denops/hellshake-yano/hint-utils.ts";
+} from "../denops/hellshake-yano/hint.ts";
+import { getByteLength } from "../denops/hellshake-yano/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("convertToDisplayColumn function", async (t) => {
