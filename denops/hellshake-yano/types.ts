@@ -204,6 +204,8 @@ export interface DetectionContext {
   bufnr?: number;
   /** 設定オブジェクト（オプショナル） */
   config?: any;
+  /** 単語検出戦略 */
+  strategy?: string;
 
   // 新規追加フィールド（process4 sub3: コンテキスト認識による分割調整）
   /** Vimのfiletype（'typescript', 'python'等） */

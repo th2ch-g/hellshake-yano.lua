@@ -70,32 +70,32 @@
 ### process2 TinySegmenterWordDetectorの実装
 #### sub1 独立したDetectorクラスの作成
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] TinySegmenterWordDetectorクラスの新規作成
+- [x] TinySegmenterWordDetectorクラスの新規作成
   - WordDetectorインターフェースを実装
   - 日本語専用の単語検出ロジック
-- [ ] detectWordsメソッドの実装
+- [x] detectWordsメソッドの実装
   - TinySegmenter.segment()を使用した分かち書き処理
-- [ ] canHandleメソッドの実装
+- [x] canHandleメソッドの実装
   - 日本語テキストの判定ロジック
-- [ ] deno checkでの型チェックとLint確認
-- [ ] deno testでの動作確認
+- [x] deno checkでの型チェックとLint確認
+- [x] deno testでの動作確認
 
 #### sub2 RegexWordDetectorのリファクタリング
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] extractWordsImprovedからTinySegmenter処理を削除
+- [x] extractWordsImprovedからTinySegmenter処理を削除
   - 正規表現ベースの処理のみに専念
-- [ ] 日本語処理の適切な分離
-- [ ] deno checkでの型チェックとLint確認
-- [ ] deno testでの動作確認
+- [x] 日本語処理の適切な分離
+- [x] deno checkでの型チェックとLint確認
+- [x] deno testでの動作確認
 
 ### process3 HybridWordDetectorの実装（オプション）
 #### sub1 複合検出器の作成
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] HybridWordDetectorクラスの実装
+- [x] HybridWordDetectorクラスの実装
   - RegexとTinySegmenterの結果をマージ
-- [ ] 重複除去ロジックの実装
-- [ ] deno checkでの型チェックとLint確認
-- [ ] deno testでの動作確認
+- [x] 重複除去ロジックの実装
+- [x] deno checkでの型チェックとLint確認
+- [x] deno testでの動作確認
 
 ### process4 WordDetectionManagerの更新
 #### sub1 Detector登録処理の更新

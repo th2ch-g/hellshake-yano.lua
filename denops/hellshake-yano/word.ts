@@ -295,7 +295,19 @@ export const globalWordCache = new KeyBasedWordCache();
 
 /**
  * Regex-based Word Detector
- * Extracts current word detection logic from word.ts
+ *
+ * @description 正規表現ベースの単語検出器。英数字などの単語を効率的に検出します。
+ * 日本語の形態素解析処理は行わず、正規表現パターンマッチングのみを使用します。
+ * 日本語テキストの詳細な分割が必要な場合は、TinySegmenterWordDetectorを使用してください。
+ *
+ * @features
+ * - 英数字、記号を含む単語の高速検出
+ * - 最小/最大文字数によるフィルタリング
+ * - 複数行テキストの処理
+ * - DetectionContextによる動的設定
+ *
+ * @responsibility 正規表現ベースの単語検出のみ
+ * @delegation 日本語形態素解析はTinySegmenterWordDetectorに委譲
  */
 export class RegexWordDetector implements WordDetector {
   readonly name = "RegexWordDetector";
@@ -387,53 +399,27 @@ export class RegexWordDetector implements WordDetector {
     };
   }
 
+  /**
+   * 正規表現ベースの単語抽出（リファクタリング後）
+   *
+   * @description 単一責任の原則に従い、正規表現ベースの処理のみを実行します。
+   * TinySegmenter関連の処理は削除され、責務が明確に分離されています。
+   *
+   * @param lineText - 処理対象の行テキスト
+   * @param lineNumber - 行番号（1ベース）
+   * @param context - 検出コンテキスト（オプション）
+   * @returns 検出された単語の配列
+   *
+   * @responsibility 正規表現ベースの単語検出のみ
+   * @refactored TinySegmenter処理を削除し、責務を分離
+   */
   private async extractWordsImproved(
     lineText: string,
     lineNumber: number,
     context?: DetectionContext,
   ): Promise<Word[]> {
-    // TinySegmenterが有効で日本語を使用する設定の場合
-    if (this.config.useJapanese && this.config.enableTinySegmenter) {
-      // 日本語が含まれているかチェック
-      const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(lineText);
-
-      if (hasJapanese) {
-        const words: Word[] = [];
-
-        // TinySegmenterで分割を試みる
-        const segmentResult = await tinysegmenter.segment(lineText);
-
-        if (segmentResult.success && segmentResult.segments) {
-          // TinySegmenterの結果を使用して単語を抽出
-          let currentIndex = 0;
-          for (const segment of segmentResult.segments) {
-            const index = lineText.indexOf(segment, currentIndex);
-            if (index !== -1 && segment.trim().length > 0) {
-              // 日本語と英数字の両方を許可（最小文字数制限も適用）
-              const minLength = context?.minWordLength || this.config.minWordLength || 1;
-              if (/[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+/.test(segment) && segment.length >= minLength) {
-                const byteIndex = charIndexToByteIndex(lineText, index);
-                const displayCol = getDisplayColumn(lineText, index);
-
-                words.push({
-                  text: segment,
-                  line: lineNumber,
-                  col: displayCol + 1,
-                  byteCol: byteIndex + 1,
-                });
-              }
-              currentIndex = index + segment.length;
-            }
-          }
-
-          if (words.length > 0) {
-            return words;
-          }
-        }
-      }
-    }
-
-    // フォールバック: 既存のextractWordsFromLineを使用
+    // RegexWordDetectorは正規表現ベースの処理のみを行う
+    // 日本語処理はTinySegmenterWordDetectorに委譲される
     const excludeJapanese = !this.config.useJapanese;
     return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
@@ -674,6 +660,284 @@ export class TinySegmenterWordDetector implements WordDetector {
    */
   async isAvailable(): Promise<boolean> {
     return true;
+  }
+}
+
+/**
+ * HybridWordDetector - 統合型単語検出器
+ *
+ * @description
+ * RegexWordDetectorとTinySegmenterWordDetectorを組み合わせた統合型の単語検出器です。
+ * 英数字の単語と日本語の単語の両方を効率的に検出し、重複を除去して統一された結果を提供します。
+ *
+ * ### 特徴
+ * - 英数字単語: RegexWordDetectorによる高速な正規表現ベース検出
+ * - 日本語単語: TinySegmenterによる形態素解析ベース検出
+ * - 重複除去: 同じ位置の単語は自動的に除去（より長い単語を優先）
+ * - 位置ソート: 結果は位置順（行、列）でソートされて返却
+ * - 全言語対応: すべてのテキストタイプを処理可能
+ *
+ * ### 処理優先度
+ * 1. 同じ位置に複数の単語がある場合、より長い単語を優先
+ * 2. 長さが同じ場合は、TinySegmenterの結果を優先
+ * 3. 位置順（line, col）でソート
+ *
+ * @example
+ * ```typescript
+ * const detector = new HybridWordDetector();
+ * const words = await detector.detectWords("hello こんにちは world", 1);
+ * // => 英数字と日本語の単語が両方検出される
+ * ```
+ *
+ * @since 2.1.0
+ */
+export class HybridWordDetector implements WordDetector {
+  readonly name = "HybridWordDetector";
+  readonly priority = 15; // 最も高い優先度
+  readonly supportedLanguages = ["ja", "en", "any"];
+
+  private regexDetector: RegexWordDetector;
+  private tinySegmenterDetector: TinySegmenterWordDetector;
+
+  /**
+   * HybridWordDetectorのコンストラクタ
+   *
+   * @param config - 単語検出設定（オプショナル）
+   */
+  constructor(config?: WordDetectionConfig) {
+    this.regexDetector = new RegexWordDetector(config);
+    this.tinySegmenterDetector = new TinySegmenterWordDetector();
+  }
+
+  /**
+   * 統合型単語検出を実行
+   *
+   * @description
+   * RegexWordDetectorとTinySegmenterWordDetectorの両方を使用して
+   * 単語を検出し、結果をマージして重複を除去します。
+   *
+   * ### 処理の流れ
+   * 1. 入力検証とパフォーマンス最適化チェック
+   * 2. RegexWordDetectorとTinySegmenterWordDetectorの並行実行
+   * 3. 結果をマージして重複を除去
+   * 4. 位置順でソート
+   * 5. エラーハンドリングとフォールバック処理
+   *
+   * ### パフォーマンス考慮
+   * - 空文字列やスペースのみの場合は早期リターン
+   * - 並行実行によるレスポンス時間の最適化
+   * - 部分的なエラーでも可能な限り結果を返却
+   *
+   * @param text - 検出対象のテキスト
+   * @param startLine - 開始行番号（1ベース）
+   * @param context - 検出コンテキスト（オプショナル）
+   * @param denops - Denopsインスタンス（オプショナル）
+   * @returns Promise<Word[]> 検出された単語の配列（エラー時は空配列）
+   *
+   * @throws エラーが発生した場合はログに記録し、空配列を返却
+   *
+   * @example
+   * ```typescript
+   * const detector = new HybridWordDetector();
+   * const words = await detector.detectWords("hello こんにちは world", 1);
+   * console.log(words); // => 英数字と日本語の単語配列
+   * ```
+   */
+  async detectWords(
+    text: string,
+    startLine: number,
+    context?: DetectionContext,
+    denops?: Denops,
+  ): Promise<Word[]> {
+    // 入力検証: 空文字列やスペースのみの場合は早期リターン
+    if (!text || text.trim().length === 0) {
+      return [];
+    }
+
+    // パフォーマンス最適化: 非常に短いテキストの場合
+    if (text.length < 2) {
+      return [];
+    }
+
+    try {
+      // 両方のDetectorを並行実行（レスポンス時間の最適化）
+      const [regexWordsResult, tinySegmenterWordsResult] = await Promise.allSettled([
+        this.regexDetector.detectWords(text, startLine, context, denops),
+        this.tinySegmenterDetector.detectWords(text, startLine, context, denops),
+      ]);
+
+      // 成功した結果のみを取得（部分的なエラーに対する堅牢性）
+      const regexWords = regexWordsResult.status === "fulfilled" ? regexWordsResult.value : [];
+      const tinySegmenterWords = tinySegmenterWordsResult.status === "fulfilled"
+        ? tinySegmenterWordsResult.value : [];
+
+      // 部分的なエラーをログに記録
+      if (regexWordsResult.status === "rejected") {
+        console.warn("HybridWordDetector: RegexWordDetector failed:", regexWordsResult.reason);
+      }
+      if (tinySegmenterWordsResult.status === "rejected") {
+        console.warn("HybridWordDetector: TinySegmenterWordDetector failed:", tinySegmenterWordsResult.reason);
+      }
+
+      // 結果をマージして重複を除去
+      const mergedWords = this.mergeAndDeduplicateWords(regexWords, tinySegmenterWords);
+
+      // 位置順でソート
+      return this.sortWordsByPosition(mergedWords);
+    } catch (error) {
+      // 予期しないエラーの詳細ログ
+      if (error instanceof Error) {
+        console.error(`HybridWordDetector unexpected error: ${error.message}`, {
+          text: text.substring(0, 100), // テキストの先頭部分のみログ
+          startLine,
+          stack: error.stack,
+        });
+      } else {
+        console.error("HybridWordDetector unknown error:", error);
+      }
+      return [];
+    }
+  }
+
+  /**
+   * 指定されたテキストを処理可能かどうかを判定
+   *
+   * @description
+   * HybridWordDetectorはすべてのテキストタイプを処理できるため、
+   * 常にtrueを返します。
+   *
+   * @param text - 判定対象のテキスト
+   * @returns 常にtrue
+   */
+  canHandle(text: string): boolean {
+    return true; // すべてのテキストを処理可能
+  }
+
+  /**
+   * この検出器が利用可能かどうかを確認
+   *
+   * @description
+   * 内部で使用するRegexWordDetectorとTinySegmenterWordDetectorが
+   * 両方とも利用可能な場合にtrueを返します。
+   *
+   * @returns Promise<boolean> 利用可能な場合はtrue
+   */
+  async isAvailable(): Promise<boolean> {
+    try {
+      const [regexAvailable, tinySegmenterAvailable] = await Promise.all([
+        this.regexDetector.isAvailable?.() ?? true,
+        this.tinySegmenterDetector.isAvailable(),
+      ]);
+      return regexAvailable && tinySegmenterAvailable;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 複数のDetectorの結果をマージして重複を除去
+   *
+   * @description
+   * 同じ位置にある単語の重複を除去し、より長い単語を優先します。
+   * 長さが同じ場合はTinySegmenterの結果を優先します。
+   *
+   * ### 最適化
+   * - Setを使用した高速な所属確認
+   * - 文字列比較によるより正確な判定
+   * - メモリ効率的な処理
+   *
+   * @param regexWords - RegexWordDetectorの結果
+   * @param tinySegmenterWords - TinySegmenterWordDetectorの結果
+   * @returns 重複除去後の単語配列
+   */
+  private mergeAndDeduplicateWords(regexWords: Word[], tinySegmenterWords: Word[]): Word[] {
+    const positionMap = new Map<string, Word>();
+
+    // TinySegmenterWordDetectorの結果をSetで高速検索
+    const tinySegmenterWordSet = new Set(tinySegmenterWords);
+
+    // すべての単語を位置キーでマップに登録（パフォーマンス向上のため）
+    const allWords = [...regexWords, ...tinySegmenterWords];
+
+    for (const word of allWords) {
+      // より正確な位置キーを生成
+      const positionKey = `${word.line}-${word.col}`;
+      const existing = positionMap.get(positionKey);
+
+      if (!existing) {
+        // 新しい位置の単語
+        positionMap.set(positionKey, word);
+      } else {
+        // 重複処理のロジック
+        const shouldReplaceExisting = this.shouldReplaceWord(existing, word, tinySegmenterWordSet);
+        if (shouldReplaceExisting) {
+          positionMap.set(positionKey, word);
+        }
+      }
+    }
+
+    return Array.from(positionMap.values());
+  }
+
+  /**
+   * 単語の置換判定を行う
+   *
+   * @description
+   * 既存の単語と新しい単語のどちらを優先するかを判定します。
+   *
+   * ### 判定ルール
+   * 1. より長い単語を優先
+   * 2. 長さが同じ場合はTinySegmenterの結果を優先
+   * 3. 両方とも同じソースの場合は既存を保持
+   *
+   * @param existingWord - 既存の単語
+   * @param newWord - 新しい単語
+   * @param tinySegmenterWordSet - TinySegmenterの結果のSet
+   * @returns 新しい単語を使用する場合はtrue
+   */
+  private shouldReplaceWord(
+    existingWord: Word,
+    newWord: Word,
+    tinySegmenterWordSet: Set<Word>
+  ): boolean {
+    // より長い単語を優先
+    if (newWord.text.length > existingWord.text.length) {
+      return true;
+    }
+
+    if (newWord.text.length < existingWord.text.length) {
+      return false;
+    }
+
+    // 長さが同じ場合はTinySegmenterの結果を優先
+    const isNewWordFromTinySegmenter = tinySegmenterWordSet.has(newWord);
+    const isExistingWordFromTinySegmenter = tinySegmenterWordSet.has(existingWord);
+
+    // 新しい単語がTinySegmenterで既存がそうでない場合
+    if (isNewWordFromTinySegmenter && !isExistingWordFromTinySegmenter) {
+      return true;
+    }
+
+    // その他の場合は既存を保持
+    return false;
+  }
+
+  /**
+   * 単語配列を位置順でソート
+   *
+   * @description
+   * 単語を行番号、列番号の順でソートします。
+   *
+   * @param words - ソート対象の単語配列
+   * @returns ソート済みの単語配列
+   */
+  private sortWordsByPosition(words: Word[]): Word[] {
+    return words.sort((a, b) => {
+      if (a.line !== b.line) {
+        return a.line - b.line;
+      }
+      return a.col - b.col;
+    });
   }
 }
 
@@ -4744,10 +5008,8 @@ export class WordDetectionManager {
     // Register default detectors with globalConfig (UnifiedConfig takes precedence)
     const configToUse = this.unifiedConfig || this.globalConfig;
     const regexDetector = new RegexWordDetector(this.config, configToUse);
-    // TinySegmenterWordDetector and HybridWordDetector were stubs - using RegexWordDetector as fallback
-    // TODO: Implement proper TinySegmenter and Hybrid detection strategies
-    const segmenterDetector = new RegexWordDetector(this.config, configToUse);
-    const hybridDetector = new RegexWordDetector(this.config, configToUse);
+    const segmenterDetector = new TinySegmenterWordDetector();
+    const hybridDetector = new HybridWordDetector(this.config);
 
     this.registerDetector(regexDetector);
     this.registerDetector(segmenterDetector);
@@ -5385,6 +5647,82 @@ export class WordDetectionManager {
    */
   getSessionContext(): DetectionContext | null {
     return this.sessionContext;
+  }
+
+  /**
+   * コンテキストに基づいて適切なディテクターを取得
+   * @description DetectionContextのstrategyに基づいて最適なディテクターを選択
+   * @param context - 検出コンテキスト（strategyを含む）
+   * @param text - テキスト（canHandleフィルタリング用、省略可）
+   * @returns Promise<WordDetector | null> - 選択されたディテクター、または見つからない場合はnull
+   * @since 1.0.0
+   * @example
+   * ```typescript
+   * const detector = await manager.getDetectorForContext({ strategy: "regex" });
+   * ```
+   */
+  async getDetectorForContext(context?: DetectionContext, text?: string): Promise<WordDetector | null> {
+    try {
+      if (!this.initialized) {
+        console.warn("WordDetectionManager is not initialized");
+        return null;
+      }
+
+      // Get strategy from context, or fall back to config
+      const strategy = context?.strategy ||
+        (this.config as any).wordDetectionStrategy ||
+        this.config.strategy ||
+        this.config.defaultStrategy;
+
+      // Filter detectors by text handling capability if text is provided
+      let availableDetectors = Array.from(this.detectors.values());
+      if (text) {
+        availableDetectors = availableDetectors.filter((d) => d.canHandle(text));
+      }
+
+      // Sort by priority
+      availableDetectors.sort((a, b) => b.priority - a.priority);
+
+      if (availableDetectors.length === 0) {
+        return null;
+      }
+
+      // Strategy-based selection with availability check
+      switch (strategy) {
+        case "regex":
+          const regexDetector = availableDetectors.find((d) => d.name.includes("Regex"));
+          if (regexDetector && await regexDetector.isAvailable()) {
+            return regexDetector;
+          }
+          break;
+
+        case "tinysegmenter":
+          const segmenterDetector = availableDetectors.find((d) => d.name.includes("TinySegmenter"));
+          if (segmenterDetector && await segmenterDetector.isAvailable()) {
+            return segmenterDetector;
+          }
+          break;
+
+        case "hybrid":
+          const hybridDetector = availableDetectors.find((d) => d.name.includes("Hybrid"));
+          if (hybridDetector && await hybridDetector.isAvailable()) {
+            return hybridDetector;
+          }
+          break;
+      }
+
+      // Fallback: return the highest priority available detector
+      for (const detector of availableDetectors) {
+        if (await detector.isAvailable()) {
+          return detector;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error in getDetectorForContext:", error);
+      return null;
+    }
   }
 
   /**
