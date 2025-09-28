@@ -9,10 +9,9 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/testin
 import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 import {
   RegexWordDetector,
-  TinySegmenterWordDetector,
-  HybridWordDetector,
   type WordDetectionConfig
-} from "../denops/hellshake-yano/word/detector.ts";
+} from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // Mock UnifiedConfig for testing (flat structure as per actual UnifiedConfig interface)
 const mockUnifiedConfig: UnifiedConfig = {
@@ -91,7 +90,7 @@ Deno.test("Red Phase: RegexWordDetector should use UnifiedConfig instead of Conf
 
   // This assertion will fail until detector.ts is updated to use UnifiedConfig
   const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['f'] || mockUnifiedConfig.defaultMinWordLength;
-  const validWords = words.filter(word => word.text.length >= effectiveMinLength);
+  const validWords = words.filter((word: Word) => word.text.length >= effectiveMinLength);
   assertEquals(words.length, validWords.length, "All detected words should respect UnifiedConfig min length");
 });
 
@@ -101,7 +100,8 @@ Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead
     segmenterThreshold: mockUnifiedConfig.segmenterThreshold
   };
 
-  const detector = new TinySegmenterWordDetector(config, mockUnifiedConfig);
+  // TinySegmenterWordDetector was removed in v2 consolidation, using RegexWordDetector instead
+  const detector = new RegexWordDetector(config, mockUnifiedConfig);
 
   // Test Japanese text detection with UnifiedConfig settings
   const words = await detector.detectWords("これはテストです", 1, {
@@ -113,7 +113,7 @@ Deno.test("Red Phase: TinySegmenterWordDetector should use UnifiedConfig instead
 
   // This will fail until TinySegmenterWordDetector uses UnifiedConfig properly
   const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['t'] || mockUnifiedConfig.japaneseMinWordLength;
-  const validWords = words.filter(word => word.text.length >= effectiveMinLength);
+  const validWords = words.filter((word: Word) => word.text.length >= effectiveMinLength);
   assertEquals(words.length, validWords.length, "Japanese words should respect UnifiedConfig min length");
 });
 
@@ -122,7 +122,8 @@ Deno.test("Red Phase: HybridWordDetector should use UnifiedConfig instead of Con
     strategy: mockUnifiedConfig.wordDetectionStrategy
   };
 
-  const detector = new HybridWordDetector(config, mockUnifiedConfig);
+  // HybridWordDetector was removed in v2 consolidation, using RegexWordDetector instead
+  const detector = new RegexWordDetector(config, mockUnifiedConfig);
 
   // Test hybrid detection with mixed content
   const words = await detector.detectWords("Hello こんにちは world", 1, {
@@ -134,6 +135,6 @@ Deno.test("Red Phase: HybridWordDetector should use UnifiedConfig instead of Con
 
   // This will fail until HybridWordDetector uses UnifiedConfig properly
   const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['F'] || mockUnifiedConfig.defaultMinWordLength;
-  const validWords = words.filter(word => word.text.length >= effectiveMinLength);
+  const validWords = words.filter((word: Word) => word.text.length >= effectiveMinLength);
   assertEquals(words.length, validWords.length, "Hybrid detection should respect UnifiedConfig min length");
 });

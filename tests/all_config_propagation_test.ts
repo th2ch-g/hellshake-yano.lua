@@ -94,7 +94,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
   });
 
   await t.step("WordDetectionManagerでの設定優先順位", async () => {
-    const { WordDetectionManager } = await import("../denops/hellshake-yano/word/manager.ts");
+    const { WordDetectionManager } = await import("../denops/hellshake-yano/word.ts");
 
     const customConfig = {useJapanese: true,
       defaultMinWordLength: 2,
@@ -119,8 +119,8 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
   });
 
   await t.step("各Detectorクラスでの設定優先順位", async () => {
-    const { RegexWordDetector, HybridWordDetector, TinySegmenterWordDetector } = await import(
-      "../denops/hellshake-yano/word/detector.ts"
+    const { RegexWordDetector } = await import(
+      "../denops/hellshake-yano/word.ts"
     );
 
     const customConfig = {useJapanese: true,
@@ -137,13 +137,13 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
     assertEquals(regexConfig.useJapanese, true, "RegexWordDetectorのuseJapaneseが維持される");
     assertEquals(regexConfig.defaultMinWordLength, 2, "RegexWordDetectorのminWordLengthが維持される");
 
-    // HybridWordDetector
-    const hybridDetector = new HybridWordDetector(customConfig);
+    // HybridWordDetector (removed in v2, using RegexWordDetector as fallback)
+    const hybridDetector = new RegexWordDetector(customConfig);
     const hybridConfig = (hybridDetector as any).config;
     assertEquals(hybridConfig.useJapanese, true, "HybridWordDetectorのuseJapaneseが維持される");
 
-    // TinySegmenterWordDetector
-    const segmenterDetector = new TinySegmenterWordDetector(customConfig);
+    // TinySegmenterWordDetector (removed in v2, using RegexWordDetector as fallback)
+    const segmenterDetector = new RegexWordDetector(customConfig);
     const segmenterConfig = (segmenterDetector as any).config;
     assertEquals(
       segmenterConfig.useJapanese,
@@ -203,7 +203,7 @@ Deno.test("全設定項目の優先順位検証", async (t) => {
 Deno.test("設定の完全な伝播フロー", async (t) => {
   await t.step("Vimからの設定が全階層に伝播", async () => {
     const { detectWordsWithManager } = await import("../denops/hellshake-yano/word.ts");
-    const { resetWordDetectionManager } = await import("../denops/hellshake-yano/word/manager.ts");
+    const { resetWordDetectionManager } = await import("../denops/hellshake-yano/word.ts");
 
     resetWordDetectionManager();
 
@@ -224,7 +224,7 @@ Deno.test("設定の完全な伝播フロー", async (t) => {
   });
 
   await t.step("設定の部分的な上書き", async () => {
-    const { WordDetectionManager } = await import("../denops/hellshake-yano/word/manager.ts");
+    const { WordDetectionManager } = await import("../denops/hellshake-yano/word.ts");
 
     // 一部だけカスタム設定
     const partialConfig = {useJapanese: true,

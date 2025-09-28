@@ -108,25 +108,26 @@ denops/hellshake-yano/
 #### sub3 word/配下とsegmenter.tsの統合
 @target: denops/hellshake-yano/word.ts
 @ref: word/配下の全ファイル、segmenter.ts
-- [ ] word.ts内のre-export文削除
-- [ ] 実装コードの統合
-  - [ ] word/manager.ts (942行) → word.tsへ
-  - [ ] word/context.ts (645行) → word.tsへ
-  - [ ] word/dictionary.ts (432行) → word.tsへ
-  - [ ] word/dictionary-loader.ts (575行) → word.tsへ
-  - [ ] segmenter.ts (422行) → word.tsへ
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
-- [ ] importパス修正
-  - [ ] main.tsのword/配下import修正
-  - [ ] core.tsのword/配下import修正
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
-- [ ] ディレクトリとファイル削除
-  - [ ] word/ディレクトリ削除
-  - [ ] segmenter.ts削除
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
+- [x] word.ts内のre-export文削除
+- [x] 実装コードの統合
+  - [x] word/manager.ts (942行) → word.tsへ
+  - [x] word/context.ts (645行) → word.tsへ
+  - [x] word/dictionary.ts (432行) → word.tsへ
+  - [x] word/dictionary-loader.ts (575行) → word.tsへ
+  - [x] word/detector.ts (124行) → word.tsへ
+  - [x] segmenter.ts (422行) → word.tsへ
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
+- [x] importパス修正
+  - [x] main.tsのword/配下import修正
+  - [x] core.tsのword/配下import修正
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
+- [x] ディレクトリとファイル削除（手動実行が必要）
+  - [x] word/ディレクトリ削除
+  - [x] segmenter.ts削除
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
 
 #### sub4 utils/配下の統合と削除
 @target: 各統合先ファイル

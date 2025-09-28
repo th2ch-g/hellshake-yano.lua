@@ -31,8 +31,7 @@ import {
   validateHintKeyConfig
 } from "./hint.ts";
 // Dictionary system imports
-import { DictionaryLoader, type UserDictionary } from "./word/dictionary-loader.ts";
-import { VimConfigBridge } from "./word/dictionary-loader.ts";
+import { DictionaryLoader, VimConfigBridge, type UserDictionary } from "./word.ts";
 // commands.ts は統合されたため削除（機能はcore.ts内部で実装済み）
 // lifecycle.ts は統合されたため削除（機能はcore.ts内部で実装済み）
 import { validateUnifiedConfig } from "./config.ts";

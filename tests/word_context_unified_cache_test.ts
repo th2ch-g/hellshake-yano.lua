@@ -14,7 +14,7 @@
  */
 
 import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
-import { ContextDetector } from "../denops/hellshake-yano/word/context.ts";
+import { ContextDetector } from "../denops/hellshake-yano/word.ts";
 import { UnifiedCache, CacheType } from "../denops/hellshake-yano/cache.ts";
 
 Deno.test("ContextDetector should use UnifiedCache for language rules", async () => {

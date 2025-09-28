@@ -8,7 +8,7 @@ import {
 import {
   resetWordDetectionManager,
   type WordDetectionManagerConfig,
-} from "./word/manager.ts";
+} from "./word.ts";
 import {
   assignHintsToWords,
   calculateHintPosition,

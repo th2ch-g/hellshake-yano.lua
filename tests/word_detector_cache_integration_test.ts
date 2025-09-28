@@ -1,7 +1,7 @@
 import { assertEquals, assertExists, assertThrows } from "@std/assert";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 import { UnifiedCache, CacheType } from "../denops/hellshake-yano/cache.ts";
-import { KeyBasedWordCache, globalWordCache } from "../denops/hellshake-yano/word/detector.ts";
+import { KeyBasedWordCache, globalWordCache } from "../denops/hellshake-yano/word.ts";
 
 /**
  * TDD Red-Green-Refactor による KeyBasedWordCache の UnifiedCache 統合テスト

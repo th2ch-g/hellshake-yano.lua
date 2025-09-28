@@ -10,7 +10,7 @@ import {
   ContextDetector,
   type LanguageRule,
   type SplittingRules
-} from "../denops/hellshake-yano/word/context.ts";
+} from "../denops/hellshake-yano/word.ts";
 import type { DetectionContext, SyntaxContext, LineContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("ContextDetector should detect TypeScript syntax context properly", () => {

@@ -11,7 +11,8 @@ import {
   WordDetectionManager,
   getWordDetectionManager,
   type WordDetectionManagerConfig
-} from "../denops/hellshake-yano/word/manager.ts";
+} from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // Mock UnifiedConfig for testing (flat structure as per actual UnifiedConfig interface)
 const mockUnifiedConfig: UnifiedConfig = {
@@ -95,7 +96,7 @@ Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of C
 
   // This assertion will fail until manager.ts is updated to use UnifiedConfig
   const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['f'] || mockUnifiedConfig.defaultMinWordLength;
-  const validWords = result.words.filter(word => word.text.length >= effectiveMinLength);
+  const validWords = result.words.filter((word: Word) => word.text.length >= effectiveMinLength);
   assertEquals(result.words.length, validWords.length, "All detected words should respect UnifiedConfig min length");
 });
 
@@ -120,7 +121,7 @@ Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead o
 
   // This will fail until manager.ts uses UnifiedConfig properly
   const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['t'] || mockUnifiedConfig.japaneseMinWordLength;
-  const validWords = result.words.filter(word => word.text.length >= effectiveMinLength);
+  const validWords = result.words.filter((word: Word) => word.text.length >= effectiveMinLength);
   assertEquals(result.words.length, validWords.length, "Japanese words should respect UnifiedConfig min length");
 });
 
@@ -144,6 +145,6 @@ Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with U
 
   // This will fail until manager.ts uses UnifiedConfig properly
   const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['F'] || mockUnifiedConfig.defaultMinWordLength;
-  const validWords = result.words.filter(word => word.text.length >= effectiveMinLength);
+  const validWords = result.words.filter((word: Word) => word.text.length >= effectiveMinLength);
   assertEquals(result.words.length, validWords.length, "Hybrid detection should respect UnifiedConfig min length");
 });

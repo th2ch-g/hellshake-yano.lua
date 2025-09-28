@@ -9,9 +9,8 @@ import { getMinLengthForKey } from "../denops/hellshake-yano/main.ts";
 import {
   WordDetectionManager,
   type WordDetectionManagerConfig,
-} from "../denops/hellshake-yano/word/manager.ts";
-import type { Config } from "../denops/hellshake-yano/types.ts";
-import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
+} from "../denops/hellshake-yano/word.ts";
+import type { Config, DetectionContext, Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("Process100: Baseline behavior - getMinLengthForKey function", () => {
   // 各パターンでのgetMinLengthForKey関数の動作を記録
@@ -146,7 +145,7 @@ Deno.test("Process100: Baseline behavior - Cache invalidation triggers", async (
 
   // 実際の結果を記録
   console.log(`設定変更前: ${result1.words.length}語, 設定変更後: ${result2.words.length}語`);
-  console.log(`検出された単語: ${result2.words.map((w) => w.text).join(", ")}`);
+  console.log(`検出された単語: ${result2.words.map((w: Word) => w.text).join(", ")}`);
 
   // 現在の動作を記録（期待値ではなく実際の動作をベースライン化）
   assertEquals(result2.words.length, 3, "現在の動作では3語が検出される（ベースライン）");

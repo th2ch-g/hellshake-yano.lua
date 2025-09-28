@@ -1,8 +1,8 @@
-import { assertEquals, assertNotEquals } from "@std/assert";
+import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import {
   getWordDetectionManager,
   resetWordDetectionManager,
-} from "../denops/hellshake-yano/word/manager.ts";
+} from "../denops/hellshake-yano/word.ts";
 import { detectWordsWithManager, type EnhancedWordConfig } from "../denops/hellshake-yano/word.ts";
 
 // Mock Denops for testing
@@ -62,7 +62,7 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
     resetWordDetectionManager();
     const manager3 = getWordDetectionManager();
 
-    assertNotEquals(manager1, manager3);
+    assert(manager1 !== manager3, "Should be different instances after reset");
   });
 
   await t.step("Strategy switching", async () => {

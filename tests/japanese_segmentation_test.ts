@@ -1,12 +1,11 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
 import { TinySegmenter } from "../denops/hellshake-yano/word.ts";
 import {
-  HybridWordDetector,
   RegexWordDetector,
-  TinySegmenterWordDetector,
+  WordDetectionManager,
   type WordDetectionConfig,
-} from "../denops/hellshake-yano/word/detector.ts";
-import { WordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
+} from "../denops/hellshake-yano/word.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("TinySegmenter Basic Functionality", async (t) => {
   const segmenter = TinySegmenter.getInstance();
@@ -105,31 +104,33 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(await detector.isAvailable(), true);
   });
 
-  await t.step("TinySegmenterWordDetector basic functionality", async () => {
+  await t.step("RegexWordDetector with Japanese configuration", async () => {
     const config: WordDetectionConfig = {
       enableTinySegmenter: true,
       segmenterThreshold: 3,
       useJapanese: true,
     };
 
-    const detector = new TinySegmenterWordDetector(config);
+    // TinySegmenterWordDetector was removed in v2 consolidation
+    const detector = new RegexWordDetector(config);
     const japaneseWords = await detector.detectWords("私の名前は田中です", 1);
     const englishWords = await detector.detectWords("Hello world test", 1);
 
     assertEquals(japaneseWords.length > 0, true);
     assertEquals(englishWords.length > 0, true);
     assertEquals(detector.canHandle("日本語テキスト"), true);
-    assertEquals(detector.canHandle("English text"), false);
+    assertEquals(detector.canHandle("English text"), true); // RegexWordDetector handles all text
     assertEquals(await detector.isAvailable(), true);
   });
 
-  await t.step("HybridWordDetector auto-detection", async () => {
+  await t.step("RegexWordDetector with hybrid configuration", async () => {
     const config: WordDetectionConfig = {useJapanese: true,
       enableTinySegmenter: true,
       segmenterThreshold: 3,
     };
 
-    const detector = new HybridWordDetector(config);
+    // HybridWordDetector was removed in v2 consolidation
+    const detector = new RegexWordDetector(config);
 
     // Test Japanese content
     const japaneseWords = await detector.detectWords("今日は良い天気ですね", 1);
@@ -147,12 +148,13 @@ Deno.test("Word Detector Integration Tests", async (t) => {
     assertEquals(await detector.isAvailable(), true);
   });
 
-  await t.step("Compare detection strategies", async () => {
+  await t.step("RegexWordDetector with different configurations", async () => {
     const testText = "プログラミング言語のテストを実行します";
 
     const regexDetector = new RegexWordDetector({useJapanese: true });
-    const segmenterDetector = new TinySegmenterWordDetector({ enableTinySegmenter: true });
-    const hybridDetector = new HybridWordDetector({useJapanese: true });
+    // TinySegmenterWordDetector and HybridWordDetector were removed in v2 consolidation
+    const segmenterDetector = new RegexWordDetector({ enableTinySegmenter: true });
+    const hybridDetector = new RegexWordDetector({useJapanese: true });
 
     const regexWords = await regexDetector.detectWords(testText, 1);
     const segmenterWords = await segmenterDetector.detectWords(testText, 1);
@@ -180,7 +182,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
     await manager.initialize();
 
     const detectors = manager.getAvailableDetectors();
-    assertEquals(detectors.length >= 3, true); // At least regex, segmenter, hybrid
+    assertEquals(detectors.length >= 1, true); // At least regex (v2 only has RegexWordDetector)
 
     const availability = await manager.testDetectors();
 
@@ -211,7 +213,7 @@ Deno.test("WordDetectionManager Integration Tests", async (t) => {
 
       console.log({
         text: testCase.text,
-        words: result.words.map((w) => w.text),
+        words: result.words.map((w: Word) => w.text),
         detector: result.detector,
         duration: result.performance.duration,
       });
@@ -350,11 +352,11 @@ function calculateTotal(items) {
     assertEquals(result.success, true);
     assertEquals(result.words.length > 0, true);
 
-    const words = result.words.map((w) => w.text);
+    const words = result.words.map((w: Word) => w.text);
 
     // Should detect both English and Japanese words
-    const hasEnglish = words.some((w) => /[a-zA-Z]/.test(w));
-    const hasJapanese = words.some((w) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w));
+    const hasEnglish = words.some((w: string) => /[a-zA-Z]/.test(w));
+    const hasJapanese = words.some((w: string) => /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(w));
 
     assertEquals(hasEnglish, true);
     assertEquals(hasJapanese, true);

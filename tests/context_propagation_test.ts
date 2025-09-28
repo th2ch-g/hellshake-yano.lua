@@ -16,11 +16,9 @@
 import { assertEquals, assertExists } from "@std/assert";
 import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 import {
-  HybridWordDetector,
   RegexWordDetector,
-  TinySegmenterWordDetector,
-} from "../denops/hellshake-yano/word/detector.ts";
-import { WordDetectionManager } from "../denops/hellshake-yano/word/manager.ts";
+  WordDetectionManager,
+} from "../denops/hellshake-yano/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("DetectionContext interface should be defined", () => {
@@ -54,12 +52,13 @@ Deno.test("RegexWordDetector should accept optional context parameter", async ()
   assertExists(wordsWithContext);
 
   // Words with context should be filtered by minWordLength
-  const longWords = wordsWithContext.filter((w) => w.text.length >= 5);
+  const longWords = wordsWithContext.filter((w: Word) => w.text.length >= 5);
   assertEquals(wordsWithContext.length, longWords.length);
 });
 
 Deno.test("TinySegmenterWordDetector should accept optional context parameter", async () => {
-  const detector = new TinySegmenterWordDetector({useJapanese: true });
+  // TinySegmenterWordDetector was removed in v2 consolidation, using RegexWordDetector instead
+  const detector = new RegexWordDetector({useJapanese: true });
   const text = "これは日本語のテストです";
   const startLine = 1;
 
@@ -77,12 +76,13 @@ Deno.test("TinySegmenterWordDetector should accept optional context parameter", 
   assertExists(wordsWithContext);
 
   // Verify context-based filtering
-  const filteredWords = wordsWithContext.filter((w) => w.text.length >= 3);
+  const filteredWords = wordsWithContext.filter((w: Word) => w.text.length >= 3);
   assertEquals(wordsWithContext.length, filteredWords.length);
 });
 
 Deno.test("HybridWordDetector should accept optional context parameter", async () => {
-  const detector = new HybridWordDetector({useJapanese: true });
+  // HybridWordDetector was removed in v2 consolidation, using RegexWordDetector instead
+  const detector = new RegexWordDetector({useJapanese: true });
   const text = "hello こんにちは world 世界";
   const startLine = 1;
 

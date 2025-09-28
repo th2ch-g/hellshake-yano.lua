@@ -7,9 +7,8 @@ import { assertEquals } from "@std/assert";
 import {
   WordDetectionManager,
   type WordDetectionManagerConfig,
-} from "../denops/hellshake-yano/word/manager.ts";
-import type { Config } from "../denops/hellshake-yano/types.ts";
-import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
+} from "../denops/hellshake-yano/word.ts";
+import type { Config, DetectionContext, Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("Unified min_length: Context overrides GlobalConfig", async () => {
   // グローバル設定でperKeyMinLengthを設定
@@ -46,9 +45,9 @@ Deno.test("Unified min_length: Context overrides GlobalConfig", async () => {
   const resultT = await manager.detectWords(testText, 0, undefined, contextT);
   const resultOverride = await manager.detectWords(testText, 0, undefined, contextOverride);
 
-  console.log(`Key "f" (min=3): ${resultF.words.map((w) => w.text).join(", ")}`);
-  console.log(`Key "t" (min=2): ${resultT.words.map((w) => w.text).join(", ")}`);
-  console.log(`Override (min=1): ${resultOverride.words.map((w) => w.text).join(", ")}`);
+  console.log(`Key "f" (min=3): ${resultF.words.map((w: Word) => w.text).join(", ")}`);
+  console.log(`Key "t" (min=2): ${resultT.words.map((w: Word) => w.text).join(", ")}`);
+  console.log(`Override (min=1): ${resultOverride.words.map((w: Word) => w.text).join(", ")}`);
 
   // 期待値の検証
   assertEquals(resultF.words.length, 2, 'Key "f": 3文字以上の単語のみ（"ccc", "dddd"）');
@@ -80,8 +79,8 @@ Deno.test("Unified min_length: GlobalConfig fallback hierarchy", async () => {
   const resultF = await manager.detectWords(testText, 0, undefined, contextF);
   const resultUnknown = await manager.detectWords(testText, 0, undefined, contextUnknown);
 
-  console.log(`Key "f" (min=3): ${resultF.words.map((w) => w.text).join(", ")}`);
-  console.log(`Key "x" (default=2): ${resultUnknown.words.map((w) => w.text).join(", ")}`);
+  console.log(`Key "f" (min=3): ${resultF.words.map((w: Word) => w.text).join(", ")}`);
+  console.log(`Key "x" (default=2): ${resultUnknown.words.map((w: Word) => w.text).join(", ")}`);
 
   assertEquals(resultF.words.length, 2, 'Key "f": perKeyMinLength[f]=3を使用');
   assertEquals(resultUnknown.words.length, 3, 'Key "x": defaultMinWordLength=2を使用');
@@ -105,7 +104,7 @@ Deno.test("Unified min_length: Legacy compatibility", async () => {
   const context: DetectionContext = { currentKey: "any" };
   const result = await manager.detectWords(testText, 0, undefined, context);
 
-  console.log(`Legacy defaultMinWordLength =3: ${result.words.map((w) => w.text).join(", ")}`);
+  console.log(`Legacy defaultMinWordLength =3: ${result.words.map((w: Word) => w.text).join(", ")}`);
 
   assertEquals(result.words.length, 2, "旧形式defaultMinWordLength =3が適用される");
 });
@@ -125,7 +124,7 @@ Deno.test("Unified min_length: No GlobalConfig fallback", async () => {
   const context: DetectionContext = { currentKey: "f" };
   const result = await manager.detectWords(testText, 0, undefined, context);
 
-  console.log(`No GlobalConfig (local=2): ${result.words.map((w) => w.text).join(", ")}`);
+  console.log(`No GlobalConfig (local=2): ${result.words.map((w: Word) => w.text).join(", ")}`);
 
   assertEquals(result.words.length, 4, "ローカル設定defaultMinWordLength =2を使用");
 });
