@@ -1,136 +1,137 @@
-# title: TinySegmenterによる日本語分かち書き機能の実装
+# title: Unified単語の削除とシンプルな命名への移行
 
 ## 概要
-- hellshake-yano.vimプラグインで日本語テキストに対してもヒント表示を可能にする機能
-- TinySegmenterを使用した日本語形態素解析により、日本語の単語単位でヒントを設定
+- v2となった現在、統合を意味する「Unified」という単語が不要となったため、システム全体から削除してシンプルな命名に移行する
 
 ### goal
-- 日本語を含むテキストで、単語単位にヒントが表示される
-- 英数字と日本語が混在するテキストでも適切にヒントが表示される
+- コードベース全体がより簡潔で明確な命名規則に統一される
+- 「UnifiedConfig」→「Config」、「UnifiedCache」→「GlobalCache」のようにシンプルな名前になる
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 単一責任の原則に従い、各Detectorの責務を明確に分離する
+- 後方互換性を維持しながら段階的に移行する
+- すべてのテストが通ることを確認する
 
 ## 開発のゴール
-- TinySegmenterを使用した日本語単語検出機能の実装
-- 責務を明確に分離したアーキテクチャの実現
-- 既存の英数字検出機能との適切な統合
+- 「Unified」という不要な単語をコードベース全体から削除
+- より意味が明確でシンプルな命名に変更
+- v2として適切な命名規則の確立
 
 ## 実装仕様
 
 ### 現状の問題
-1. **設定の反映不具合**
-   - `use_japanese: true`と`enable_tinysegmenter: true`を設定しても日本語にヒントが表示されない
-   - 原因: Coreインスタンスの初期化時にデフォルト設定が使用され、ユーザー設定が反映されていない
+1. **UnifiedConfigの使用箇所**
+   - 31個のファイルで使用
+   - config.ts、types.ts、main.tsなどコア実装
+   - 16個のテストファイル
+   - ドキュメント類
 
-2. **アーキテクチャの問題**
-   - RegexWordDetectorにTinySegmenter処理が混在し、責務が不明確
-   - WordDetectionManagerのstrategyパターンが十分に活用されていない
+2. **UnifiedCacheの使用箇所**
+   - cache.ts、word.ts、hint.tsで使用
+   - シングルトンパターンのキャッシュシステム
 
 ### 解決方針
-1. Coreインスタンスの設定更新処理を追加（実装済み）
-2. TinySegmenterWordDetectorを独立したクラスとして実装
-3. 各Detectorの責務を明確に分離
+1. 型エイリアスを活用した段階的移行
+2. UnifiedConfig → Config への置き換え
+3. UnifiedCache → GlobalCache への名称変更
+4. 関連する関数名の更新
 
 ## 生成AIの学習用コンテキスト
 
-### 設定ファイル
+### Core実装ファイル
 - `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
   - UnifiedConfig インターフェースの定義
-  - useJapanese, enableTinySegmenter 設定項目
+  - getDefaultUnifiedConfig、validateUnifiedConfig 関数
 
-### メインロジック
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/cache.ts`
+  - UnifiedCache クラスの定義
+  - getInstance メソッド
+
 - `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts`
-  - プラグイン初期化処理
-  - Core インスタンスの生成と設定
+  - UnifiedConfig の使用箇所多数
+  - normalizeBackwardCompatibleFlagsUnified 関数
 
-### 単語検出機能
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
+  - UnifiedConfig のインポートと型参照
+
 - `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-  - WordDetector インターフェース
-  - RegexWordDetector クラス
-  - TinySegmenter クラス
-  - WordDetectionManager クラス
+  - UnifiedCache の使用
 
-### コア機能
-- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/core.ts`
-  - Core クラス
-  - detectWordsOptimized メソッド
-  - showHintsInternal メソッド
+- `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+  - UnifiedCache の使用
 
 ## Process
 
-### process1 設定反映問題の修正
-#### sub1 Coreインスタンスへのユーザー設定反映
+### process1 型名・インターフェース名の変更
+#### sub1 UnifiedConfig → Config への置き換え
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+@ref: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
+- [ ] UnifiedConfig インターフェース名を Config に変更
+- [ ] 既存の type Config = UnifiedConfig エイリアスを削除
+- [ ] type UnifiedConfig = Config として後方互換性エイリアスを追加（一時的）
+
+#### sub2 関数名の更新
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+- [ ] getDefaultUnifiedConfig() → getDefaultConfig() に変更
+- [ ] validateUnifiedConfig() → validateConfig() に変更
+- [ ] エクスポートの更新
+
+#### sub3 main.tsの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts`
-@ref: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/core.ts`
-- [x] main.tsの初期化処理でユーザー設定取得後にcore.updateConfig()を追加
-  - 229-230行目に実装済み
+- [ ] UnifiedConfig の型参照を Config に変更
+- [ ] normalizeBackwardCompatibleFlagsUnified() → normalizeBackwardCompatibleFlags() に変更
+- [ ] 関数呼び出しの更新（getDefaultUnifiedConfig → getDefaultConfig など）
+- [ ] コメント内の Unified 削除
 
-### process2 TinySegmenterWordDetectorの実装
-#### sub1 独立したDetectorクラスの作成
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [x] TinySegmenterWordDetectorクラスの新規作成
-  - WordDetectorインターフェースを実装
-  - 日本語専用の単語検出ロジック
-- [x] detectWordsメソッドの実装
-  - TinySegmenter.segment()を使用した分かち書き処理
-- [x] canHandleメソッドの実装
-  - 日本語テキストの判定ロジック
-- [x] deno checkでの型チェックとLint確認
-- [x] deno testでの動作確認
+### process2 UnifiedCache → GlobalCache への変更
+#### sub1 cache.tsのクラス名変更
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/cache.ts`
+- [ ] UnifiedCache クラス名を GlobalCache に変更
+- [ ] static instance の型を GlobalCache に更新
+- [ ] getInstance() メソッドの更新
+- [ ] JSDoc コメントの更新
 
-#### sub2 RegexWordDetectorのリファクタリング
+#### sub2 使用箇所の更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [x] extractWordsImprovedからTinySegmenter処理を削除
-  - 正規表現ベースの処理のみに専念
-- [x] 日本語処理の適切な分離
-- [x] deno checkでの型チェックとLint確認
-- [x] deno testでの動作確認
+@ref: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+- [ ] word.ts の UnifiedCache インポートと使用箇所を GlobalCache に変更
+- [ ] hint.ts の UnifiedCache インポートと使用箇所を GlobalCache に変更
+- [ ] unifiedCache 変数名を globalCache に変更
 
-### process3 HybridWordDetectorの実装（オプション）
-#### sub1 複合検出器の作成
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [x] HybridWordDetectorクラスの実装
-  - RegexとTinySegmenterの結果をマージ
-- [x] 重複除去ロジックの実装
-- [x] deno checkでの型チェックとLint確認
-- [x] deno testでの動作確認
+### process3 types.tsの更新
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
+- [ ] UnifiedConfig のインポートを Config に変更
+- [ ] 型参照の更新
+- [ ] コメント内の Unified 削除
 
-### process4 WordDetectionManagerの更新
-#### sub1 Detector登録処理の更新
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] registerStandardDetectorsメソッドの更新
-  - TinySegmenterWordDetectorの追加
-- [ ] getDetectorForContextメソッドの実装
-  - strategyに基づく適切なDetector選択
-- [ ] deno checkでの型チェックとLint確認
-- [ ] deno testでの動作確認
+### process4 テストファイルの更新
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/`
+- [ ] 全テストファイルの UnifiedConfig インポートを Config に変更
+- [ ] 全テストファイルの UnifiedCache インポートを GlobalCache に変更
+- [ ] 型参照と関数呼び出しの更新
+- [ ] deno test で全テストが通ることを確認
 
 ### process10 ユニットテスト
-- [x] TinySegmenterWordDetectorのテスト作成
-- [x] 日本語・英語混在テキストでの動作確認
-- [x] 各strategyでの切り替え動作確認
-- [x] TDD Red-Green-Refactorアプローチでの統合テスト実装
-- [x] 実用的なシナリオテスト（プログラミングコード、技術文書）
-- [x] エラーハンドリングと境界条件テスト
-- [x] パフォーマンステスト
+- [ ] deno check で型チェック実行
+- [ ] deno test で全テスト実行
+- [ ] 既存の統合テストが通ることを確認
+- [ ] 後方互換性の動作確認
 
 ### process50 フォローアップ
-#### sub1 暫定対応の修正
-@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts`
-- [ ] RegexWordDetector内の暫定的なTinySegmenter統合を削除
-  - extractWordsImprovedメソッドを元の実装に戻す
+#### sub1 後方互換性エイリアスの削除（将来的に）
+@target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+- [ ] type UnifiedConfig = Config エイリアスの削除（v3.0.0で）
+- [ ] 移行ガイドの更新
 
 ### process100 リファクタリング
-- [ ] 不要なコードの削除
+- [ ] 不要なコメントの削除
 - [ ] 型定義の整理
-- [ ] エラーハンドリングの改善
+- [ ] import文の最適化
 
 ### process200 ドキュメンテーション
-- [ ] README.mdへの日本語対応機能の追記
-- [ ] 設定項目の説明更新
-  - wordDetectionStrategy の説明
-  - enableTinySegmenter の使用方法
-- [ ] 日本語テキストでの使用例を追加
+- [ ] MIGRATION.md の更新（UnifiedConfig → Config への移行方法）
+- [ ] README.md の更新
+- [ ] README_ja.md の更新
+- [ ] JSDoc コメント内の Unified 削除
+- [ ] 変更履歴の記録
 
