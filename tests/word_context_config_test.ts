@@ -1,7 +1,7 @@
 /**
- * TDD Red-Green-Refactor: word/context.ts UnifiedCache integration test
+ * TDD Red-Green-Refactor: word/context.ts GlobalCache integration test
  *
- * This test verifies that word/context.ts properly uses UnifiedCache
+ * This test verifies that word/context.ts properly uses GlobalCache
  * and provides consistent context detection functionality.
  */
 

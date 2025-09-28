@@ -1,12 +1,12 @@
 /**
- * TDD Red-Green-Refactor: word/manager.ts Config→UnifiedConfig migration test
+ * TDD Red-Green-Refactor: word/manager.ts Config使用のテスト
  *
- * This test verifies that word/manager.ts properly uses UnifiedConfig
+ * This test verifies that word/manager.ts properly uses Config
  * instead of the legacy Config interface for consistent configuration management.
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/testing/asserts.ts";
-import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
+import type { Config } from "../denops/hellshake-yano/config.ts";
 import {
   WordDetectionManager,
   getWordDetectionManager,
@@ -14,8 +14,8 @@ import {
 } from "../denops/hellshake-yano/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
-// Mock UnifiedConfig for testing (flat structure as per actual UnifiedConfig interface)
-const mockUnifiedConfig: UnifiedConfig = {
+// Mock Config for testing (flat structure as per actual Config interface)
+const mockConfig: Config = {
   // Core settings
   enabled: true,
   markers: ['A', 'S', 'D', 'F'],
@@ -71,80 +71,80 @@ const mockUnifiedConfig: UnifiedConfig = {
   showHintOnMotionThreshold: true
 };
 
-Deno.test("Red Phase: WordDetectionManager should use UnifiedConfig instead of Config", async () => {
+Deno.test("Red Phase: WordDetectionManager should use Config instead of Config", async () => {
   // This test should initially fail because WordDetectionManager still uses Config
   const config: WordDetectionManagerConfig = {
-    // These should map to UnifiedConfig properties (currently uses snake_case)
-    useJapanese: mockUnifiedConfig.useJapanese,
-    defaultStrategy: mockUnifiedConfig.wordDetectionStrategy,
+    // These should map to Config properties (currently uses snake_case)
+    useJapanese: mockConfig.useJapanese,
+    defaultStrategy: mockConfig.wordDetectionStrategy,
     cacheEnabled: true,
     cacheMaxSize: 500
   };
 
-  const manager = new WordDetectionManager(config, mockUnifiedConfig);
+  const manager = new WordDetectionManager(config, mockConfig);
   await manager.initialize();
 
-  // Test that manager can access UnifiedConfig properties
+  // Test that manager can access Config properties
   const result = await manager.detectWords("test word", 1, undefined, {
     currentKey: 'f',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['f']
+    minWordLength: mockConfig.perKeyMinLength?.['f']
   });
 
-  // Should be able to detect words with proper min length from UnifiedConfig
+  // Should be able to detect words with proper min length from Config
   assertExists(result);
   assertExists(result.words);
 
-  // This assertion will fail until manager.ts is updated to use UnifiedConfig
-  const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['f'] || mockUnifiedConfig.defaultMinWordLength;
+  // This assertion will fail until manager.ts is updated to use Config
+  const effectiveMinLength = mockConfig.perKeyMinLength?.['f'] || mockConfig.defaultMinWordLength;
   const validWords = result.words.filter((word: Word) => word.text.length >= effectiveMinLength);
-  assertEquals(result.words.length, validWords.length, "All detected words should respect UnifiedConfig min length");
+  assertEquals(result.words.length, validWords.length, "All detected words should respect Config min length");
 });
 
-Deno.test("Red Phase: getWordDetectionManager should use UnifiedConfig instead of Config", async () => {
-  const config: WordDetectionManagerConfig = {useJapanese: mockUnifiedConfig.useJapanese,
-    defaultStrategy: mockUnifiedConfig.wordDetectionStrategy,
-    enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter
+Deno.test("Red Phase: getWordDetectionManager should use Config instead of Config", async () => {
+  const config: WordDetectionManagerConfig = {useJapanese: mockConfig.useJapanese,
+    defaultStrategy: mockConfig.wordDetectionStrategy,
+    enableTinySegmenter: mockConfig.enableTinySegmenter
   };
 
-  // This should work with UnifiedConfig
-  const manager = getWordDetectionManager(config, mockUnifiedConfig);
+  // This should work with Config
+  const manager = getWordDetectionManager(config, mockConfig);
   await manager.initialize();
 
-  // Test Japanese text detection with UnifiedConfig settings
+  // Test Japanese text detection with Config settings
   const result = await manager.detectWords("これはテストです", 1, undefined, {
     currentKey: 't',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['t']
+    minWordLength: mockConfig.perKeyMinLength?.['t']
   });
 
   assertExists(result);
   assertExists(result.words);
 
-  // This will fail until manager.ts uses UnifiedConfig properly
-  const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['t'] || mockUnifiedConfig.japaneseMinWordLength;
+  // This will fail until manager.ts uses Config properly
+  const effectiveMinLength = mockConfig.perKeyMinLength?.['t'] || mockConfig.japaneseMinWordLength;
   const validWords = result.words.filter((word: Word) => word.text.length >= effectiveMinLength);
-  assertEquals(result.words.length, validWords.length, "Japanese words should respect UnifiedConfig min length");
+  assertEquals(result.words.length, validWords.length, "Japanese words should respect Config min length");
 });
 
-Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with UnifiedConfig", async () => {
-  const config: WordDetectionManagerConfig = {useJapanese: mockUnifiedConfig.useJapanese,
+Deno.test("Red Phase: WordDetectionManager should handle hybrid detection with Config", async () => {
+  const config: WordDetectionManagerConfig = {useJapanese: mockConfig.useJapanese,
     defaultStrategy: 'hybrid', // Force hybrid strategy
-    enableTinySegmenter: mockUnifiedConfig.enableTinySegmenter
+    enableTinySegmenter: mockConfig.enableTinySegmenter
   };
 
-  const manager = new WordDetectionManager(config, mockUnifiedConfig);
+  const manager = new WordDetectionManager(config, mockConfig);
   await manager.initialize();
 
   // Test hybrid detection with mixed content
   const result = await manager.detectWords("Hello こんにちは world", 1, undefined, {
     currentKey: 'F',
-    minWordLength: mockUnifiedConfig.perKeyMinLength?.['F']
+    minWordLength: mockConfig.perKeyMinLength?.['F']
   });
 
   assertExists(result);
   assertExists(result.words);
 
-  // This will fail until manager.ts uses UnifiedConfig properly
-  const effectiveMinLength = mockUnifiedConfig.perKeyMinLength?.['F'] || mockUnifiedConfig.defaultMinWordLength;
+  // This will fail until manager.ts uses Config properly
+  const effectiveMinLength = mockConfig.perKeyMinLength?.['F'] || mockConfig.defaultMinWordLength;
   const validWords = result.words.filter((word: Word) => word.text.length >= effectiveMinLength);
-  assertEquals(result.words.length, validWords.length, "Hybrid detection should respect UnifiedConfig min length");
+  assertEquals(result.words.length, validWords.length, "Hybrid detection should respect Config min length");
 });

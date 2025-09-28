@@ -78,10 +78,10 @@
 
 #### sub3 main.tsの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/main.ts`
-- [ ] UnifiedConfig の型参照を Config に変更
+- [x] UnifiedConfig の型参照を Config に変更
 - [ ] normalizeBackwardCompatibleFlagsUnified() → normalizeBackwardCompatibleFlags() に変更
-- [ ] 関数呼び出しの更新（getDefaultUnifiedConfig → getDefaultConfig など）
-- [ ] コメント内の Unified 削除
+- [x] 関数呼び出しの更新（getDefaultUnifiedConfig → getDefaultConfig など）
+- [x] コメント内の Unified 削除
 
 ### process2 UnifiedCache → GlobalCache への変更
 #### sub1 cache.tsのクラス名変更
@@ -100,16 +100,16 @@
 
 ### process3 types.tsの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
-- [ ] UnifiedConfig のインポートを Config に変更
-- [ ] 型参照の更新
-- [ ] コメント内の Unified 削除
+- [x] UnifiedConfig のインポートを Config に変更
+- [x] 型参照の更新
+- [x] コメント内の Unified 削除
 
 ### process4 テストファイルの更新
 @target: `/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests/`
-- [ ] 全テストファイルの UnifiedConfig インポートを Config に変更
-- [ ] 全テストファイルの UnifiedCache インポートを GlobalCache に変更
-- [ ] 型参照と関数呼び出しの更新
-- [ ] deno test で全テストが通ることを確認
+- [x] 全テストファイルの UnifiedConfig インポートを Config に変更
+- [x] 全テストファイルの UnifiedCache インポートを GlobalCache に変更
+- [x] 型参照と関数呼び出しの更新
+- [x] deno test で全テストが通ることを確認
 
 ### process10 ユニットテスト
 - [ ] deno check で型チェック実行

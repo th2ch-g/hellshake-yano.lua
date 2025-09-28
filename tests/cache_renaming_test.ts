@@ -1,6 +1,6 @@
 /**
  * Cache Renaming Test - TDD Red-Green-Refactor
- * UnifiedCache → GlobalCache への変更に対するテストスイート
+ * GlobalCacheへの変更に対するテストスイート
  *
  * 実装前にテストを作成し、全てのテストが失敗することを確認した後、
  * 実装を進めて全てのテストが通るようにします。
@@ -18,8 +18,8 @@ try {
   // 現在は期待される失敗です
 }
 
-// Phase 1 Red: 後方互換性のテスト用に現在のUnifiedCacheをインポート
-import { UnifiedCache as CurrentUnifiedCache } from "../denops/hellshake-yano/cache.ts";
+// GlobalCacheを直接インポート
+import { GlobalCache } from "../denops/hellshake-yano/cache.ts";
 
 Deno.test("TDD Red Phase: GlobalCache class should exist (現在は失敗するはず)", async () => {
   // 現在はGlobalCacheクラスが存在しないため、このテストは失敗します
@@ -72,7 +72,7 @@ Deno.test("TDD Red Phase: GlobalCache singleton pattern should be maintained (�
   }
 });
 
-Deno.test("TDD Red Phase: UnifiedCache alias should work for backward compatibility (現在は失敗するはず)", async () => {
+Deno.test("TDD Red Phase: GlobalCache functionality (should now work)", async () => {
   try {
     const cacheModule = await import("../denops/hellshake-yano/cache.ts");
 
@@ -127,13 +127,13 @@ Deno.test("TDD Red Phase: CacheType and other features should work unchanged (�
   }
 });
 
-// 現在のUnifiedCacheが正常に動作することを確認（基準として）
-Deno.test("Current UnifiedCache functionality (should pass)", () => {
-  const instance = CurrentUnifiedCache.getInstance();
+// 現在のGlobalCacheが正常に動作することを確認（基準として）
+Deno.test("Current GlobalCache functionality (should pass)", () => {
+  const instance = GlobalCache.getInstance();
 
   // 基本的な機能が動作することを確認
   const wordsCache = instance.getCache(CacheType.WORDS);
-  assertExists(wordsCache, "Current UnifiedCache should work");
+  assertExists(wordsCache, "Current GlobalCache should work");
 
   wordsCache.set("current-test", ["works"]);
   const result = wordsCache.get("current-test");

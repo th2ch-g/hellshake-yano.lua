@@ -6,23 +6,23 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
-  getDefaultUnifiedConfig,
+  getDefaultConfig as getDefaultConfigFunction,
   getDefaultConfig,
   createMinimalConfig,
-  DEFAULT_UNIFIED_CONFIG,
-  type UnifiedConfig,
+  DEFAULT_CONFIG,
+  type Config as ConfigType,
   type Config
 } from "../denops/hellshake-yano/config.ts";
 
 describe("Process2 Sub4: Default Value Management Unification", () => {
-  describe("getDefaultUnifiedConfig function", () => {
-    it("should have getDefaultUnifiedConfig function", () => {
+  describe("getDefaultConfigFunction function", () => {
+    it("should have getDefaultConfigFunction function", () => {
       // このテストは最初失敗する（関数が存在しないため）
-      assertExists(getDefaultUnifiedConfig);
+      assertExists(getDefaultConfigFunction);
     });
 
-    it("should return complete UnifiedConfig with all 32 properties", () => {
-      const config = getDefaultUnifiedConfig();
+    it("should return complete ConfigType with all 32 properties", () => {
+      const config = getDefaultConfigFunction();
 
       // Core settings (6 properties)
       assertExists(config.enabled);
@@ -62,21 +62,21 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(config.defaultMinWordLength);
     });
 
-    it("should return exactly the same values as DEFAULT_UNIFIED_CONFIG", () => {
-      const config = getDefaultUnifiedConfig();
+    it("should return exactly the same values as DEFAULT_CONFIG", () => {
+      const config = getDefaultConfigFunction();
 
       // この段階では一致しない（関数がまだ存在しないため）
-      assertEquals(config.enabled, DEFAULT_UNIFIED_CONFIG.enabled);
-      assertEquals(config.motionCount, DEFAULT_UNIFIED_CONFIG.motionCount);
-      assertEquals(config.hintPosition, DEFAULT_UNIFIED_CONFIG.hintPosition);
-      assertEquals(config.useNumbers, DEFAULT_UNIFIED_CONFIG.useNumbers);
+      assertEquals(config.enabled, DEFAULT_CONFIG.enabled);
+      assertEquals(config.motionCount, DEFAULT_CONFIG.motionCount);
+      assertEquals(config.hintPosition, DEFAULT_CONFIG.hintPosition);
+      assertEquals(config.useNumbers, DEFAULT_CONFIG.useNumbers);
     });
   });
 
   describe("getDefaultConfig redirection", () => {
-    it("should have consistent values between getDefaultConfig and getDefaultUnifiedConfig", () => {
+    it("should have consistent values between getDefaultConfig and getDefaultConfigFunction", () => {
       const oldConfig = getDefaultConfig();
-      const newConfig = getDefaultUnifiedConfig();
+      const newConfig = getDefaultConfigFunction();
 
       // 対応するプロパティの値が一致することをテスト
       assertEquals(oldConfig.enabled, newConfig.enabled);
@@ -90,9 +90,9 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
 
   // getDefaultHierarchicalConfig removed as part of Process4 Sub2-4
 
-  describe("createMinimalConfig with UnifiedConfig", () => {
-    it("should accept UnifiedConfig partial input", () => {
-      // この段階では失敗する（まだUnifiedConfigベースに更新されていないため）
+  describe("createMinimalConfig with ConfigType", () => {
+    it("should accept ConfigType partial input", () => {
+      // この段階では失敗する（まだConfigTypeベースに更新されていないため）
       const minimal = createMinimalConfig({
         motionCount: 5,
         hintPosition: "end" as const,
@@ -104,10 +104,10 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertEquals(minimal.useNumbers, false);
     });
 
-    it("should return UnifiedConfig type", () => {
+    it("should return ConfigType type", () => {
       const minimal = createMinimalConfig({});
 
-      // UnifiedConfigのプロパティが存在することを確認
+      // ConfigTypeのプロパティが存在することを確認
       assertExists(minimal.enabled);
       assertExists(minimal.motionCount);
       assertExists(minimal.hintPosition);
@@ -118,32 +118,32 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
   describe("Default value consistency between config types", () => {
     it("should have consistent enabled values", () => {
       const oldConfig = getDefaultConfig();
-      const newConfig = getDefaultUnifiedConfig();
+      const newConfig = getDefaultConfigFunction();
       assertEquals(oldConfig.enabled, newConfig.enabled);
     });
 
     it("should have consistent motion count values", () => {
       const oldConfig = getDefaultConfig();
-      const newConfig = getDefaultUnifiedConfig();
+      const newConfig = getDefaultConfigFunction();
       assertEquals(oldConfig.motionCount, newConfig.motionCount);
     });
 
     it("should have consistent hint position values", () => {
       const oldConfig = getDefaultConfig();
-      const newConfig = getDefaultUnifiedConfig();
+      const newConfig = getDefaultConfigFunction();
       assertEquals(oldConfig.hintPosition, newConfig.hintPosition);
     });
 
     it("should have consistent marker values", () => {
       const oldConfig = getDefaultConfig();
-      const newConfig = getDefaultUnifiedConfig();
+      const newConfig = getDefaultConfigFunction();
       assertEquals(oldConfig.markers.length, newConfig.markers.length);
       assertEquals(oldConfig.markers[0], newConfig.markers[0]);
     });
 
     it("should have consistent useNumbers/useNumbers values", () => {
       const oldConfig = getDefaultConfig();
-      const newConfig = getDefaultUnifiedConfig();
+      const newConfig = getDefaultConfigFunction();
       assertEquals(oldConfig.useNumbers, newConfig.useNumbers);
     });
   });

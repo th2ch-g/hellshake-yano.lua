@@ -1,11 +1,11 @@
 /**
- * main.tsのテスト - Process2 Sub5 UnifiedConfig移行のテスト
+ * main.tsのテスト - Config使用への移行のテスト
  * TDD Red-Green-Refactor方式で実装
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import { getDefaultConfig, validateConfig, getMinLengthForKey, getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
-import { getDefaultUnifiedConfig, validateUnifiedConfig } from "../denops/hellshake-yano/config.ts";
+import { getDefaultConfig as getDefaultConfigFromConfig, validateConfig as validateConfigFromConfig } from "../denops/hellshake-yano/config.ts";
 
 Deno.test("getDefaultConfig() should delegate to config.ts", () => {
   const config = getDefaultConfig();
@@ -45,10 +45,10 @@ Deno.test("validateConfig() should delegate to config.ts", () => {
   assertEquals(invalidResult.errors.length > 0, true);
 });
 
-Deno.test("getMinLengthForKey() should work with both Config and UnifiedConfig", () => {
-  // UnifiedConfig形式でのテスト
-  const unifiedConfig = getDefaultUnifiedConfig();
-  const minLength1 = getMinLengthForKey(unifiedConfig, "f");
+Deno.test("getMinLengthForKey() should work with both Config and Config", () => {
+  // Config形式でのテスト
+  const configFromConfigModule = getDefaultConfigFromConfig();
+  const minLength1 = getMinLengthForKey(configFromConfigModule, "f");
   assertEquals(typeof minLength1, "number");
   assertEquals(minLength1 >= 1, true);
 
@@ -62,10 +62,10 @@ Deno.test("getMinLengthForKey() should work with both Config and UnifiedConfig",
   assertEquals(minLength1, minLength2);
 });
 
-Deno.test("getMotionCountForKey() should work with both Config and UnifiedConfig", () => {
-  // UnifiedConfig形式でのテスト
-  const unifiedConfig = getDefaultUnifiedConfig();
-  const motionCount1 = getMotionCountForKey("f", unifiedConfig);
+Deno.test("getMotionCountForKey() should work with both Config and Config", () => {
+  // Config形式でのテスト
+  const configFromConfigModule = getDefaultConfigFromConfig();
+  const motionCount1 = getMotionCountForKey("f", configFromConfigModule);
   assertEquals(typeof motionCount1, "number");
   assertEquals(motionCount1 >= 1, true);
 
@@ -92,16 +92,16 @@ Deno.test("Config types should be backward compatible", () => {
   assertEquals(Array.isArray(config.countedMotions), true);
 });
 
-Deno.test("UnifiedConfig and Config should provide equivalent functionality", () => {
+Deno.test("Config and Config should provide equivalent functionality", () => {
   const config = getDefaultConfig();
-  const unifiedConfig = getDefaultUnifiedConfig();
+  const configFromConfigModule = getDefaultConfigFromConfig();
 
   // 重要な設定値が両方で同じであることを確認
-  assertEquals(config.enabled, unifiedConfig.enabled);
-  assertEquals(config.motionCount, unifiedConfig.motionCount);
-  assertEquals(config.motionTimeout, unifiedConfig.motionTimeout);
-  assertEquals(config.hintPosition, unifiedConfig.hintPosition);
-  assertEquals(config.markers.length, unifiedConfig.markers.length);
+  assertEquals(config.enabled, configFromConfigModule.enabled);
+  assertEquals(config.motionCount, configFromConfigModule.motionCount);
+  assertEquals(config.motionTimeout, configFromConfigModule.motionTimeout);
+  assertEquals(config.hintPosition, configFromConfigModule.hintPosition);
+  assertEquals(config.markers.length, configFromConfigModule.markers.length);
 });
 
 // Process2 Sub6: 型安全性のテスト（Red Phase）

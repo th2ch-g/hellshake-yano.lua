@@ -3,9 +3,9 @@
  */
 
 import { Core } from "../denops/hellshake-yano/core.ts";
-import { getDefaultUnifiedConfig } from "../denops/hellshake-yano/config.ts";
+import { getDefaultConfig } from "../denops/hellshake-yano/config.ts";
 
-const config = getDefaultUnifiedConfig();
+const config = getDefaultConfig();
 const core = Core.getInstance(config);
 
 console.log("Available methods on Core:");

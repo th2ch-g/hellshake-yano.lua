@@ -132,17 +132,6 @@ export interface CoreState {
   isActive: boolean;
 }
 
-/**
- * 統合設定型エイリアス
- * Process1: 型定義の統合実装により UnifiedConfig → Config に変更
- *
- * @description Configインターフェースの型エイリアス
- * すべての設定はcamelCase形式に統一され、Configインターフェースとして定義される
- *
- * @note この型は Config インターフェースと完全に同一です
- * snake_case形式は廃止され、camelCase形式に統一されました
- */
-export type UnifiedConfig = Config;
 
 /**
  * ハイライト色設定インターフェース
@@ -711,13 +700,13 @@ export type ValueOf<T> = T[keyof T];
 // Configインターフェースの定義はconfig.tsに移動しました
 
 /**
- * 統合設定型エイリアス
- * すべての設定型を統合した型
+ * 設定型エイリアス
+ * すべての設定を表す型
  */
 export type ConfigType = Config;
 
 /**
- * 統合設定型の型ガード関数
+ * 設定型の型ガード関数
  * TDD Green Phase実装
  */
 export function isConfigType(obj: unknown): obj is ConfigType {

@@ -1902,15 +1902,15 @@ Deno.test("Core.getMinLengthForKey should return correct min length for key", ()
   assertEquals(Core.getMinLengthForKey(config, "x"), 3); // defaultMinWordLength from config.defaultMinWordLength
 });
 
-Deno.test("Core.getMinLengthForKey should work with UnifiedConfig", () => {
-  const unifiedConfig = {
+Deno.test("Core.getMinLengthForKey should work with Config", () => {
+  const config = {
     motionCount: 3,
     perKeyMinLength: { f: 5 },
     defaultMinWordLength: 3
   } as any; // Test config
 
-  assertEquals(Core.getMinLengthForKey(unifiedConfig, "f"), 5);
-  assertEquals(Core.getMinLengthForKey(unifiedConfig, "w"), 3); // default min word length
+  assertEquals(Core.getMinLengthForKey(config, "f"), 5);
+  assertEquals(Core.getMinLengthForKey(config, "w"), 3); // default min word length
 });
 
 Deno.test("Core.getMinLengthForKey should return default when no config", () => {
@@ -1933,15 +1933,15 @@ Deno.test("Core.getMotionCountForKey should return correct motion count for key"
   assertEquals(Core.getMotionCountForKey("x", config), 3); // fallback to motionCount
 });
 
-Deno.test("Core.getMotionCountForKey should work with UnifiedConfig", () => {
-  const unifiedConfig = {
+Deno.test("Core.getMotionCountForKey should work with Config", () => {
+  const config = {
     motionCount: 5,
     perKeyMotionCount: { f: 7 },
     defaultMotionCount: 4
   } as any; // Test config
 
-  assertEquals(Core.getMotionCountForKey("f", unifiedConfig), 7);
-  assertEquals(Core.getMotionCountForKey("w", unifiedConfig), 4); // default motion count
+  assertEquals(Core.getMotionCountForKey("f", config), 7);
+  assertEquals(Core.getMotionCountForKey("w", config), 4); // default motion count
 });
 
 Deno.test("Core.getMotionCountForKey should validate values", () => {

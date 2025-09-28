@@ -7,7 +7,7 @@ import { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
 import { assertEquals, assertExists } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { delay } from "https://deno.land/std@0.201.0/async/delay.ts";
 import type { HintMapping, Word } from "../denops/hellshake-yano/types.ts";
-import { getDefaultUnifiedConfig, type UnifiedConfig } from "../denops/hellshake-yano/config.ts";
+import { getDefaultConfig, type Config } from "../denops/hellshake-yano/config.ts";
 
 // Mock Denops interface for testing
 class MockDenops implements Partial<Denops> {
@@ -97,7 +97,7 @@ const createMockHints = (): HintMapping[] => [
   },
 ];
 
-const createMockConfig = (): UnifiedConfig => getDefaultUnifiedConfig();
+const createMockConfig = (): Config => getDefaultConfig();
 
 // テスト用のモック関数
 function setupTestEnvironment() {
