@@ -94,12 +94,16 @@ denops/hellshake-yano/
   - [ ] commands.ts関連のimport削除
   - [ ] lifecycle.ts関連のimport削除
   - [ ] motion.ts関連のimport削除
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 - [ ] ファイル削除（5ファイル）
   - [ ] api.ts
   - [ ] commands.ts
   - [ ] lifecycle.ts
   - [ ] motion.ts
   - [ ] display.ts
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 
 #### sub3 word/配下とsegmenter.tsの統合
 @target: denops/hellshake-yano/word.ts
@@ -111,12 +115,18 @@ denops/hellshake-yano/
   - [ ] word/dictionary.ts (432行) → word.tsへ
   - [ ] word/dictionary-loader.ts (575行) → word.tsへ
   - [ ] segmenter.ts (422行) → word.tsへ
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 - [ ] importパス修正
   - [ ] main.tsのword/配下import修正
   - [ ] core.tsのword/配下import修正
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 - [ ] ディレクトリとファイル削除
   - [ ] word/ディレクトリ削除
   - [ ] segmenter.ts削除
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 
 #### sub4 utils/配下の統合と削除
 @target: 各統合先ファイル
@@ -124,10 +134,14 @@ denops/hellshake-yano/
 - [ ] utils/display.ts (95行) の統合
   - [ ] 表示関連 → hint.tsへ
   - [ ] 汎用関数 → core.tsへ
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 - [ ] utils/validation.ts (31行) → 削除（config.tsに統合済み）
 - [ ] utils/cache.ts (6行) → 削除（cache.tsに統合済み）
 - [ ] utils/sort.ts (6行) → 削除
 - [ ] utils/ディレクトリ削除
+- [ ] deno checkで型エラー確認
+- [ ] deno testでテスト実行
 
 #### sub5 最終確認と調整
 @target: denops/hellshake-yano/
