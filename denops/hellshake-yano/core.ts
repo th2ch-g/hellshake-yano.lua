@@ -296,7 +296,6 @@ export class Core {
   private _renderingAbortController: AbortController | null = null;
 
   // タイマー管理（タイマーリーク対策）
-  private _pendingHighlightTimerId?: number;
 
   // Motion counter management
   private motionManager: MotionManager = new MotionManager();
@@ -366,11 +365,6 @@ export class Core {
     this._isRenderingHints = false;
     this._renderingAbortController = null;
 
-    // タイマーのクリーンアップ（タイマーリーク対策）
-    if (this._pendingHighlightTimerId !== undefined) {
-      clearTimeout(this._pendingHighlightTimerId);
-      this._pendingHighlightTimerId = undefined;
-    }
 
       // 必要に応じて他のクリーンアップ処理をここに追加
 
@@ -2229,134 +2223,6 @@ export class Core {
     }
   }
 
-  /*   * sub2-3-4: highlightCandidateHintsAsync - 候補ヒントをハイライト   * 部分入力に基づいて、該当する候補ヒントをハイライト表示します
-   * main.ts の highlightCandidateHintsAsync 関数をCoreクラスに移植   * @param denops Denopsインスタンス
-   * @param hintMappings ヒントマッピング配列
-   * @param partialInput 部分入力文字列
-   * @param config 表示設定
-   * @param signal 中断用のAbortSignal（オプション）
-   * @returns Promise<void> 非同期で完了   * const core = Core.getInstance();
-   * await core.highlightCandidateHintsAsync(denops, hints, "A", { mode: "normal" });
-   */
-  /*   * テスト環境の検出とバッファ時間の設定
-   * テスト環境では競合を防ぐため、より長いタイムアウトを使用
-   */
-  private getTimeoutDelay(): number {
-    // Deno テスト環境またはCI環境を検出
-    const isDeno = typeof Deno !== 'undefined';
-    let isTest = false;
-    let isCI = false;
-    try {
-      isTest = isDeno && (Deno.env?.get?.("DENO_TEST") === "1" || Deno.args?.includes?.("test"));
-      isCI = isDeno && Deno.env?.get?.("CI") === "true";
-    } catch {
-      // If we can't access env variables (e.g., in tests without --allow-env), assume test environment
-      isTest = true;
-    }
-
-    // テスト環境では20ms、CI環境では30ms、本番では0ms
-    if (isCI) return 30;
-    if (isTest) return 20;
-    return 0;
-  }
-
-  highlightCandidateHintsAsync(
-    denops: Denops,
-    hintMappings: HintMapping[],
-    partialInput: string,
-    config: { mode?: string; [key: string]: any },
-    signal?: AbortSignal,
-  ): void {
-    // 既存のタイマーをクリア
-    if (this._pendingHighlightTimerId !== undefined) {
-      clearTimeout(this._pendingHighlightTimerId);
-      this._pendingHighlightTimerId = undefined;
-    }
-
-    // 環境に応じたタイムアウト遅延を使用
-    const delay = this.getTimeoutDelay();
-    this._pendingHighlightTimerId = setTimeout(async () => {
-      this._pendingHighlightTimerId = undefined;
-      try {
-        // 中断チェック
-        if (signal?.aborted) {
-          return;
-        }
-
-        // 空の部分入力の場合は何もしない
-        if (!partialInput) {
-          return;
-        }
-
-        const mode = config.mode || "normal";
-        const bufnr = await denops.call("bufnr", "%") as number;
-
-        // 候補ヒントをハイライト表示
-        // 元のヒントと同じnamespaceを使って全ヒントを再描画（重複を防ぐため）
-        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
-
-        // 既存のハイライトをクリア
-        await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
-
-        // 中断チェック
-        if (signal?.aborted) {
-          return;
-        }
-
-        // 全ヒントを再描画（候補かどうかでハイライトグループを切り替え）
-        let candidateCount = 0;
-        let nonCandidateCount = 0;
-
-        for (const mapping of hintMappings) {
-          // 中断チェック
-          if (signal?.aborted) {
-            return;
-          }
-
-          const { word, hint } = mapping;
-          const hintLine = word.line;
-          const hintCol = mapping.hintCol || word.col;
-          const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-          // 候補かどうか判定
-          const isCandidate = hint.startsWith(partialInput);
-          const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
-
-          if (isCandidate) candidateCount++;
-          else nonCandidateCount++;
-
-          // Neovim用の0ベース座標に変換
-          const nvimLine = hintLine - 1;
-          const nvimCol = hintByteCol - 1;
-
-          try {
-            await denops.call(
-              "nvim_buf_set_extmark",
-              bufnr,
-              extmarkNamespace,
-              nvimLine,
-              nvimCol,
-              {
-                "virt_text": [[hint, highlightGroup]], // 候補かどうかでハイライトグループを切り替え
-                "virt_text_pos": "overlay",
-                "priority": isCandidate ? 1001 : 1000, // 候補は高優先度
-              }
-            );
-          } catch (error) {
-            // 個別のextmarkエラーは無視（バッファが変更された可能性）
-            console.warn("[Core] highlightCandidateHintsAsync extmark error:", error);
-          }
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          // 中断は正常な動作なので、エラーログは出力しない
-          return;
-        }
-        console.error("[Core] highlightCandidateHintsAsync error:", error);
-      }
-    }, delay) as unknown as number;
-  }
-
   /**
    * 候補ヒントを同期的にハイライト表示（即座に反映）
    * @param denops - Denops インスタンス
@@ -2422,13 +2288,12 @@ export class Core {
           );
         } catch (error) {
           // 個別のextmarkエラーは無視（バッファが変更された可能性）
-          console.warn("[Core] highlightCandidateHintsSync extmark error:", error);
+          // 個別のextmarkエラーは無視（バッファが変更された可能性）
         }
       }
 
-      console.log(`[Core] highlightCandidateHintsSync completed: candidates=${candidateCount}, non-candidates=${nonCandidateCount}`);
     } catch (error) {
-      console.error("[Core] highlightCandidateHintsSync error:", error);
+      // エラーハンドリング
     }
   }
 
