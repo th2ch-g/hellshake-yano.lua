@@ -6,7 +6,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import type { Denops } from "@denops/std";
 import { test } from "@denops/test";
-import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
+import { HintManager } from "../denops/hellshake-yano/hint.ts";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 

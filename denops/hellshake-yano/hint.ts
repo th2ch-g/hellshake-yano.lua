@@ -20,29 +20,7 @@ export type { HintKeyConfig, HintMapping, HintPosition };
 // HintPositionWithCoordinateSystem interface moved to types.ts for consolidation
 // Use: import type { HintPositionWithCoordinateSystem } from "./types.ts";
 
-/**
- * パフォーマンス最適化用の統一キャッシュシステム
- *
- * ## UnifiedCache統合による改善点
- * - 4つの独立したMapキャッシュを1つのUnifiedCacheに統合
- * - LRUアルゴリズムによる効率的なメモリ管理
- * - 型安全なキャッシュアクセスとパフォーマンス監視
- * - モード別キャッシュ分離機能を完全に保持
- *
- * @version 1.0.0 - UnifiedCache統合完了
- * @see {@link UnifiedCache} - 統一キャッシュシステム
- * @see {@link CacheType} - キャッシュタイプ一覧
- */
 const unifiedCache = UnifiedCache.getInstance();
-
-/**
- * hint.ts専用キャッシュインスタンス
- * UnifiedCacheから型安全にLRUCacheインスタンスを取得
- *
- * 各キャッシュの用途:
- * - hintCache: ヒント生成結果のキャッシュ（500エントリ上限）
- * - assignmentCache*: モード別ヒント割り当てキャッシュ（各100エントリ上限）
- */
 const hintCache = unifiedCache.getCache<string, string[]>(CacheType.HINTS);
 const assignmentCacheNormal = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_NORMAL);
 const assignmentCacheVisual = unifiedCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);

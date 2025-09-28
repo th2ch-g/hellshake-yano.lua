@@ -34,7 +34,7 @@ import { ContextDetector, type SplittingRules } from "./context.ts";
 import type { UnifiedConfig } from "../config.ts";
 import { type Config, getMinLengthForKey } from "../main.ts";
 import { charIndexToByteIndex } from "../word.ts";
-import { convertToDisplayColumn } from "../hint-utils.ts";
+import { convertToDisplayColumn } from "../hint.ts";
 import { WordDictionaryImpl, createBuiltinDictionary, applyDictionaryCorrection } from "./dictionary.ts";
 import { DictionaryLoader, DictionaryMerger, VimConfigBridge, type UserDictionary } from "./dictionary-loader.ts";
 import { RegexWordDetector, type WordDetectionConfig, type WordDetector } from "../word.ts";

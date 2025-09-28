@@ -4,7 +4,7 @@
  */
 
 import { assertEquals, assertLess, assertNotEquals } from "@std/assert";
-import { HintManager } from "../denops/hellshake-yano/hint/manager.ts";
+import { HintManager } from "../denops/hellshake-yano/hint.ts";
 import { getMinLengthForKey } from "../denops/hellshake-yano/main.ts";
 import {
   WordDetectionManager,
