@@ -6,15 +6,33 @@
  */
 
 import { assertEquals, assertNotEquals, assertExists } from "@std/assert";
+// lifecycle.ts has been integrated into core.ts
 import {
-  initializePlugin,
-  cleanupPlugin,
+  Core,
   getPluginState,
   updatePluginState,
-  getPluginStatistics,
-  type InitializationOptions,
-  type PluginState
-} from "../denops/hellshake-yano/lifecycle.ts";
+  initializePlugin as internalInitializePlugin
+} from "../denops/hellshake-yano/core.ts";
+
+// Create wrapper functions for compatibility
+const initializePlugin = async (denops: any, options?: any) => {
+  // Use the internal initializePlugin which handles cache sizes
+  return await internalInitializePlugin(denops, options);
+};
+
+const cleanupPlugin = async (denops: any) => {
+  const core = Core.getInstance({});
+  return await core.cleanup(denops);
+};
+
+const getPluginStatistics = () => {
+  const core = Core.getInstance({});
+  return core.getStatistics();
+};
+
+// Type definitions for compatibility
+type InitializationOptions = any;
+type PluginState = any;
 import { UnifiedCache, CacheType } from "../denops/hellshake-yano/cache.ts";
 
 // Mock Denops for testing

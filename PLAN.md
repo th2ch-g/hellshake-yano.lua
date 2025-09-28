@@ -89,21 +89,21 @@ denops/hellshake-yano/
 #### sub2 統合済みファイルの削除とimport修正
 @target: denops/hellshake-yano/main.ts, denops/hellshake-yano/core.ts
 @ref: 削除対象ファイル
-- [ ] main.ts, core.tsのimportパス修正
-  - [ ] api.ts関連のimport削除
-  - [ ] commands.ts関連のimport削除
-  - [ ] lifecycle.ts関連のimport削除
-  - [ ] motion.ts関連のimport削除
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
-- [ ] ファイル削除（5ファイル）
-  - [ ] api.ts
-  - [ ] commands.ts
-  - [ ] lifecycle.ts
-  - [ ] motion.ts
-  - [ ] display.ts
-- [ ] deno checkで型エラー確認
-- [ ] deno testでテスト実行
+- [x] main.ts, core.tsのimportパス修正
+  - [x] api.ts関連のimport削除
+  - [x] commands.ts関連のimport削除
+  - [x] lifecycle.ts関連のimport削除
+  - [x] motion.ts関連のimport削除
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
+- [x] ファイル削除（5ファイル）
+  - [x] api.ts
+  - [x] commands.ts
+  - [x] lifecycle.ts
+  - [x] motion.ts
+  - [x] display.ts
+- [x] deno checkで型エラー確認
+- [x] deno testでテスト実行
 
 #### sub3 word/配下とsegmenter.tsの統合
 @target: denops/hellshake-yano/word.ts

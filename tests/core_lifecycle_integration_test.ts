@@ -7,8 +7,8 @@
 
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Denops } from "@denops/std";
-import { Core } from "../denops/hellshake-yano/core.ts";
-import { getPluginState, updatePluginState } from "../denops/hellshake-yano/lifecycle.ts";
+import { Core, getPluginState, updatePluginState } from "../denops/hellshake-yano/core.ts";
+// Lifecycle functions have been integrated into Core class
 
 // Mock Denops for testing
 const mockDenops = {

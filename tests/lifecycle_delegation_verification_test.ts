@@ -8,7 +8,13 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type { Denops } from "@denops/std";
 import { Core } from "../denops/hellshake-yano/core.ts";
-import { getPluginState, resetCaches } from "../denops/hellshake-yano/lifecycle.ts";
+import { getPluginState } from "../denops/hellshake-yano/core.ts";
+
+// Create a resetCaches function using Core.clearCache
+const resetCaches = () => {
+  const core = Core.getInstance({});
+  core.clearCache();
+};
 import { CacheType } from "../denops/hellshake-yano/cache.ts";
 
 // Mock Denops for testing

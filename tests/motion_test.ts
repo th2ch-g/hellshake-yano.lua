@@ -3,7 +3,8 @@ import { sleep, test } from "./testRunner.ts";
 import { MockTimer } from "./helpers/mock.ts";
 
 // 移動カウント管理機能をインポート
-import { MotionCounter, MotionManager } from "../denops/hellshake-yano/motion.ts";
+// MotionCounter and MotionManager have been integrated into core.ts
+import { MotionCounter, MotionManager } from "../denops/hellshake-yano/core.ts";
 
 test("hjkl各キーのカウント増加", async (denops) => {
   const counter = new MotionCounter(3, 2000);

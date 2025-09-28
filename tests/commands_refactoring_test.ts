@@ -12,12 +12,9 @@ import { describe, it, beforeEach } from "@std/testing/bdd";
 import { Core } from "../denops/hellshake-yano/core.ts";
 import { getDefaultUnifiedConfig } from "../denops/hellshake-yano/config.ts";
 import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
-import {
-  HellshakeYanoController,
-  HellshakeYanoConfigManager,
-  DebugController,
-  CommandFactory
-} from "../denops/hellshake-yano/commands.ts";
+import { CommandFactory } from "../denops/hellshake-yano/core.ts";
+// HellshakeYanoController, HellshakeYanoConfigManager, and DebugController
+// have been integrated into Core/CommandFactory
 
 describe("Commands Refactoring Phase Tests", () => {
   let core: Core;

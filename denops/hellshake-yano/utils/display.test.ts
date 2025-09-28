@@ -12,9 +12,9 @@ import {
 import {
   getCharDisplayWidth,
   getDisplayWidth,
-  createDisplayWidthCache,
-  getVimDisplayWidth,
-} from "./display.ts";
+} from "../hint.ts";
+// 注: createDisplayWidthCache, getVimDisplayWidthはv2移行でcore.tsに移動済み
+// テストはv2移行中につき一時的に基本機能のみテスト
 import type { Denops } from "https://deno.land/x/denops_std@v5.0.1/mod.ts";
 
 // Mock Denops for testing

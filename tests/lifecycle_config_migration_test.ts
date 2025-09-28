@@ -12,14 +12,21 @@ import {
   getDefaultUnifiedConfig,
   mergeConfig,
   validateUnifiedConfig} from "../denops/hellshake-yano/config.ts";
-import { initializePlugin } from "../denops/hellshake-yano/lifecycle.ts";
+import { Core } from "../denops/hellshake-yano/core.ts";
+
+// Create wrapper function for initializePlugin
+const initializePlugin = async (denops: any, config?: any) => {
+  const core = Core.getInstance(config || {});
+  return await core.initializePlugin(denops);
+};
 
 /**
  * TDD Red Phase Test 1: lifecycle.tsがUnifiedConfigをインポートしているか
  *
  * 現在はConfig型をインポートしているため、このテストは失敗するはず
  */
-Deno.test("RED: lifecycle.ts should import UnifiedConfig type", async () => {
+Deno.test.ignore("RED: lifecycle.ts should import UnifiedConfig type", async () => {
+  // SKIPPED: lifecycle.ts has been integrated into core.ts and deleted
   // lifecycle.tsソースコードを読み取って型インポートをチェック
   const lifecycleSource = await Deno.readTextFile(
     "./denops/hellshake-yano/lifecycle.ts"
@@ -65,7 +72,8 @@ Deno.test("RED: mergeConfig should work with UnifiedConfig", () => {
  *
  * 現在はConfig型を使用しているため失敗するはず
  */
-Deno.test("RED: InitializationOptions should use UnifiedConfig", async () => {
+Deno.test.ignore("RED: InitializationOptions should use UnifiedConfig", async () => {
+  // SKIPPED: lifecycle.ts has been integrated into core.ts and deleted
   const lifecycleSource = await Deno.readTextFile(
     "./denops/hellshake-yano/lifecycle.ts"
   );

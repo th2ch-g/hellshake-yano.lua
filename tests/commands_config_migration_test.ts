@@ -9,18 +9,16 @@
 import { assertEquals, assertThrows, assertExists } from "jsr:@std/assert";
 import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 import { getDefaultUnifiedConfig } from "../denops/hellshake-yano/config.ts";
-import {
-  HellshakeYanoController,
-  HellshakeYanoConfigManager,
-  CommandFactory
-} from "../denops/hellshake-yano/commands.ts";
+import { Core, CommandFactory } from "../denops/hellshake-yano/core.ts";
+// CommandFactory and related classes have been integrated into Core
 
 /**
  * TDD Red Phase Test 1: commands.tsがUnifiedConfigをインポートしているか
  *
  * 現在はConfig型をインポートしているため、このテストは失敗するはず
  */
-Deno.test("RED: commands.ts should import UnifiedConfig type", async () => {
+Deno.test.ignore("RED: commands.ts should import UnifiedConfig type", async () => {
+  // SKIPPED: commands.ts has been integrated into core.ts and deleted
   const commandsSource = await Deno.readTextFile(
     "./denops/hellshake-yano/commands.ts"
   );
@@ -49,7 +47,9 @@ Deno.test("RED: PluginController should work with UnifiedConfig", () => {
   const unifiedConfig = getDefaultUnifiedConfig();
 
   // UnifiedConfigはサポートされている
-  const controller = new HellshakeYanoController(unifiedConfig);
+  // HellshakeYanoController is now integrated into Core/CommandFactory
+  const factory = new CommandFactory(unifiedConfig);
+  const controller = factory.getController();
   assertExists(controller);
 });
 
@@ -62,7 +62,9 @@ Deno.test("RED: ConfigManager should handle UnifiedConfig structure", () => {
   const unifiedConfig = getDefaultUnifiedConfig();
 
   // UnifiedConfigはサポートされている
-  const manager = new HellshakeYanoConfigManager(unifiedConfig);
+  // HellshakeYanoConfigManager is now integrated into CommandFactory
+  const factory = new CommandFactory(unifiedConfig);
+  const manager = factory.getConfigManager();
   assertExists(manager);
 });
 
@@ -84,7 +86,8 @@ Deno.test("RED: CommandFactory should accept UnifiedConfig", () => {
  *
  * UnifiedConfigではmotionCountの代わりに入力パラメータの構造が変わる可能性
  */
-Deno.test("RED: ConfigManager methods should work with UnifiedConfig structure", async () => {
+Deno.test.ignore("RED: ConfigManager methods should work with UnifiedConfig structure", async () => {
+  // SKIPPED: commands.ts has been integrated into core.ts and deleted
   const commandsSource = await Deno.readTextFile(
     "./denops/hellshake-yano/commands.ts"
   );
@@ -109,7 +112,8 @@ Deno.test("RED: ConfigManager methods should work with UnifiedConfig structure",
  *
  * enable, disable, toggle等の単純な関数もUnifiedConfigに対応すべき
  */
-Deno.test("RED: Backward compatibility functions should support UnifiedConfig", async () => {
+Deno.test.ignore("RED: Backward compatibility functions should support UnifiedConfig", async () => {
+  // SKIPPED: commands.ts has been integrated into core.ts and deleted
   const commandsSource = await Deno.readTextFile(
     "./denops/hellshake-yano/commands.ts"
   );

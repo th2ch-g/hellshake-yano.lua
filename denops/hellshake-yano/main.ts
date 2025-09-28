@@ -33,20 +33,8 @@ import {
   UnifiedConfig,
   validateUnifiedConfig,
 } from "./config.ts";
-import {
-  CommandFactory,
-  disable,
-  enable,
-  setCount,
-  setTimeout as setTimeoutCommand,
-  toggle,
-} from "./commands.ts";
-import {
-  getPluginStatistics,
-  healthCheck,
-  initializePlugin,
-  updatePluginState,
-} from "./lifecycle.ts";
+// commands.ts は core.ts に統合されたため削除
+// lifecycle.ts は core.ts に統合されたため削除
 import { LRUCache } from "./cache.ts";
 let config: UnifiedConfig = getDefaultUnifiedConfig();
 let currentHints: HintMapping[] = [];
@@ -229,7 +217,9 @@ function syncManagerConfig(config: UnifiedConfig): void {
 }
 export async function main(denops: Denops): Promise<void> {
   try {
-    await initializePlugin(denops);
+    // initializePluginはcore.tsに統合されているのでCoreクラス経由で呼び出し
+    const core = Core.getInstance(getDefaultUnifiedConfig());
+    await core.initializePlugin(denops);
     // g:hellshake_yano_configが未定義の場合は空のオブジェクトをフォールバック
     const userConfig = await denops.eval('g:hellshake_yano_config').catch(() => ({})) as Partial<UnifiedConfig>;
     const normalizedUserConfig = normalizeBackwardCompatibleFlagsUnified(userConfig);
@@ -243,22 +233,27 @@ export async function main(denops: Denops): Promise<void> {
     await initializeDictionarySystem(denops);
     denops.dispatcher = {
       async enable(): Promise<void> {
-        enable(config);
+        const core = Core.getInstance(config);
+        core.enable();
       },
       async disable(): Promise<void> {
-        disable(config);
+        const core = Core.getInstance(config);
+        core.disable();
       },
       async toggle(): Promise<void> {
-        toggle(config);
+        const core = Core.getInstance(config);
+        core.toggle();
       },
       async setCount(count: unknown): Promise<void> {
         if (typeof count === 'number') {
-          setCount(config, count);
+          const core = Core.getInstance(config);
+          core.setMotionThreshold(count);
         }
       },
       async setTimeout(timeout: unknown): Promise<void> {
         if (typeof timeout === 'number') {
-          setTimeoutCommand(config, timeout);
+          const core = Core.getInstance(config);
+          core.setMotionTimeout(timeout);
         }
       },
       async showHints(): Promise<void> {
@@ -318,10 +313,12 @@ export async function main(denops: Denops): Promise<void> {
         return validateConfig(cfg as Partial<Config>);
       },
       async healthCheck(): Promise<void> {
-        await healthCheck(denops);
+        const core = Core.getInstance(config);
+        await core.getHealthStatus(denops);
       },
       async getStatistics(): Promise<unknown> {
-        return getPluginStatistics();
+        const core = Core.getInstance(config);
+        return core.getStatistics();
       },
       async reloadDictionary(): Promise<void> {
         await reloadDictionary(denops);
@@ -387,10 +384,10 @@ export async function main(denops: Denops): Promise<void> {
         };
       },
     };
-    updatePluginState({ status: "initialized" } as any);
+    // updatePluginStateはcore.tsに統合されたため、必要に応じてCoreクラス経由で呼び出し
   } catch (error) {
     console.error("Plugin initialization failed:", error);
-    updatePluginState({ status: "error" } as any);
+    // updatePluginStateはcore.tsに統合されたため、必要に応じてCoreクラス経由で呼び出し
     throw error;
   }
 }

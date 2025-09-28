@@ -9,14 +9,16 @@
 import { assertEquals, assertThrows, assertExists } from "jsr:@std/assert";
 import type { UnifiedConfig } from "../denops/hellshake-yano/config.ts";
 import { getDefaultUnifiedConfig } from "../denops/hellshake-yano/config.ts";
-import { HellshakeYanoAPIImpl } from "../denops/hellshake-yano/api.ts";
+import { Core } from "../denops/hellshake-yano/core.ts";
+// HellshakeYanoAPIImpl has been integrated into Core class
 
 /**
  * TDD Red Phase Test 1: api.tsがUnifiedConfigをインポートしているか
  *
  * 現在はConfig型をインポートしているため、このテストは失敗するはず
  */
-Deno.test("RED: api.ts should import UnifiedConfig type", async () => {
+Deno.test.ignore("RED: api.ts should import UnifiedConfig type", async () => {
+  // SKIPPED: api.ts has been integrated into core.ts and deleted
   const apiSource = await Deno.readTextFile("./denops/hellshake-yano/api.ts");
 
   // UnifiedConfigのインポートが存在する
@@ -39,7 +41,8 @@ Deno.test("RED: api.ts should import UnifiedConfig type", async () => {
  *
  * 現在はConfig型を使用しているため失敗するはず
  */
-Deno.test("RED: HellshakeYanoAPI should use UnifiedConfig in methods", async () => {
+Deno.test.ignore("RED: HellshakeYanoAPI should use UnifiedConfig in methods", async () => {
+  // SKIPPED: api.ts has been integrated into core.ts and deleted
   const apiSource = await Deno.readTextFile("./denops/hellshake-yano/api.ts");
 
   // getConfig()メソッドの戻り値型をチェック
@@ -64,7 +67,8 @@ Deno.test("RED: HellshakeYanoAPI should use UnifiedConfig in methods", async () 
  *
  * process4 sub4-1統合後の新しい実装を確認
  */
-Deno.test("GREEN: HellshakeYanoAPIImpl should use core delegation with UnifiedConfig", async () => {
+Deno.test.ignore("GREEN: HellshakeYanoAPIImpl should use core delegation with UnifiedConfig", async () => {
+  // SKIPPED: api.ts has been integrated into core.ts and deleted
   const apiSource = await Deno.readTextFile("./denops/hellshake-yano/api.ts");
 
   // core.tsを委譲するprivateプロパティをチェック
@@ -100,8 +104,9 @@ Deno.test("RED: API instance should work with UnifiedConfig", () => {
   const unifiedConfig = getDefaultUnifiedConfig();
 
   // UnifiedConfigはサポートされている
-  const api = new HellshakeYanoAPIImpl(unifiedConfig);
-  assertExists(api);
+  // HellshakeYanoAPIImpl is now integrated into Core
+  const core = Core.getInstance(unifiedConfig);
+  assertExists(core);
 });
 
 /**
@@ -109,7 +114,8 @@ Deno.test("RED: API instance should work with UnifiedConfig", () => {
  *
  * 現在はUnifiedConfig型をエクスポートしていないため失敗するはず
  */
-Deno.test("RED: api.ts should export UnifiedConfig type", async () => {
+Deno.test.ignore("RED: api.ts should export UnifiedConfig type", async () => {
+  // SKIPPED: api.ts has been integrated into core.ts and deleted
   const apiSource = await Deno.readTextFile("./denops/hellshake-yano/api.ts");
 
   // 型エクスポート行をチェック
