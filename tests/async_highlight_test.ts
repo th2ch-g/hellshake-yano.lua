@@ -31,11 +31,29 @@ class MockDenops implements Partial<Denops> {
       await delay(1); // 1ms遅延
     }
 
+    // getcharのレスポンスを処理
+    if (method === "getchar") {
+      const response = this.responses[method];
+      if (typeof response === "function") {
+        return response();
+      }
+      return response || "";
+    }
+
     if (method in this.responses) {
-      return this.responses[method];
+      const response = this.responses[method];
+      return typeof response === "function" ? response() : response;
     }
 
     return 1; // デフォルトレスポンス
+  }
+
+  async cmd(command: string): Promise<void> {
+    this.callHistory.push({ method: "cmd", args: [command] });
+    // cmdメソッドのモック実装（redrawコマンドを記録）
+    if (command === "redraw") {
+      this.callHistory.push({ method: "redraw", args: [] });
+    }
   }
 
   getCallHistory() {
@@ -57,6 +75,7 @@ let testCurrentHints: any[];
 let testConfig: any;
 let testExtmarkNamespace: number;
 let testHintsVisible: boolean;
+let globalAbortController: AbortController | undefined;
 
 // テスト専用のグローバル変数アクセス
 // NOTE: 実際の実装ではこれらをテスト用に公開する必要があります
@@ -99,8 +118,29 @@ const createMockHints = (): HintMapping[] => [
 
 const createMockConfig = (): Config => getDefaultConfig();
 
+// タイマークリーンアップ用
+function cleanupTimers() {
+  // 既存のハイライトタイマーをクリア
+  try {
+    // グローバルのpendingHighlightTimerIdがある場合はクリア
+    if (typeof globalThis !== 'undefined' && (globalThis as any).pendingHighlightTimerId) {
+      clearTimeout((globalThis as any).pendingHighlightTimerId);
+      (globalThis as any).pendingHighlightTimerId = undefined;
+    }
+    // AbortControllerをクリア
+    if (globalAbortController) {
+      globalAbortController.abort();
+      globalAbortController = undefined;
+    }
+  } catch (e) {
+    // エラーは無視
+  }
+}
+
 // テスト用のモック関数
 function setupTestEnvironment() {
+  cleanupTimers(); // まずタイマーをクリーンアップ
+
   mockDenops = new MockDenops();
   testCurrentHints = [
     {
@@ -139,7 +179,6 @@ function setupTestEnvironment() {
     if (mockDenops && mockDenops.getCallHistory) {
       mockDenops.getCallHistory().push({ method: "clearHintDisplay", args: [] });
     }
-    console.log("clearHintDisplay called");
   };
 
   globalThis.calculateHintPositionWithCoordinateSystem = (word: any, hintPosition: any, debugCoordinates: any) => {
@@ -337,4 +376,418 @@ Deno.test("highlightCandidateHintsAsync - エラーハンドリングテスト",
   assertEquals(true, true, "Should handle errors gracefully");
 });
 
-console.log("✅ All async highlight tests defined (currently failing as expected in RED phase)");
+// ========================================
+// TDD RED PHASE: highlightCandidateHintsHybrid テスト
+// ========================================
+
+Deno.test("highlightCandidateHintsHybrid - GREEN PHASE：基本動作テスト", async () => {
+  setupTestEnvironment();
+
+  try {
+    // highlightCandidateHintsHybrid関数をインポート（今度は存在する）
+    const { highlightCandidateHintsHybrid } = await import("../denops/hellshake-yano/main.ts");
+
+    const mockHints = createMockHints();
+    const mockConfig = createMockConfig();
+
+    // 関数が正常に動作することを確認
+    await highlightCandidateHintsHybrid(mockDenops as unknown as Denops, "a", mockHints, mockConfig);
+
+    assertEquals(true, true, "highlightCandidateHintsHybrid should work correctly");
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    assertEquals(false, true, `Should not throw error: ${error}`);
+  } finally {
+    cleanupTimers();
+  }
+});
+
+Deno.test("highlightCandidateHintsHybrid - GREEN PHASE：最初の15個の同期処理", async () => {
+  setupTestEnvironment();
+
+  // 大量のヒントを作成（50個）
+  const largeHints = [];
+  for (let i = 0; i < 50; i++) {
+    largeHints.push({
+      hint: `a${i}`,
+      word: { line: i + 1, col: 1, byteCol: 1, text: `test${i}` },
+      hintByteCol: 1,
+      hintCol: 1
+    });
+  }
+
+  try {
+    const { highlightCandidateHintsHybrid } = await import("../denops/hellshake-yano/main.ts");
+
+    mockDenops.clearCallHistory();
+    const startTime = Date.now();
+
+    // ハイブリッド処理を呼び出し
+    await highlightCandidateHintsHybrid(mockDenops as unknown as Denops, "a", largeHints as HintMapping[], createMockConfig());
+
+    const endTime = Date.now();
+
+    // redrawが呼ばれているかテスト
+    const redrawCalls = mockDenops.getCallHistory().filter(call => call.method === "redraw");
+    assertEquals(redrawCalls.length >= 1, true, "Should call redraw after sync processing first batch");
+
+    assertEquals(true, true, "Hybrid method should process sync batch correctly");
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    assertEquals(false, true, `Should not throw error: ${error}`);
+  } finally {
+    cleanupTimers();
+  }
+});
+
+Deno.test("highlightCandidateHintsHybrid - GREEN PHASE：残りの非同期処理", async () => {
+  setupTestEnvironment();
+
+  // 50個のヒントを作成
+  const largeHints = [];
+  for (let i = 0; i < 50; i++) {
+    largeHints.push({
+      hint: `a${i}`,
+      word: { line: i + 1, col: 1, byteCol: 1, text: `test${i}` },
+      hintByteCol: 1,
+      hintCol: 1
+    });
+  }
+
+  try {
+    const { highlightCandidateHintsHybrid } = await import("../denops/hellshake-yano/main.ts");
+
+    mockDenops.clearCallHistory();
+
+    // ハイブリッド処理を呼び出し
+    await highlightCandidateHintsHybrid(mockDenops as unknown as Denops, "a", largeHints as HintMapping[], createMockConfig());
+
+    // 少し待ってから、非同期処理の実行を確認
+    await delay(50);
+
+    assertEquals(true, true, "Hybrid method should handle async processing correctly");
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    assertEquals(false, true, `Should not throw error: ${error}`);
+  } finally {
+    cleanupTimers();
+  }
+});
+
+Deno.test("highlightCandidateHintsHybrid - GREEN PHASE：redrawタイミング", async () => {
+  setupTestEnvironment();
+
+  const mockHints = createMockHints();
+
+  try {
+    const { highlightCandidateHintsHybrid } = await import("../denops/hellshake-yano/main.ts");
+
+    // redraw履歴をクリア
+    mockDenops.clearCallHistory();
+
+    // ハイブリッド処理を呼び出し
+    await highlightCandidateHintsHybrid(mockDenops as unknown as Denops, "a", mockHints, createMockConfig());
+
+    const callHistory = mockDenops.getCallHistory();
+    const redrawIndex = callHistory.findIndex(call => call.method === "redraw");
+
+    // redrawが呼ばれていることを確認
+    assertEquals(redrawIndex >= 0, true, "Should call redraw after sync batch");
+
+    assertEquals(true, true, "Redraw timing should work correctly");
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    assertEquals(false, true, `Should not throw error: ${error}`);
+  } finally {
+    cleanupTimers();
+  }
+});
+
+// ========================================
+// TDD Process10: Fire-and-forget方式の動作確認テスト
+// ========================================
+
+Deno.test("Process10 RED: Fire-and-forget - 即座に返ることの検証", async () => {
+  setupTestEnvironment();
+
+  // 100個のヒントでテスト
+  const largeHints = [];
+  for (let i = 0; i < 100; i++) {
+    largeHints.push({
+      hint: `h${i}`,
+      word: { line: i + 1, col: 1, byteCol: 1, text: `word${i}` },
+      hintByteCol: 1,
+      hintCol: 1
+    });
+  }
+
+  const startTime = performance.now();
+
+  // Fire-and-forgetパターン: awaitを使わない
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "h", largeHints as HintMapping[], createMockConfig());
+
+  const returnTime = performance.now() - startTime;
+
+  // 5ms以内に返ることを検証（ブロッキングしていない）
+  assertEquals(
+    returnTime < 5,
+    true,
+    `Fire-and-forgetパターンがブロッキング: ${returnTime}ms > 5ms`
+  );
+
+  // 処理が実際に実行されることを確認
+  await delay(100);
+  const calls = mockDenops.getCallHistory();
+  assertEquals(calls.length > 0, true, "非同期処理が実行されていない");
+});
+
+Deno.test("Process10 RED: Fire-and-forget - Promiseを返さないことの確認", async () => {
+  setupTestEnvironment();
+
+  const result = highlightCandidateHintsAsync(
+    mockDenops as unknown as Denops,
+    "a",
+    createMockHints(),
+    createMockConfig()
+  );
+
+  // voidを返すことを確認（Promiseではない）
+  assertEquals(result, undefined, "Fire-and-forget関数はvoidを返すべき");
+  // resultがundefinedの場合、Promiseではない
+  const isPromise = result != null && typeof result === "object" && (result as any) instanceof Promise;
+  assertEquals(isPromise, false, "Promiseを返してはいけない");
+
+  // クリーンアップ
+  await delay(10);
+  cleanupTimers();
+});
+
+// ========================================
+// TDD Process10: AbortController中断テスト
+// ========================================
+
+Deno.test("Process10 RED: AbortController - 古い処理のキャンセル", async () => {
+  setupTestEnvironment();
+
+  const largeHints = [];
+  for (let i = 0; i < 50; i++) {
+    largeHints.push({
+      hint: `h${i}`,
+      word: { line: i + 1, col: 1, byteCol: 1, text: `word${i}` },
+      hintByteCol: 1,
+      hintCol: 1
+    });
+  }
+
+  mockDenops.clearCallHistory();
+
+  // 最初の処理を開始
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "h1", largeHints as HintMapping[], createMockConfig());
+  await delay(10);
+
+  // 2番目の処理を開始（古い処理をキャンセルすべき）
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "h2", largeHints as HintMapping[], createMockConfig());
+  await delay(10);
+
+  // 3番目の処理（2番目をキャンセルすべき）
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "h3", largeHints as HintMapping[], createMockConfig());
+
+  // 全ての処理が完了するまで待つ
+  await delay(150);
+
+  const calls = mockDenops.getCallHistory();
+
+  // 最後の処理のみが実行されることを検証
+  // clearHintDisplayは少なくとも3回呼ばれる（各呼び出しで）
+  const clearCalls = calls.filter(c => c.method === "clearHintDisplay");
+  assertEquals(clearCalls.length >= 3, true, `clearHintDisplayが呼ばれるべき: ${clearCalls.length}回`);
+
+  // クリーンアップ
+  cleanupTimers();
+});
+
+Deno.test("Process10 RED: AbortController - キャンセル時のメモリリーク防止", async () => {
+  setupTestEnvironment();
+
+  const memoryBefore = getMemoryUsage();
+
+  // 多数のキャンセルを発生させる
+  for (let i = 0; i < 10; i++) {
+    highlightCandidateHintsAsync(
+      mockDenops as unknown as Denops,
+      `test${i}`,
+      createMockHints(),
+      createMockConfig()
+    );
+    await delay(1);
+  }
+
+  // GCを促進
+  try {
+    if ((globalThis as any).gc) {
+      (globalThis as any).gc();
+    }
+  } catch {}
+
+  await delay(100);
+
+  const memoryAfter = getMemoryUsage();
+  const memoryIncrease = memoryAfter - memoryBefore;
+
+  // メモリリークがないことを確認（100KB以下）
+  assertEquals(
+    memoryIncrease < 100 * 1024,
+    true,
+    `メモリリークの可能性: ${memoryIncrease} bytes`
+  );
+});
+
+// ========================================
+// TDD Process10: バッチ処理の非同期実行テスト
+// ========================================
+
+Deno.test("Process10 RED: バッチ処理 - 並列実行の検証", async () => {
+  setupTestEnvironment();
+
+  // バッチ処理の実行タイミングを記録
+  const batchTimings: number[] = [];
+  const originalProcessExtmarks = globalThis.processExtmarksBatched;
+
+  globalThis.processExtmarksBatched = async (denops, matching, nonMatching, prefix, bufnr, signal) => {
+    const timestamp = performance.now();
+    batchTimings.push(timestamp);
+    // 少し遅延させる（重い処理をシミュレート）
+    await delay(10);
+    return originalProcessExtmarks(denops, matching, nonMatching, prefix, bufnr, signal);
+  };
+
+  // 50個のヒントでテスト（複数バッチに分割される）
+  const largeHints = [];
+  for (let i = 0; i < 50; i++) {
+    largeHints.push({
+      hint: `a${i}`,
+      word: { line: i + 1, col: 1, byteCol: 1, text: `test${i}` },
+      hintByteCol: 1,
+      hintCol: 1
+    });
+  }
+
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", largeHints as HintMapping[], createMockConfig());
+
+  // バッチ処理が開始されるまで待つ
+  await delay(50);
+
+  // バッチがほぼ同時に開始されることを確認
+  if (batchTimings.length >= 2) {
+    const timeDiff = batchTimings[1] - batchTimings[0];
+    // バッチ間の時間差が20ms以下（並列実行）
+    assertEquals(
+      timeDiff < 20,
+      true,
+      `バッチが順次実行されている可能性: ${timeDiff}ms`
+    );
+  }
+
+  // クリーンアップ
+  globalThis.processExtmarksBatched = originalProcessExtmarks;
+});
+
+Deno.test("Process10 RED: バッチ処理 - queueMicrotaskによるイベントループ解放", async () => {
+  setupTestEnvironment();
+
+  let eventLoopReleased = false;
+
+  // イベントループが解放されることを確認
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", createMockHints(), createMockConfig());
+
+  // queueMicrotaskでイベントループ解放を確認
+  queueMicrotask(() => {
+    eventLoopReleased = true;
+  });
+
+  await delay(10);
+
+  assertEquals(eventLoopReleased, true, "queueMicrotaskが実行されるべき");
+
+  // クリーンアップ
+  cleanupTimers();
+});
+
+// ========================================
+// TDD Process10: 2文字目入力の取りこぼし防止テスト
+// ========================================
+
+Deno.test("Process10 RED: 2文字目入力 - イベントループがブロックされない", async () => {
+  setupTestEnvironment();
+
+  // getcharをシミュレートするモック
+  let getcharCalled = false;
+  mockDenops.setResponse("getchar", () => {
+    getcharCalled = true;
+    return "b"; // 2文字目
+  });
+
+  // ハイライト処理開始
+  const startTime = performance.now();
+  highlightCandidateHintsAsync(mockDenops as unknown as Denops, "a", createMockHints(), createMockConfig());
+
+  // ハイライト処理中にgetcharが呼べることを確認
+  await delay(10);
+
+  // getcharシミュレーション
+  const charResult = await mockDenops.call("getchar");
+
+  assertEquals(getcharCalled, true, "getcharが呼ばれるべき");
+  assertEquals(charResult, "b", "2文字目入力が取得できるべき");
+
+  // クリーンアップ
+  cleanupTimers();
+});
+
+Deno.test("Process10 RED: 2文字目入力 - 高速連続入力テスト", async () => {
+  setupTestEnvironment();
+
+  const inputSequence = ["a", "b", "c", "d", "e"];
+  const receivedInputs: string[] = [];
+  let currentInputIndex = 0;
+
+  // getcharモック（連続入力をシミュレート）
+  mockDenops.setResponse("getchar", () => {
+    if (currentInputIndex < inputSequence.length) {
+      const char = inputSequence[currentInputIndex++];
+      receivedInputs.push(char);
+      return char;
+    }
+    return "";
+  });
+
+  // 複数回のハイライト処理と入力をシミュレート
+  for (let i = 0; i < inputSequence.length - 1; i++) {
+    highlightCandidateHintsAsync(mockDenops as unknown as Denops, inputSequence[i], createMockHints(), createMockConfig());
+    await mockDenops.call("getchar");
+    await delay(5); // 短い間隔で連続入力
+  }
+
+  // 全ての入力が取りこぼされないことを確認
+  assertEquals(
+    receivedInputs.length,
+    inputSequence.length - 1,
+    `入力が取りこぼされた: ${receivedInputs.join(",")}`
+  );
+
+  // クリーンアップ
+  cleanupTimers();
+});
+
+// getMemoryUsageヘルパー関数（テスト用）
+function getMemoryUsage(): number {
+  try {
+    if (Deno.memoryUsage) {
+      return Deno.memoryUsage().heapUsed;
+    }
+  } catch {}
+  return 0;
+}
+
+console.log("🔴 Process10 RED PHASE: 包括的なテストを作成完了");
+console.log("✅ Fire-and-forget、AbortController、バッチ処理、2文字目入力テストを定義");

@@ -1620,13 +1620,14 @@ export class Core {
 
       // ハイライト処理をバックグラウンドで開始（入力処理をブロックしない）
       if (shouldHighlight) {
-        // 非同期Fire-and-forget方式でハイライトを実行（awaitしない）
-        // highlightCandidateHintsAsync は void を返すため、内部でエラーハンドリングされる
+        // ハイブリッド方式でハイライトを実行（最初の15個は同期、残りは非同期）
+        // process3実装：1文字目入力時の即時ハイライト表示
         try {
-          this.highlightCandidateHintsAsync(denops, currentHints, inputChar, { mode: "normal" });
+          // awaitして最初のバッチが確実に表示されるまで待つ
+          await this.highlightCandidateHintsHybrid(denops, currentHints, inputChar, { mode: "normal" });
         } catch (error: unknown) {
           // 同期的なエラーをキャッチ（非同期エラーは関数内部で処理）
-          console.warn("Highlight processing initialization failed:", error);
+          console.warn("Hybrid highlight processing failed:", error);
         }
       }
 
@@ -2637,6 +2638,140 @@ export class Core {
         });
       }
     }, 0) as unknown as number;
+  }
+
+  /**
+   * ハイブリッドハイライト処理：最初の15-20個を同期処理、残りを非同期処理
+   * プロセス3実装：1文字目入力時の即時ハイライト表示
+   *
+   * @param denops - Denopsインスタンス
+   * @param hintMappings - ヒントマッピング配列
+   * @param partialInput - 部分入力文字列
+   * @param config - 設定オプション
+   */
+  async highlightCandidateHintsHybrid(
+    denops: Denops,
+    hintMappings: HintMapping[],
+    partialInput: string,
+    config: { mode?: "normal" | "visual" | "operator" } = {}
+  ): Promise<void> {
+    const SYNC_BATCH_SIZE = 15; // 同期処理する候補数
+
+    try {
+      // 既存のレンダリング処理をキャンセル
+      if (this._renderingAbortController) {
+        this._renderingAbortController.abort();
+      }
+
+      // 新しいAbortControllerを作成
+      this._renderingAbortController = new AbortController();
+      const signal = this._renderingAbortController.signal;
+
+      // 空の部分入力の場合は何もしない
+      if (!partialInput) {
+        return;
+      }
+
+      const mode = config.mode || "normal";
+      const bufnr = await denops.call("bufnr", "%") as number;
+      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+
+      if (signal.aborted) return;
+
+      // 既存のハイライトをクリア
+      await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+
+      if (signal.aborted) return;
+
+      // 候補ヒントをフィルタリング
+      const candidateHints = hintMappings.filter(mapping =>
+        mapping.hint.startsWith(partialInput)
+      );
+
+      if (candidateHints.length === 0) return;
+
+      // Phase 1: 最初の15個を同期的に処理
+      const syncCandidates = candidateHints.slice(0, SYNC_BATCH_SIZE);
+      const asyncCandidates = candidateHints.slice(SYNC_BATCH_SIZE);
+
+      // 同期バッチを即座に表示
+      for (const mapping of syncCandidates) {
+        if (signal.aborted) return;
+
+        const { word, hint } = mapping;
+        const hintLine = word.line;
+        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+        const nvimLine = hintLine - 1;
+        const nvimCol = hintByteCol - 1;
+
+        try {
+          await denops.call(
+            "nvim_buf_set_extmark",
+            bufnr,
+            extmarkNamespace,
+            nvimLine,
+            nvimCol,
+            {
+              "virt_text": [[hint, "HellshakeYanoMarkerCurrent"]],
+              "virt_text_pos": "overlay",
+              "priority": 1001,
+            }
+          );
+        } catch (error) {
+          // 個別のextmarkエラーは無視
+        }
+      }
+
+      // 即座にredrawして表示を更新
+      await denops.cmd("redraw");
+
+      // Phase 2: 残りを非同期で処理（fire-and-forget）
+      if (asyncCandidates.length > 0) {
+        // 非同期処理を開始（awaitしない）
+        queueMicrotask(async () => {
+          try {
+            for (const mapping of asyncCandidates) {
+              if (signal.aborted) return;
+
+              const { word, hint } = mapping;
+              const hintLine = word.line;
+              const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+              const nvimLine = hintLine - 1;
+              const nvimCol = hintByteCol - 1;
+
+              try {
+                await denops.call(
+                  "nvim_buf_set_extmark",
+                  bufnr,
+                  extmarkNamespace,
+                  nvimLine,
+                  nvimCol,
+                  {
+                    "virt_text": [[hint, "HellshakeYanoMarkerCurrent"]],
+                    "virt_text_pos": "overlay",
+                    "priority": 1001,
+                  }
+                );
+              } catch (error) {
+                // 個別のextmarkエラーは無視
+              }
+            }
+          } catch (err) {
+            console.error("highlightCandidateHintsHybrid async error:", err);
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error("highlightCandidateHintsHybrid error:", {
+        partialInput,
+        hintCount: hintMappings.length,
+        mode: config.mode,
+        error: error instanceof Error ? error.message : error
+      });
+    }
   }
 
   /**

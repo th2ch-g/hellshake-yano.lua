@@ -90,9 +90,38 @@
 ### process3 既存コードのリファクタリング
 #### sub1 同期版メソッドの保持
 @target: denops/hellshake-yano/core.ts
-- [ ] `highlightCandidateHintsSync`はフォールバックとして残す
-- [ ] 設定オプションで同期/非同期を切り替え可能に
-- [ ] デバッグモードでの切り替え機能
+- [x] `highlightCandidateHintsSync`はフォールバックとして残す
+- [x] 設定オプションで同期/非同期を切り替え可能に
+- [x] デバッグモードでの切り替え機能
+- [x] deno checkを通過する型安全なコード
+- [x] deno testでの動作確認
+
+### process4 1文字目入力時の即時ハイライト表示
+#### sub1 ハイブリッドハイライトメソッドの実装
+@target: denops/hellshake-yano/core.ts
+- [ ] `highlightCandidateHintsHybrid`メソッドを新規作成
+- [ ] 最初の15-20個の候補を同期的に処理
+- [ ] `denops.cmd("redraw")`で即座にレンダリング
+- [ ] 残りのヒントを非同期で処理
+- [ ] AbortControllerによるキャンセル機能維持
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
+
+#### sub2 waitForUserInputメソッドの更新
+@target: denops/hellshake-yano/core.ts:1622-1631
+- [ ] `highlightCandidateHintsAsync`を`highlightCandidateHintsHybrid`に変更
+- [ ] 最初のバッチは`await`して確実に表示
+- [ ] 2文字目入力の応答性を維持
+- [ ] エラーハンドリングの実装
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
+
+#### sub3 パフォーマンスの最適化
+@target: denops/hellshake-yano/core.ts
+- [ ] 同期処理するバッチサイズの調整（10-15個）
+- [ ] 可視領域優先の実装検討
+- [ ] redrawコマンドのタイミング最適化
+- [ ] 大量ヒント時のパフォーマンステスト
 - [ ] deno checkを通過する型安全なコード
 - [ ] deno testでの動作確認
 

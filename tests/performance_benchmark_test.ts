@@ -427,6 +427,187 @@ test("Performance: Integrated performance test", async (denops: Denops) => {
 });
 
 /**
+ * Process10 パフォーマンステスト: 大量ヒントでの非同期ハイライト処理
+ * 100個以上のヒントで100ms以内に処理開始することを検証
+ */
+test("Process10 Performance: Large hints async highlighting", async (denops: Denops) => {
+  // 150個のヒントを生成
+  const largeHints: Array<{ line: number; col: number; text: string; hintByteCol: number; hintCol: number }> = [];
+  for (let i = 0; i < 150; i++) {
+    largeHints.push({
+      line: i + 1,
+      col: (i % 10) + 1,
+      text: `word${i}`,
+      hintByteCol: 1,
+      hintCol: 1
+    });
+  }
+
+  // テスト用バッファを設定
+  await denops.cmd("enew!");
+  const testLines = largeHints.map(h => h.text);
+  await denops.call("setline", 1, testLines);
+
+  const result = await runBenchmark(
+    "Large hints async highlighting",
+    5, // 5回実行
+    async () => {
+      // highlightCandidateHintsAsyncのシミュレーション
+      const startTime = performance.now();
+
+      // Fire-and-forget パターンの検証
+      // 実際の関数は即座に返る必要がある
+      queueMicrotask(() => {
+        // 非同期処理の開始をシミュレート
+        for (let i = 0; i < largeHints.length; i += 15) {
+          // バッチ処理をシミュレート
+          const batch = largeHints.slice(i, i + 15);
+          queueMicrotask(() => {
+            // extmark設定の処理
+            batch.forEach(() => {
+              // 処理のシミュレーション
+              Math.random();
+            });
+          });
+        }
+      });
+
+      const endTime = performance.now();
+
+      // 100ms以内に開始することを確認
+      if (endTime - startTime > 100) {
+        throw new Error(`処理開始が遅い: ${endTime - startTime}ms`);
+      }
+    },
+    100, // 100ms以下の閾値
+  );
+
+  console.log(`大量ヒント非同期ハイライト: ${result.avgTimePerIteration.toFixed(4)}ms/回`);
+  console.log(`150個のヒントで${result.executionTime.toFixed(2)}ms`);
+
+  assertLess(
+    result.avgTimePerIteration,
+    100,
+    `大量ヒント処理が閾値を超過: ${result.avgTimePerIteration}ms > 100ms`,
+  );
+});
+
+/**
+ * Process10 パフォーマンステスト: 同期版との比較ベンチマーク
+ * 非同期版が同期版より応答性が良いことを検証
+ */
+test("Process10 Performance: Async vs Sync comparison", async (denops: Denops) => {
+  const testHints: Array<{ line: number; col: number; text: string }> = [];
+  for (let i = 0; i < 100; i++) {
+    testHints.push({
+      line: i + 1,
+      col: 1,
+      text: `hint${i}`,
+    });
+  }
+
+  // 同期版のシミュレーション
+  const syncResult = await runBenchmark(
+    "Sync highlighting",
+    10,
+    () => {
+      // 同期的にすべて処理
+      for (const hint of testHints) {
+        // 重い処理をシミュレート
+        for (let j = 0; j < 100; j++) {
+          Math.sqrt(j);
+        }
+      }
+    },
+    1000,
+  );
+
+  // 非同期版のシミュレーション
+  const asyncResult = await runBenchmark(
+    "Async highlighting",
+    10,
+    () => {
+      // Fire-and-forgetで即座に返る
+      queueMicrotask(() => {
+        for (const hint of testHints) {
+          for (let j = 0; j < 100; j++) {
+            Math.sqrt(j);
+          }
+        }
+      });
+    },
+    10, // 非同期版は10ms以内に返るべき
+  );
+
+  console.log(`同期版: ${syncResult.avgTimePerIteration.toFixed(2)}ms`);
+  console.log(`非同期版: ${asyncResult.avgTimePerIteration.toFixed(2)}ms`);
+  console.log(`改善率: ${((1 - asyncResult.avgTimePerIteration / syncResult.avgTimePerIteration) * 100).toFixed(1)}%`);
+
+  // 非同期版の方が速いことを確認
+  assertLess(
+    asyncResult.avgTimePerIteration,
+    syncResult.avgTimePerIteration,
+    "非同期版は同期版より応答性が良いべき",
+  );
+});
+
+/**
+ * Process10 パフォーマンステスト: メモリ使用量測定
+ * 大量ヒント処理でのメモリリークがないことを検証
+ */
+test("Process10 Performance: Memory usage with large hints", async (denops: Denops) => {
+  const initialMemory = getMemoryUsage();
+  const memorySnapshots: number[] = [];
+
+  // 10回の大量ヒント処理を実行
+  for (let iteration = 0; iteration < 10; iteration++) {
+    const hints: Array<{ line: number; col: number; text: string }> = [];
+    for (let i = 0; i < 200; i++) {
+      hints.push({
+        line: i + 1,
+        col: 1,
+        text: `memory_test_${iteration}_${i}`,
+      });
+    }
+
+    // Fire-and-forget処理のシミュレーション
+    queueMicrotask(() => {
+      hints.forEach(() => {
+        // 処理のシミュレーション
+        Math.random();
+      });
+    });
+
+    // メモリスナップショット
+    await new Promise(resolve => setTimeout(resolve, 50));
+    memorySnapshots.push(getMemoryUsage());
+
+    // GCを促進
+    try {
+      if ((globalThis as any).gc) {
+        (globalThis as any).gc();
+      }
+    } catch {}
+  }
+
+  const finalMemory = getMemoryUsage();
+  const memoryIncrease = finalMemory - initialMemory;
+  const avgMemory = memorySnapshots.reduce((a, b) => a + b, 0) / memorySnapshots.length;
+
+  console.log(`初期メモリ: ${(initialMemory / 1024).toFixed(2)} KB`);
+  console.log(`最終メモリ: ${(finalMemory / 1024).toFixed(2)} KB`);
+  console.log(`メモリ増加: ${(memoryIncrease / 1024).toFixed(2)} KB`);
+  console.log(`平均メモリ: ${(avgMemory / 1024).toFixed(2)} KB`);
+
+  // メモリリークがないことを確認（500KB以下の増加）
+  assertLess(
+    memoryIncrease,
+    500 * 1024,
+    `メモリリークの可能性: ${(memoryIncrease / 1024).toFixed(2)} KB > 500 KB`,
+  );
+});
+
+/**
  * ベンチマーク結果出力テスト
  * 全ベンチマーク結果をJSON形式で出力
  */

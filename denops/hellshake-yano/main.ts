@@ -676,6 +676,63 @@ export function highlightCandidateHintsAsync(
       });
   }, delay) as unknown as number;
 }
+
+/**
+ * ハイブリッドハイライト処理：最初の15-20個を同期処理、残りを非同期処理
+ * プロセス3実装：1文字目入力時の即時ハイライト表示
+ *
+ * @param denops - Denopsインスタンス
+ * @param input - 入力文字列
+ * @param hints - ヒントマッピング配列
+ * @param config - プラグイン設定
+ * @param onComplete - 処理完了時のコールバック関数（オプション）
+ */
+export async function highlightCandidateHintsHybrid(
+  denops: Denops,
+  input: string,
+  hints: HintMapping[],
+  config: Config,
+  onComplete?: () => void,
+): Promise<void> {
+  const SYNC_BATCH_SIZE = 15; // 同期処理する候補数
+  const candidates = hints.filter((h) => h.hint.startsWith(input));
+
+  // 古いハイライトをクリア
+  await clearHintDisplay(denops);
+
+  if (candidates.length === 0) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  // Phase 1: 最初の15個を同期的に処理
+  const syncCandidates = candidates.slice(0, SYNC_BATCH_SIZE);
+  const asyncCandidates = candidates.slice(SYNC_BATCH_SIZE);
+
+  // 同期バッチを即座に表示
+  await displayHintsBatched(denops, syncCandidates, config, extmarkNamespace, fallbackMatchIds);
+
+  // 即座にredrawして表示を更新
+  await denops.cmd("redraw");
+
+  // Phase 2: 残りを非同期で処理（fire-and-forget）
+  if (asyncCandidates.length > 0) {
+    // 非同期処理を開始（awaitしない）
+    queueMicrotask(async () => {
+      try {
+        await displayHintsBatched(denops, asyncCandidates, config, extmarkNamespace, fallbackMatchIds);
+        if (onComplete) onComplete();
+      } catch (err) {
+        console.error("highlightCandidateHintsHybrid async error:", err);
+        if (onComplete) onComplete();
+      }
+    });
+  } else {
+    // 非同期処理がない場合は同期完了時点でコールバック実行
+    if (onComplete) onComplete();
+  }
+}
+
 /**
  * 最適化された候補ヒントのハイライト処理
  * @param denops - Denops インスタンス
