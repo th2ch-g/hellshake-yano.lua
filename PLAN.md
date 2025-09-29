@@ -68,11 +68,15 @@
 - [ ] `displayHintsOptimized()`でハードコードされた値(1,1)を実際のカーソル位置に修正
   - 現在: `const cursorLine = 1; const cursorCol = 1;`
   - 修正: `const [cursorLine, cursorCol] = await fn.getpos(denops, ".");`
+- [ ] deno checkを通過すること
+- [ ] deno testを通過すること
 
 #### sub2 showHintsInternalでカーソル位置の伝達
 @target: `denops/hellshake-yano/core.ts`
 - [ ] `showHintsInternal()`でカーソル位置を取得
 - [ ] 取得したカーソル位置を`displayHintsOptimized()`に渡す
+- [ ] deno checkを通過すること
+- [ ] deno testを通過すること
 
 ### process2 ヒント割り当てロジックの改善
 #### sub1 距離ベースのシンプルな割り当て実装
@@ -82,22 +86,30 @@
   - カーソルからの距離でソート（既存のsortWordsByDistanceOptimized活用）
   - 最初のN個（singleCharKeysの数）に1文字ヒント
   - 残りに2文字ヒント（multiCharKeys）
+- [ ] deno checkを通過すること
+- [ ] deno testを通過すること
 
 #### sub2 ヒント生成の動的調整
 @target: `denops/hellshake-yano/hint.ts`
 - [ ] `generateHintsWithGroups()`を修正
   - カーソル近傍の単語数に基づいて1文字/2文字ヒントの比率を動的調整
   - maxSingleCharHints設定の考慮
+- [ ] deno checkを通過すること
+- [ ] deno testを通過すること
 
 ### process3 既存機能の維持と互換性確保
 #### sub1 ハイライトシステムの維持
 - [ ] 既存のハイライト処理には変更を加えない
 - [ ] `displayHintsBatched()`の処理フローは維持
+- [ ] deno checkを通過すること
+- [ ] deno testを通過すること
 
 #### sub2 設定の後方互換性
 @target: `denops/hellshake-yano/config.ts`
 - [ ] 既存の設定項目はすべて維持
 - [ ] 新しい設定項目は任意（オプション）として追加
+- [ ] deno checkを通過すること
+- [ ] deno testを通過すること
 
 ### process10 ユニットテスト
 - [ ] カーソル位置取得のテスト
