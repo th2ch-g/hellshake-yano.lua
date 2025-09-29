@@ -71,21 +71,21 @@
 ### process2 入力処理の非同期化
 #### sub1 waitForUserInputメソッドの更新
 @target: denops/hellshake-yano/core.ts:1598
-- [ ] `highlightCandidateHintsSync`の呼び出しを`highlightCandidateHintsAsync`に変更
-- [ ] **重要**：awaitを使わずにfire-and-forget方式で呼び出し
-- [ ] 古いハイライト処理のキャンセル処理を追加
-- [ ] ハイライト処理開始後、**即座に**2文字目の入力待機に移行
-- [ ] deno checkを通過する型安全なコード
-- [ ] deno testでの動作確認
+- [x] `highlightCandidateHintsSync`の呼び出しを`highlightCandidateHintsAsync`に変更
+- [x] **重要**：awaitを使わずにfire-and-forget方式で呼び出し
+- [x] 古いハイライト処理のキャンセル処理を追加
+- [x] ハイライト処理開始後、**即座に**2文字目の入力待機に移行
+- [x] deno checkを通過する型安全なコード
+- [x] deno testでの動作確認
 
 #### sub2 2文字目入力の改善
 @target: denops/hellshake-yano/core.ts:1600-1640
-- [ ] ハイライト処理の完了を待たずに`getchar()`を実行
-- [ ] 入力タイミングの競合状態を解決
-- [ ] バックグラウンドのハイライト処理と入力処理の分離
-- [ ] エラーハンドリングの強化
-- [ ] deno checkを通過する型安全なコード
-- [ ] deno testでの動作確認
+- [x] ハイライト処理の完了を待たずに`getchar()`を実行
+- [x] 入力タイミングの競合状態を解決
+- [x] バックグラウンドのハイライト処理と入力処理の分離
+- [x] エラーハンドリングの強化
+- [x] deno checkを通過する型安全なコード
+- [x] deno testでの動作確認
 
 ### process3 既存コードのリファクタリング
 #### sub1 同期版メソッドの保持

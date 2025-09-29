@@ -1610,27 +1610,52 @@ export class Core {
         }
       }
 
-      // 候補のヒントをハイライト表示（UX改善）
+      // 第2文字の入力を待機 - ハイライト処理とは完全に分離
+      // ハイライト処理は並行して実行されるが、入力処理をブロックしない
+      let secondChar: number;
+
+      // 候補のヒントをハイライト表示（UX改善） - 入力処理と並行実行
       // Option 3: 1文字ヒントが存在する場合はハイライト処理をスキップ
       const shouldHighlight = config.highlightSelected && !singleCharTarget;
 
+      // ハイライト処理をバックグラウンドで開始（入力処理をブロックしない）
       if (shouldHighlight) {
         // 非同期Fire-and-forget方式でハイライトを実行（awaitしない）
-        this.highlightCandidateHintsAsync(denops, currentHints, inputChar, { mode: "normal" });
+        // highlightCandidateHintsAsync は void を返すため、内部でエラーハンドリングされる
+        try {
+          this.highlightCandidateHintsAsync(denops, currentHints, inputChar, { mode: "normal" });
+        } catch (error: unknown) {
+          // 同期的なエラーをキャッチ（非同期エラーは関数内部で処理）
+          console.warn("Highlight processing initialization failed:", error);
+        }
       }
 
-      // 第2文字の入力を待機
-      let secondChar: number;
+      // 入力処理を即座開始 - ハイライト処理の完了を待たない
+      try {
+        if (config.useHintGroups) {
+          const multiOnlyKeys = config.multiCharKeys ||
+            ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
-      if (config.useHintGroups) {
-        const multiOnlyKeys = config.multiCharKeys ||
-          ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+          if (multiOnlyKeys.includes(inputChar)) {
+            // 2文字専用キーの場合：タイムアウトなしで2文字目を待つ
+            // ハイライト処理とは独立して実行
+            secondChar = await denops.call("getchar") as number;
+          } else {
+            // それ以外（従来の動作）：タイムアウトあり
+            const secondInputPromise = denops.call("getchar") as Promise<number>;
+            const secondTimeoutPromise = new Promise<number>((resolve) => {
+              timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
+            });
 
-        if (multiOnlyKeys.includes(inputChar)) {
-          // 2文字専用キーの場合：タイムアウトなしで2文字目を待つ
-          secondChar = await denops.call("getchar") as number;
+            secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = undefined;
+            }
+          }
         } else {
-          // それ以外（従来の動作）：タイムアウトあり
+          // 従来の動作：タイムアウトあり
           const secondInputPromise = denops.call("getchar") as Promise<number>;
           const secondTimeoutPromise = new Promise<number>((resolve) => {
             timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
@@ -1643,19 +1668,10 @@ export class Core {
             timeoutId = undefined;
           }
         }
-      } else {
-        // 従来の動作：タイムアウトあり
-        const secondInputPromise = denops.call("getchar") as Promise<number>;
-        const secondTimeoutPromise = new Promise<number>((resolve) => {
-          timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
-        });
-
-        secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
-
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = undefined;
-        }
+      } catch (error) {
+        // 入力処理のエラーハンドリングを強化
+        console.error("第2文字入力中にエラーが発生:", error);
+        return; // エラー時は処理を中止
       }
 
       if (secondChar === -1) {
@@ -1718,6 +1734,10 @@ export class Core {
         // 無効なヒント組み合わせの場合（視覚・音声フィードバック付き）
         await this.showErrorFeedback(denops, `Invalid hint combination: ${fullHint}`);
       }
+
+      // バックグラウンドのハイライト処理は fire-and-forget 方式
+      // 入力処理は独立して実行され、ハイライト処理の完了を待たない
+      // エラーハンドリングは highlightCandidateHintsAsync 内部で処理される
 
       // ヒントを非表示
       await this.hideHintsOptimized(denops);
