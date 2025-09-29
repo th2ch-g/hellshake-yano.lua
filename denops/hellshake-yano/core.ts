@@ -24,6 +24,7 @@ import {
   detectWordsWithConfig,
 } from "./word.ts";
 import {
+  assignHintsToWords,
   generateHints,
   generateHintsWithGroups,
   validateHintKeyConfig
@@ -1281,6 +1282,12 @@ export class Core {
         return;
       }
 
+      // カーソル位置を取得
+      // getpos('.')は [bufnum, lnum, col, off] の形式を返す
+      const cursorPos = await denops.call("getpos", ".") as [number, number, number, number];
+      const cursorLine = cursorPos[1];
+      const cursorCol = cursorPos[2];
+
       // ヒント生成
       const unifiedConfig = this.config; // 既にConfig形式
       const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
@@ -1290,13 +1297,8 @@ export class Core {
         return;
       }
 
-      // HintMappingを作成
-      const hintMappings: HintMapping[] = words.map((word, index) => ({
-        word,
-        hint: hints[index] || "",
-        hintCol: word.col,
-        hintByteCol: word.byteCol || word.col,
-      }));
+      // HintMappingを作成 - カーソル位置を基準に距離ソートして割り当て
+      const hintMappings = assignHintsToWords(words, hints, cursorLine, cursorCol, modeString);
 
       // ヒント表示
       await this.displayHintsOptimized(denops, hintMappings, modeString);

@@ -511,9 +511,11 @@ export async function displayHintsOptimized(
   extmarkNamespace?: number,
   fallbackMatchIds?: number[],
 ): Promise<void> {
-  // カーソル位置を取得 (デフォルト値を使用)
-  const cursorLine = 1;
-  const cursorCol = 1;
+  // カーソル位置を取得 (実際のカーソル位置を使用)
+  // getpos('.')は [bufnum, lnum, col, off] の形式を返す
+  const cursorPos = await denops.call("getpos", ".") as [number, number, number, number];
+  const cursorLine = cursorPos[1];
+  const cursorCol = cursorPos[2];
   currentHints = assignHintsToWords(words, hints, cursorLine, cursorCol, "normal");
   hintsVisible = true;
   await displayHintsBatched(denops, currentHints, config, extmarkNamespace, fallbackMatchIds);
