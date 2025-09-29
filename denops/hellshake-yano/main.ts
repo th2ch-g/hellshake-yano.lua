@@ -168,12 +168,28 @@ function clearDebugInfo(): void {
 }
 
 /**
+ * snake_case形式の設定を受け入れるための型定義
+ * Vim側からのsnake_case設定に対応
+ */
+type BackwardCompatibleConfig = {
+  single_char_keys?: string[];
+  multi_char_keys?: string[];
+  max_single_char_hints?: number;
+  highlight_selected?: boolean;
+  enable_tinysegmenter?: boolean;
+  enable_word_detection?: boolean;
+  disable_visual_mode?: boolean;
+  // 他のsnake_caseプロパティも必要に応じて追加可能
+  [key: string]: any; // その他の未定義のsnake_caseプロパティを許容
+};
+
+/**
  * 後方互換性のある設定フラグを正規化する
  * snake_case から camelCase への変換を行う
- * @param cfg - 部分的な設定オブジェクト
+ * @param cfg - 部分的な設定オブジェクト（snake_caseとcamelCase両方を受け入れ）
  * @returns 正規化された設定オブジェクト
  */
-export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
+export function normalizeBackwardCompatibleFlags(cfg: Partial<Config> & BackwardCompatibleConfig): Partial<Config> {
   const normalized = { ...cfg };
 
   // Config では camelCase 形式で直接処理
@@ -189,8 +205,11 @@ export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<
     "highlight_selected": "highlightSelected",
     "debugCoordinates": "debugCoordinates",
     "singleCharKeys": "singleCharKeys",
+    "single_char_keys": "singleCharKeys",
     "multiCharKeys": "multiCharKeys",
+    "multi_char_keys": "multiCharKeys",
     "maxSingleCharHints": "maxSingleCharHints",
+    "max_single_char_hints": "maxSingleCharHints",
     "useHintGroups": "useHintGroups",
     "highlightHintMarker": "highlightHintMarker",
     "highlightHintMarkerCurrent": "highlightHintMarkerCurrent",
@@ -216,7 +235,10 @@ export function normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<
   for (const [snakeKey, camelKey] of Object.entries(snakeToCamelMap)) {
     if (snakeKey in normalized) {
       (normalized as any)[camelKey] = (normalized as any)[snakeKey];
-      delete (normalized as any)[snakeKey];
+      // snake_caseとcamelCaseが異なる場合のみ元のキーを削除
+      if (snakeKey !== camelKey) {
+        delete (normalized as any)[snakeKey];
+      }
     }
   }
 
