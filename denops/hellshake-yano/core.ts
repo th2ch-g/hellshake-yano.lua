@@ -1615,8 +1615,8 @@ export class Core {
       const shouldHighlight = config.highlightSelected && !singleCharTarget;
 
       if (shouldHighlight) {
-        // 同期的に即座に実行してハイライトを確実に適用
-        await this.highlightCandidateHintsSync(denops, currentHints, inputChar, { mode: "normal" });
+        // 非同期Fire-and-forget方式でハイライトを実行（awaitしない）
+        this.highlightCandidateHintsAsync(denops, currentHints, inputChar, { mode: "normal" });
       }
 
       // 第2文字の入力を待機
