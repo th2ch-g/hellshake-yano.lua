@@ -22,7 +22,6 @@ const mockConfig: Config = {
   motionCount: 3,
   motionTimeout: 2000,
   hintPosition: "start",
-  visualHintPosition: "end",
 
   // Hint settings
   triggerOnHjkl: true,

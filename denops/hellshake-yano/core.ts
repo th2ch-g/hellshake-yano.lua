@@ -35,6 +35,19 @@ import { DictionaryLoader, VimConfigBridge, type UserDictionary } from "./word.t
 import { validateConfig } from "./config.ts";
 // motion.ts は統合されたため削除（MotionManagerはcore.ts内部で実装済み）
 
+// === Constants ===
+/**
+ * ハイライト処理のバッチサイズ
+ *
+ * 非同期ハイライト処理において、一度に処理するextmarkの数を定義します。
+ * この値により以下のバランスを調整できます：
+ * - 小さい値: より細かい非同期制御、応答性向上
+ * - 大きい値: バッチ効率向上、オーバーヘッド削減
+ *
+ * 15という値は、一般的なユースケースでの性能バランスを考慮した値です。
+ */
+export const HIGHLIGHT_BATCH_SIZE = 15;
+
 // 内部実装: 統合されたクラス群
 /**
  * モーション操作をカウントして闾値に達した時にイベントを発生させるクラス
@@ -421,6 +434,8 @@ export class Core {
   private _isRenderingHints: boolean = false;
   /** 描画処理を中断するためのAbortController */
   private _renderingAbortController: AbortController | null = null;
+  /** ペンディング中のハイライトタイマー */
+  private _pendingHighlightTimer: number | null = null;
 
   /** モーションカウンターの管理クラス */
   private motionManager: MotionManager = new MotionManager();
@@ -497,6 +512,12 @@ export class Core {
     this.abortCurrentRendering();
     this._isRenderingHints = false;
     this._renderingAbortController = null;
+
+    // ペンディング中のタイマーをクリア
+    if (this._pendingHighlightTimer !== null) {
+      clearTimeout(this._pendingHighlightTimer);
+      this._pendingHighlightTimer = null;
+    }
 
 
       // 必要に応じて他のクリーンアップ処理をここに追加
@@ -2452,6 +2473,218 @@ export class Core {
 
     } catch (error) {
       // エラーハンドリング
+    }
+  }
+
+  /**
+   * 候補ヒントを非同期でハイライト表示する（Fire-and-forget方式）
+   *
+   * このメソッドは以下の特徴を持ちます：
+   * - Fire-and-forget: Promiseを返さず、awaitを使わない
+   * - AbortController: 古いハイライト処理をキャンセル
+   * - バッチ処理: HIGHLIGHT_BATCH_SIZEずつ効率的に処理
+   * - 非ブロッキング: メインスレッドをブロックしない
+   *
+   * @param denops - Denopsインスタンス（Vim/Neovimとの通信用）
+   * @param hintMappings - ハイライト対象のヒントマッピング配列
+   * @param partialInput - 部分入力文字列（候補判定に使用）
+   * @param config - ハイライト設定オプション
+   * @param config.mode - 操作モード（normal/visual/operator）
+   *
+   * @example
+   * ```typescript
+   * // 使用例：2文字目入力待機中にハイライトを非同期実行
+   * core.highlightCandidateHintsAsync(denops, hints, "a", { mode: "normal" });
+   * // 即座に次の処理（getchar()など）に進める
+   * const secondChar = await denops.call("getchar");
+   * ```
+   */
+  highlightCandidateHintsAsync(
+    denops: Denops,
+    hintMappings: HintMapping[],
+    partialInput: string,
+    config: { mode?: "normal" | "visual" | "operator" } = {}
+  ): void {
+    // 既存のレンダリング処理をキャンセル
+    if (this._renderingAbortController) {
+      this._renderingAbortController.abort();
+    }
+
+    // 新しいAbortControllerを作成
+    this._renderingAbortController = new AbortController();
+    const signal = this._renderingAbortController.signal;
+
+    // 既存のタイマーをクリア
+    if (this._pendingHighlightTimer !== null) {
+      clearTimeout(this._pendingHighlightTimer);
+      this._pendingHighlightTimer = null;
+    }
+
+    // Fire-and-forget: Promiseを返さず、awaitを使わない
+    // setTimeout(0)でメインスレッドをブロックしない
+    this._pendingHighlightTimer = setTimeout(async () => {
+      this._pendingHighlightTimer = null;
+      try {
+        if (signal.aborted) return;
+
+        // 空の部分入力の場合は何もしない
+        if (!partialInput) {
+          return;
+        }
+
+        const mode = config.mode || "normal";
+        const bufnr = await denops.call("bufnr", "%") as number;
+
+        if (signal.aborted) return;
+
+        // 候補ヒントをハイライト表示
+        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+
+        if (signal.aborted) return;
+
+        // 既存のハイライトをクリア
+        await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+
+        if (signal.aborted) return;
+
+        // バッチ処理で効率的にextmarkを設定
+        const candidateHints: HintMapping[] = [];
+        const nonCandidateHints: HintMapping[] = [];
+
+        // 候補と非候補を分離
+        for (const mapping of hintMappings) {
+          const isCandidate = mapping.hint.startsWith(partialInput);
+          if (isCandidate) {
+            candidateHints.push(mapping);
+          } else {
+            nonCandidateHints.push(mapping);
+          }
+        }
+
+        // 効率化: 候補が少ない場合は混在処理
+        const totalHints = candidateHints.length + nonCandidateHints.length;
+        if (totalHints <= HIGHLIGHT_BATCH_SIZE) {
+          // 少数のヒントは候補判定を個別に行いながら一括処理
+          for (const mapping of hintMappings) {
+            if (signal.aborted) return;
+
+            const isCandidate = mapping.hint.startsWith(partialInput);
+            const { word, hint } = mapping;
+            const hintLine = word.line;
+            const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+            const nvimLine = hintLine - 1;
+            const nvimCol = hintByteCol - 1;
+            const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+            const priority = isCandidate ? 1001 : 1000;
+
+            try {
+              await denops.call(
+                "nvim_buf_set_extmark",
+                bufnr,
+                extmarkNamespace,
+                nvimLine,
+                nvimCol,
+                {
+                  "virt_text": [[hint, highlightGroup]],
+                  "virt_text_pos": "overlay",
+                  "priority": priority,
+                }
+              );
+            } catch (error) {
+              // 個別のextmarkエラーは無視（バッファが変更された可能性）
+              // デバッグ情報は開発時のみ出力
+            }
+          }
+          return;
+        }
+
+        // 候補ヒントを優先的に処理（HIGHLIGHT_BATCH_SIZEずつ）
+        await this.processBatchedExtmarks(denops, candidateHints, true, bufnr, extmarkNamespace, signal);
+
+        if (signal.aborted) return;
+
+        // 非候補ヒントを処理
+        await this.processBatchedExtmarks(denops, nonCandidateHints, false, bufnr, extmarkNamespace, signal);
+
+      } catch (error) {
+        // エラーハンドリング（ログ出力のみ、Fire-and-forgetのためrethrowしない）
+        console.error("highlightCandidateHintsAsync error:", {
+          partialInput,
+          hintCount: hintMappings.length,
+          mode: config.mode,
+          error: error instanceof Error ? error.message : error
+        });
+      }
+    }, 0) as unknown as number;
+  }
+
+  /**
+   * バッチ処理でextmarkを設定する
+   *
+   * ヒントをHIGHLIGHT_BATCH_SIZEずつ処理し、各バッチ間で
+   * メインスレッドに制御を返すことで非ブロッキング処理を実現します。
+   *
+   * @param denops - Denopsインスタンス（Vim/Neovimとの通信用）
+   * @param hints - 処理対象のヒント配列
+   * @param isCandidate - 候補ヒントかどうか（ハイライトグループと優先度決定に使用）
+   * @param bufnr - 対象バッファ番号
+   * @param extmarkNamespace - extmarkの名前空間ID
+   * @param signal - 処理中断用のAbortSignal
+   * @private
+   */
+  private async processBatchedExtmarks(
+    denops: Denops,
+    hints: HintMapping[],
+    isCandidate: boolean,
+    bufnr: number,
+    extmarkNamespace: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    const batchSize = HIGHLIGHT_BATCH_SIZE;
+    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+    const priority = isCandidate ? 1001 : 1000;
+
+    for (let i = 0; i < hints.length; i += batchSize) {
+      if (signal.aborted) return;
+
+      const batch = hints.slice(i, i + batchSize);
+
+      // バッチ内の各ヒントを処理
+      for (const mapping of batch) {
+        if (signal.aborted) return;
+
+        const { word, hint } = mapping;
+        const hintLine = word.line;
+        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+        // Neovim用の0ベース座標に変換
+        const nvimLine = hintLine - 1;
+        const nvimCol = hintByteCol - 1;
+
+        try {
+          await denops.call(
+            "nvim_buf_set_extmark",
+            bufnr,
+            extmarkNamespace,
+            nvimLine,
+            nvimCol,
+            {
+              "virt_text": [[hint, highlightGroup]],
+              "virt_text_pos": "overlay",
+              "priority": priority,
+            }
+          );
+        } catch (error) {
+          // 個別のextmarkエラーは無視（バッファが変更された可能性）
+          // バッチ処理中のエラーは継続処理を優先
+        }
+      }
+
+      // バッチ間でメインスレッドに制御を返す
+      if (i + batchSize < hints.length) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
   }
 

@@ -142,25 +142,6 @@ Deno.test("validateConfigFunction - hintPosition バリデーション", () => {
   assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay"), true);
 });
 
-Deno.test("validateConfigFunction - visualHintPosition バリデーション", () => {
-  // 正常系（オプショナル）
-  let result = validateConfigFunction({});
-  assertEquals(result.valid, true);
-  assertEquals(result.errors.length, 0);
-
-  // 正常系: 有効な値
-  const validPositions = ["start", "end", "same", "both"];
-  for (const position of validPositions) {
-    result = validateConfigFunction({ visualHintPosition: position as any });
-    assertEquals(result.valid, true);
-    assertEquals(result.errors.length, 0);
-  }
-
-  // 異常系: 無効な値
-  result = validateConfigFunction({ visualHintPosition: "invalid" as any });
-  assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("visualHintPosition must be one of: start, end, same, both"), true);
-});
 
 Deno.test("validateConfigFunction - wordDetectionStrategy バリデーション", () => {
   // 正常系

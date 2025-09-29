@@ -22,7 +22,7 @@ const TEST_FILES_TO_UPDATE = [
 ];
 
 Deno.test("TDD Red Phase: テストファイルはまだUnifiedConfig/UnifiedCacheを使用している（失敗するはず）", async () => {
-  const testsDir = "/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests";
+  const testsDir = `${Deno.env.get("HOME")}/.config/nvim/plugged/hellshake-yano.vim/tests`;
 
   // 各テストファイルを確認
   for (const fileName of TEST_FILES_TO_UPDATE) {
@@ -45,7 +45,7 @@ Deno.test("TDD Red Phase: テストファイルはまだUnifiedConfig/UnifiedCac
 });
 
 Deno.test("TDD Green Phase: process4完了後はUnifiedConfig/UnifiedCacheを使用していない（現在は失敗するはず）", async () => {
-  const testsDir = "/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests";
+  const testsDir = `${Deno.env.get("HOME")}/.config/nvim/plugged/hellshake-yano.vim/tests`;
 
   for (const fileName of TEST_FILES_TO_UPDATE) {
     const filePath = join(testsDir, fileName);
@@ -66,7 +66,7 @@ Deno.test("TDD Green Phase: process4完了後はUnifiedConfig/UnifiedCacheを使
 });
 
 Deno.test("TDD Green Phase: 新しいConfig/GlobalCacheを使用している（現在は失敗するはず）", async () => {
-  const testsDir = "/home/takets/.config/nvim/plugged/hellshake-yano.vim/tests";
+  const testsDir = `${Deno.env.get("HOME")}/.config/nvim/plugged/hellshake-yano.vim/tests`;
 
   for (const fileName of TEST_FILES_TO_UPDATE) {
     const filePath = join(testsDir, fileName);

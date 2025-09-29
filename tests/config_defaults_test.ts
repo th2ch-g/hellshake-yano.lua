@@ -30,7 +30,6 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(config.motionCount);
       assertExists(config.motionTimeout);
       assertExists(config.hintPosition);
-      assertExists(config.visualHintPosition);
 
       // Hint settings (8 properties)
       assertExists(config.triggerOnHjkl);

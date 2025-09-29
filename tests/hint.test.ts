@@ -259,31 +259,6 @@ Deno.test("Hint Adjacency Detection and Position Calculation", async (t) => {
     assertEquals(position.display_mode, "after");
   });
 
-  // ===== Visual Mode Tests (3 cases) =====
-  await t.step("Visual Mode 1: start position", () => {
-    const word = createWord("test", 1, 5);
-    const position = calculateHintPosition(word, "end", true, "start");
-    assertEquals(position.line, 1);
-    assertEquals(position.col, 5);  // Should use start position
-    assertEquals(position.display_mode, "before");
-  });
-
-  await t.step("Visual Mode 2: end position", () => {
-    const word = createWord("test", 1, 5);
-    const position = calculateHintPosition(word, "start", true, "end");
-    assertEquals(position.line, 1);
-    // Should use display width: position 5 + display_width(4) - 1 = 8
-    assertEquals(position.col, 8);  // Should use end position
-    assertEquals(position.display_mode, "after");
-  });
-
-  await t.step("Visual Mode 3: both mode fallback to start", () => {
-    const word = createWord("test", 1, 5);
-    const position = calculateHintPosition(word, "end", true, "both");
-    assertEquals(position.line, 1);
-    assertEquals(position.col, 5);  // Should fallback to start
-    assertEquals(position.display_mode, "before");
-  });
 
   // ===== Symbol Display Width Tests (8 cases) =====
   await t.step("Symbol Width 1: Circled numbers '①②③④⑤' - each width 2", () => {

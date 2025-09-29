@@ -51,18 +51,22 @@
 #### sub1 highlightCandidateHintsAsyncメソッドの作成
 @target: denops/hellshake-yano/core.ts
 @ref: denops/hellshake-yano/main.ts:645-678
-- [ ] `highlightCandidateHintsAsync`メソッドを新規作成
-- [ ] バッチサイズ定数の定義（HIGHLIGHT_BATCH_SIZE = 15）
-- [ ] AbortControllerの実装
-- [ ] **Fire-and-forget方式**：Promiseを返さず、awaitを使わない実装
+- [x] `highlightCandidateHintsAsync`メソッドを新規作成
+- [x] バッチサイズ定数の定義（HIGHLIGHT_BATCH_SIZE = 15）
+- [x] AbortControllerの実装
+- [x] **Fire-and-forget方式**：Promiseを返さず、awaitを使わない実装
+- [x] deno checkを通過する型安全なコード
+- [x] deno testでの動作確認
 
 #### sub2 バッチ処理の最適化
 @target: denops/hellshake-yano/core.ts
-- [ ] extmark操作を15-20個ずつバッチ化
-- [ ] **非同期バッチ処理**：各バッチを個別のPromiseとして実行（awaitなし）
-- [ ] 各バッチ間に`queueMicrotask`または`setTimeout(0)`で制御を返す
-- [ ] 候補ヒントと非候補ヒントの分離処理
-- [ ] 候補ヒントの優先描画処理
+- [x] extmark操作を15-20個ずつバッチ化
+- [x] **非同期バッチ処理**：各バッチを個別のPromiseとして実行（awaitなし）
+- [x] 各バッチ間に`queueMicrotask`または`setTimeout(0)`で制御を返す
+- [x] 候補ヒントと非候補ヒントの分離処理
+- [x] 候補ヒントの優先描画処理
+- [x] deno checkを通過する型安全なコード
+- [x] deno testでの動作確認
 
 ### process2 入力処理の非同期化
 #### sub1 waitForUserInputメソッドの更新
@@ -71,6 +75,8 @@
 - [ ] **重要**：awaitを使わずにfire-and-forget方式で呼び出し
 - [ ] 古いハイライト処理のキャンセル処理を追加
 - [ ] ハイライト処理開始後、**即座に**2文字目の入力待機に移行
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
 
 #### sub2 2文字目入力の改善
 @target: denops/hellshake-yano/core.ts:1600-1640
@@ -78,6 +84,8 @@
 - [ ] 入力タイミングの競合状態を解決
 - [ ] バックグラウンドのハイライト処理と入力処理の分離
 - [ ] エラーハンドリングの強化
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
 
 ### process3 既存コードのリファクタリング
 #### sub1 同期版メソッドの保持
@@ -85,6 +93,8 @@
 - [ ] `highlightCandidateHintsSync`はフォールバックとして残す
 - [ ] 設定オプションで同期/非同期を切り替え可能に
 - [ ] デバッグモードでの切り替え機能
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
 
 ### process10 ユニットテスト
 #### sub1 非同期ハイライト処理のテスト
@@ -94,12 +104,16 @@
 - [ ] バッチ処理が非同期で実行されることの確認
 - [ ] **重要**：2文字目入力の取りこぼしがないことの確認テスト
 - [ ] イベントループがブロックされないことの検証
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
 
 #### sub2 パフォーマンステスト
 @target: tests/performance_benchmark_test.ts
 - [ ] 大量ヒント（100個以上）での性能テスト
 - [ ] 同期版との比較ベンチマーク
 - [ ] メモリ使用量の測定
+- [ ] deno checkを通過する型安全なコード
+- [ ] deno testでの動作確認
 
 ### process50 フォローアップ
 #### sub1 パフォーマンスチューニング
