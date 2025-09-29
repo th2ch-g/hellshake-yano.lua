@@ -1,143 +1,71 @@
-# title: カーソル位置基準のヒント生成システム
+# title: 日本語分かち書き閾値設定の調整と最適化
 
 ## 概要
-- カーソル位置を基準として、近い単語にはsingle_char_keys（1文字）、遠い単語にはmulti_char_keys（2文字）を割り当てる2ゾーン構成のヒント生成システムを実装する
+- hellshake-yano.vimプラグインの日本語分かち書き機能における閾値設定を調整し、より精度の高い単語分割を実現する
 
 ### goal
-- カーソル周辺の単語により素早くジャンプできる直感的なナビゲーション
-- 近い場所は押しやすい1文字キー、遠い場所は2文字キーという認知負荷に配慮した設計
+- 日本語テキストのナビゲーション時に、自然な単語単位でのジャンプを可能にする
+- 助詞や接続詞の適切な結合により、文脈に応じた単語認識を実現する
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 
 ## 開発のゴール
-- カーソル位置からの距離に基づいた効率的なヒント割り当て
-- Immediate Zone（カーソル近傍）にsingle_char_keysを優先的に割り当て
-- それ以外の領域にmulti_char_keysを使用した2文字ヒントを割り当て
-- 既存のハイライトシステムは変更せず、ロジックのみを改善
+- 日本語分かち書きの閾値設定を調整可能にする
+- TinySegmenterの使用条件を最適化する
+- 助詞マージの挙動を改善する
 
 ## 実装仕様
-
-### 現在の実装の問題点
-1. **カーソル位置の未活用**: `displayHintsOptimized()`でハードコードされた値（1,1）を使用
-2. **固定的な割り当て**: 単語の位置に関係なく、生成順にヒントを割り当て
-3. **非効率な検出**: 画面全体の単語を検出してからソート
-
-### 改善案：2ゾーン構成
-```
-カーソル位置
-     ↓
-[Immediate Zone: カーソル近傍]
-- single_char_keys (A,S,D,F,G,H,J,K,L,0-9など)
-- カーソルに最も近い単語から順に割り当て
-- 最大21個程度（設定による）
-
-[その他すべて]
-- multi_char_keys (BB, BC, BE, BI...)
-- Immediate Zone以外のすべての単語
-- 2文字の組み合わせ
-```
+- 設定キーはcamelCase形式（japaneseMergeThreshold等）を使用
+- snake_case形式も後方互換性のために維持
+- デフォルト値は現在の値を維持（japaneseMergeThreshold: 2, segmenterThreshold: 4）
 
 ## 生成AIの学習用コンテキスト
-
-### コアファイル
-- `denops/hellshake-yano/core.ts`
-  - `showHintsInternal()`: ヒント表示のメインエントリポイント
-  - `detectWordsOptimized()`: 単語検出ロジック
-
-- `denops/hellshake-yano/main.ts`
-  - `displayHintsOptimized()`: ヒント表示処理（カーソル位置のハードコード問題）
-
-- `denops/hellshake-yano/hint.ts`
-  - `assignHintsToWords()`: ヒント割り当てロジック
-  - `generateHintsWithGroups()`: ヒント生成ロジック
-  - `sortWordsByDistanceOptimized()`: 距離ベースのソート
-
 ### 設定ファイル
-- `denops/hellshake-yano/config.ts`
-  - `singleCharKeys`: 1文字ヒント用のキー定義
-  - `multiCharKeys`: 2文字ヒント用のキー定義
-  - `maxSingleCharHints`: 1文字ヒントの最大数
+- denops/hellshake-yano/config.ts
+  - 閾値設定の型定義とデフォルト値
+- denops/hellshake-yano/main.ts
+  - snake_case to camelCase変換マッピング
+- denops/hellshake-yano/word.ts
+  - 日本語単語検出とマージ処理の実装
+
+### テストファイル
+- denops/hellshake-yano/word_test.ts
+  - 単語検出ロジックのテスト
 
 ## Process
+### process1 閾値設定の現状確認と文書化
+@target: PLAN.md
+@ref: denops/hellshake-yano/config.ts
+- [x] 現在の閾値設定を調査（japaneseMergeThreshold, segmenterThreshold等）
+- [x] 設定名の変更履歴を確認（snake_case → camelCase）
+- [x] デフォルト値と用途を文書化
 
-### process1 カーソル位置の正しい取得と伝達
-#### sub1 displayHintsOptimizedのカーソル位置取得修正
-@target: `denops/hellshake-yano/main.ts`
-@ref: `denops/hellshake-yano/core.ts`
-- [x] `displayHintsOptimized()`でハードコードされた値(1,1)を実際のカーソル位置に修正
-  - 現在: `const cursorLine = 1; const cursorCol = 1;`
-  - 修正: `const cursorPos = await denops.call("getpos", ".")`を使用
-- [x] deno checkを通過すること
-- [x] deno testを通過すること
+### process2 設定方法の明確化
+@target: README.md（必要に応じて）
+@ref: plugin/hellshake-yano.vim
+- [ ] vimrcでの設定例を作成（新旧両形式）
+- [ ] 各閾値の効果と調整指針を文書化
 
-#### sub2 showHintsInternalでカーソル位置の伝達
-@target: `denops/hellshake-yano/core.ts`
-- [x] `showHintsInternal()`でカーソル位置を取得
-- [x] 取得したカーソル位置を`assignHintsToWords()`に渡す
-- [x] deno checkを通過すること
-- [x] deno testを通過すること
-
-### process2 ヒント割り当てロジックの改善
-#### sub1 距離ベースのシンプルな割り当て実装
-@target: `denops/hellshake-yano/hint.ts`
-@ref: `denops/hellshake-yano/config.ts`, `denops/hellshake-yano/types.ts`
-- [x] `assignHintsToWords()`を修正してカーソル距離優先の割り当てを実装
-  - カーソルからの距離でソート（既存のsortWordsByDistanceOptimized活用）
-  - 最初のN個（singleCharKeysの数）に1文字ヒント
-  - 残りに2文字ヒント（multiCharKeys）
-  - **注**: process1で既に実装済み（line 654でsortWordsByDistanceOptimized呼び出し）
-- [x] deno checkを通過すること
-- [x] deno testを通過すること
-  - テストファイル作成: `denops/hellshake-yano/hint.test.ts`
-  - 6個のテストケースで動作を検証
-
-#### sub2 ヒント生成の動的調整
-@target: `denops/hellshake-yano/hint.ts`
-- [x] `generateHintsWithGroups()`を修正
-  - カーソル近傍の単語数に基づいて1文字/2文字ヒントの比率を動的調整
-  - maxSingleCharHints設定の考慮
-  - **注**: process1で既に実装済み（line 1283-1286で動的調整実装）
-- [x] deno checkを通過すること
-- [x] deno testを通過すること
-  - 4個のテストケースで動的調整を検証
-
-### process3 既存機能の維持と互換性確保
-#### sub1 ハイライトシステムの維持
-- [x] 既存のハイライト処理には変更を加えない
-- [x] `displayHintsBatched()`の処理フローは維持
-- [x] deno checkを通過すること
-- [x] deno testを通過すること
-  - テストファイル作成: `tests/process3_backward_compatibility.test.ts`
-  - ハイライト処理フローの関数存在確認（4個のテスト）
-  - すべてグリーン（実装済みシステムの検証成功）
-
-#### sub2 設定の後方互換性
-@target: `denops/hellshake-yano/config.ts`
-- [x] 既存の設定項目はすべて維持
-- [x] 新しい設定項目は任意（オプション）として追加
-- [x] deno checkを通過すること
-- [x] deno testを通過すること
-  - 8個のテストケースで後方互換性を検証
-  - すべてグリーン（既存設定の完全互換性確認）
+### process3 閾値調整の検証
+@target: init.vim または .vimrc
+- [ ] japaneseMergeThresholdを1〜5で検証
+- [ ] segmenterThresholdを2〜6で検証
+- [ ] 最適な組み合わせを決定
 
 ### process10 ユニットテスト
-- [ ] カーソル位置取得のテスト
-- [ ] 距離ベースのソートのテスト
-- [ ] 2ゾーン割り当てロジックのテスト
-- [ ] エッジケース（単語が少ない/多い場合）のテスト
+@target: denops/hellshake-yano/word_test.ts
+- [ ] deno check実行
+- [ ] deno test実行
+- [ ] 閾値変更による挙動の確認
 
 ### process50 フォローアップ
-#### sub1 パフォーマンス最適化（将来的な改善）
-- [ ] カーソル移動時のキャッシュ機能
-- [ ] 段階的検出の実装（immediate → far）
+- [ ] ユーザーの要望に応じた閾値のカスタマイズ
 
 ### process100 リファクタリング
-- [ ] 重複コードの整理
-- [ ] 関数の責務の明確化
-- [ ] 型定義の整理
+- [ ] 不要な設定の削除検討
+- [ ] 設定名の一貫性確認
 
 ### process200 ドキュメンテーション
-- [ ] README.mdにカーソル位置基準モードの説明を追加
-- [ ] 設定オプションのドキュメント更新
-- [ ] 変更履歴（CHANGELOG）の更新
+- [ ] README.mdに日本語設定セクションを追加
+- [ ] 設定例とベストプラクティスを記載
