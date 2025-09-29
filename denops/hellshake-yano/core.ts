@@ -47,6 +47,7 @@ import { validateConfig } from "./config.ts";
  * 15という値は、一般的なユースケースでの性能バランスを考慮した値です。
  */
 export const HIGHLIGHT_BATCH_SIZE = 15;
+export const HYBRID_SYNC_BATCH_SIZE = 15;
 
 // 内部実装: 統合されたクラス群
 /**
@@ -2641,13 +2642,24 @@ export class Core {
   }
 
   /**
-   * ハイブリッドハイライト処理：最初の15-20個を同期処理、残りを非同期処理
-   * プロセス3実装：1文字目入力時の即時ハイライト表示
+   * 候補ヒントのハイブリッドハイライト表示（TDD実装）
+   *
+   * Process4実装：1文字目入力時の即時ハイライト表示
+   *
+   * ハイブリッド戦略：
+   * - Phase 1: 最初の15個のヒントを同期的に処理し、即座にredrawで視覚的フィードバック
+   * - Phase 2: 残りのヒントをfire-and-forget非同期処理で応答性を維持
+   *
+   * パフォーマンス特性：
+   * - 同期バッチ: HYBRID_SYNC_BATCH_SIZE（15個）で即座に表示
+   * - 非同期処理: queueMicrotaskでメインスレッドをブロックしない
+   * - AbortController: 古い処理のキャンセル機能
    *
    * @param denops - Denopsインスタンス
    * @param hintMappings - ヒントマッピング配列
-   * @param partialInput - 部分入力文字列
-   * @param config - 設定オプション
+   * @param partialInput - 部分入力文字列（候補フィルタリング用）
+   * @param config - 設定オプション（mode: "normal" | "visual" | "operator"）
+   * @returns Promise<void> - 同期バッチ完了時点で解決
    */
   async highlightCandidateHintsHybrid(
     denops: Denops,
@@ -2655,7 +2667,7 @@ export class Core {
     partialInput: string,
     config: { mode?: "normal" | "visual" | "operator" } = {}
   ): Promise<void> {
-    const SYNC_BATCH_SIZE = 15; // 同期処理する候補数
+    const SYNC_BATCH_SIZE = HYBRID_SYNC_BATCH_SIZE; // 同期処理する候補数
 
     try {
       // 既存のレンダリング処理をキャンセル
@@ -2694,32 +2706,14 @@ export class Core {
       const syncCandidates = candidateHints.slice(0, SYNC_BATCH_SIZE);
       const asyncCandidates = candidateHints.slice(SYNC_BATCH_SIZE);
 
-      // 同期バッチを即座に表示
+      // 同期バッチを即座に表示（リファクタリング済み）
       for (const mapping of syncCandidates) {
         if (signal.aborted) return;
 
-        const { word, hint } = mapping;
-        const hintLine = word.line;
-        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-        const nvimLine = hintLine - 1;
-        const nvimCol = hintByteCol - 1;
-
         try {
-          await denops.call(
-            "nvim_buf_set_extmark",
-            bufnr,
-            extmarkNamespace,
-            nvimLine,
-            nvimCol,
-            {
-              "virt_text": [[hint, "HellshakeYanoMarkerCurrent"]],
-              "virt_text_pos": "overlay",
-              "priority": 1001,
-            }
-          );
+          await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
         } catch (error) {
-          // 個別のextmarkエラーは無視
+          // 個別のextmarkエラーは無視（デバッグログは共通メソッドで処理）
         }
       }
 
@@ -2734,28 +2728,10 @@ export class Core {
             for (const mapping of asyncCandidates) {
               if (signal.aborted) return;
 
-              const { word, hint } = mapping;
-              const hintLine = word.line;
-              const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-              const nvimLine = hintLine - 1;
-              const nvimCol = hintByteCol - 1;
-
               try {
-                await denops.call(
-                  "nvim_buf_set_extmark",
-                  bufnr,
-                  extmarkNamespace,
-                  nvimLine,
-                  nvimCol,
-                  {
-                    "virt_text": [[hint, "HellshakeYanoMarkerCurrent"]],
-                    "virt_text_pos": "overlay",
-                    "priority": 1001,
-                  }
-                );
+                await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
               } catch (error) {
-                // 個別のextmarkエラーは無視
+                // 個別のextmarkエラーは無視（デバッグログは共通メソッドで処理）
               }
             }
           } catch (err) {
@@ -2772,6 +2748,45 @@ export class Core {
         error: error instanceof Error ? error.message : error
       });
     }
+  }
+
+  /**
+   * 単一ヒントのextmarkを設定する共通メソッド（リファクタリング）
+   *
+   * @param denops - Denopsインスタンス
+   * @param mapping - ヒントマッピング
+   * @param bufnr - バッファ番号
+   * @param extmarkNamespace - extmarkの名前空間ID
+   * @param isCandidate - 候補ヒントかどうか
+   * @private
+   */
+  private async setHintExtmark(
+    denops: Denops,
+    mapping: HintMapping,
+    bufnr: number,
+    extmarkNamespace: number,
+    isCandidate: boolean = true
+  ): Promise<void> {
+    const { word, hint } = mapping;
+    const hintLine = word.line;
+    const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+
+    const nvimLine = hintLine - 1;
+    const nvimCol = hintByteCol - 1;
+    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+
+    await denops.call(
+      "nvim_buf_set_extmark",
+      bufnr,
+      extmarkNamespace,
+      nvimLine,
+      nvimCol,
+      {
+        "virt_text": [[hint, highlightGroup]],
+        "virt_text_pos": "overlay",
+        "priority": 1001,
+      }
+    );
   }
 
   /**
