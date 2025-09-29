@@ -1,89 +1,121 @@
-# title: single_char_keys設定の正規化処理修正
+# title: カーソル位置基準のヒント生成システム
 
 ## 概要
-- `single_char_keys`、`multi_char_keys`、`max_single_char_hints`のsnake_case設定が正しくcamelCaseに変換されるようにし、ユーザーが指定した設定が確実に反映されるようにする
+- カーソル位置を基準として、近い単語にはsingle_char_keys（1文字）、遠い単語にはmulti_char_keys（2文字）を割り当てる2ゾーン構成のヒント生成システムを実装する
 
 ### goal
-- ユーザーが`'single_char_keys': split('ASDFGNM', '\zs')`と設定した場合、ヒントとして指定した文字のみが表示され、デフォルトの0〜9が混入しないようにする
+- カーソル周辺の単語により素早くジャンプできる直感的なナビゲーション
+- 近い場所は押しやすい1文字キー、遠い場所は2文字キーという認知負荷に配慮した設計
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 既存のテストコードとの互換性を保つこと
-- ドキュメント（README）のsnake_case形式の例は維持すること
 
 ## 開発のゴール
-- snake_case形式の設定項目が確実にcamelCase形式に変換され、設定が正しく反映されるようにする
-- ユーザーが混乱しないよう、snake_caseとcamelCase両方の形式をサポートする
+- カーソル位置からの距離に基づいた効率的なヒント割り当て
+- Immediate Zone（カーソル近傍）にsingle_char_keysを優先的に割り当て
+- それ以外の領域にmulti_char_keysを使用した2文字ヒントを割り当て
+- 既存のハイライトシステムは変更せず、ロジックのみを改善
 
 ## 実装仕様
 
-### 問題の詳細
-現在の`normalizeBackwardCompatibleFlags`関数には以下のマッピングが欠落している：
-- `single_char_keys` → `singleCharKeys`
-- `multi_char_keys` → `multiCharKeys`
-- `max_single_char_hints` → `maxSingleCharHints`
+### 現在の実装の問題点
+1. **カーソル位置の未活用**: `displayHintsOptimized()`でハードコードされた値（1,1）を使用
+2. **固定的な割り当て**: 単語の位置に関係なく、生成順にヒントを割り当て
+3. **非効率な検出**: 画面全体の単語を検出してからソート
 
-これにより、ユーザーがsnake_case形式で設定しても無視され、デフォルト値（0〜9を含む）が使用されてしまう。
+### 改善案：2ゾーン構成
+```
+カーソル位置
+     ↓
+[Immediate Zone: カーソル近傍]
+- single_char_keys (A,S,D,F,G,H,J,K,L,0-9など)
+- カーソルに最も近い単語から順に割り当て
+- 最大21個程度（設定による）
 
-### 修正内容
-`snakeToCamelMap`オブジェクトに上記3つのマッピングを追加する。
+[その他すべて]
+- multi_char_keys (BB, BC, BE, BI...)
+- Immediate Zone以外のすべての単語
+- 2文字の組み合わせ
+```
 
 ## 生成AIの学習用コンテキスト
 
+### コアファイル
+- `denops/hellshake-yano/core.ts`
+  - `showHintsInternal()`: ヒント表示のメインエントリポイント
+  - `detectWordsOptimized()`: 単語検出ロジック
+
+- `denops/hellshake-yano/main.ts`
+  - `displayHintsOptimized()`: ヒント表示処理（カーソル位置のハードコード問題）
+
+- `denops/hellshake-yano/hint.ts`
+  - `assignHintsToWords()`: ヒント割り当てロジック
+  - `generateHintsWithGroups()`: ヒント生成ロジック
+  - `sortWordsByDistanceOptimized()`: 距離ベースのソート
+
 ### 設定ファイル
-- denops/hellshake-yano/config.ts
-  - DEFAULT_CONFIG定義（デフォルト値の確認）
-  - singleCharKeysのデフォルト値に0〜9が含まれている
-
-### メイン処理
-- denops/hellshake-yano/main.ts
-  - normalizeBackwardCompatibleFlags関数（line 175-233）
-  - main関数での設定読み込み処理
-
-### ヒント生成
-- denops/hellshake-yano/hint.ts
-  - generateHintsWithGroups関数
-  - ヒント生成ロジックの理解
-
-### ドキュメント
-- README.md, README_ja.md
-  - snake_case形式での設定例
-- MIGRATION.md
-  - snake_case → camelCase対応表
+- `denops/hellshake-yano/config.ts`
+  - `singleCharKeys`: 1文字ヒント用のキー定義
+  - `multiCharKeys`: 2文字ヒント用のキー定義
+  - `maxSingleCharHints`: 1文字ヒントの最大数
 
 ## Process
 
-### process1 normalizeBackwardCompatibleFlags関数の修正
-#### sub1 snake_caseからcamelCaseへの変換マッピング追加
-@target: denops/hellshake-yano/main.ts
-@ref: denops/hellshake-yano/config.ts
-- [ ] snake_case形式の設定が正しく変換されることを確認
-- [ ] camelCase形式の設定も引き続き動作することを確認
-- [ ] `snakeToCamelMap`オブジェクトに以下を追加:
-  - `"single_char_keys": "singleCharKeys"`
-  - `"multi_char_keys": "multiCharKeys"`
-  - `"max_single_char_hints": "maxSingleCharHints"`
-- [ ] 既存のマッピングのアルファベット順に適切な位置に挿入
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testで既存のテストが通ることを確認
+### process1 カーソル位置の正しい取得と伝達
+#### sub1 displayHintsOptimizedのカーソル位置取得修正
+@target: `denops/hellshake-yano/main.ts`
+@ref: `denops/hellshake-yano/core.ts`
+- [ ] `displayHintsOptimized()`でハードコードされた値(1,1)を実際のカーソル位置に修正
+  - 現在: `const cursorLine = 1; const cursorCol = 1;`
+  - 修正: `const [cursorLine, cursorCol] = await fn.getpos(denops, ".");`
+
+#### sub2 showHintsInternalでカーソル位置の伝達
+@target: `denops/hellshake-yano/core.ts`
+- [ ] `showHintsInternal()`でカーソル位置を取得
+- [ ] 取得したカーソル位置を`displayHintsOptimized()`に渡す
+
+### process2 ヒント割り当てロジックの改善
+#### sub1 距離ベースのシンプルな割り当て実装
+@target: `denops/hellshake-yano/hint.ts`
+@ref: `denops/hellshake-yano/config.ts`, `denops/hellshake-yano/types.ts`
+- [ ] `assignHintsToWords()`を修正してカーソル距離優先の割り当てを実装
+  - カーソルからの距離でソート（既存のsortWordsByDistanceOptimized活用）
+  - 最初のN個（singleCharKeysの数）に1文字ヒント
+  - 残りに2文字ヒント（multiCharKeys）
+
+#### sub2 ヒント生成の動的調整
+@target: `denops/hellshake-yano/hint.ts`
+- [ ] `generateHintsWithGroups()`を修正
+  - カーソル近傍の単語数に基づいて1文字/2文字ヒントの比率を動的調整
+  - maxSingleCharHints設定の考慮
+
+### process3 既存機能の維持と互換性確保
+#### sub1 ハイライトシステムの維持
+- [ ] 既存のハイライト処理には変更を加えない
+- [ ] `displayHintsBatched()`の処理フローは維持
+
+#### sub2 設定の後方互換性
+@target: `denops/hellshake-yano/config.ts`
+- [ ] 既存の設定項目はすべて維持
+- [ ] 新しい設定項目は任意（オプション）として追加
 
 ### process10 ユニットテスト
-- [ ] snake_case形式の設定が正しく変換されることを確認
-- [ ] camelCase形式の設定も引き続き動作することを確認
-- [ ] 設定が反映されて期待通りのヒントが生成されることを確認
+- [ ] カーソル位置取得のテスト
+- [ ] 距離ベースのソートのテスト
+- [ ] 2ゾーン割り当てロジックのテスト
+- [ ] エッジケース（単語が少ない/多い場合）のテスト
 
 ### process50 フォローアップ
-- [ ] 実装後、実際にVimで以下の設定が動作することを確認：
-  ```vim
-  let g:hellshake_yano = {
-    \ 'single_char_keys': split('ASDFGNM', '\zs'),
-    \ }
-  ```
-- [ ] 0〜9の数字がヒントに含まれないことを確認
+#### sub1 パフォーマンス最適化（将来的な改善）
+- [ ] カーソル移動時のキャッシュ機能
+- [ ] 段階的検出の実装（immediate → far）
 
 ### process100 リファクタリング
-- [ ] 将来的には設定の正規化処理を別ファイルに分離することを検討
+- [ ] 重複コードの整理
+- [ ] 関数の責務の明確化
+- [ ] 型定義の整理
 
 ### process200 ドキュメンテーション
-- [ ] 変更履歴（CHANGELOG）への記載が必要な場合は追記
-- [ ] README内の設定例は変更不要（snake_case形式を維持）
+- [ ] README.mdにカーソル位置基準モードの説明を追加
+- [ ] 設定オプションのドキュメント更新
+- [ ] 変更履歴（CHANGELOG）の更新
