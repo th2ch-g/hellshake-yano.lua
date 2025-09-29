@@ -12,14 +12,16 @@
 
 ## 開発のゴール
 - 現在の同期的な`highlightCandidateHintsSync`を非同期化
+  - 応答性を重視するため、多少非同期が遅延しても問題ない
 - 2文字目の入力を取りこぼさない高速な応答性を実現
 - 描画処理と入力処理を並列化してユーザー体験を向上
 
 ## 実装仕様
+- Fire-and-forget方式による完全非同期処理（awaitを使わない）
 - バッチ処理による効率的な描画（15-20個ずつのextmark操作）
 - AbortControllerによる古いハイライト処理のキャンセル機能
-- Promise.allによる並列実行でパフォーマンス向上
 - 候補ヒントを優先的にハイライト表示
+- queueMicrotaskやsetTimeoutを活用してメインスレッドをブロックしない
 
 ## 生成AIの学習用コンテキスト
 ### 問題箇所
@@ -27,8 +29,16 @@
   - `highlightCandidateHintsSync`が同期的に実行される箇所
 - denops/hellshake-yano/core.ts:2391-2456
   - 現在の同期的ハイライト処理の実装
+- denops/hellshake-yano/main.ts:556
+  - `await processExtmarksBatched`でイベントループがブロックされる
 - denops/hellshake-yano/main.ts:645-678
   - 既存の`highlightCandidateHintsAsync`実装（参考）
+
+### 既存実装の問題点
+- main.ts:556で`await processExtmarksBatched`を使用
+  - 各バッチ処理が完了するまでJavaScriptのイベントループがブロック
+  - この間、Vimからのキー入力イベントが処理されない
+  - `denops.call("getchar")`が入力を受け取れず、キーが失われる
 
 ### 関連ファイル
 - autoload/hellshake_yano/highlight.vim
@@ -44,12 +54,13 @@
 - [ ] `highlightCandidateHintsAsync`メソッドを新規作成
 - [ ] バッチサイズ定数の定義（HIGHLIGHT_BATCH_SIZE = 15）
 - [ ] AbortControllerの実装
-- [ ] Promise.allによる並列実行の実装
+- [ ] **Fire-and-forget方式**：Promiseを返さず、awaitを使わない実装
 
 #### sub2 バッチ処理の最適化
 @target: denops/hellshake-yano/core.ts
 - [ ] extmark操作を15-20個ずつバッチ化
-- [ ] 各バッチ間に`setTimeout(0)`で制御を返す処理
+- [ ] **非同期バッチ処理**：各バッチを個別のPromiseとして実行（awaitなし）
+- [ ] 各バッチ間に`queueMicrotask`または`setTimeout(0)`で制御を返す
 - [ ] 候補ヒントと非候補ヒントの分離処理
 - [ ] 候補ヒントの優先描画処理
 
@@ -57,13 +68,15 @@
 #### sub1 waitForUserInputメソッドの更新
 @target: denops/hellshake-yano/core.ts:1598
 - [ ] `highlightCandidateHintsSync`の呼び出しを`highlightCandidateHintsAsync`に変更
-- [ ] 非同期呼び出し（awaitを使わない）に変更
+- [ ] **重要**：awaitを使わずにfire-and-forget方式で呼び出し
 - [ ] 古いハイライト処理のキャンセル処理を追加
+- [ ] ハイライト処理開始後、**即座に**2文字目の入力待機に移行
 
 #### sub2 2文字目入力の改善
 @target: denops/hellshake-yano/core.ts:1600-1640
-- [ ] ハイライト処理中でも入力を受け付ける実装
+- [ ] ハイライト処理の完了を待たずに`getchar()`を実行
 - [ ] 入力タイミングの競合状態を解決
+- [ ] バックグラウンドのハイライト処理と入力処理の分離
 - [ ] エラーハンドリングの強化
 
 ### process3 既存コードのリファクタリング
@@ -76,10 +89,11 @@
 ### process10 ユニットテスト
 #### sub1 非同期ハイライト処理のテスト
 @target: tests/async_highlight_test.ts
-- [ ] 基本的な非同期動作のテスト
+- [ ] Fire-and-forget方式の動作確認テスト
 - [ ] AbortControllerによる中断テスト
-- [ ] バッチ処理のテスト
-- [ ] 2文字目入力の取りこぼしがないことの確認テスト
+- [ ] バッチ処理が非同期で実行されることの確認
+- [ ] **重要**：2文字目入力の取りこぼしがないことの確認テスト
+- [ ] イベントループがブロックされないことの検証
 
 #### sub2 パフォーマンステスト
 @target: tests/performance_benchmark_test.ts
