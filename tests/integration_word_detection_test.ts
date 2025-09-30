@@ -30,6 +30,9 @@ import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 function createDefaultDetectionContext(): DetectionContext {
   return {
     fileType: "plaintext",
+    config: {
+      japaneseMergeParticles: false  // Disable particle merging for tests expecting individual morphemes
+    },
     syntaxContext: {
       inComment: false,
       inString: false,

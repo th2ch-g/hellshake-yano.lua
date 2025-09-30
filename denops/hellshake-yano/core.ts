@@ -1281,9 +1281,9 @@ export class Core {
 
       // カーソル位置を取得
       // getpos('.')は [bufnum, lnum, col, off] の形式を返す
-      const cursorPos = await denops.call("getpos", ".") as [number, number, number, number];
-      const cursorLine = cursorPos[1];
-      const cursorCol = cursorPos[2];
+      const cursorPos = await denops.call("getpos", ".") as [number, number, number, number] | undefined;
+      const cursorLine = cursorPos ? cursorPos[1] : 1;
+      const cursorCol = cursorPos ? cursorPos[2] : 1;
 
       // ヒント生成 - singleCharKeysとmultiCharKeysを使用
       const unifiedConfig = this.config; // 既にConfig形式

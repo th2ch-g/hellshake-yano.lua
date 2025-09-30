@@ -101,6 +101,11 @@ Deno.test("highlightCandidateHintsHybrid - TDD Green Phase: Method exists and wo
   } catch (error) {
     // Green Phaseでは正常に動作することが期待される
     assert(false, `Method should work in Green Phase, but got error: ${error}`);
+  } finally {
+    // 非同期処理の完了を待つ（queueMicrotaskでスケジュールされた処理）
+    await delay(200);
+    // テスト後のクリーンアップ（タイマーリークを防ぐ）
+    await core.cleanup();
   }
 });
 

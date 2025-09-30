@@ -636,6 +636,11 @@ export class TinySegmenterWordDetector implements WordDetector {
     context?: DetectionContext,
     denops?: Denops,
   ): Promise<Word[]> {
+    // Check if this detector can handle the text
+    if (!this.canHandle(text)) {
+      return [];
+    }
+
     const words: Word[] = [];
     const lines = text.split("\n");
 
@@ -655,11 +660,11 @@ export class TinySegmenterWordDetector implements WordDetector {
       }
 
       try {
-        // TinySegmenterで分割
-        const segmentResult = await tinysegmenter.segment(lineText);
+        // TinySegmenterで分割 (常に生の分割結果を取得)
+        const segmentResult = await tinysegmenter.segment(lineText, { mergeParticles: false });
 
         if (segmentResult.success && segmentResult.segments) {
-          // 形態素統合処理を適用
+          // 形態素統合処理を適用（必要に応じて）
           let segments = segmentResult.segments;
           if (mergeParticles) {
             segments = this.postProcessSegments(segments);
@@ -675,7 +680,8 @@ export class TinySegmenterWordDetector implements WordDetector {
             }
 
             // 助詞フィルタ（PLAN.md process50 sub1: 対策2）
-            if (this.particles.has(segment)) {
+            // 助詞を統合する場合のみフィルタリング（統合しない場合は個別に検出）
+            if (mergeParticles && this.particles.has(segment)) {
               currentIndex += segment.length;
               continue;
             }
@@ -3186,7 +3192,7 @@ export class TinySegmenter {
    * }
    * ```
    */
-  async segment(text: string): Promise<SegmentationResult> {
+  async segment(text: string, options?: { mergeParticles?: boolean }): Promise<SegmentationResult> {
     if (!this.enabled) {
       return {
         segments: await this.fallbackSegmentation(text),
@@ -3204,11 +3210,15 @@ export class TinySegmenter {
       };
     }
 
+    // Include mergeParticles setting in cache key
+    const mergeParticles = options?.mergeParticles ?? true;
+    const cacheKey = `${text}:${mergeParticles}`;
+
     // Check GlobalCache first
     const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
-    if (cache.has(text)) {
+    if (cache.has(cacheKey)) {
       return {
-        segments: cache.get(text)!,
+        segments: cache.get(cacheKey)!,
         success: true,
         source: "tinysegmenter",
       };
@@ -3218,12 +3228,11 @@ export class TinySegmenter {
       // npm版TinySegmenterを使用
       const rawSegments = this.segmenter.segment(text);
 
-      // 後処理を適用
-      const segments = this.postProcessSegments(rawSegments);
+      // 後処理を適用 (mergeParticlesオプションに基づく)
+      const segments = mergeParticles ? this.postProcessSegments(rawSegments) : rawSegments;
 
       // Cache the result in GlobalCache (LRU handles size limit automatically)
-      const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
-      cache.set(text, segments);
+      cache.set(cacheKey, segments);
 
       return {
         segments,

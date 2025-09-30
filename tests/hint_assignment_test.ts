@@ -103,7 +103,7 @@ describe("Hint Assignment with Character Groups", () => {
 
       assertEquals(result.valid, false);
       assertEquals(result.errors.length, 1);
-      assertEquals(result.errors[0], "Invalid single char keys: AB");
+      assertEquals(result.errors[0], "Invalid single char keys (must be single character): AB");
     });
 
     it("should detect overlapping keys between groups", () => {

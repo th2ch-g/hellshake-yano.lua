@@ -46,8 +46,13 @@ Deno.test("TinySegmenterWordDetector - detectWords - 日本語文章の単語検
   const detector = new TinySegmenterWordDetector();
   const text = "これはテストです";
   const startLine = 1;
+  const context = {
+    config: {
+      japaneseMergeParticles: false  // Don't merge particles for this test
+    }
+  };
 
-  const words = await detector.detectWords(text, startLine);
+  const words = await detector.detectWords(text, startLine, context);
 
   // 期待される結果: ["これ", "は", "テスト", "です"]
   assertExists(words);
@@ -74,8 +79,13 @@ Deno.test("TinySegmenterWordDetector - detectWords - 日本語と英数字の混
   const detector = new TinySegmenterWordDetector();
   const text = "私はJavaScriptを学習中";
   const startLine = 1;
+  const context = {
+    config: {
+      japaneseMergeParticles: false  // Don't merge particles for this test
+    }
+  };
 
-  const words = await detector.detectWords(text, startLine);
+  const words = await detector.detectWords(text, startLine, context);
 
   assertExists(words);
   assertEquals(words.length > 0, true);
