@@ -1544,18 +1544,24 @@ export class Core {
         return;
       }
 
-      // 現在のキー設定に数字が含まれているかチェック
+      // 現在のキー設定から有効な入力文字を判定
       const allKeys = [...(config.singleCharKeys || []), ...(config.multiCharKeys || [])];
-      const hasNumbers = allKeys.some((k) => /^\d$/.test(k));
 
-      // 有効な文字範囲チェック（useNumbersがtrueまたはキー設定に数字が含まれている、またはuseNumericMultiCharHintsが有効なら数字を許可）
-      const validPattern = (config.useNumbers || hasNumbers || config.useNumericMultiCharHints) ? /[A-Z0-9]/ : /[A-Z]/;
-      const errorMessage = (config.useNumbers || hasNumbers || config.useNumericMultiCharHints)
-        ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
-        : "Please use alphabetic characters only";
+      // useNumericMultiCharHintsが有効な場合、数字0-9を追加
+      if (config.useNumericMultiCharHints) {
+        allKeys.push(...["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+      }
 
-      if (!validPattern.test(inputChar)) {
-        await this.showErrorFeedback(denops, errorMessage);
+      // 大文字に正規化されたキー設定を作成（アルファベットの場合のみ大文字化）
+      const normalizedKeys = allKeys.map(k => /[a-zA-Z]/.test(k) ? k.toUpperCase() : k);
+      const validKeysSet = new Set(normalizedKeys);
+
+      // 入力文字が設定されたキーに含まれているかチェック
+      if (!validKeysSet.has(inputChar)) {
+        // エラーメッセージを生成（最初の10個のキーを表示）
+        const keysSample = normalizedKeys.slice(0, 10).join(", ");
+        const moreKeys = normalizedKeys.length > 10 ? `, ... (${normalizedKeys.length} total)` : "";
+        await this.showErrorFeedback(denops, `Please use configured hint keys: ${keysSample}${moreKeys}`);
         await this.hideHintsOptimized(denops);
         return;
       }

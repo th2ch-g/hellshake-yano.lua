@@ -137,10 +137,11 @@ let g:hellshake_yano = {
 | `trigger_on_hjkl`               | boolean     | v:true          | Enable triggering on hjkl movements                     |
 | `counted_motions`               | array       | []              | Custom motion keys to count (overrides trigger_on_hjkl) |
 | `enabled`                       | boolean     | v:true          | Enable/disable the plugin                               |
-| `single_char_keys`              | array       | ASDFGHJKLNM0-9  | Keys used for single-character hints                    |
+| `single_char_keys`              | array       | ASDFGHJKLNM0-9  | Keys used for single-character hints (supports symbols) |
 | `multi_char_keys`               | array       | BCEIOPQRTUVWXYZ | Keys used for multi-character hints                     |
 | `use_hint_groups`               | boolean     | v:true          | Enable hint groups feature                              |
 | `use_numbers`                   | boolean     | v:true          | Allow number keys for hints                             |
+| `use_numeric_multi_char_hints`  | boolean     | v:false         | Enable numeric two-character hints (01-99, 00)          |
 | `max_single_char_hints`         | number      | -               | Optional: limit single-character hints                  |
 | `use_japanese`                  | boolean     | v:true          | Enable Japanese word detection                          |
 | `highlight_hint_marker`         | string/dict | 'DiffAdd'       | Highlight for hint markers                              |
@@ -805,6 +806,8 @@ and multi-character hints for improved navigation efficiency:
 - **Auto-detection**: Setting single_char_keys or multi_char_keys automatically enables use_hint_groups
 - **Performance optimized**: Single-character hints jump instantly without highlight delays
 - **Max single-character hints**: Optional limit to balance between single and multi-char hints
+- **Symbol support**: single_char_keys supports symbols (`;`, `:`, `[`, `]`, `'`, `"`, `,`, `.`, `/`, `\`, `-`, `=`, `` ` ``)
+- **Numeric two-character hints**: Optional numeric hints (01-99, 00) for large word counts
 
 #### Important Behavior Changes (v2.0+)
 
@@ -813,6 +816,55 @@ When using hint groups with strict separation:
 - If 'B' is in `multi_char_keys` only, 'B' will NOT appear as a single-char hint
 - Single-character hints jump instantly without waiting for a second key
 - Multi-character hints show visual feedback when first key is pressed
+
+#### Symbol Support in Hint Keys (New Feature)
+
+You can now use symbols in `single_char_keys` for more hint options:
+
+**Valid symbols**: `;` `:` `[` `]` `'` `"` `,` `.` `/` `\` `-` `=` `` ` ``
+
+```vim
+" Example: Using symbols for additional single-character hints
+let g:hellshake_yano = {
+  \ 'single_char_keys': ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', '[', ']'],
+  \ 'multi_char_keys': ['B', 'C', 'E', 'I', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
+  \ 'max_single_char_hints': 13
+  \ }
+```
+
+**Benefits**:
+- Increase single-character hint capacity without using all alphabetic keys
+- Keep multi-character keys available for two-character combinations
+- More ergonomic key placement on QWERTY keyboards
+
+#### Numeric Two-Character Hints (New Feature)
+
+Enable numeric two-character hints (01-99, 00) for handling large numbers of words:
+
+```vim
+" Enable numeric multi-character hints
+let g:hellshake_yano = {
+  \ 'use_numeric_multi_char_hints': v:true,
+  \ 'single_char_keys': ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  \ 'multi_char_keys': ['B', 'C', 'E', 'I', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+  \ }
+```
+
+**How it works**:
+1. Single-character hints: A, S, D, F, G, H, J, K, L (9 hints)
+2. Alphabetic two-character hints: BB, BC, BE, CB, CC... (multi_char_keys combinations)
+3. Numeric two-character hints: 01, 02, 03, ..., 99, 00 (up to 100 hints)
+
+**Generation order**:
+- Priority 1: Single-character hints (fastest access)
+- Priority 2: Alphabetic two-character hints (familiar patterns)
+- Priority 3: Numeric two-character hints (large word counts)
+
+**Usage**:
+- Type `0` → Shows all hints starting with 0 (01, 02, 03, ...)
+- Type `01` → Jumps to the word with hint "01"
+- Type `5` → Shows all hints starting with 5 (50-59)
+- Type `55` → Jumps to the word with hint "55"
 
 ### Advanced Highlight Configuration
 
