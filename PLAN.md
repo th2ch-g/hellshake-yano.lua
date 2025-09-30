@@ -72,16 +72,16 @@
 @ref: PLAN.md
 
 #### sub1 feat/v3ブランチの作成
-- [ ] 現在のmainブランチの状態を確認
-- [ ] `git checkout -b feat/v3`でブランチ作成
-- [ ] 初期状態のテスト実行（ベースライン確立）
-  - [ ] `deno check`で型チェック
-  - [ ] `deno test -A`で全テスト実行
+- [x] 現在のmainブランチの状態を確認
+- [x] `git checkout -b feat/v3`でブランチ作成
+- [x] 初期状態のテスト実行（ベースライン確立）
+  - [x] `deno check`で型チェック
+  - [x] `deno test -A`で全テスト実行
 
 #### sub2 v3.0.0移行計画の文書化
-- [ ] MIGRATION_v3.mdの作成
-- [ ] 破壊的変更のリスト作成
-- [ ] 移行ガイドの記述
+- [x] MIGRATION_v3.mdの作成
+- [x] 破壊的変更のリスト作成
+- [x] 移行ガイドの記述
 
 ### process6 main.tsのリファクタリング
 @target: denops/hellshake-yano/main.ts
