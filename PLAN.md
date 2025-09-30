@@ -154,6 +154,46 @@
 
 ### process50 フォローアップ
 
+#### sub1 日本語分かち書きヒント生成の粒度最適化
+@date: 2025-09-30
+@issue: カーソル位置によって日本語の分かち書きによる形態素解析が細かすぎるヒントが生成される
+
+##### 調査結果
+- **TinySegmenterの形態素解析の性質**
+  - `word.ts:629`で`TinySegmenter`を使用して日本語を分かち書き
+  - 助詞レベルまで細かく分割される（例：「私の名前は」→「私」「の」「名前」「は」）
+
+- **最小文字数フィルタの問題**
+  - `word.ts:617,642`: `minWordLength`のデフォルトは`1`
+  - `TinySegmenterWordDetector`は1文字の助詞も検出対象にしている
+  - これにより「の」「は」「が」などの助詞にもヒントが表示される
+
+- **後処理の限定的な統合**
+  - `word.ts:3002-3058`: `postProcessSegments`は数字と単位、括弧内容のみを統合
+  - 助詞や接続詞の統合処理がないため、形態素単位のまま残る
+
+- **カーソル位置の影響**
+  - `main.ts:603-607`: カーソル位置を取得
+  - `hint.ts:653`: カーソルからの距離でソート
+  - `word.ts:5319-5321`: visible range取得では画面表示範囲(`w0`-`w$`)全体が対象
+  - カーソル位置によって可視範囲内の助詞が優先的に表示される
+
+- **設定のデフォルト値**
+  - `config.ts:288`: `japaneseMinWordLength: 2`（日本語用の最小文字数は2文字）
+  - しかし、`word.ts:617`では`context?.minWordLength || 1`となっており、contextが渡されない場合は1文字も検出される
+
+##### 対策案
+- [ ] 最小文字数の適切な適用: `japaneseMinWordLength`をTinySegmenterに正しく適用
+  - `word.ts:617`で`japaneseMinWordLength`を優先的に使用するロジックを追加
+- [ ] 助詞フィルタの追加: 一般的な助詞を除外するフィルタリング
+  - 除外対象: 「の」「は」「が」「を」「に」「へ」「と」「や」「で」「も」「か」「な」「よ」「ね」など
+  - `word.ts:TinySegmenterWordDetector.detectWords`に助詞フィルタを追加
+- [ ] 形態素の統合強化: 意味のある単位に統合
+  - `word.ts:postProcessSegments`に名詞+助詞、動詞+助詞の統合処理を追加
+  - 例: 「私」+「の」→「私の」、「名前」+「は」→「名前は」
+- [ ] contextに`japaneseMinWordLength`を渡す処理を追加
+  - `main.ts`や`core.ts`でDetectionContextを生成する際に`japaneseMinWordLength`を含める
+
 ### process100 リファクタリング
 - [ ] 重複コードの削除
 - [ ] 関数の責務分離
