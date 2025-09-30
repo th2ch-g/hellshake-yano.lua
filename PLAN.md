@@ -1,135 +1,134 @@
-# title: 日本語分かち書き閾値設定の調整と最適化
+# title: ヒントキー設定の拡張（記号対応・数字専用モード）
 
 ## 概要
-- hellshake-yano.vimプラグインの日本語分かち書き機能における閾値設定を調整し、より精度の高い単語分割を実現する
+- ヒントキーの設定をより柔軟にカスタマイズ可能にする機能拡張
+- singleCharKeysにキーボード記号を使用可能にし、multiCharKeysで数字専用の2文字ヒント生成を実現
 
 ### goal
-- 日本語テキストのナビゲーション時に、自然な単語単位でのジャンプを可能にする
-- 助詞や接続詞の適切な結合により、文脈に応じた単語認識を実現する
+- ユーザーが好みのキーボード記号（`;`, `:`, `[`, `]`など）を1文字ヒントに使用できる
+- 数字キー(0-9)を使用した場合、`01`, `02`のような数字のみの2文字ヒントが生成される
+- 数字とアルファベット/記号の混在（`0A`, `1B`など）を防止し、認知負荷を軽減
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
+- 既存の後方互換性を維持すること
+- TypeScriptの型安全性を保証すること
 
 ## 開発のゴール
-- 日本語分かち書きの閾値設定を調整可能にする
-- TinySegmenterの使用条件を最適化する
-- 助詞マージの挙動を改善する
+- キーボードで入力可能な記号をsingleCharKeysで使えるようにする
+- multiCharKeysで数字のみを使用した場合、数字だけの2文字ヒントを生成する
+- ユーザーの認知負荷を減らし、より直感的なヒント入力を実現する
 
 ## 実装仕様
-- 設定キーはcamelCase形式（japaneseMergeThreshold等）を使用
-- snake_case形式も後方互換性のために維持
-- デフォルト値は現在の値を維持（japaneseMergeThreshold: 2, segmenterThreshold: 4）
+
+### singleCharKeys拡張仕様
+- 使用可能な記号: `;`, `:`, `[`, `]`, `'`, `"`, `,`, `.`, `/`, `\`, `-`, `=`, `` ` ``
+- 既存のアルファベット・数字に加えて上記記号を設定可能
+- バリデーション: 1文字であることの確認（既存）+ 入力可能文字の検証
+
+### multiCharKeys数字専用モード仕様
+- 数字のみ（0-9）が設定された場合、自動的に数字専用モードを有効化
+- 生成パターン: `00`, `01`, `02`...`99`（最大100個）
+- アルファベット/記号が混在している場合は従来の生成方式を使用
+- 優先順位: `01-09`, `10-99`, `00`の順で生成
 
 ## 生成AIの学習用コンテキスト
-### 設定ファイル
-- denops/hellshake-yano/config.ts
-  - 閾値設定の型定義とデフォルト値
-- denops/hellshake-yano/main.ts
-  - snake_case to camelCase変換マッピング
-- denops/hellshake-yano/word.ts
-  - 日本語単語検出とマージ処理の実装
 
-### テストファイル
-- denops/hellshake-yano/word_test.ts
-  - 単語検出ロジックのテスト
+### 設定ファイル
+- `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+  - DEFAULT_CONFIG定数のsingleCharKeys, multiCharKeys設定
+  - validateUnifiedConfig関数のバリデーションロジック
+
+### 型定義ファイル
+- `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
+  - HintKeyConfigインターフェース（273行目）
+
+### ヒント生成ロジック
+- `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+  - generateHintsWithGroups関数（1256行目）: メインのヒント生成関数
+  - generateMultiCharHintsFromKeys関数（1366行目）: 複数文字ヒント生成
+  - validateHintKeyConfig関数（1423行目）: 設定検証
 
 ## Process
-### process1 閾値設定の現状確認と文書化
-@target: PLAN.md
-@ref: denops/hellshake-yano/config.ts
-- [x] 現在の閾値設定を調査（japaneseMergeThreshold, segmenterThreshold等）
-- [x] 設定名の変更履歴を確認（snake_case → camelCase）
-- [x] デフォルト値と用途を文書化
 
-### process2 設定方法の明確化
-@target: README.md（必要に応じて）
-@ref: plugin/hellshake-yano.vim
-- [x] vimrcでの設定例を作成（新旧両形式）
-- [x] 各閾値の効果と調整指針を文書化
+### process1 型定義の拡張
+#### sub1 HintKeyConfigインターフェースの拡張
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
+@ref: `HintKeyConfig`インターフェース（273行目）
+- [ ] `allowSymbolsInSingleChar`オプションフラグの追加（記号使用可否）
+- [ ] `numericOnlyMultiChar`オプションフラグの追加（数字専用モード）
+- [ ] JSDocコメントで新規オプションの説明を追加
 
-### process3 閾値調整の検証
-@target: tests/threshold-validation/
-@implemented: TDD Red-Green-Refactor方式で実装完了
-- [x] japaneseMergeThresholdを1〜5で検証（テストケース作成）
-- [x] segmenterThresholdを2〜6で検証（テストケース作成）
-- [x] 最適な組み合わせを決定（3つの推奨プロファイル定義）
-- [x] テストスキーマとJSONテストケース作成
-- [x] 3つのVim設定ファイル作成（aggressive, balanced, precise）
-- [x] マトリックステスト用スクリプト作成
-- [x] 検証結果記録テンプレート作成
-- [x] テストサンプルテキスト作成
-- [x] 包括的なREADMEとクイックリファレンス作成
+### process2 デフォルト設定の更新
+#### sub1 DEFAULT_CONFIGの拡張
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+@ref: `DEFAULT_CONFIG`定数（239行目）
+- [ ] singleCharKeysのデフォルト値に記号を追加可能にする設定
+- [ ] コメントで使用可能な記号リストを明記
 
-**成果物**:
-- `tests/threshold-validation/` - 完全なテスト検証スイート
-- 推奨設定: Aggressive(5,2), Balanced(2,4), Precise(1,6)
+#### sub2 バリデーション関数の更新
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
+@ref: `validateUnifiedConfig`関数（440行目）
+- [ ] singleCharKeysの記号文字検証ロジック追加
+- [ ] 使用可能な記号のホワイトリスト定義
+- [ ] エラーメッセージの改善
+
+### process3 ヒント生成ロジックの実装
+#### sub1 数字専用判定関数の実装
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+@ref: `generateMultiCharHintsFromKeys`関数の前（1350行目付近）
+- [ ] `isNumericOnlyKeys`関数の実装（キー配列が数字のみかチェック）
+- [ ] ユニットテスト用のexport
+
+#### sub2 数字専用ヒント生成の実装
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+@ref: `generateMultiCharHintsFromKeys`関数（1366行目）
+- [ ] 数字専用モードの判定ロジック追加
+- [ ] 数字専用の2文字ヒント生成処理（00-99）
+- [ ] 優先順位に基づく生成順序の実装
+
+#### sub3 generateHintsWithGroups関数の更新
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+@ref: `generateHintsWithGroups`関数（1256行目）
+- [ ] 数字専用モードの自動検出
+- [ ] 記号を含むsingleCharKeysの処理
+
+### process4 バリデーション強化
+#### sub1 validateHintKeyConfig関数の更新
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
+@ref: `validateHintKeyConfig`関数（1423行目）
+- [ ] 記号文字のバリデーション追加
+- [ ] 数字専用モード時の検証
+- [ ] エラーメッセージの詳細化
 
 ### process10 ユニットテスト
-@target: denops/hellshake-yano/word_test.ts
-- [ ] deno check実行
-- [ ] deno test実行
-- [ ] 閾値変更による挙動の確認
+#### sub1 記号対応のテスト
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.test.ts`
+- [ ] 記号を含むsingleCharKeysのヒント生成テスト
+- [ ] 記号のバリデーションテスト
+- [ ] 記号と英数字の混在テスト
+
+#### sub2 数字専用モードのテスト
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.test.ts`
+- [ ] 数字のみのmultiCharKeysテスト
+- [ ] 00-99の生成順序テスト
+- [ ] 数字とアルファベット混在時の通常モードテスト
+
+#### sub3 統合テスト
+@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/tests/`に新規ファイル作成
+- [ ] 記号と数字専用モードの組み合わせテスト
+- [ ] パフォーマンステスト（大量ヒント生成時）
+- [ ] エッジケーステスト
 
 ### process50 フォローアップ
-- [ ] ユーザーの要望に応じた閾値のカスタマイズ
 
 ### process100 リファクタリング
-- [ ] 不要な設定の削除検討
-- [ ] 設定名の一貫性確認
+- [ ] 重複コードの削除
+- [ ] 関数の責務分離
+- [ ] パフォーマンス最適化
 
 ### process200 ドキュメンテーション
-- [ ] README.mdに日本語設定セクションを追加
-- [ ] 設定例とベストプラクティスを記載
-
-## 推奨設定例（camelCase形式）
-
-### 完全な設定例
-```vim
-let g:hellshake_yano = {
-      \ 'debugMode': v:false,
-      \ 'useJapanese': v:true,
-      \ 'useHintGroups': v:true,
-      \ 'enableTinySegmenter': v:true,
-      \ 'singleCharKeys': split('ASDFGNM0123456789', '\zs'),
-      \ 'multiCharKeys': split('BCEIOPQRTUVWXYZ', '\zs'),
-      \ 'highlightHintMarker': {'bg': 'black', 'fg': '#57FD14'},
-      \ 'highlightHintMarkerCurrent': {'bg': 'Red', 'fg': 'White'},
-      \ 'highlightSelected': v:true,
-      \ 'perKeyMinLength': {
-      \   'w': 1,
-      \   'b': 1,
-      \   'e': 1,
-      \ },
-      \ 'defaultMinWordLength': 2,
-      \ 'perKeyMotionCount': {
-      \   'w': 1,
-      \   'b': 1,
-      \   'e': 1,
-      \   'h': 3,
-      \   'j': 3,
-      \   'k': 3,
-      \   'l': 3,
-      \ },
-      \ 'motionCount': 3,
-      \ 'segmenterThreshold': 4,
-      \ 'japaneseMergeThreshold': 2,
-      \ }
-```
-
-### 重要な注意事項
-
-**camelCase形式を使用してください**:
-- ❌ `default_min_word_length` (snake_case) - 認識されません
-- ✅ `defaultMinWordLength` (camelCase) - 正しく認識されます
-
-設定キーの優先順位:
-1. `perKeyMinLength[key]` - キー別の最小文字数（最優先）
-2. `defaultMinWordLength` - デフォルトの最小単語長
-3. `default_min_length` - 後方互換性（非推奨）
-4. デフォルト値: 3
-
-### トラブルシューティング
-
-**問題**: 漢字やひらがなにヒントが表示されない
-**原因**: `defaultMinWordLength`が設定されておらず、デフォルト値3が使用されている
-**解決**: `'defaultMinWordLength': 1` または `'defaultMinWordLength': 2` を設定
+- [ ] README.mdへの新機能説明追加
+- [ ] 設定例の追加（記号使用例、数字専用モード例）
+- [ ] CHANGELOG.mdへの変更履歴追加
+- [ ] JSDocコメントの充実化
