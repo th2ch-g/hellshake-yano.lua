@@ -75,18 +75,18 @@
 @ref: denops/hellshake-yano/core.ts
 
 #### sub1 extractWordsFromLineWithConfig の除去
-- [ ] deno testで全テストがパスすることを確認
-- [ ] `extractWordsFromLineWithConfig` の使用箇所を特定
-- [ ] `extractWordsUnified` への移行パスを確認
-- [ ] 移行実装
-- [ ] deno checkで型エラーがないことを確認
-- [ ] deno testで全テストがパスすることを再確認
+- [x] deno testで全テストがパスすることを確認
+- [x] `extractWordsFromLineWithConfig` の使用箇所を特定
+- [x] `extractWordsUnified` への移行パスを確認
+- [x] 移行実装（extractWordsUnified内部でextractWordsFromLine直接呼び出しに変更）
+- [x] deno checkで型エラーがないことを確認
+- [x] deno testで全テストがパスすることを再確認
 
 #### sub2 extractWordsFromLineWithEnhancedConfig の除去
-- [ ] deno testで全テストがパスすることを確認
-- [ ] `extractWordsFromLineWithEnhancedConfig` の使用箇所を特定
-- [ ] `extractWordsUnified` への移行
-- [ ] パラメータ互換性の確認
+- [x] deno testで全テストがパスすることを確認
+- [x] `extractWordsFromLineWithEnhancedConfig` の使用箇所を特定
+- [x] `extractWordsUnified` への移行（extractWordsUnified内部でextractWordsFromLine直接呼び出しに変更）
+- [x] パラメータ互換性の確認
 
 ### process3 Phase 3: 大きな影響（detectWords系の移行）
 @target: denops/hellshake-yano/word.ts, denops/hellshake-yano/core.ts

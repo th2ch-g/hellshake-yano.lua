@@ -2089,24 +2089,15 @@ export function extractWordsUnified(
   }
 
   if (normalizedConfig.hasEnhancedFeatures) {
-    // Use enhanced config path
-    const enhancedConfig: EnhancedWordConfig = {useJapanese: normalizedConfig.useJapanese,
-      strategy: normalizedConfig.strategy,
-      minWordLength: normalizedConfig.minWordLength,
-      enableTinySegmenter: normalizedConfig.enableTinySegmenter,
-      perKeyMinLength: normalizedConfig.perKeyMinLength,
-      defaultMinWordLength: normalizedConfig.defaultMinWordLength,
-      currentKeyContext: normalizedConfig.currentKeyContext,
-    };
-    return extractWordsFromLineWithEnhancedConfig(lineText, lineNumber, enhancedConfig);
+    // Use extractWordsFromLine directly (avoiding deprecated function)
+    const excludeJapanese = normalizedConfig.useJapanese !== true;
+    return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
 
   if (normalizedConfig.useWordConfig) {
-    // Use UnifiedConfig path instead of WordConfig for type compatibility
-    const unifiedConfig = createPartialUnifiedConfig({
-      useJapanese: normalizedConfig.useJapanese,
-    });
-    return extractWordsFromLineWithConfig(lineText, lineNumber, unifiedConfig);
+    // Use extractWordsFromLine directly (avoiding deprecated function)
+    const excludeJapanese = normalizedConfig.useJapanese !== true;
+    return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
 
   // Check if we should use improved detection via extractWordsFromLine
