@@ -564,6 +564,30 @@ export class TinySegmenterWordDetector implements WordDetector {
   private readonly japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
 
   /**
+   * 日本語助詞リスト（フィルタリングおよび統合対象）
+   * @description
+   * 一般的な日本語助詞のセット。単独では意味を持たないため、
+   * フィルタリングまたは前後の単語と統合される。
+   * @see https://ja.wikipedia.org/wiki/助詞
+   */
+  private readonly particles = new Set([
+    // 格助詞
+    "の", "が", "を", "に", "へ", "と", "から", "まで", "より",
+    // 副助詞
+    "は", "も", "こそ", "さえ", "でも", "しか", "まで", "だけ", "ばかり",
+    "ほど", "くらい", "など", "なり", "やら", "か", "のみ",
+    // 接続助詞
+    "ば", "と", "ても", "でも", "のに", "ので", "から", "けど", "けれど",
+    "けれども", "が", "し", "て", "で", "ながら", "つつ", "たり",
+    // 終助詞
+    "な", "よ", "ね", "か", "ぞ", "ぜ", "さ", "わ", "の",
+    // 補助動詞・助動詞的な要素
+    "です", "ます", "だ", "である",
+    // 並列助詞
+    "や", "とか", "だの",
+  ]);
+
+  /**
    * TinySegmenterを使用して日本語テキストから単語を検出
    *
    * @description
@@ -614,7 +638,13 @@ export class TinySegmenterWordDetector implements WordDetector {
   ): Promise<Word[]> {
     const words: Word[] = [];
     const lines = text.split("\n");
-    const minWordLength = context?.minWordLength || 1;
+
+    // japaneseMinWordLengthを優先的に使用（PLAN.md process50 sub1: 対策1）
+    const japaneseMinWordLength = context?.config?.japaneseMinWordLength;
+    const minWordLength = japaneseMinWordLength ?? context?.minWordLength ?? 1;
+
+    // 助詞統合が有効かどうか（PLAN.md process50 sub1: 対策3）
+    const mergeParticles = context?.config?.japaneseMergeParticles ?? true;
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
@@ -629,11 +659,23 @@ export class TinySegmenterWordDetector implements WordDetector {
         const segmentResult = await tinysegmenter.segment(lineText);
 
         if (segmentResult.success && segmentResult.segments) {
+          // 形態素統合処理を適用
+          let segments = segmentResult.segments;
+          if (mergeParticles) {
+            segments = this.postProcessSegments(segments);
+          }
+
           let currentIndex = 0;
 
-          for (const segment of segmentResult.segments) {
+          for (const segment of segments) {
             // 空のセグメントをスキップ
             if (segment.trim().length === 0) {
+              currentIndex += segment.length;
+              continue;
+            }
+
+            // 助詞フィルタ（PLAN.md process50 sub1: 対策2）
+            if (this.particles.has(segment)) {
               currentIndex += segment.length;
               continue;
             }
@@ -688,6 +730,59 @@ export class TinySegmenterWordDetector implements WordDetector {
     }
 
     return words;
+  }
+
+  /**
+   * セグメント後処理：名詞+助詞の統合
+   *
+   * @description
+   * TinySegmenterで分割されたセグメントを後処理し、
+   * 名詞+助詞、動詞+助詞などの自然な単位に統合します。
+   *
+   * @param segments - 後処理前のセグメント配列
+   * @returns 後処理されたセグメント配列
+   *
+   * @example
+   * ```typescript
+   * const processed = this.postProcessSegments(['私', 'の', '名前']);
+   * // ['私の', '名前']
+   * ```
+   *
+   * @since 2.0.0
+   */
+  private postProcessSegments(segments: string[]): string[] {
+    const processed: string[] = [];
+    let i = 0;
+
+    while (i < segments.length) {
+      const current = segments[i];
+
+      // 空のセグメントをスキップ
+      if (!current || current.trim().length === 0) {
+        i++;
+        continue;
+      }
+
+      // 現在のセグメント + 後続の助詞を結合（PLAN.md process50 sub1: 対策3）
+      let merged = current;
+      let j = i + 1;
+
+      // 後続の助詞を連続して結合
+      while (j < segments.length) {
+        const next = segments[j];
+        if (next && this.particles.has(next)) {
+          merged += next;
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      processed.push(merged);
+      i = j;
+    }
+
+    return processed;
   }
 
   /**
@@ -1778,8 +1873,8 @@ export function createPartialUnifiedConfig(options: { useJapanese?: boolean }): 
     singleCharKeys: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
     multiCharKeys: ['a', 'b', 'c', 'd', 'e', 'f'],
     useHintGroups: false,
-    highlightHintMarker: "HellshakeYanoHintMarker",
-    highlightHintMarkerCurrent: "HellshakeYanoHintMarkerCurrent",
+    highlightHintMarker: "HellshakeYanoMarker",
+    highlightHintMarkerCurrent: "HellshakeYanoMarkerCurrent",
     suppressOnKeyRepeat: false,
     keyRepeatThreshold: 50,
     useJapanese: options.useJapanese ?? false,
@@ -3003,6 +3098,13 @@ export class TinySegmenter {
     const processed: string[] = [];
     let i = 0;
 
+    // 助詞セット（統合対象）
+    const particles = new Set([
+      "の", "は", "が", "を", "に", "へ", "と", "や", "で", "も",
+      "か", "な", "よ", "ね", "ぞ", "さ", "わ", "ば", "から", "まで",
+      "です", "ます", "だ", "である",
+    ]);
+
     while (i < segments.length) {
       const current = segments[i];
 
@@ -3047,10 +3149,27 @@ export class TinySegmenter {
         }
       }
 
-      // 通常のセグメント
+      // 名詞+助詞、動詞+助詞の統合
       if (current && current.trim().length > 0) {
-        processed.push(current);
+        let merged = current;
+        let j = i + 1;
+
+        // 後続の助詞を結合
+        while (j < segments.length) {
+          const next = segments[j];
+          if (next && particles.has(next)) {
+            merged += next;
+            j++;
+          } else {
+            break;
+          }
+        }
+
+        processed.push(merged);
+        i = j;
+        continue;
       }
+
       i++;
     }
 

@@ -12,18 +12,20 @@ set cpo&vim
 
 " ハイライト設定を再適用
 function! hellshake_yano#highlight#apply_highlights() abort
-  " highlight_hint_marker の設定適用
-  if has_key(g:hellshake_yano, 'highlight_hint_marker') &&
-        \ !empty(g:hellshake_yano.highlight_hint_marker)
+  " highlight_hint_marker の設定適用（snake_case優先、camelCaseフォールバック）
+  let l:marker_config = get(g:hellshake_yano, 'highlight_hint_marker',
+        \ get(g:hellshake_yano, 'highlightHintMarker', ''))
+  if !empty(l:marker_config)
     call hellshake_yano#highlight#apply_highlight_setting('HellshakeYanoMarker',
-          \ g:hellshake_yano.highlight_hint_marker)
+          \ l:marker_config)
   endif
 
-  " highlight_hint_marker_current の設定適用
-  if has_key(g:hellshake_yano, 'highlight_hint_marker_current') &&
-        \ !empty(g:hellshake_yano.highlight_hint_marker_current)
+  " highlight_hint_marker_current の設定適用（snake_case優先、camelCaseフォールバック）
+  let l:current_config = get(g:hellshake_yano, 'highlight_hint_marker_current',
+        \ get(g:hellshake_yano, 'highlightHintMarkerCurrent', ''))
+  if !empty(l:current_config)
     call hellshake_yano#highlight#apply_highlight_setting('HellshakeYanoMarkerCurrent',
-          \ g:hellshake_yano.highlight_hint_marker_current)
+          \ l:current_config)
   endif
 endfunction
 

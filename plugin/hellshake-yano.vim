@@ -237,21 +237,25 @@ endfunction
 
 " カスタムハイライト色を適用する関数（fg/bg対応）
 function! s:apply_custom_highlights() abort
-  " highlight_hint_marker の設定適用
-  if has_key(g:hellshake_yano, 'highlight_hint_marker') && !empty(g:hellshake_yano.highlight_hint_marker)
+  " highlight_hint_marker の設定適用（snake_case優先、camelCaseフォールバック）
+  let l:marker_config = get(g:hellshake_yano, 'highlight_hint_marker',
+        \ get(g:hellshake_yano, 'highlightHintMarker', ''))
+  if !empty(l:marker_config)
     try
-      call s:apply_highlight('HellshakeYanoMarker', g:hellshake_yano.highlight_hint_marker)
+      call s:apply_highlight('HellshakeYanoMarker', l:marker_config)
     catch
-      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker: ' . string(g:hellshake_yano.highlight_hint_marker))
+      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker: ' . string(l:marker_config))
     endtry
   endif
 
-  " highlight_hint_marker_current の設定適用
-  if has_key(g:hellshake_yano, 'highlight_hint_marker_current') && !empty(g:hellshake_yano.highlight_hint_marker_current)
+  " highlight_hint_marker_current の設定適用（snake_case優先、camelCaseフォールバック）
+  let l:current_config = get(g:hellshake_yano, 'highlight_hint_marker_current',
+        \ get(g:hellshake_yano, 'highlightHintMarkerCurrent', ''))
+  if !empty(l:current_config)
     try
-      call s:apply_highlight('HellshakeYanoMarkerCurrent', g:hellshake_yano.highlight_hint_marker_current)
+      call s:apply_highlight('HellshakeYanoMarkerCurrent', l:current_config)
     catch
-      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker_current: ' . string(g:hellshake_yano.highlight_hint_marker_current))
+      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker_current: ' . string(l:current_config))
     endtry
   endif
 endfunction

@@ -2735,18 +2735,23 @@ export class Core {
 
       if (signal.aborted) return;
 
-      // 候補ヒントをフィルタリング
-      const candidateHints = hintMappings.filter(mapping =>
-        mapping.hint.startsWith(partialInput)
-      );
+      // 全ヒントを候補と非候補に分類
+      const candidateHints: HintMapping[] = [];
+      const nonCandidateHints: HintMapping[] = [];
 
-      if (candidateHints.length === 0) return;
+      for (const mapping of hintMappings) {
+        if (mapping.hint.startsWith(partialInput)) {
+          candidateHints.push(mapping);
+        } else {
+          nonCandidateHints.push(mapping);
+        }
+      }
 
-      // Phase 1: 最初の15個を同期的に処理
+      // Phase 1: 候補ヒントを優先的に同期表示（最初の15個）
       const syncCandidates = candidateHints.slice(0, SYNC_BATCH_SIZE);
       const asyncCandidates = candidateHints.slice(SYNC_BATCH_SIZE);
 
-      // 同期バッチを即座に表示（リファクタリング済み）
+      // 候補ヒントを同期表示（HellshakeYanoMarkerCurrent - 赤背景）
       for (const mapping of syncCandidates) {
         if (signal.aborted) return;
 
@@ -2757,21 +2762,48 @@ export class Core {
         }
       }
 
+      // 非候補ヒントも同期表示（HellshakeYanoMarker - 通常背景）
+      // 最初の数個を同期表示してコンテキストを保持
+      const syncNonCandidates = nonCandidateHints.slice(0, Math.min(5, nonCandidateHints.length));
+      for (const mapping of syncNonCandidates) {
+        if (signal.aborted) return;
+
+        try {
+          await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, false);
+        } catch (error) {
+          // 個別のextmarkエラーは無視
+        }
+      }
+
       // 即座にredrawして表示を更新
       await denops.cmd("redraw");
 
       // Phase 2: 残りを非同期で処理（fire-and-forget）
-      if (asyncCandidates.length > 0) {
+      const asyncNonCandidates = nonCandidateHints.slice(5);
+
+      if (asyncCandidates.length > 0 || asyncNonCandidates.length > 0) {
         // 非同期処理を開始（awaitしない）
         queueMicrotask(async () => {
           try {
+            // 残りの候補ヒント（赤背景）
             for (const mapping of asyncCandidates) {
               if (signal.aborted) return;
 
               try {
                 await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
               } catch (error) {
-                // 個別のextmarkエラーは無視（デバッグログは共通メソッドで処理）
+                // 個別のextmarkエラーは無視
+              }
+            }
+
+            // 残りの非候補ヒント（通常背景）
+            for (const mapping of asyncNonCandidates) {
+              if (signal.aborted) return;
+
+              try {
+                await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, false);
+              } catch (error) {
+                // 個別のextmarkエラーは無視
               }
             }
           } catch (err) {

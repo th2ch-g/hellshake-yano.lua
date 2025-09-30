@@ -183,16 +183,39 @@
   - しかし、`word.ts:617`では`context?.minWordLength || 1`となっており、contextが渡されない場合は1文字も検出される
 
 ##### 対策案
-- [ ] 最小文字数の適切な適用: `japaneseMinWordLength`をTinySegmenterに正しく適用
-  - `word.ts:617`で`japaneseMinWordLength`を優先的に使用するロジックを追加
-- [ ] 助詞フィルタの追加: 一般的な助詞を除外するフィルタリング
-  - 除外対象: 「の」「は」「が」「を」「に」「へ」「と」「や」「で」「も」「か」「な」「よ」「ね」など
-  - `word.ts:TinySegmenterWordDetector.detectWords`に助詞フィルタを追加
-- [ ] 形態素の統合強化: 意味のある単位に統合
-  - `word.ts:postProcessSegments`に名詞+助詞、動詞+助詞の統合処理を追加
+- [x] 最小文字数の適切な適用: `japaneseMinWordLength`をTinySegmenterに正しく適用
+  - `word.ts:642-644`で`japaneseMinWordLength`を優先的に使用するロジックを追加
+  - 実装日: 2025-09-30
+- [x] 助詞フィルタの追加: 一般的な助詞を除外するフィルタリング
+  - 除外対象: 「の」「は」「が」「を」「に」「へ」「と」「や」「で」「も」など40種以上
+  - `word.ts:573-588`に助詞セットを定義、`word.ts:678`でフィルタリング実装
+  - 実装日: 2025-09-30
+- [x] 形態素の統合強化: 意味のある単位に統合
+  - `word.ts:753-786`のpostProcessSegmentsに名詞+助詞、動詞+助詞の統合処理を追加
   - 例: 「私」+「の」→「私の」、「名前」+「は」→「名前は」
-- [ ] contextに`japaneseMinWordLength`を渡す処理を追加
-  - `main.ts`や`core.ts`でDetectionContextを生成する際に`japaneseMinWordLength`を含める
+  - 実装日: 2025-09-30
+- [x] contextに`japaneseMinWordLength`を渡す処理を追加
+  - DetectionContextを通じて`japaneseMinWordLength`が伝播されることを確認
+  - テストで検証完了
+  - 実装日: 2025-09-30
+
+##### 実装詳細
+- **TDD Red-Green-Refactorアプローチで実装**
+  - RED Phase: 8つの失敗するテストを作成（tests/japanese_word_granularity_test.ts）
+  - GREEN Phase: 最小限の実装でテストをパス
+  - REFACTOR Phase: 助詞リストの共通化、コメント追加
+- **主な変更箇所**
+  - `word.ts:573-588`: 助詞セット定義（private readonly particles）
+  - `word.ts:642-647`: japaneseMinWordLength優先ロジック、助詞統合フラグ
+  - `word.ts:678-681`: 助詞フィルタリング
+  - `word.ts:753-786`: postProcessSegments（形態素統合）
+- **テスト**
+  - tests/japanese_word_granularity_test.ts: 8つのテストケース（全てパス）
+  - 既存の日本語関連テストも全てパス
+- **結果**
+  - 1文字の助詞（「の」「は」など）が単独で表示されなくなった
+  - 形態素統合により、より自然な単位でヒントが表示されるようになった（例: 「私の」「名前は」）
+  - japaneseMinWordLength設定が正しく適用されるようになった
 
 ### process100 リファクタリング
 - [ ] 重複コードの削除
