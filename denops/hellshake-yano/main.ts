@@ -9,6 +9,7 @@ import {
   calculateHintPosition,
   calculateHintPositionWithCoordinateSystem,
   generateHints,
+  generateHintsWithGroups,
 } from "./hint.ts";
 import { Core } from "./core.ts";
 import type { DebugInfo, HighlightColor, HintMapping, PerformanceMetrics, Word } from "./types.ts";
@@ -252,6 +253,23 @@ export function normalizeBackwardCompatibleFlags(cfg: Partial<Config> & Backward
     delete (normalized as any).disable_visual_mode;
   }
 
+  // singleCharKeysとmultiCharKeysの文字列→配列変換
+  // Vimのsplit()関数の結果が文字列として渡される場合に対応
+  if (typeof (normalized as any).singleCharKeys === "string") {
+    const keysString = (normalized as any).singleCharKeys as string;
+    (normalized as any).singleCharKeys = keysString.split("");
+
+    // 記号のバリデーションとログ
+    const symbols = (normalized as any).singleCharKeys.filter((k: string) =>
+      !k.match(/[A-Za-z0-9]/));
+    if (symbols.length > 0) {
+      console.log(`[Config] Symbols detected in singleCharKeys: ${symbols.join(", ")}`);
+    }
+  }
+  if (typeof (normalized as any).multiCharKeys === "string") {
+    (normalized as any).multiCharKeys = ((normalized as any).multiCharKeys as string).split("");
+  }
+
   return normalized;
 }
 /**
@@ -291,6 +309,42 @@ export async function main(denops: Denops): Promise<void> {
     // Configを直接使用
     const defaultConfig = DEFAULT_CONFIG;
     config = { ...defaultConfig, ...normalizedUserConfig } as Config;
+
+    // デバッグログ: 設定の内容を確認
+    if (config.debug || config.debugMode) {
+      console.log("[hellshake-yano] Configuration loaded:");
+      console.log("  singleCharKeys:", config.singleCharKeys);
+      console.log("  multiCharKeys:", config.multiCharKeys);
+      console.log("  singleCharKeys type:", typeof config.singleCharKeys);
+      console.log("  multiCharKeys type:", typeof config.multiCharKeys);
+
+      // 記号の詳細な確認
+      if (config.singleCharKeys && Array.isArray(config.singleCharKeys)) {
+        const symbols = config.singleCharKeys.filter(k =>
+          !k.match(/[A-Za-z0-9]/));
+        if (symbols.length > 0) {
+          console.log("  Symbols in singleCharKeys:", symbols);
+          console.log("  Symbol characters (char codes):");
+          symbols.forEach(s => {
+            console.log(`    "${s}" = ${s.charCodeAt(0)}`);
+          });
+        }
+      }
+
+      // ヒント生成のテスト
+      const testHintConfig = {
+        singleCharKeys: config.singleCharKeys,
+        multiCharKeys: config.multiCharKeys,
+        maxSingleCharHints: config.maxSingleCharHints,
+      };
+      const testHints = generateHintsWithGroups(15, testHintConfig);
+      console.log("  Test hint generation (first 15):", testHints);
+      const symbolHints = testHints.filter(h => !h.match(/^[A-Za-z0-9]+$/));
+      if (symbolHints.length > 0) {
+        console.log("  Symbol hints generated:", symbolHints);
+      }
+    }
+
     // Coreインスタンスの設定を更新（use_japanese, enable_tinysegmenterなどが反映される）
     core.updateConfig(config);
     syncManagerConfig(config);
@@ -361,8 +415,16 @@ export async function main(denops: Denops): Promise<void> {
         const startTime = performance.now();
         try {
           const count = typeof wordCount === "number" ? wordCount : 0;
-          const markers = config.markers || ["a", "s", "d", "f"];
-          return generateHintsOptimized(count, markers);
+          // singleCharKeysとmultiCharKeysを使用するように修正
+          const hintConfig = {
+            singleCharKeys: config.singleCharKeys,
+            multiCharKeys: config.multiCharKeys,
+            maxSingleCharHints: config.maxSingleCharHints,
+            useNumericMultiCharHints: config.useNumericMultiCharHints,
+            // フォールバック用にmarkersも設定
+            markers: config.markers || ["a", "s", "d", "f"],
+          };
+          return generateHintsWithGroups(count, hintConfig);
         } finally {
           recordPerformance("hintGeneration", performance.now() - startTime);
         }
@@ -494,6 +556,33 @@ export function generateHintsOptimized(wordCount: number, markers: string[]): st
   hintsCache.set(cacheKey, hints);
   return hints;
 }
+
+/**
+ * 設定に基づいたヒント生成（singleChar/multiChar対応）
+ * @param wordCount - 生成するヒントの数
+ * @param config - プラグイン設定
+ * @returns 生成されたヒントの配列
+ */
+export function generateHintsFromConfig(wordCount: number, config: Config): string[] {
+  const hintConfig = {
+    singleCharKeys: config.singleCharKeys,
+    multiCharKeys: config.multiCharKeys,
+    maxSingleCharHints: config.maxSingleCharHints,
+    useNumericMultiCharHints: config.useNumericMultiCharHints,
+    markers: config.markers,
+  };
+
+  // キャッシュキーを生成
+  const cacheKey = `generateHintsWithGroups:${wordCount}:${JSON.stringify(hintConfig)}`;
+  const cached = hintsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const hints = generateHintsWithGroups(wordCount, hintConfig);
+  hintsCache.set(cacheKey, hints);
+  return hints;
+}
 /**
  * 最適化されたヒント表示
  * @param denops - Denops インスタンス
@@ -516,7 +605,14 @@ export async function displayHintsOptimized(
   const cursorPos = await denops.call("getpos", ".") as [number, number, number, number];
   const cursorLine = cursorPos[1];
   const cursorCol = cursorPos[2];
-  currentHints = assignHintsToWords(words, hints, cursorLine, cursorCol, "normal");
+
+  // ヒントが不足している場合、設定に基づいて追加生成
+  let actualHints = hints;
+  if (hints.length < words.length) {
+    actualHints = generateHintsFromConfig(words.length, config);
+  }
+
+  currentHints = assignHintsToWords(words, actualHints, cursorLine, cursorCol, "normal");
   hintsVisible = true;
   await displayHintsBatched(denops, currentHints, config, extmarkNamespace, fallbackMatchIds);
 }
@@ -573,6 +669,14 @@ async function displayHintsBatched(
 ): Promise<void> {
   _isRenderingHints = true;
   try {
+    // デバッグ: 記号ヒントの検出
+    const symbolHints = hints.filter(h =>
+      [';', ':', '[', ']', "'", '"', ',', '.', '/', '\\', '-', '=', '`', '@'].includes(h.hint)
+    );
+    if (symbolHints.length > 0 && config.debug) {
+      console.log(`[hellshake-yano] Symbol hints detected: ${symbolHints.map(h => h.hint).join(', ')}`);
+    }
+
     for (let i = 0; i < hints.length; i += HIGHLIGHT_BATCH_SIZE) {
       if (!_isRenderingHints) break;
       const batch = hints.slice(i, i + HIGHLIGHT_BATCH_SIZE);
@@ -789,6 +893,10 @@ async function processExtmarksBatched(
 ): Promise<void> {
   for (const hint of hints) {
     const position = calculateHintPositionWithCoordinateSystem(hint.word, "offset");
+    // 記号を含むヒントのデバッグ
+    if (config.debug && [';', ':', '[', ']', "'", '"', ',', '.', '/', '\\', '-', '=', '`', '@'].includes(hint.hint)) {
+      console.log(`[extmark] Displaying symbol hint: "${hint.hint}" at line ${position.line}, col ${position.col}`);
+    }
     await denops.call(
       "nvim_buf_set_extmark",
       0,
@@ -817,9 +925,69 @@ async function processMatchaddBatched(
 ): Promise<void> {
   for (const hint of hints) {
     const position = calculateHintPosition(hint.word, "offset");
-    const pattern = `\\%${position.line}l\\%${position.col}c.\\{${hint.hint.length}}`;
-    const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern) as number;
-    fallbackMatchIds.push(matchId);
+
+    // 記号を含むヒントの判定（より広範囲の記号をカバー）
+    const isSymbol = !hint.hint.match(/^[A-Za-z0-9]+$/);
+
+    if (isSymbol) {
+      if (config.debug || config.debugMode) {
+        console.log(`[matchadd] Symbol hint detected: "${hint.hint}" at line ${position.line}, col ${position.col}`);
+      }
+
+      try {
+        // 方法1: prop_typeを使用（Vim 8.2以降）
+        if (await denops.call("exists", "*prop_type_add") === 1) {
+          // prop_typeを作成（既存の場合はスキップ）
+          try {
+            await denops.call("prop_type_add", "HellshakeYanoSymbol", {
+              highlight: "HellshakeYanoMarker"
+            });
+          } catch {
+            // Already exists
+          }
+
+          // テキストプロパティを追加
+          await denops.call("prop_add", position.line, position.col, {
+            type: "HellshakeYanoSymbol",
+            length: hint.hint.length,
+            text: hint.hint
+          });
+        } else {
+          // 方法2: 従来のmatchaddを使用（改善版エスケープ）
+          // Vimパターン用の最小限のエスケープ
+          let escapedHint = hint.hint;
+
+          // 特定の記号のみエスケープ
+          const needsEscape = ['\\', '.', '[', ']', '^', '$', '*'];
+          if (needsEscape.some(char => hint.hint.includes(char))) {
+            escapedHint = hint.hint
+              .replace(/\\/g, '\\\\')
+              .replace(/\./g, '\\.')
+              .replace(/\[/g, '\\[')
+              .replace(/\]/g, '\\]')
+              .replace(/\^/g, '\\^')
+              .replace(/\$/g, '\\$')
+              .replace(/\*/g, '\\*');
+          }
+
+          // シンプルなパターン: 位置と長さのみ指定
+          const pattern = `\\%${position.line}l\\%${position.col}c.`;
+          const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 10) as number;
+          fallbackMatchIds.push(matchId);
+        }
+      } catch (error) {
+        console.error(`[matchadd] Failed to display symbol "${hint.hint}":`, error);
+        // フォールバック: 通常の文字として処理
+        const pattern = `\\%${position.line}l\\%${position.col}c.`;
+        const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern) as number;
+        fallbackMatchIds.push(matchId);
+      }
+    } else {
+      // 通常の英数字用パターン
+      const pattern = `\\%${position.line}l\\%${position.col}c.\\{${hint.hint.length}}`;
+      const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern) as number;
+      fallbackMatchIds.push(matchId);
+    }
   }
 }
 /**

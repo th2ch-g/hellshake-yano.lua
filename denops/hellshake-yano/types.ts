@@ -319,6 +319,35 @@ export interface HintKeyConfig {
    * ```
    */
   numericOnlyMultiChar?: boolean;
+  /**
+   * アルファベットヒントに加えて数字2文字ヒントを追加生成するか
+   *
+   * @description
+   * trueの場合、singleCharKeysとmultiCharKeysで生成されたアルファベットヒントの後に、
+   * 数字2文字ヒント（01-99, 00）を追加生成します。
+   * これにより、アルファベットと数字の組み合わせで100個以上のヒントパターンを提供できます。
+   *
+   * ### 生成順序（優先順位）：
+   * 1. singleCharKeys（1文字ヒント）
+   * 2. multiCharKeys（アルファベット2文字ヒント）
+   * 3. 数字2文字ヒント（01-09, 10-99, 00）
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const config: HintKeyConfig = {
+   *   singleCharKeys: ["A", "S", "D"],
+   *   multiCharKeys: ["B", "C"],
+   *   useNumericMultiCharHints: true
+   * };
+   * // 生成例:
+   * // 1文字: A, S, D
+   * // 2文字アルファベット: BB, BC, CB, CC
+   * // 2文字数字: 01, 02, 03, ..., 99, 00
+   * ```
+   */
+  useNumericMultiCharHints?: boolean;
 }
 
 // ===== 型エイリアス =====

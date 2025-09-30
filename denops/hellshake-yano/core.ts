@@ -936,18 +936,15 @@ export class Core {
     // Config型をConfigに変換
     const unifiedConfig = this.config; // 既にConfig形式
 
-    // ヒントグループ機能の判定
-    const shouldUseHintGroups = unifiedConfig.useHintGroups !== false &&
-      ((unifiedConfig.singleCharKeys && unifiedConfig.singleCharKeys.length > 0) ||
-       (unifiedConfig.multiCharKeys && unifiedConfig.multiCharKeys.length > 0));
-
-    if (shouldUseHintGroups) {
+    // singleCharKeys/multiCharKeysが設定されている場合は常に優先
+    if (unifiedConfig.singleCharKeys || unifiedConfig.multiCharKeys) {
       // HintKeyConfigオブジェクトを作成
-      const hintConfig: HintKeyConfig = {singleCharKeys: unifiedConfig.singleCharKeys,
+      const hintConfig: HintKeyConfig = {
+        singleCharKeys: unifiedConfig.singleCharKeys,
         multiCharKeys: unifiedConfig.multiCharKeys,
         markers: markers.length > 0 ? markers : undefined,
         maxSingleCharHints: unifiedConfig.maxSingleCharHints,
-        useDistancePriority: undefined, // Configには存在しない
+        useNumericMultiCharHints: unifiedConfig.useNumericMultiCharHints,
       };
 
       // 設定の検証
@@ -1288,10 +1285,25 @@ export class Core {
       const cursorLine = cursorPos[1];
       const cursorCol = cursorPos[2];
 
-      // ヒント生成
+      // ヒント生成 - singleCharKeysとmultiCharKeysを使用
       const unifiedConfig = this.config; // 既にConfig形式
-      const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
-      const hints = this.generateHintsOptimized(words.length, markers);
+
+      // singleCharKeys/multiCharKeysが設定されている場合は優先的に使用
+      let hints: string[];
+      if (unifiedConfig.singleCharKeys || unifiedConfig.multiCharKeys) {
+        const hintConfig: HintKeyConfig = {
+          singleCharKeys: unifiedConfig.singleCharKeys,
+          multiCharKeys: unifiedConfig.multiCharKeys,
+          maxSingleCharHints: unifiedConfig.maxSingleCharHints,
+          useNumericMultiCharHints: unifiedConfig.useNumericMultiCharHints,
+          markers: unifiedConfig.markers // フォールバック用
+        };
+        hints = generateHintsWithGroups(words.length, hintConfig);
+      } else {
+        // フォールバック: 従来のmarkers方式
+        const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
+        hints = this.generateHintsOptimized(words.length, markers);
+      }
 
       if (hints.length === 0) {
         return;
@@ -1536,9 +1548,9 @@ export class Core {
       const allKeys = [...(config.singleCharKeys || []), ...(config.multiCharKeys || [])];
       const hasNumbers = allKeys.some((k) => /^\d$/.test(k));
 
-      // 有効な文字範囲チェック（useNumbersがtrueまたはキー設定に数字が含まれていれば数字を許可）
-      const validPattern = (config.useNumbers || hasNumbers) ? /[A-Z0-9]/ : /[A-Z]/;
-      const errorMessage = (config.useNumbers || hasNumbers)
+      // 有効な文字範囲チェック（useNumbersがtrueまたはキー設定に数字が含まれている、またはuseNumericMultiCharHintsが有効なら数字を許可）
+      const validPattern = (config.useNumbers || hasNumbers || config.useNumericMultiCharHints) ? /[A-Z0-9]/ : /[A-Z]/;
+      const errorMessage = (config.useNumbers || hasNumbers || config.useNumericMultiCharHints)
         ? "Please use alphabetic characters (A-Z) or numbers (0-9) only"
         : "Please use alphabetic characters only";
 
@@ -1564,42 +1576,58 @@ export class Core {
 
       if (config.useHintGroups) {
         // デフォルトのキー設定
-        const singleOnlyKeys = config.singleCharKeys ||
-          [
-            "A",
-            "S",
-            "D",
-            "F",
-            "G",
-            "H",
-            "J",
-            "K",
-            "L",
-            "N",
-            "M",
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-          ];
+        let defaultSingleKeys = [
+          "A",
+          "S",
+          "D",
+          "F",
+          "G",
+          "H",
+          "J",
+          "K",
+          "L",
+          "N",
+          "M",
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+        ];
+
+        // useNumericMultiCharHintsが有効な場合、数字を単一文字キーから除外
+        // これにより数字は必ず2文字ヒントとして扱われる
+        if (config.useNumericMultiCharHints) {
+          defaultSingleKeys = defaultSingleKeys.filter(k => !/^\d$/.test(k));
+        }
+
+        const singleOnlyKeys = config.singleCharKeys || defaultSingleKeys;
         const multiOnlyKeys = config.multiCharKeys ||
           ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
         // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
-        if (singleOnlyKeys.includes(inputChar) && singleCharTarget) {
+        // ただし、useNumericMultiCharHintsが有効で数字の場合はスキップ
+        const shouldJumpImmediately = singleOnlyKeys.includes(inputChar) &&
+          singleCharTarget &&
+          !(config.useNumericMultiCharHints && /^\d$/.test(inputChar));
+
+        if (shouldJumpImmediately) {
           await this.jumpToHintTarget(denops, singleCharTarget, "single char hint (hint groups)");
           await this.hideHintsOptimized(denops);
           return;
         }
 
         // 2文字専用キーの場合：必ず2文字目を待つ（タイムアウトなし）
-        if (multiOnlyKeys.includes(inputChar) && multiCharHints.length > 0) {
+        // useNumericMultiCharHintsが有効な場合、数字も2文字専用として扱う
+        const isMultiCharKey = multiOnlyKeys.includes(inputChar) ||
+          (config.useNumericMultiCharHints && /^\d$/.test(inputChar));
+
+        if (isMultiCharKey && multiCharHints.length > 0) {
           // 2文字目の入力を待つ処理は後続のコードで実行される
           // ただし、タイムアウト処理をスキップするフラグを設定
           // この場合は通常の処理フローを続ける
@@ -1640,7 +1668,11 @@ export class Core {
           const multiOnlyKeys = config.multiCharKeys ||
             ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
 
-          if (multiOnlyKeys.includes(inputChar)) {
+          // useNumericMultiCharHintsが有効な場合、数字も2文字専用として扱う
+          const isMultiCharKey = multiOnlyKeys.includes(inputChar) ||
+            (config.useNumericMultiCharHints && /^\d$/.test(inputChar));
+
+          if (isMultiCharKey) {
             // 2文字専用キーの場合：タイムアウトなしで2文字目を待つ
             // ハイライト処理とは独立して実行
             secondChar = await denops.call("getchar") as number;
@@ -1714,9 +1746,9 @@ export class Core {
         return;
       }
 
-      // 有効な文字範囲チェック（数字対応）
-      const secondValidPattern = config.useNumbers ? /[A-Z0-9]/ : /[A-Z]/;
-      const secondErrorMessage = config.useNumbers
+      // 有効な文字範囲チェック（数字対応、useNumericMultiCharHintsも考慮）
+      const secondValidPattern = (config.useNumbers || config.useNumericMultiCharHints) ? /[A-Z0-9]/ : /[A-Z]/;
+      const secondErrorMessage = (config.useNumbers || config.useNumericMultiCharHints)
         ? "Second character must be alphabetic or numeric"
         : "Second character must be alphabetic";
 

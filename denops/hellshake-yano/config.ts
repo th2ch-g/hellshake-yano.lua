@@ -202,6 +202,14 @@ export interface Config {
   // Additional settings for backward compatibility
   /** 改善された単語検出を使用するか（WordConfig互換性のため） */
   useImprovedDetection?: boolean;
+
+  // Debug settings
+  /** デバッグモード - コンソールログ出力の有効化 */
+  debug?: boolean;
+
+  // Hint generation settings
+  /** 数字の複数文字ヒントを追加生成するか */
+  useNumericMultiCharHints?: boolean;
 }
 
 /**
@@ -252,6 +260,10 @@ export const DEFAULT_CONFIG: Config = {
   useNumbers: false,
   highlightSelected: false,
   debugCoordinates: false,
+  // process2 sub1: singleCharKeys - 1文字ヒント専用のキー配列
+  // アルファベット、数字に加えて以下の記号を使用可能:
+  // ;  :  [  ]  '  "  ,  .  /  \  -  =  `
+  // 例: singleCharKeys: ["A", "S", "D", ";", ":", "["]
   singleCharKeys: [
     "A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M",
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -290,9 +302,13 @@ export const DEFAULT_CONFIG: Config = {
   // Debug settings
   debugMode: false,
   performanceLog: false,
+  debug: false,
 
   // Additional settings for backward compatibility
   useImprovedDetection: true,
+
+  // Hint generation settings
+  useNumericMultiCharHints: false,
 };
 
 /**
@@ -513,7 +529,62 @@ export function validateUnifiedConfig(
 
   // debugCoordinates - boolean（型で保証）
 
-  // singleCharKeys, multiCharKeys - 配列（型で保証）
+  // singleCharKeys - 配列の検証 + 記号文字の検証 (process2 sub2)
+  if (config.singleCharKeys !== undefined) {
+    if (!Array.isArray(config.singleCharKeys)) {
+      errors.push("singleCharKeys must be an array");
+    } else if (config.singleCharKeys.length > 0) {
+      // 有効な記号のホワイトリスト
+      const validSymbols = new Set([";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"]);
+
+      for (let i = 0; i < config.singleCharKeys.length; i++) {
+        const key = config.singleCharKeys[i];
+
+        // 型チェック
+        if (typeof key !== "string") {
+          errors.push("singleCharKeys must be an array of strings");
+          break;
+        }
+
+        // 空文字列チェック
+        if (key === "") {
+          errors.push("singleCharKeys must not contain empty strings");
+          break;
+        }
+
+        // 1文字チェック
+        if (key.length !== 1) {
+          errors.push("singleCharKeys must contain only single character strings");
+          break;
+        }
+
+        // 有効な文字チェック（英数字または有効な記号）
+        const isAlphanumeric = /^[a-zA-Z0-9]$/.test(key);
+        const isValidSymbol = validSymbols.has(key);
+        const isWhitespace = /^\s$/.test(key);
+        const isControlChar = key.charCodeAt(0) < 32 || key.charCodeAt(0) === 127;
+
+        if (!isAlphanumeric && !isValidSymbol) {
+          if (isWhitespace) {
+            errors.push("singleCharKeys must not contain whitespace characters (space, tab, newline)");
+          } else if (isControlChar) {
+            errors.push("singleCharKeys must not contain control characters");
+          } else {
+            errors.push(`singleCharKeys contains invalid character: '${key}'. Valid symbols are: ; : [ ] ' " , . / \\ - = \``);
+          }
+          break;
+        }
+      }
+
+      // 重複チェック
+      const uniqueKeys = new Set(config.singleCharKeys);
+      if (uniqueKeys.size !== config.singleCharKeys.length) {
+        errors.push("singleCharKeys must contain unique values");
+      }
+    }
+  }
+
+  // multiCharKeys - 配列（型で保証）
 
   // Extended hint settings validation (4 properties)
   // maxSingleCharHints - オプショナル正の整数

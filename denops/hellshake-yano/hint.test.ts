@@ -4,7 +4,7 @@
  */
 
 import { assertEquals, assertExists } from "jsr:@std/assert";
-import type { Word, HintMapping } from "./types.ts";
+import type { Word, HintMapping, HintKeyConfig } from "./types.ts";
 import { assignHintsToWords, generateHintsWithGroups } from "./hint.ts";
 import type { Config } from "./config.ts";
 
@@ -231,4 +231,381 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   // すべてのヒントが一意であることを確認
   const uniqueHints = new Set(hints);
   assertEquals(uniqueHints.size, wordCount, "すべてのヒントが一意");
+});
+
+// ===== Process3: 数字専用モードのヒント生成 =====
+// Note: isNumericOnlyKeys と generateMultiCharHintsFromKeys は実装後にexportする必要があります
+
+Deno.test("Process3 Sub1: isNumericOnlyKeys - 数字のみの配列を正しく判定", async () => {
+  const { isNumericOnlyKeys } = await import("./hint.ts");
+
+  // 数字のみの配列
+  assertEquals(isNumericOnlyKeys(["0", "1", "2", "3"]), true);
+  assertEquals(isNumericOnlyKeys(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]), true);
+  assertEquals(isNumericOnlyKeys(["5", "6", "7"]), true);
+
+  // アルファベットが混在
+  assertEquals(isNumericOnlyKeys(["0", "1", "A"]), false);
+  assertEquals(isNumericOnlyKeys(["A", "B", "C"]), false);
+
+  // 記号が混在
+  assertEquals(isNumericOnlyKeys(["0", "1", "."]), false);
+  assertEquals(isNumericOnlyKeys([".", "-"]), false);
+
+  // 空配列
+  assertEquals(isNumericOnlyKeys([]), false);
+
+  // 2桁の数字（文字列として）
+  assertEquals(isNumericOnlyKeys(["10", "20"]), false);
+});
+
+Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字専用モードで00-99を生成", async () => {
+  const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
+
+  // 10個の数字キーで数字専用モード
+  const keys = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  const hints = generateMultiCharHintsFromKeys(keys, 100);
+
+  // 100個生成される
+  assertEquals(hints.length, 100);
+
+  // 優先順位を確認: 01-09が最初
+  assertEquals(hints.slice(0, 9), ["01", "02", "03", "04", "05", "06", "07", "08", "09"]);
+
+  // 次に10-99
+  const expectedTens = [];
+  for (let i = 10; i < 100; i++) {
+    expectedTens.push(String(i).padStart(2, "0"));
+  }
+  assertEquals(hints.slice(9, 99), expectedTens);
+
+  // 最後に00
+  assertEquals(hints[99], "00");
+});
+
+Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字専用モードで50個のみ生成", async () => {
+  const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
+
+  const keys = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  const hints = generateMultiCharHintsFromKeys(keys, 50);
+
+  // 50個のみ生成
+  assertEquals(hints.length, 50);
+
+  // 01-09の9個 + 10-49の40個 + 50の1個
+  assertEquals(hints[0], "01");
+  assertEquals(hints[8], "09");
+  assertEquals(hints[9], "10");
+  assertEquals(hints[49], "50");
+});
+
+Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 非数字専用モードでは通常の生成", async () => {
+  const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
+
+  // アルファベットキー
+  const keys = ["A", "B", "C"];
+  const hints = generateMultiCharHintsFromKeys(keys, 10);
+
+  // 通常の2文字組み合わせ: AA, AB, AC, BA, BB, BC, CA, CB, CC
+  assertEquals(hints.length, 9); // 3² = 9
+  assertEquals(hints, ["AA", "AB", "AC", "BA", "BB", "BC", "CA", "CB", "CC"]);
+});
+
+Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字とアルファベット混在は通常モード", async () => {
+  const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
+
+  // 混在キー
+  const keys = ["0", "1", "A", "B"];
+  const hints = generateMultiCharHintsFromKeys(keys, 16);
+
+  // 通常の2文字組み合わせ: 4² = 16
+  assertEquals(hints.length, 16);
+  assertEquals(hints[0], "00");
+  assertEquals(hints[1], "01");
+  assertEquals(hints[2], "0A");
+  assertEquals(hints[3], "0B");
+  // 数字専用モードの優先順位は適用されない
+});
+
+Deno.test("Process3 Sub3: generateHintsWithGroups - 数字専用multiCharKeysで自動検出", () => {
+  const config = {
+    singleCharKeys: ["A", "S", "D"], // 通常のキー
+    multiCharKeys: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], // 数字専用
+    maxSingleCharHints: 3,
+  };
+
+  const hints = generateHintsWithGroups(50, config);
+
+  // 最初の3個が1文字ヒント
+  assertEquals(hints.slice(0, 3), ["A", "S", "D"]);
+
+  // 残りが数字専用モードの2文字ヒント（01から開始）
+  assertEquals(hints[3], "01");
+  assertEquals(hints[4], "02");
+  assertEquals(hints[11], "09");
+  assertEquals(hints[12], "10");
+});
+
+Deno.test("Process3 Sub3: generateHintsWithGroups - singleCharKeysに記号がある場合", () => {
+  const config = {
+    singleCharKeys: [".", ",", ";"], // 記号
+    multiCharKeys: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], // 数字専用
+    maxSingleCharHints: 3,
+  };
+
+  const hints = generateHintsWithGroups(20, config);
+
+  // 記号が1文字ヒントとして使用される
+  assertEquals(hints[0], ".");
+  assertEquals(hints[1], ",");
+  assertEquals(hints[2], ";");
+
+  // 数字専用モードの2文字ヒント
+  assertEquals(hints[3], "01");
+  assertEquals(hints[4], "02");
+});
+
+// ===== Process5: useNumericMultiCharHints機能のテスト =====
+
+Deno.test("Process5 Sub1: HintKeyConfig - useNumericMultiCharHintsプロパティの型定義", () => {
+  // useNumericMultiCharHintsプロパティが存在することを確認
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A", "S", "D"],
+    multiCharKeys: ["B", "C", "E"],
+    useNumericMultiCharHints: true
+  };
+
+  assertEquals(typeof config.useNumericMultiCharHints, "boolean");
+});
+
+Deno.test("Process5 Sub2: generateNumericHints - 数字ヒントを01-99, 00の順で生成", async () => {
+  const { generateNumericHints } = await import("./hint.ts");
+
+  // 100個の数字ヒントを生成
+  const hints = generateNumericHints(100);
+
+  // 100個生成される
+  assertEquals(hints.length, 100);
+
+  // 優先順位を確認: 01-09が最初
+  assertEquals(hints.slice(0, 9), ["01", "02", "03", "04", "05", "06", "07", "08", "09"]);
+
+  // 次に10-99 (90個)
+  for (let i = 10; i <= 99; i++) {
+    assertEquals(hints[i - 1], String(i).padStart(2, "0"));
+  }
+
+  // 最後に00
+  assertEquals(hints[99], "00");
+});
+
+Deno.test("Process5 Sub2: generateNumericHints - 必要な数だけ生成", async () => {
+  const { generateNumericHints } = await import("./hint.ts");
+
+  // 50個のみ要求
+  const hints = generateNumericHints(50);
+  assertEquals(hints.length, 50);
+  assertEquals(hints[0], "01");
+  assertEquals(hints[8], "09");
+  assertEquals(hints[9], "10");
+  assertEquals(hints[49], "50");
+
+  // 10個のみ要求
+  const hints10 = generateNumericHints(10);
+  assertEquals(hints10.length, 10);
+  assertEquals(hints10, ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]);
+
+  // 1個のみ要求
+  const hints1 = generateNumericHints(1);
+  assertEquals(hints1.length, 1);
+  assertEquals(hints1[0], "01");
+});
+
+Deno.test("Process5 Sub2: generateNumericHints - 0個または負の数の場合は空配列", async () => {
+  const { generateNumericHints } = await import("./hint.ts");
+
+  assertEquals(generateNumericHints(0), []);
+  assertEquals(generateNumericHints(-1), []);
+  assertEquals(generateNumericHints(-10), []);
+});
+
+Deno.test("Process5 Sub2: generateNumericHints - 100個を超える要求でも100個まで", async () => {
+  const { generateNumericHints } = await import("./hint.ts");
+
+  const hints = generateNumericHints(150);
+  assertEquals(hints.length, 100, "最大100個まで生成");
+  assertEquals(hints[99], "00");
+});
+
+Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints=trueでアルファベット+数字ヒントを生成", () => {
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A", "S", "D"],
+    multiCharKeys: ["B", "C", "E"],
+    maxSingleCharHints: 3,
+    useNumericMultiCharHints: true
+  };
+
+  // 20個のヒントを要求
+  const hints = generateHintsWithGroups(20, config);
+
+  assertEquals(hints.length, 20);
+
+  // 最初の3個が1文字ヒント
+  assertEquals(hints[0], "A");
+  assertEquals(hints[1], "S");
+  assertEquals(hints[2], "D");
+
+  // 次にアルファベット2文字ヒント（multiCharKeys使用）
+  // B, C, Eから生成: BB, BC, BE, CB, CC, CE, EB, EC, EE = 9個
+  const alphabetHints = hints.slice(3, 12);
+  assertEquals(alphabetHints.length, 9);
+  assertEquals(alphabetHints, ["BB", "BC", "BE", "CB", "CC", "CE", "EB", "EC", "EE"]);
+
+  // 残り8個が数字ヒント: 01-08
+  assertEquals(hints[12], "01");
+  assertEquals(hints[13], "02");
+  assertEquals(hints[14], "03");
+  assertEquals(hints[15], "04");
+  assertEquals(hints[16], "05");
+  assertEquals(hints[17], "06");
+  assertEquals(hints[18], "07");
+  assertEquals(hints[19], "08");
+});
+
+Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints=falseでは数字ヒントなし", () => {
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A", "S"],
+    multiCharKeys: ["B", "C"],
+    maxSingleCharHints: 2,
+    useNumericMultiCharHints: false
+  };
+
+  // 10個のヒントを要求
+  const hints = generateHintsWithGroups(10, config);
+
+  // multiCharKeysで生成できるのは2x2=4個のみ
+  // 合計: 1文字2個 + 2文字4個 = 6個
+  assertEquals(hints.length, 6);
+
+  // 最初の2個が1文字ヒント
+  assertEquals(hints[0], "A");
+  assertEquals(hints[1], "S");
+
+  // 残り4個がアルファベット2文字ヒント: BB, BC, CB, CC
+  const multiCharHints = hints.slice(2);
+  assertEquals(multiCharHints.length, 4);
+  assertEquals(multiCharHints, ["BB", "BC", "CB", "CC"]);
+
+  // useNumericMultiCharHints=falseなので数字ヒントは含まれない
+  assertEquals(multiCharHints.every(h => !/^\d+$/.test(h)), true, "数字のみのヒントは含まれない");
+});
+
+Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints未定義ではデフォルトfalse", () => {
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A"],
+    multiCharKeys: ["B"],
+    maxSingleCharHints: 1
+    // useNumericMultiCharHints未定義
+  };
+
+  const hints = generateHintsWithGroups(5, config);
+
+  // multiCharKeysで生成できるのは1x1=1個のみ
+  // 合計: 1文字1個 + 2文字1個 = 2個
+  assertEquals(hints.length, 2);
+  assertEquals(hints[0], "A");
+  assertEquals(hints[1], "BB");
+
+  // useNumericMultiCharHints未定義（デフォルトfalse）なので数字ヒントは追加されない
+});
+
+Deno.test("Process5 Sub3: generateHintsWithGroups - 大量ヒント要求でアルファベット+数字の組み合わせ", () => {
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A", "S", "D", "F"], // 4個
+    multiCharKeys: ["B", "C", "E", "I"], // 4個 → 16個の2文字ヒント
+    maxSingleCharHints: 4,
+    useNumericMultiCharHints: true
+  };
+
+  // 120個のヒントを要求（1文字4個 + アルファベット2文字16個 + 数字100個）
+  const hints = generateHintsWithGroups(120, config);
+
+  assertEquals(hints.length, 120);
+
+  // 最初の4個が1文字ヒント
+  assertEquals(hints.slice(0, 4), ["A", "S", "D", "F"]);
+
+  // 次の16個がアルファベット2文字ヒント
+  const alphabetHints = hints.slice(4, 20);
+  assertEquals(alphabetHints.length, 16);
+
+  // 残り100個が数字ヒント: 01-99, 00
+  assertEquals(hints[20], "01");
+  assertEquals(hints[28], "09");
+  assertEquals(hints[29], "10");
+  assertEquals(hints[118], "99");
+  assertEquals(hints[119], "00");
+});
+
+Deno.test("Process5 Sub3: generateHintsWithGroups - multiCharKeysが空でもuseNumericMultiCharHints=trueで数字ヒント生成", () => {
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A", "S", "D"],
+    multiCharKeys: [], // 空配列
+    maxSingleCharHints: 3,
+    useNumericMultiCharHints: true
+  };
+
+  const hints = generateHintsWithGroups(15, config);
+
+  assertEquals(hints.length, 15);
+
+  // 最初の3個が1文字ヒント
+  assertEquals(hints.slice(0, 3), ["A", "S", "D"]);
+
+  // multiCharKeysが空なので、直接数字ヒントへ
+  assertEquals(hints[3], "01");
+  assertEquals(hints[4], "02");
+  assertEquals(hints[14], "12");
+});
+
+Deno.test("Process5 Sub3: validateHintKeyConfig - useNumericMultiCharHintsのバリデーション", async () => {
+  const { validateHintKeyConfig } = await import("./hint.ts");
+
+  // boolean値は有効
+  const validTrue = validateHintKeyConfig({
+    useNumericMultiCharHints: true
+  });
+  assertEquals(validTrue.valid, true);
+
+  const validFalse = validateHintKeyConfig({
+    useNumericMultiCharHints: false
+  });
+  assertEquals(validFalse.valid, true);
+
+  // 未定義も有効
+  const validUndefined = validateHintKeyConfig({});
+  assertEquals(validUndefined.valid, true);
+});
+
+Deno.test("Process5 Sub3: 優先順位の検証 - singleChar → multiChar(アルファベット) → 数字", () => {
+  const config: HintKeyConfig = {
+    singleCharKeys: ["A", "S"],
+    multiCharKeys: ["B", "C"],
+    maxSingleCharHints: 2,
+    useNumericMultiCharHints: true
+  };
+
+  const hints = generateHintsWithGroups(10, config);
+
+  // 優先順位の確認
+  assertEquals(hints[0], "A", "1. singleCharKeys");
+  assertEquals(hints[1], "S", "1. singleCharKeys");
+  assertEquals(hints[2], "BB", "2. multiCharKeys (アルファベット2文字)");
+  assertEquals(hints[3], "BC", "2. multiCharKeys (アルファベット2文字)");
+  assertEquals(hints[4], "CB", "2. multiCharKeys (アルファベット2文字)");
+  assertEquals(hints[5], "CC", "2. multiCharKeys (アルファベット2文字)");
+  assertEquals(hints[6], "01", "3. 数字2文字（01から）");
+  assertEquals(hints[7], "02", "3. 数字2文字");
+  assertEquals(hints[8], "03", "3. 数字2文字");
+  assertEquals(hints[9], "04", "3. 数字2文字");
 });

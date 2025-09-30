@@ -4,7 +4,7 @@
 - ヒントキーの設定をより柔軟にカスタマイズ可能にする機能拡張
 - singleCharKeysにキーボード記号を使用可能にし、アルファベットの複数文字ヒントに加えて数字の複数文字ヒントも追加生成可能にする
 
-### goal
+### f
 - ユーザーが好みのキーボード記号（`;`, `:`, `[`, `]`など）を1文字ヒントに使用できる
 - `useNumericMultiCharHints: true`により、アルファベットの2文字ヒント（BB, BC...）に加えて、数字の2文字ヒント（01, 02...99）も追加生成される
 - 大量の単語に対してより多くのヒントパターンを提供し、効率的な移動を実現
@@ -119,19 +119,19 @@
 #### sub1 型定義の追加
 @target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
 @ref: `HintKeyConfig`インターフェース
-- [ ] `useNumericMultiCharHints?: boolean`プロパティの追加
-- [ ] JSDocコメントで詳細な説明を追加
+- [x] `useNumericMultiCharHints?: boolean`プロパティの追加
+- [x] JSDocコメントで詳細な説明を追加
 
 #### sub2 数字ヒント生成関数の実装
 @target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-- [ ] `generateNumericHints`関数の実装（01-99, 00の順序で生成）
-- [ ] generateHintsWithGroups関数にuseNumericMultiCharHintsサポートを追加
-- [ ] アルファベットヒントの後に数字ヒントを追加する処理
+- [x] `generateNumericHints`関数の実装（01-99, 00の順序で生成）
+- [x] generateHintsWithGroups関数にuseNumericMultiCharHintsサポートを追加
+- [x] アルファベットヒントの後に数字ヒントを追加する処理
 
 #### sub3 バリデーションの追加
 @target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
 @ref: `validateHintKeyConfig`関数
-- [ ] useNumericMultiCharHintsフラグのバリデーション追加
+- [x] useNumericMultiCharHintsフラグのバリデーション追加
 
 ### process10 ユニットテスト
 #### sub1 記号対応のテスト

@@ -262,3 +262,116 @@ Deno.test("validateConfigFunction - エラーメッセージの一貫性", () =>
   assertEquals(errorMessage.includes("motionCount"), true, "Error message should use camelCase");
   assertEquals(errorMessage.includes("motion_count"), false, "Error message should not use snake_case");
 });
+
+// process2 sub2: 記号文字バリデーションテスト (TDD Red Phase)
+Deno.test("validateConfigFunction - singleCharKeys 記号文字バリデーション", () => {
+  // 正常系: 有効な記号のみ
+  const validSymbols = [";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"];
+  let result = validateConfigFunction({
+    singleCharKeys: ["A", "S", "D", ...validSymbols]
+  });
+  assertEquals(result.valid, true, "Valid symbols should be accepted");
+  assertEquals(result.errors.length, 0);
+
+  // 正常系: アルファベットと数字のみ（既存の動作）
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", "C", "0", "1", "2"]
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  // 正常系: すべて記号
+  result = validateConfigFunction({
+    singleCharKeys: [";", ":", "[", "]"]
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  // 異常系: 無効な記号（スペース）
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", " "]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("whitespace")), true,
+    "Space should be rejected as invalid symbol");
+
+  // 異常系: 無効な記号（タブ文字）
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", "\t"]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("whitespace")), true,
+    "Tab character should be rejected");
+
+  // 異常系: 無効な記号（改行文字）
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", "\n"]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("whitespace")), true,
+    "Newline should be rejected");
+
+  // 異常系: 複数文字
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", "AB"]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("single character")), true,
+    "Multi-character strings should be rejected");
+
+  // 異常系: 空文字列
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", ""]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("empty")), true,
+    "Empty string should be rejected");
+
+  // 異常系: 特殊文字（制御文字）
+  result = validateConfigFunction({
+    singleCharKeys: ["A", "B", "\x00"]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("control")), true,
+    "Control characters should be rejected");
+});
+
+Deno.test("validateConfigFunction - singleCharKeys 記号重複チェック", () => {
+  // 異常系: 記号の重複
+  const result = validateConfigFunction({
+    singleCharKeys: ["A", ";", ";", "B"]
+  });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.some(e => e.includes("singleCharKeys") && e.includes("unique")), true,
+    "Duplicate symbols should be rejected");
+});
+
+Deno.test("validateConfigFunction - singleCharKeys エッジケース", () => {
+  // 正常系: 記号のみの設定
+  let result = validateConfigFunction({
+    singleCharKeys: [";", ":", ",", "."]
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  // 正常系: バックスラッシュ
+  result = validateConfigFunction({
+    singleCharKeys: ["\\"]
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  // 正常系: バッククォート
+  result = validateConfigFunction({
+    singleCharKeys: ["`"]
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  // 正常系: クォートマーク
+  result = validateConfigFunction({
+    singleCharKeys: ["'", '"']
+  });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+});

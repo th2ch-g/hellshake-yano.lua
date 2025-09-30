@@ -1199,19 +1199,26 @@ export function calculateHintPositionWithCoordinateSystem(
 
 /**
  * キーグループを使用したヒント生成（高度な振り分けロジック付き）
- * @description 1文字ヒント用と2文字以上ヒント用のキーを分けて管理し、効率的なヒント生成を行う。数字フォールバック機能付き
+ * @description 1文字ヒント用と2文字以上ヒント用のキーを分けて管理し、効率的なヒント生成を行う。数字専用モード自動検出機能付き
  *
  * ## ヒントグループ生成ロジック
  * 1. **1文字ヒント優先**: max_single_char_hints で指定された数まで単一文字ヒントを生成
  * 2. **複数文字ヒント**: 1文字ヒントを使い切った後、multi_char_keys から2文字の組み合わせを生成
- * 3. **数字フォールバック**: アルファベット組み合わせを使い切った場合、00-99の数字ヒントを使用
- * 4. **3文字エクステンション**: 数字でも足りない場合、3文字の組み合わせまで拡張
+ * 3. **数字専用モード自動検出**: multi_char_keysが0-9のみの場合、01-09→10-99→00の優先順位で生成
+ * 4. **数字フォールバック**: アルファベット組み合わせを使い切った場合、00-99の数字ヒントを使用
+ * 5. **3文字エクステンション**: 数字でも足りない場合、3文字の組み合わせまで拡張
  *
  * ## 単一文字と複数文字の振り分け
- * - **single_char_keys**: ホームポジション重視のキー配列（例: ASDFGHJKL）
- * - **multi_char_keys**: 複数文字ヒント用のキー配列（例: QWERTYUIOP）
+ * - **single_char_keys**: ホームポジション重視のキー配列（例: ASDFGHJKL、記号も可）
+ * - **multi_char_keys**: 複数文字ヒント用のキー配列（例: QWERTYUIOP、数字専用も可）
  * - **分離の利点**: タイピング効率とヒント識別性を両立
  * - **重複防止**: 設定検証により同じキーが両方のグループに含まれることを防止
+ *
+ * ## 数字専用モード（Numeric-Only Mode）
+ * - **検出条件**: multi_char_keysが['0','1','2','3','4','5','6','7','8','9']のような数字のみの配列
+ * - **生成パターン**: 01,02,03,...,09,10,11,...,99,00（優先順位順）
+ * - **最大数**: 100個の2桁数字ヒント
+ * - **利点**: 視覚的に識別しやすく、テンキー操作に最適化
  *
  * ## 数字フォールバックの仕組み
  * - **発動条件**: アルファベット2文字組み合わせを使い切った場合
@@ -1235,6 +1242,25 @@ export function calculateHintPositionWithCoordinateSystem(
  * const hints = generateHintsWithGroups(5, config);
  * // 結果: ['A', 'S', 'QQ', 'QW', 'QE']
  *
+ * // 数字専用モード自動検出例
+ * const numericConfig = {
+ *   single_char_keys: ['A', 'S', 'D'],
+ *   multi_char_keys: ['0','1','2','3','4','5','6','7','8','9'],
+ *   max_single_char_hints: 3
+ * };
+ * const numericHints = generateHintsWithGroups(10, numericConfig);
+ * // 結果: ['A', 'S', 'D', '01', '02', '03', '04', '05', '06', '07']
+ * // 説明: multi_char_keysが数字のみなので、01から優先順位順に生成
+ *
+ * // 記号とのsingle_char_keys混在例
+ * const symbolConfig = {
+ *   single_char_keys: ['.', ',', ';'],
+ *   multi_char_keys: ['0','1','2','3','4','5','6','7','8','9'],
+ *   max_single_char_hints: 3
+ * };
+ * const symbolHints = generateHintsWithGroups(8, symbolConfig);
+ * // 結果: ['.', ',', ';', '01', '02', '03', '04', '05']
+ *
  * // 数字フォールバック例
  * const smallConfig = {
  *   single_char_keys: ['A'],
@@ -1243,14 +1269,6 @@ export function calculateHintPositionWithCoordinateSystem(
  * };
  * const manyHints = generateHintsWithGroups(5, smallConfig);
  * // 結果: ['A', 'QQ', '00', '01', '02']
- *
- * // 大量ヒント生成例（3文字まで拡張）
- * const extremeHints = generateHintsWithGroups(150, {
- *   single_char_keys: ['A', 'B'],
- *   multi_char_keys: ['X', 'Y'],
- *   max_single_char_hints: 2
- * });
- * // 結果: ['A', 'B', 'XX', 'XY', 'YX', 'YY', '00'...'99', 'XXX', 'XXY'...]
  * ```
  */
 export function generateHintsWithGroups(
@@ -1292,10 +1310,31 @@ export function generateHintsWithGroups(
   let remainingCount = wordCount - singleCharCount;
 
   if (remainingCount > 0) {
+    // useNumericMultiCharHintsが有効な場合、数字ヒント用のスペースを予約
+    let alphaDoubleCount = remainingCount;
+    let numericCount = 0;
+
+    if (config.useNumericMultiCharHints) {
+      // 残りを半々に分ける、または数字ヒントを最低20個確保
+      numericCount = Math.min(remainingCount, Math.max(20, Math.floor(remainingCount / 2)));
+      alphaDoubleCount = remainingCount - numericCount;
+    }
+
+    // アルファベット2文字ヒントを生成
     const doubleLimit = multiCharKeys.length * multiCharKeys.length;
-    const doubleCount = Math.min(remainingCount, doubleLimit);
-    hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, doubleCount, 2));
-    remainingCount -= doubleCount;
+    const actualAlphaCount = Math.min(alphaDoubleCount, doubleLimit);
+    hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, actualAlphaCount, 2));
+    remainingCount -= actualAlphaCount;
+
+    // 数字2文字ヒントを生成
+    if (config.useNumericMultiCharHints && (numericCount > 0 || remainingCount > 0)) {
+      const targetNumericCount = Math.min(numericCount + remainingCount, wordCount - hints.length); // 要求数を超えない
+      if (targetNumericCount > 0) {
+        const numericHints = generateNumericHints(targetNumericCount);
+        hints.push(...numericHints);
+        remainingCount -= numericHints.length;
+      }
+    }
   }
 
   // 数字フォールバックを削除 - single_char_keysとmulti_char_keysの組み合わせのみを使用
@@ -1320,50 +1359,129 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
  * 指定されたキーから複数文字ヒントを生成（多段階フォールバック付き）
  * @description 2文字組み合わせ → 3文字組み合わせの段階的ヒント生成システム
  *
- * ## 生成アルゴリズムの詳細
+ * ## 数字専用モード（Numeric-Only Mode）
+ * keysが0-9の数字のみで構成される場合、自動的に数字専用モードを有効化
+ * - **生成パターン**: 00-99の2桁数字ヒント（最大100個）
+ * - **優先順位**: 01-09 → 10-99 → 00 の順で生成
+ * - **使用例**: ['0','1','2','3','4','5','6','7','8','9'] → 01,02,...,99,00
+ *
+ * ## 通常モード（Normal Mode）
+ * アルファベットや記号が含まれる場合の生成アルゴリズム
  * 1. **2文字組み合わせ**: keys × keys の直積（例: ['A','B'] → ['AA','AB','BA','BB']）
  * 2. **3文字エクステンション**: 2文字でも不足時にkeys³の3文字組み合わせ
  * 3. **順序最適化**: より短いヒントを優先的に生成
  *
  * ## パフォーマンス特性とスケーラビリティ
- * - **2文字段階**: O(k²) - kはキー数
- * - **3文字段階**: O(k³) - kはキー数
+ * - **数字専用モード**: O(min(count, 100)) - 固定上限100個
+ * - **通常モード 2文字段階**: O(k²) - kはキー数
+ * - **通常モード 3文字段階**: O(k³) - kはキー数
  * - **メモリ効率**: 必要分のみ生成、事前計算なし
- * - **最大容量**: k² + k³個のヒント（kはキー数）
+ * - **最大容量（通常）**: k² + k³個のヒント（kはキー数）
+ * - **最大容量（数字）**: 100個のヒント
  *
  * ## 実用的な容量計算
+ * - 数字専用: 100個のヒント（固定）
  * - k=5キーの場合: 25 + 125 = 150個のヒント
  * - k=10キーの場合: 100 + 1000 = 1100個のヒント
  * - k=26キーの場合: 676 + 17576 = 18252個のヒント
  *
- * @param keys - 使用可能なキーの配列（通常は単一文字のアルファベット）
- * @param count - 生成するヒント数（最大値はkeys² + keys³）
- * @returns string[] - 生成された複数文字ヒントの配列（2文字 → 3文字の順）
- * @complexity O(min(count, k² + k³)) - kはキー数
+ * @param keys - 使用可能なキーの配列（数字のみまたはアルファベット/記号）
+ * @param count - 生成するヒント数（最大値は数字モード:100、通常モード:keys² + keys³）
+ * @returns string[] - 生成された複数文字ヒントの配列
+ * @complexity 数字モード:O(min(count,100)) / 通常モード:O(min(count,k²+k³))
  * @since 1.0.0
  * @example
  * ```typescript
- * // 基本的な2文字ヒント生成
+ * // 数字専用モード例
+ * const numericHints = generateMultiCharHintsFromKeys(['0','1','2','3','4','5','6','7','8','9'], 10);
+ * // 結果: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+ * // 説明: 優先順位に基づいて01から開始
+ *
+ * // 基本的な2文字ヒント生成（通常モード）
  * const basicHints = generateMultiCharHintsFromKeys(['A', 'B'], 5);
  * // 結果: ['AA', 'AB', 'BA', 'BB', 'AAA']
  * // 説明: 2文字組み合わせ4個 + 3文字1個
- *
- * // 3文字エクステンション例
- * const extended = generateMultiCharHintsFromKeys(['A', 'B'], 10);
- * // 結果: ['AA', 'AB', 'BA', 'BB', 'AAA', 'AAB', 'ABA', 'ABB', 'BAA', 'BAB']
- * // 説明: 2文字4個 + 3文字6個
- *
- * // 大量ヒント生成（3文字まで使用）
- * const massive = generateMultiCharHintsFromKeys(['Q', 'W'], 12);
- * // 結果: 2文字4個 + 3文字8個 = 12個
- * // ['QQ', 'QW', 'WQ', 'WW', 'QQQ', 'QQW', 'QWQ', 'QWW', 'WQQ', 'WQW', 'WWQ', 'WWW']
  *
  * // 実際のキーボード配列例
  * const homeRow = generateMultiCharHintsFromKeys(['A','S','D','F'], 20);
  * // ホームロウキーから20個のヒント生成（16の2文字 + 4の3文字）
  * ```
  */
-function generateMultiCharHintsFromKeys(
+
+/**
+ * キー配列が数字のみで構成されているかをチェック
+ * @description multiCharKeys数字専用モードの判定に使用
+ * @param keys - チェックするキー配列
+ * @returns boolean - すべてのキーが0-9の1文字数字の場合true
+ * @since 1.0.0
+ * @example
+ * ```typescript
+ * isNumericOnlyKeys(["0", "1", "2"]) // => true
+ * isNumericOnlyKeys(["0", "1", "A"]) // => false
+ * isNumericOnlyKeys([]) // => false
+ * ```
+ */
+export function isNumericOnlyKeys(keys: string[]): boolean {
+  if (keys.length === 0) {
+    return false;
+  }
+  return keys.every(key => key.length === 1 && key >= "0" && key <= "9");
+}
+
+/**
+ * 数字2文字ヒントを優先順位順に生成する
+ *
+ * @description
+ * 01-09, 10-99, 00の順序で数字2文字ヒントを生成します。
+ * useNumericMultiCharHints機能で使用される関数です。
+ *
+ * ### 生成順序：
+ * 1. 01-09（9個）
+ * 2. 10-99（90個）
+ * 3. 00（1個）
+ *
+ * @param count - 生成するヒント数（最大100）
+ * @returns string[] 生成された数字ヒント配列
+ *
+ * @example
+ * ```typescript
+ * generateNumericHints(5);   // ["01", "02", "03", "04", "05"]
+ * generateNumericHints(10);  // ["01", "02", ..., "09", "10"]
+ * generateNumericHints(100); // ["01", "02", ..., "99", "00"]
+ * ```
+ *
+ * @since 1.0.0
+ */
+export function generateNumericHints(count: number): string[] {
+  const hints: string[] = [];
+
+  // 0個以下の要求は空配列を返す
+  if (count <= 0) {
+    return hints;
+  }
+
+  // 最大100個まで生成
+  const maxCount = Math.min(count, 100);
+
+  // 優先順位1: 01-09を生成
+  for (let i = 1; i <= 9 && hints.length < maxCount; i++) {
+    hints.push(String(i).padStart(2, "0"));
+  }
+
+  // 優先順位2: 10-99を生成
+  for (let i = 10; i < 100 && hints.length < maxCount; i++) {
+    hints.push(String(i).padStart(2, "0"));
+  }
+
+  // 優先順位3: 最後に00を生成
+  if (hints.length < maxCount) {
+    hints.push("00");
+  }
+
+  return hints;
+}
+
+export function generateMultiCharHintsFromKeys(
   keys: string[],
   count: number,
   startLength: number = 2,
@@ -1373,6 +1491,30 @@ function generateMultiCharHintsFromKeys(
     return hints;
   }
 
+  // 数字専用モードの判定
+  if (isNumericOnlyKeys(keys)) {
+    // 数字専用モード: 00-99を優先順位に基づいて生成
+    // 優先順位: 01-09, 10-99, 00
+
+    // 01-09を生成
+    for (let i = 1; i <= 9 && hints.length < count; i++) {
+      hints.push(String(i).padStart(2, "0"));
+    }
+
+    // 10-99を生成
+    for (let i = 10; i < 100 && hints.length < count; i++) {
+      hints.push(String(i).padStart(2, "0"));
+    }
+
+    // 最後に00を生成
+    if (hints.length < count) {
+      hints.push("00");
+    }
+
+    return hints;
+  }
+
+  // 通常モード: 従来の2文字組み合わせ生成
   const maxLength = 2; // 2文字までに制限（3文字生成を廃止）
 
   const generateForLength = (length: number, prefix: string[]): boolean => {
@@ -1404,6 +1546,125 @@ function generateMultiCharHintsFromKeys(
 }
 
 /**
+ * 有効な記号のリスト定数
+ * @description singleCharKeysで使用可能な記号文字
+ */
+const VALID_SYMBOLS = [";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"];
+const VALID_SYMBOL_SET = new Set<string>(VALID_SYMBOLS);
+
+/**
+ * 文字が英数字かどうかを判定
+ * @param char - 判定する文字（1文字）
+ * @returns 英数字の場合true
+ */
+function isAlphanumeric(char: string): boolean {
+  return /^[a-zA-Z0-9]$/.test(char);
+}
+
+/**
+ * 文字がホワイトスペースかどうかを判定
+ * @param char - 判定する文字（1文字）
+ * @returns ホワイトスペースの場合true
+ */
+function isWhitespace(char: string): boolean {
+  return /\s/.test(char);
+}
+
+/**
+ * 文字が制御文字かどうかを判定
+ * @param char - 判定する文字（1文字）
+ * @returns 制御文字の場合true
+ */
+function isControlCharacter(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (code >= 0x00 && code <= 0x1F) || (code >= 0x7F && code <= 0x9F);
+}
+
+/**
+ * 文字が有効な記号かどうかを判定
+ * @param char - 判定する文字（1文字）
+ * @returns 有効な記号の場合true
+ */
+function isValidSymbol(char: string): boolean {
+  return VALID_SYMBOL_SET.has(char);
+}
+
+/**
+ * 文字が数字かどうかを判定
+ * @param char - 判定する文字（1文字）
+ * @returns 数字の場合true
+ */
+function isDigit(char: string): boolean {
+  return /^\d$/.test(char);
+}
+
+/**
+ * singleCharKeysの文字の妥当性を検証
+ * @param keys - 検証する文字配列
+ * @returns エラーメッセージの配列
+ */
+function validateCharacterValidity(keys: string[]): string[] {
+  const errors: string[] = [];
+  const invalidChars: string[] = [];
+  const whitespaceChars: string[] = [];
+  const controlChars: string[] = [];
+
+  for (const key of keys) {
+    if (key.length !== 1) continue; // 長さエラーは別の関数で検出
+
+    if (isWhitespace(key)) {
+      whitespaceChars.push(key);
+      continue;
+    }
+
+    if (isControlCharacter(key)) {
+      controlChars.push(key);
+      continue;
+    }
+
+    if (!isAlphanumeric(key) && !isValidSymbol(key)) {
+      invalidChars.push(key);
+    }
+  }
+
+  if (whitespaceChars.length > 0) {
+    errors.push(`singleCharKeys cannot contain whitespace characters: ${JSON.stringify(whitespaceChars)}`);
+  }
+  if (controlChars.length > 0) {
+    errors.push(`singleCharKeys cannot contain control characters: ${JSON.stringify(controlChars)}`);
+  }
+  if (invalidChars.length > 0) {
+    errors.push(
+      `singleCharKeys contains invalid characters: ${invalidChars.join(", ")} (allowed: a-z, A-Z, 0-9, ${VALID_SYMBOLS.join(" ")})`
+    );
+  }
+
+  return errors;
+}
+
+/**
+ * 数字専用モードの整合性を検証
+ * @param config - 検証するヒントキー設定
+ * @returns エラーメッセージの配列
+ */
+function validateNumericOnlyMode(config: HintKeyConfig): string[] {
+  const errors: string[] = [];
+
+  if (config.numericOnlyMultiChar === true && config.multiCharKeys) {
+    const isAllDigits = config.multiCharKeys.every(isDigit);
+
+    if (!isAllDigits) {
+      const nonDigits = config.multiCharKeys.filter((k) => !isDigit(k));
+      errors.push(
+        `numericOnlyMultiChar is true but multiCharKeys contains non-digit characters: ${nonDigits.join(", ")}`
+      );
+    }
+  }
+
+  return errors;
+}
+
+/**
  * ヒントキー設定の検証
  * @description ヒントキー設定の妥当性を検証し、エラーメッセージを返す
  * @param config - 検証するヒントキー設定
@@ -1428,9 +1689,24 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
 
   // 1文字キーの検証
   if (config.singleCharKeys) {
-    const invalidSingle = config.singleCharKeys.filter((k) => k.length !== 1);
-    if (invalidSingle.length > 0) {
-      errors.push(`Invalid single char keys: ${invalidSingle.join(", ")}`);
+    // 長さの検証
+    const invalidLength = config.singleCharKeys.filter((k) => k.length !== 1);
+    if (invalidLength.length > 0) {
+      errors.push(`Invalid single char keys (must be single character): ${invalidLength.join(", ")}`);
+    }
+
+    // 空文字列の検証
+    if (config.singleCharKeys.some((k) => k.length === 0)) {
+      errors.push("singleCharKeys cannot contain empty strings");
+    }
+
+    // 文字の妥当性検証
+    errors.push(...validateCharacterValidity(config.singleCharKeys));
+
+    // 重複チェック
+    const uniqueKeys = new Set(config.singleCharKeys);
+    if (uniqueKeys.size !== config.singleCharKeys.length) {
+      errors.push("singleCharKeys must contain unique values");
     }
   }
 
@@ -1442,7 +1718,7 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
     }
   }
 
-  // 重複チェック
+  // 重複チェック（singleCharKeysとmultiCharKeysの間）
   if (config.singleCharKeys && config.multiCharKeys) {
     const overlap = config.singleCharKeys.filter((k) => config.multiCharKeys!.includes(k));
     if (overlap.length > 0) {
@@ -1450,10 +1726,20 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
     }
   }
 
+  // 数字専用モードの検証
+  errors.push(...validateNumericOnlyMode(config));
+
   // max_single_char_hints の検証
   if (config.maxSingleCharHints !== undefined) {
     if (config.maxSingleCharHints < 0) {
       errors.push("max_single_char_hints must be non-negative");
+    }
+  }
+
+  // useNumericMultiCharHints の検証
+  if (config.useNumericMultiCharHints !== undefined) {
+    if (typeof config.useNumericMultiCharHints !== "boolean") {
+      errors.push("useNumericMultiCharHints must be a boolean value");
     }
   }
 
