@@ -281,6 +281,44 @@ export interface HintKeyConfig {
   maxSingleCharHints?: number;
   /** カーソルからの距離で1文字/2文字を決定するか */
   useDistancePriority?: boolean;
+  /**
+   * 1文字ヒントでの記号使用を許可するか
+   *
+   * @description
+   * trueの場合、singleCharKeysに記号（!, @, #等）を含めることができます。
+   * falseまたは未定義の場合、従来の動作（英数字のみ）を維持します。
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const config: HintKeyConfig = {
+   *   singleCharKeys: ["A", "B", "!", "@"],
+   *   allowSymbolsInSingleChar: true
+   * };
+   * ```
+   */
+  allowSymbolsInSingleChar?: boolean;
+  /**
+   * 複数文字ヒントで数字専用モードを有効にするか
+   *
+   * @description
+   * trueの場合、multiCharKeysは数字のみを使用してヒントを生成します。
+   * これにより、"11", "12", "21"のような数字ベースのヒントが生成されます。
+   * falseまたは未定義の場合、multiCharKeysの内容に基づいた通常の動作を行います。
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const config: HintKeyConfig = {
+   *   multiCharKeys: ["1", "2", "3", "4", "5"],
+   *   numericOnlyMultiChar: true
+   * };
+   * // ヒント例: "11", "12", "13", "21", "22", "23", ...
+   * ```
+   */
+  numericOnlyMultiChar?: boolean;
 }
 
 // ===== 型エイリアス =====
