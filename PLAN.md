@@ -64,11 +64,14 @@ main.ts（1408行）に以下の責務が混在している：
 - [ ] isRenderingHints/abortCurrentRendering関数を移動（行646-654）
 - [ ] 定数HIGHLIGHT_BATCH_SIZEを移動（行623）
 - [ ] レンダリング状態管理変数を移動（行620,730-731）
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process2 validation.tsの作成
 #### sub1 検証関連関数の移動
 @target: denops/hellshake-yano/validation.ts
 @ref: denops/hellshake-yano/main.ts:998-1312
+- [ ] deno testで既存の動作を確認
 - [ ] validateConfig関数を移動（行998-1082）
 - [ ] validateHighlightGroupName関数を移動（行1088-1090）
 - [ ] isValidColorName関数を移動（行1096-1112）
@@ -77,22 +80,28 @@ main.ts（1408行）に以下の責務が混在している：
 - [ ] validateHighlightColor関数を移動（行1139-1185）
 - [ ] generateHighlightCommand関数を移動（行1192-1224）
 - [ ] validateHighlightConfig関数を移動（行1230-1312）
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process3 compatibility.tsの作成
 #### sub1 後方互換性とユーティリティ関数の移動
 @target: denops/hellshake-yano/compatibility.ts
 @ref: denops/hellshake-yano/main.ts:77-145,193-294
+- [ ] deno testで既存の動作を確認
 - [ ] normalizeBackwardCompatibleFlags関数を移動（行193-274）
 - [ ] getMinLengthForKey関数を移動（行77-109）
 - [ ] getMotionCountForKey関数を移動（行116-145）
 - [ ] convertConfigForManager関数を移動（行280-285）
 - [ ] syncManagerConfig関数を移動（行290-293）
 - [ ] BackwardCompatibleConfig型定義を移動（行175-185）
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process4 performance.tsの作成
 #### sub1 パフォーマンス計測とキャッシュ管理の移動
 @target: denops/hellshake-yano/performance.ts
 @ref: denops/hellshake-yano/main.ts:44-70,526-585
+- [ ] deno testで既存の動作を確認
 - [ ] recordPerformance関数を移動（行61-70）
 - [ ] detectWordsOptimized関数を移動（行531-542）
 - [ ] generateHintsOptimized関数を移動（行549-558）
@@ -102,11 +111,14 @@ main.ts（1408行）に以下の責務が混在している：
 - [ ] collectDebugInfo/clearDebugInfo関数を移動（行150-169）
 - [ ] cleanupPendingTimers関数を移動（行758-763）
 - [ ] getTimeoutDelay関数を移動（行738-748）
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process5 dictionary.tsの作成
 #### sub1 辞書システム関連の移動
 @target: denops/hellshake-yano/dictionary.ts
 @ref: denops/hellshake-yano/main.ts:1318-1405
+- [ ] deno testで既存の動作を確認
 - [ ] getCoreForDictionary関数を移動（行1318-1320）
 - [ ] initializeDictionarySystem関数を移動（行1325-1332）
 - [ ] reloadDictionary関数を移動（行1338-1345）
@@ -114,22 +126,30 @@ main.ts（1408行）に以下の責務が混在している：
 - [ ] editDictionary関数を移動（行1372-1379）
 - [ ] showDictionary関数を移動（行1385-1392）
 - [ ] validateDictionary関数を移動（行1398-1405）
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process6 main.tsの整理
 #### sub1 エンドポイント定義に集中
 @target: denops/hellshake-yano/main.ts
+- [ ] deno testで既存の動作を確認
 - [ ] 移動した関数を削除
 - [ ] 新しいモジュールからのインポートを追加
 - [ ] dispatcherの各メソッドを、対応するモジュールの関数呼び出しに置き換え
 - [ ] グローバル状態変数（config, currentHints, hintsVisible等）を保持
 - [ ] main関数とdispatcher定義のみを残す
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process7 インポート最適化
 #### sub1 循環依存の解消と整理
 @target: 各モジュールファイル
+- [ ] deno testで既存の動作を確認
 - [ ] 循環依存がないことを確認
 - [ ] 不要なインポートを削除
 - [ ] 型定義のインポートを整理
+- [ ] deno checkでエラーが出ないことを確認
+- [ ] deno testでエラーが出ないことを確認
 
 ### process10 ユニットテスト
 #### sub1 既存テストの動作確認
