@@ -1,178 +1,180 @@
-# title: main.tsのエンドポイント責務集中リファクタリング
+# title: Deprecatedメソッドの段階的削除とAPIクリーンアップ
 
 ## 概要
-- main.tsを純粋なDenopsエンドポイントファイルとして機能させ、実装ロジックを適切な責務を持つ専用モジュールに分離する
+- コードベース内のdeprecatedメソッドを段階的に新APIへ移行し、技術的負債を削減
+- すべてのdeprecatedメソッドは現在も使用されているため、後方互換性を維持しながら段階的に削除
 
 ### goal
-- main.tsがAPIエンドポイントのみを定義し、実装詳細は各モジュールに委譲される構造を実現する
-- 各モジュールが単一責任原則に従い、保守性と再利用性が向上する
+- 後方互換性を保ちながら、クリーンなAPIに移行する
+- 依存関係を解消し、保守性の高いコードベースを実現する
+- v3.0.0でのメジャーバージョンアップに向けた準備
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 後方互換性を維持すること
-- 既存のAPIインターフェースを変更しないこと
+- 各Phaseの完了後に必ずテストを実行すること
+- 後方互換性を破壊しない（Phase 4除く）
 
 ## 開発のゴール
-- main.tsから実装ロジックを完全に分離し、エンドポイント定義のみにする
-- 責務ごとに専門化されたモジュールを作成し、コードの見通しを改善する
-- ファイルサイズを適切に保ち、理解しやすい構造にする
+- deprecatedメソッドの完全な削除
+- 新APIへの完全移行
+- 型定義のクリーンアップ
+- ドキュメントの更新
 
 ## 実装仕様
 
-### 現状の問題点
-main.ts（1408行）に以下の責務が混在している：
-- 表示・レンダリング処理（約400行）
-- 設定検証・色検証（約300行）
-- 後方互換性処理（約80行）
-- パフォーマンス計測・キャッシュ管理（約150行）
-- 辞書システム連携（約80行）
-- ユーティリティ関数（約70行）
+### 調査結果サマリー
+- **@deprecated関数**: 8個
+- **@deprecated型/インターフェース**: 3個以上
+- **@deprecatedエイリアス/定数**: 1個
+- **完全未使用**: 0個（すべて使用されている）
+- **削除可能（依存解消後）**: 全て
 
-### 新モジュール構造
-- `display.ts`: ヒント表示とレンダリング関連
-- `validation.ts`: 設定とハイライトの検証
-- `compatibility.ts`: 後方互換性とユーティリティ
-- `performance.ts`: パフォーマンス計測とキャッシュ
-- `dictionary.ts`: 辞書システム連携
+### 段階的移行の必要性
+すべてのdeprecatedメソッドが何らかの形で使用されているため、即座の削除は不可能。
+依存関係を解消しながら段階的に移行する必要がある。
 
 ## 生成AIの学習用コンテキスト
-
-### 現在の構造
+### TypeScriptソースファイル
 - denops/hellshake-yano/main.ts
-  - 現在1408行のファイルで、エンドポイントと実装が混在
+  - エンドポイント実装、プラグインのエントリーポイント
 - denops/hellshake-yano/core.ts
-  - Coreクラスが中核ロジックを管理
-- denops/hellshake-yano/config.ts
-  - 設定管理（validateConfigはここに存在）
+  - コア機能とフォールバック処理
+- denops/hellshake-yano/word.ts
+  - 単語検出の中核ロジック
+- denops/hellshake-yano/types.ts
+  - 型定義
+- denops/hellshake-yano/compatibility.ts
+  - 後方互換性処理
+
+### テストファイル
+- tests/*.test.ts
+  - 各機能のユニットテスト
 
 ## Process
 
-### process1 display.tsの作成
-#### sub1 表示関連関数の移動
-@target: denops/hellshake-yano/display.ts
-@ref: denops/hellshake-yano/main.ts:595-992
-- [ ] displayHintsOptimized関数を移動（行595-618）
-- [ ] displayHintsAsync関数を移動（行633-641）
-- [ ] displayHintsBatched関数を移動（行663-695）
-- [ ] highlightCandidateHintsAsync関数を移動（行773-806）
-- [ ] highlightCandidateHintsHybrid関数を移動（行818-862）
-- [ ] highlightCandidateHintsOptimized関数を移動（行871-880）
-- [ ] processExtmarksBatched関数を移動（行888-912）
-- [ ] processMatchaddBatched関数を移動（行920-992）
-- [ ] clearHintDisplay関数を移動（行700-713）
-- [ ] hideHints関数を移動（行718-728）
-- [ ] isRenderingHints/abortCurrentRendering関数を移動（行646-654）
-- [ ] 定数HIGHLIGHT_BATCH_SIZEを移動（行623）
-- [ ] レンダリング状態管理変数を移動（行620,730-731）
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+### process1 Phase 1: 低影響の置き換え
+@target: denops/hellshake-yano/main.ts, denops/hellshake-yano/core.ts
+@ref: denops/hellshake-yano/types.ts
 
-### process2 validation.tsの作成
-#### sub1 検証関連関数の移動
-@target: denops/hellshake-yano/validation.ts
-@ref: denops/hellshake-yano/main.ts:998-1312
-- [ ] deno testで既存の動作を確認
-- [ ] validateConfig関数を移動（行998-1082）
-- [ ] validateHighlightGroupName関数を移動（行1088-1090）
-- [ ] isValidColorName関数を移動（行1096-1112）
-- [ ] isValidHexColor関数を移動（行1118-1122）
-- [ ] normalizeColorName関数を移動（行1128-1133）
-- [ ] validateHighlightColor関数を移動（行1139-1185）
-- [ ] generateHighlightCommand関数を移動（行1192-1224）
-- [ ] validateHighlightConfig関数を移動（行1230-1312）
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+#### sub1 UnifiedCache → GlobalCache への置き換え
+- [ ] main.tsの `UnifiedCache` 使用箇所を `GlobalCache` に置き換え（2箇所）
+- [ ] core.tsの `UnifiedCache` 使用箇所を確認
+- [ ] 型定義の更新確認
 
-### process3 compatibility.tsの作成
-#### sub1 後方互換性とユーティリティ関数の移動
-@target: denops/hellshake-yano/compatibility.ts
-@ref: denops/hellshake-yano/main.ts:77-145,193-294
-- [ ] deno testで既存の動作を確認
-- [ ] normalizeBackwardCompatibleFlags関数を移動（行193-274）
-- [ ] getMinLengthForKey関数を移動（行77-109）
-- [ ] getMotionCountForKey関数を移動（行116-145）
-- [ ] convertConfigForManager関数を移動（行280-285）
-- [ ] syncManagerConfig関数を移動（行290-293）
-- [ ] BackwardCompatibleConfig型定義を移動（行175-185）
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+#### sub2 getStatistics() → getStats() への置き換え
+- [ ] main.tsの `getStatistics()` 呼び出しを `getStats()` に置き換え（2箇所）
+- [ ] 戻り値の型が互換性あることを確認
+- [ ] テストケースの更新
 
-### process4 performance.tsの作成
-#### sub1 パフォーマンス計測とキャッシュ管理の移動
-@target: denops/hellshake-yano/performance.ts
-@ref: denops/hellshake-yano/main.ts:44-70,526-585
-- [ ] deno testで既存の動作を確認
-- [ ] recordPerformance関数を移動（行61-70）
-- [ ] detectWordsOptimized関数を移動（行531-542）
-- [ ] generateHintsOptimized関数を移動（行549-558）
-- [ ] generateHintsFromConfig関数を移動（行566-585）
-- [ ] wordsCache/hintsCacheインスタンスを移動（行44-47）
-- [ ] performanceMetrics変数を移動（行49-55）
-- [ ] collectDebugInfo/clearDebugInfo関数を移動（行150-169）
-- [ ] cleanupPendingTimers関数を移動（行758-763）
-- [ ] getTimeoutDelay関数を移動（行738-748）
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+### process2 Phase 2: 中程度の影響（extractWords系）
+@target: denops/hellshake-yano/word.ts
+@ref: denops/hellshake-yano/core.ts
 
-### process5 dictionary.tsの作成
-#### sub1 辞書システム関連の移動
-@target: denops/hellshake-yano/dictionary.ts
-@ref: denops/hellshake-yano/main.ts:1318-1405
-- [ ] deno testで既存の動作を確認
-- [ ] getCoreForDictionary関数を移動（行1318-1320）
-- [ ] initializeDictionarySystem関数を移動（行1325-1332）
-- [ ] reloadDictionary関数を移動（行1338-1345）
-- [ ] addToDictionary関数を移動（行1354-1366）
-- [ ] editDictionary関数を移動（行1372-1379）
-- [ ] showDictionary関数を移動（行1385-1392）
-- [ ] validateDictionary関数を移動（行1398-1405）
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+#### sub1 extractWordsFromLineWithConfig の除去
+- [ ] `extractWordsFromLineWithConfig` の使用箇所を特定
+- [ ] `extractWordsUnified` への移行パスを確認
+- [ ] 移行実装
 
-### process6 main.tsの整理
-#### sub1 エンドポイント定義に集中
-@target: denops/hellshake-yano/main.ts
-- [ ] deno testで既存の動作を確認
-- [ ] 移動した関数を削除
-- [ ] 新しいモジュールからのインポートを追加
-- [ ] dispatcherの各メソッドを、対応するモジュールの関数呼び出しに置き換え
-- [ ] グローバル状態変数（config, currentHints, hintsVisible等）を保持
-- [ ] main関数とdispatcher定義のみを残す
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+#### sub2 extractWordsFromLineWithEnhancedConfig の除去
+- [ ] `extractWordsFromLineWithEnhancedConfig` の使用箇所を特定
+- [ ] `extractWordsUnified` への移行
+- [ ] パラメータ互換性の確認
 
-### process7 インポート最適化
-#### sub1 循環依存の解消と整理
-@target: 各モジュールファイル
-- [ ] deno testで既存の動作を確認
-- [ ] 循環依存がないことを確認
-- [ ] 不要なインポートを削除
-- [ ] 型定義のインポートを整理
-- [ ] deno checkでエラーが出ないことを確認
-- [ ] deno testでエラーが出ないことを確認
+### process3 Phase 3: 大きな影響（detectWords系の移行）
+@target: denops/hellshake-yano/word.ts, denops/hellshake-yano/core.ts
+@ref: denops/hellshake-yano/main.ts
+
+#### sub1 detectWords() → detectWordsWithManager への移行
+- [ ] `detectWords()` の全使用箇所を特定
+- [ ] 各使用箇所で `detectWordsWithManager` への移行計画を立案
+- [ ] 段階的な移行実装
+- [ ] 後方互換性の検証
+
+#### sub2 detectWordsWithConfig() → 新API への移行
+- [ ] `detectWordsWithConfig()` の使用箇所を特定
+- [ ] 新APIの設計確認
+- [ ] 移行実装
+- [ ] パラメータマッピングの検証
+
+#### sub3 extractWordsFromLine() → extractWordsUnified への移行
+- [ ] `extractWordsFromLine()` の全使用箇所を特定
+- [ ] `extractWordsUnified` の完全実装を確認
+- [ ] 移行実装
+- [ ] エッジケースのテスト
+
+### process4 Phase 4: 型定義の削除（v3.0.0）
+@target: denops/hellshake-yano/types.ts, denops/hellshake-yano/core.ts
+@ref: denops/hellshake-yano/compatibility.ts
+
+#### sub1 CoreConfig型の削除
+- [ ] `CoreConfig` の使用箇所を完全に排除
+- [ ] 新しい型への完全移行を確認
+- [ ] ドキュメントの更新
+
+#### sub2 WordConfig型の削除
+- [ ] `WordConfig` の使用箇所を完全に排除
+- [ ] 新しい型への完全移行を確認
+- [ ] 破壊的変更のドキュメント化
+
+#### sub3 その他のdeprecated型の削除
+- [ ] 残りのdeprecated型を特定
+- [ ] 影響範囲の調査
+- [ ] 削除実装
 
 ### process10 ユニットテスト
-#### sub1 既存テストの動作確認
-@target: denops/hellshake-yano/*.test.ts
-- [ ] 既存のテストが正常に動作することを確認
-- [ ] 必要に応じてインポートパスを更新
+@target: tests/
 
-#### sub2 新モジュールのテスト作成
-- [ ] display.tsのテストを作成
-- [ ] validation.tsのテストを作成
-- [ ] compatibility.tsのテストを作成
-- [ ] performance.tsのテストを作成
+#### sub1 Phase 1後のテスト
+- [ ] `deno test` を実行し、全テストがパスすることを確認
+- [ ] 新しいAPIの動作確認
+- [ ] リグレッションテストの実施
+
+#### sub2 Phase 2後のテスト
+- [ ] extractWordsUnified の動作確認
+- [ ] 既存機能の互換性確認
+- [ ] パフォーマンステスト
+
+#### sub3 Phase 3後のテスト
+- [ ] detectWordsWithManager の動作確認
+- [ ] エンドツーエンドテスト
+- [ ] 統合テスト
+
+#### sub4 Phase 4後のテスト（v3.0.0）
+- [ ] 全機能の動作確認
+- [ ] 破壊的変更の検証
+- [ ] マイグレーションガイドのテスト
 
 ### process50 フォローアップ
-（実装後に仕様変更などが発生した場合に追加）
+実装後に仕様変更などが発生した場合は、ここにProcessを追加する
 
 ### process100 リファクタリング
-#### sub1 コードの最適化
-- [ ] 重複コードの削除
-- [ ] 命名規則の統一
-- [ ] TypeScript型定義の改善
+@target: denops/hellshake-yano/
+
+#### sub1 コードクリーンアップ
+- [ ] 不要なコメントの削除
+- [ ] 型定義の整理
+- [ ] import文の最適化
+
+#### sub2 パフォーマンス最適化
+- [ ] 新APIのパフォーマンス測定
+- [ ] ボトルネックの特定と改善
+- [ ] メモリ使用量の確認
 
 ### process200 ドキュメンテーション
-- [ ] 各モジュールにJSDocコメントを追加
-- [ ] README.mdに新しいアーキテクチャを記載
-- [ ] CLAUDE.mdに新しいモジュール構造を反映
+@target: README.md, CHANGELOG.md, docs/
+
+#### sub1 CHANGELOG.md の更新
+- [ ] Phase 1の変更内容を記録
+- [ ] Phase 2の変更内容を記録
+- [ ] Phase 3の変更内容を記録
+- [ ] Phase 4の破壊的変更を記録（v3.0.0）
+
+#### sub2 マイグレーションガイドの作成
+- [ ] v2.x → v3.0.0のマイグレーションガイド作成
+- [ ] deprecated API一覧と代替API一覧の作成
+- [ ] コード例の追加
+
+#### sub3 API ドキュメントの更新
+- [ ] 新APIのドキュメント作成
+- [ ] deprecated APIのドキュメント削除
+- [ ] 使用例の更新
