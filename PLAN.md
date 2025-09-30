@@ -57,11 +57,15 @@
 @ref: denops/hellshake-yano/types.ts
 
 #### sub1 UnifiedCache → GlobalCache への置き換え
+- [ ] deno testで全テストがパスすることを確認
 - [ ] main.tsの `UnifiedCache` 使用箇所を `GlobalCache` に置き換え（2箇所）
 - [ ] core.tsの `UnifiedCache` 使用箇所を確認
 - [ ] 型定義の更新確認
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 #### sub2 getStatistics() → getStats() への置き換え
+- [ ] deno testで全テストがパスすることを確認
 - [ ] main.tsの `getStatistics()` 呼び出しを `getStats()` に置き換え（2箇所）
 - [ ] 戻り値の型が互換性あることを確認
 - [ ] テストケースの更新
@@ -71,11 +75,15 @@
 @ref: denops/hellshake-yano/core.ts
 
 #### sub1 extractWordsFromLineWithConfig の除去
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `extractWordsFromLineWithConfig` の使用箇所を特定
 - [ ] `extractWordsUnified` への移行パスを確認
 - [ ] 移行実装
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 #### sub2 extractWordsFromLineWithEnhancedConfig の除去
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `extractWordsFromLineWithEnhancedConfig` の使用箇所を特定
 - [ ] `extractWordsUnified` への移行
 - [ ] パラメータ互換性の確認
@@ -85,18 +93,25 @@
 @ref: denops/hellshake-yano/main.ts
 
 #### sub1 detectWords() → detectWordsWithManager への移行
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `detectWords()` の全使用箇所を特定
 - [ ] 各使用箇所で `detectWordsWithManager` への移行計画を立案
 - [ ] 段階的な移行実装
 - [ ] 後方互換性の検証
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 #### sub2 detectWordsWithConfig() → 新API への移行
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `detectWordsWithConfig()` の使用箇所を特定
 - [ ] 新APIの設計確認
 - [ ] 移行実装
 - [ ] パラメータマッピングの検証
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 #### sub3 extractWordsFromLine() → extractWordsUnified への移行
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `extractWordsFromLine()` の全使用箇所を特定
 - [ ] `extractWordsUnified` の完全実装を確認
 - [ ] 移行実装
@@ -107,19 +122,28 @@
 @ref: denops/hellshake-yano/compatibility.ts
 
 #### sub1 CoreConfig型の削除
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `CoreConfig` の使用箇所を完全に排除
 - [ ] 新しい型への完全移行を確認
 - [ ] ドキュメントの更新
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 #### sub2 WordConfig型の削除
+- [ ] deno testで全テストがパスすることを確認
 - [ ] `WordConfig` の使用箇所を完全に排除
 - [ ] 新しい型への完全移行を確認
 - [ ] 破壊的変更のドキュメント化
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 #### sub3 その他のdeprecated型の削除
+- [ ] deno testで全テストがパスすることを確認
 - [ ] 残りのdeprecated型を特定
 - [ ] 影響範囲の調査
 - [ ] 削除実装
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで全テストがパスすることを再確認
 
 ### process10 ユニットテスト
 @target: tests/
