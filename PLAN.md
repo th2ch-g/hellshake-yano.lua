@@ -1,229 +1,158 @@
-# title: ヒントキー設定の拡張（記号対応・数字複数文字ヒント追加）
+# title: main.tsのエンドポイント責務集中リファクタリング
 
 ## 概要
-- ヒントキーの設定をより柔軟にカスタマイズ可能にする機能拡張
-- singleCharKeysにキーボード記号を使用可能にし、アルファベットの複数文字ヒントに加えて数字の複数文字ヒントも追加生成可能にする
+- main.tsを純粋なDenopsエンドポイントファイルとして機能させ、実装ロジックを適切な責務を持つ専用モジュールに分離する
 
-### f
-- ユーザーが好みのキーボード記号（`;`, `:`, `[`, `]`など）を1文字ヒントに使用できる
-- `useNumericMultiCharHints: true`により、アルファベットの2文字ヒント（BB, BC...）に加えて、数字の2文字ヒント（01, 02...99）も追加生成される
-- 大量の単語に対してより多くのヒントパターンを提供し、効率的な移動を実現
+### goal
+- main.tsがAPIエンドポイントのみを定義し、実装詳細は各モジュールに委譲される構造を実現する
+- 各モジュールが単一責任原則に従い、保守性と再利用性が向上する
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 既存の後方互換性を維持すること
-- TypeScriptの型安全性を保証すること
+- 後方互換性を維持すること
+- 既存のAPIインターフェースを変更しないこと
 
 ## 開発のゴール
-- キーボードで入力可能な記号をsingleCharKeysで使えるようにする
-- `useNumericMultiCharHints`フラグにより、アルファベットの複数文字ヒントに加えて数字の2文字ヒントも追加生成できるようにする
-- 大量の単語がある場合でも十分なヒントパターンを提供し、効率的な移動を実現する
+- main.tsから実装ロジックを完全に分離し、エンドポイント定義のみにする
+- 責務ごとに専門化されたモジュールを作成し、コードの見通しを改善する
+- ファイルサイズを適切に保ち、理解しやすい構造にする
 
 ## 実装仕様
 
-### singleCharKeys拡張仕様
-- 使用可能な記号: `;`, `:`, `[`, `]`, `'`, `"`, `,`, `.`, `/`, `\`, `-`, `=`, `` ` ``
-- 既存のアルファベット・数字に加えて上記記号を設定可能
-- バリデーション: 1文字であることの確認（既存）+ 入力可能文字の検証
+### 現状の問題点
+main.ts（1408行）に以下の責務が混在している：
+- 表示・レンダリング処理（約400行）
+- 設定検証・色検証（約300行）
+- 後方互換性処理（約80行）
+- パフォーマンス計測・キャッシュ管理（約150行）
+- 辞書システム連携（約80行）
+- ユーティリティ関数（約70行）
 
-### useNumericMultiCharHints仕様
-- `useNumericMultiCharHints: true`が設定された場合、数字の2文字ヒントを追加生成
-- 生成パターン: アルファベット2文字（BB, BC...）の後に数字2文字（`01`, `02`...`99`, `00`）を追加
-- アルファベットヒントと数字ヒントの組み合わせで最大100個以上のヒントパターンを提供
-- 優先順位: singleCharKeys → multiCharKeys（アルファベット）→ 数字2文字（01-09, 10-99, 00）
+### 新モジュール構造
+- `display.ts`: ヒント表示とレンダリング関連
+- `validation.ts`: 設定とハイライトの検証
+- `compatibility.ts`: 後方互換性とユーティリティ
+- `performance.ts`: パフォーマンス計測とキャッシュ
+- `dictionary.ts`: 辞書システム連携
 
 ## 生成AIの学習用コンテキスト
 
-### 設定ファイル
-- `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
-  - DEFAULT_CONFIG定数のsingleCharKeys, multiCharKeys設定
-  - validateUnifiedConfig関数のバリデーションロジック
-
-### 型定義ファイル
-- `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
-  - HintKeyConfigインターフェース（273行目）
-
-### ヒント生成ロジック
-- `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-  - generateHintsWithGroups関数（1256行目）: メインのヒント生成関数
-  - generateMultiCharHintsFromKeys関数（1366行目）: 複数文字ヒント生成
-  - validateHintKeyConfig関数（1423行目）: 設定検証
+### 現在の構造
+- denops/hellshake-yano/main.ts
+  - 現在1408行のファイルで、エンドポイントと実装が混在
+- denops/hellshake-yano/core.ts
+  - Coreクラスが中核ロジックを管理
+- denops/hellshake-yano/config.ts
+  - 設定管理（validateConfigはここに存在）
 
 ## Process
 
-### process1 型定義の拡張
-#### sub1 HintKeyConfigインターフェースの拡張
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
-@ref: `HintKeyConfig`インターフェース（273行目）
-- [x] `allowSymbolsInSingleChar`オプションフラグの追加（記号使用可否）
-- [x] `numericOnlyMultiChar`オプションフラグの追加（数字専用モード）
-- [ ] `useNumericMultiCharHints`オプションフラグの追加（数字2文字ヒント追加生成）
-- [x] JSDocコメントで新規オプションの説明を追加
+### process1 display.tsの作成
+#### sub1 表示関連関数の移動
+@target: denops/hellshake-yano/display.ts
+@ref: denops/hellshake-yano/main.ts:595-992
+- [ ] displayHintsOptimized関数を移動（行595-618）
+- [ ] displayHintsAsync関数を移動（行633-641）
+- [ ] displayHintsBatched関数を移動（行663-695）
+- [ ] highlightCandidateHintsAsync関数を移動（行773-806）
+- [ ] highlightCandidateHintsHybrid関数を移動（行818-862）
+- [ ] highlightCandidateHintsOptimized関数を移動（行871-880）
+- [ ] processExtmarksBatched関数を移動（行888-912）
+- [ ] processMatchaddBatched関数を移動（行920-992）
+- [ ] clearHintDisplay関数を移動（行700-713）
+- [ ] hideHints関数を移動（行718-728）
+- [ ] isRenderingHints/abortCurrentRendering関数を移動（行646-654）
+- [ ] 定数HIGHLIGHT_BATCH_SIZEを移動（行623）
+- [ ] レンダリング状態管理変数を移動（行620,730-731）
 
-### process2 デフォルト設定の更新
-#### sub1 DEFAULT_CONFIGの拡張
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
-@ref: `DEFAULT_CONFIG`定数（239行目）
-- [x] singleCharKeysのデフォルト値に記号を追加可能にする設定
-- [x] コメントで使用可能な記号リストを明記
-- [x] deno checkでエラーが出ないことを確認
-- [x] deno testでテストが通ることを確認
+### process2 validation.tsの作成
+#### sub1 検証関連関数の移動
+@target: denops/hellshake-yano/validation.ts
+@ref: denops/hellshake-yano/main.ts:998-1312
+- [ ] validateConfig関数を移動（行998-1082）
+- [ ] validateHighlightGroupName関数を移動（行1088-1090）
+- [ ] isValidColorName関数を移動（行1096-1112）
+- [ ] isValidHexColor関数を移動（行1118-1122）
+- [ ] normalizeColorName関数を移動（行1128-1133）
+- [ ] validateHighlightColor関数を移動（行1139-1185）
+- [ ] generateHighlightCommand関数を移動（行1192-1224）
+- [ ] validateHighlightConfig関数を移動（行1230-1312）
 
-#### sub2 バリデーション関数の更新
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/config.ts`
-@ref: `validateUnifiedConfig`関数（440行目）
-- [x] singleCharKeysの記号文字検証ロジック追加
-- [x] 使用可能な記号のホワイトリスト定義
-- [x] エラーメッセージの改善
-- [x] deno checkでエラーが出ないことを確認
-- [x] deno testでテストが通ることを確認
+### process3 compatibility.tsの作成
+#### sub1 後方互換性とユーティリティ関数の移動
+@target: denops/hellshake-yano/compatibility.ts
+@ref: denops/hellshake-yano/main.ts:77-145,193-294
+- [ ] normalizeBackwardCompatibleFlags関数を移動（行193-274）
+- [ ] getMinLengthForKey関数を移動（行77-109）
+- [ ] getMotionCountForKey関数を移動（行116-145）
+- [ ] convertConfigForManager関数を移動（行280-285）
+- [ ] syncManagerConfig関数を移動（行290-293）
+- [ ] BackwardCompatibleConfig型定義を移動（行175-185）
 
-### process3 ヒント生成ロジックの実装
-#### sub1 数字専用判定関数の実装
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-@ref: `generateMultiCharHintsFromKeys`関数の前（1350行目付近）
-- [x] `isNumericOnlyKeys`関数の実装（キー配列が数字のみかチェック）
-- [x] ユニットテスト用のexport
-- [x] deno checkでエラーが出ないことを確認
-- [x] deno testでテストが通ることを確認
+### process4 performance.tsの作成
+#### sub1 パフォーマンス計測とキャッシュ管理の移動
+@target: denops/hellshake-yano/performance.ts
+@ref: denops/hellshake-yano/main.ts:44-70,526-585
+- [ ] recordPerformance関数を移動（行61-70）
+- [ ] detectWordsOptimized関数を移動（行531-542）
+- [ ] generateHintsOptimized関数を移動（行549-558）
+- [ ] generateHintsFromConfig関数を移動（行566-585）
+- [ ] wordsCache/hintsCacheインスタンスを移動（行44-47）
+- [ ] performanceMetrics変数を移動（行49-55）
+- [ ] collectDebugInfo/clearDebugInfo関数を移動（行150-169）
+- [ ] cleanupPendingTimers関数を移動（行758-763）
+- [ ] getTimeoutDelay関数を移動（行738-748）
 
-#### sub2 数字専用ヒント生成の実装
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-@ref: `generateMultiCharHintsFromKeys`関数（1366行目）
-- [x] 数字専用モードの判定ロジック追加
-- [x] 数字専用の2文字ヒント生成処理（00-99）
-- [x] 優先順位に基づく生成順序の実装
-- [x] deno checkでエラーが出ないことを確認
-- [x] deno testでテストが通ることを確認
+### process5 dictionary.tsの作成
+#### sub1 辞書システム関連の移動
+@target: denops/hellshake-yano/dictionary.ts
+@ref: denops/hellshake-yano/main.ts:1318-1405
+- [ ] getCoreForDictionary関数を移動（行1318-1320）
+- [ ] initializeDictionarySystem関数を移動（行1325-1332）
+- [ ] reloadDictionary関数を移動（行1338-1345）
+- [ ] addToDictionary関数を移動（行1354-1366）
+- [ ] editDictionary関数を移動（行1372-1379）
+- [ ] showDictionary関数を移動（行1385-1392）
+- [ ] validateDictionary関数を移動（行1398-1405）
 
-#### sub3 generateHintsWithGroups関数の更新
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-@ref: `generateHintsWithGroups`関数（1256行目）
-- [x] 数字専用モードの自動検出
-- [x] 記号を含むsingleCharKeysの処理
-- [ ] `useNumericMultiCharHints`フラグのサポート追加
-- [x] deno checkでエラーが出ないことを確認
-- [x] deno testでテストが通ることを確認
+### process6 main.tsの整理
+#### sub1 エンドポイント定義に集中
+@target: denops/hellshake-yano/main.ts
+- [ ] 移動した関数を削除
+- [ ] 新しいモジュールからのインポートを追加
+- [ ] dispatcherの各メソッドを、対応するモジュールの関数呼び出しに置き換え
+- [ ] グローバル状態変数（config, currentHints, hintsVisible等）を保持
+- [ ] main関数とdispatcher定義のみを残す
 
-### process4 バリデーション強化
-#### sub1 validateHintKeyConfig関数の更新
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-@ref: `validateHintKeyConfig`関数（1423行目）
-- [x] 記号文字のバリデーション追加
-- [x] 数字専用モード時の検証
-- [x] エラーメッセージの詳細化
-- [x] deno checkでエラーが出ないことを確認
-- [x] deno testでテストが通ることを確認
-
-### process5 useNumericMultiCharHints機能の実装
-#### sub1 型定義の追加
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/types.ts`
-@ref: `HintKeyConfig`インターフェース
-- [x] `useNumericMultiCharHints?: boolean`プロパティの追加
-- [x] JSDocコメントで詳細な説明を追加
-
-#### sub2 数字ヒント生成関数の実装
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-- [x] `generateNumericHints`関数の実装（01-99, 00の順序で生成）
-- [x] generateHintsWithGroups関数にuseNumericMultiCharHintsサポートを追加
-- [x] アルファベットヒントの後に数字ヒントを追加する処理
-
-#### sub3 バリデーションの追加
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.ts`
-@ref: `validateHintKeyConfig`関数
-- [x] useNumericMultiCharHintsフラグのバリデーション追加
+### process7 インポート最適化
+#### sub1 循環依存の解消と整理
+@target: 各モジュールファイル
+- [ ] 循環依存がないことを確認
+- [ ] 不要なインポートを削除
+- [ ] 型定義のインポートを整理
 
 ### process10 ユニットテスト
-#### sub1 記号対応のテスト
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.test.ts`
-- [ ] 記号を含むsingleCharKeysのヒント生成テスト
-- [ ] 記号のバリデーションテスト
-- [ ] 記号と英数字の混在テスト
+#### sub1 既存テストの動作確認
+@target: denops/hellshake-yano/*.test.ts
+- [ ] 既存のテストが正常に動作することを確認
+- [ ] 必要に応じてインポートパスを更新
 
-#### sub2 useNumericMultiCharHintsのテスト
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/hint.test.ts`
-- [ ] useNumericMultiCharHints=trueでアルファベット＋数字ヒントが生成されることを確認
-- [ ] 大量のヒント（100個以上）でも正しく動作することを確認
-- [ ] 優先順位（single → multi alphabet → multi numeric）の確認
-
-#### sub3 統合テスト
-@target: `/Users/ttakeda/.config/nvim/plugged/hellshake-yano.vim/tests/`に新規ファイル作成
-- [ ] 記号と数字専用モードの組み合わせテスト
-- [ ] パフォーマンステスト（大量ヒント生成時）
-- [ ] エッジケーステスト
+#### sub2 新モジュールのテスト作成
+- [ ] display.tsのテストを作成
+- [ ] validation.tsのテストを作成
+- [ ] compatibility.tsのテストを作成
+- [ ] performance.tsのテストを作成
 
 ### process50 フォローアップ
-
-#### sub1 日本語分かち書きヒント生成の粒度最適化
-@date: 2025-09-30
-@issue: カーソル位置によって日本語の分かち書きによる形態素解析が細かすぎるヒントが生成される
-
-##### 調査結果
-- **TinySegmenterの形態素解析の性質**
-  - `word.ts:629`で`TinySegmenter`を使用して日本語を分かち書き
-  - 助詞レベルまで細かく分割される（例：「私の名前は」→「私」「の」「名前」「は」）
-
-- **最小文字数フィルタの問題**
-  - `word.ts:617,642`: `minWordLength`のデフォルトは`1`
-  - `TinySegmenterWordDetector`は1文字の助詞も検出対象にしている
-  - これにより「の」「は」「が」などの助詞にもヒントが表示される
-
-- **後処理の限定的な統合**
-  - `word.ts:3002-3058`: `postProcessSegments`は数字と単位、括弧内容のみを統合
-  - 助詞や接続詞の統合処理がないため、形態素単位のまま残る
-
-- **カーソル位置の影響**
-  - `main.ts:603-607`: カーソル位置を取得
-  - `hint.ts:653`: カーソルからの距離でソート
-  - `word.ts:5319-5321`: visible range取得では画面表示範囲(`w0`-`w$`)全体が対象
-  - カーソル位置によって可視範囲内の助詞が優先的に表示される
-
-- **設定のデフォルト値**
-  - `config.ts:288`: `japaneseMinWordLength: 2`（日本語用の最小文字数は2文字）
-  - しかし、`word.ts:617`では`context?.minWordLength || 1`となっており、contextが渡されない場合は1文字も検出される
-
-##### 対策案
-- [x] 最小文字数の適切な適用: `japaneseMinWordLength`をTinySegmenterに正しく適用
-  - `word.ts:642-644`で`japaneseMinWordLength`を優先的に使用するロジックを追加
-  - 実装日: 2025-09-30
-- [x] 助詞フィルタの追加: 一般的な助詞を除外するフィルタリング
-  - 除外対象: 「の」「は」「が」「を」「に」「へ」「と」「や」「で」「も」など40種以上
-  - `word.ts:573-588`に助詞セットを定義、`word.ts:678`でフィルタリング実装
-  - 実装日: 2025-09-30
-- [x] 形態素の統合強化: 意味のある単位に統合
-  - `word.ts:753-786`のpostProcessSegmentsに名詞+助詞、動詞+助詞の統合処理を追加
-  - 例: 「私」+「の」→「私の」、「名前」+「は」→「名前は」
-  - 実装日: 2025-09-30
-- [x] contextに`japaneseMinWordLength`を渡す処理を追加
-  - DetectionContextを通じて`japaneseMinWordLength`が伝播されることを確認
-  - テストで検証完了
-  - 実装日: 2025-09-30
-
-##### 実装詳細
-- **TDD Red-Green-Refactorアプローチで実装**
-  - RED Phase: 8つの失敗するテストを作成（tests/japanese_word_granularity_test.ts）
-  - GREEN Phase: 最小限の実装でテストをパス
-  - REFACTOR Phase: 助詞リストの共通化、コメント追加
-- **主な変更箇所**
-  - `word.ts:573-588`: 助詞セット定義（private readonly particles）
-  - `word.ts:642-647`: japaneseMinWordLength優先ロジック、助詞統合フラグ
-  - `word.ts:678-681`: 助詞フィルタリング
-  - `word.ts:753-786`: postProcessSegments（形態素統合）
-- **テスト**
-  - tests/japanese_word_granularity_test.ts: 8つのテストケース（全てパス）
-  - 既存の日本語関連テストも全てパス
-- **結果**
-  - 1文字の助詞（「の」「は」など）が単独で表示されなくなった
-  - 形態素統合により、より自然な単位でヒントが表示されるようになった（例: 「私の」「名前は」）
-  - japaneseMinWordLength設定が正しく適用されるようになった
+（実装後に仕様変更などが発生した場合に追加）
 
 ### process100 リファクタリング
+#### sub1 コードの最適化
 - [ ] 重複コードの削除
-- [ ] 関数の責務分離
-- [ ] パフォーマンス最適化
+- [ ] 命名規則の統一
+- [ ] TypeScript型定義の改善
 
 ### process200 ドキュメンテーション
-- [ ] README.mdへの新機能説明追加
-- [ ] 設定例の追加（記号使用例、数字専用モード例）
-- [ ] CHANGELOG.mdへの変更履歴追加
-- [ ] JSDocコメントの充実化
+- [ ] 各モジュールにJSDocコメントを追加
+- [ ] README.mdに新しいアーキテクチャを記載
+- [ ] CLAUDE.mdに新しいモジュール構造を反映
