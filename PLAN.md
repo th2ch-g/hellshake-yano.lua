@@ -57,18 +57,18 @@
 @ref: denops/hellshake-yano/types.ts
 
 #### sub1 UnifiedCache → GlobalCache への置き換え
-- [ ] deno testで全テストがパスすることを確認
-- [ ] main.tsの `UnifiedCache` 使用箇所を `GlobalCache` に置き換え（2箇所）
-- [ ] core.tsの `UnifiedCache` 使用箇所を確認
-- [ ] 型定義の更新確認
-- [ ] deno checkで型エラーがないことを確認
-- [ ] deno testで全テストがパスすることを再確認
+- [x] deno testで全テストがパスすることを確認
+- [x] main.tsの `UnifiedCache` 使用箇所を `GlobalCache` に置き換え（実際にはmain.tsには使用箇所なし）
+- [x] core.tsの `UnifiedCache` 使用箇所を確認（2箇所をGlobalCacheに置き換え）
+- [x] 型定義の更新確認
+- [x] deno checkで型エラーがないことを確認
+- [x] deno testで全テストがパスすることを再確認
 
 #### sub2 getStatistics() → getStats() への置き換え
-- [ ] deno testで全テストがパスすることを確認
-- [ ] main.tsの `getStatistics()` 呼び出しを `getStats()` に置き換え（2箇所）
-- [ ] 戻り値の型が互換性あることを確認
-- [ ] テストケースの更新
+- [x] deno testで全テストがパスすることを確認
+- [x] core.tsのgetPluginStatistics()内の `getStatistics()` 呼び出しを `getStats()` に置き換え（2箇所）
+- [x] 戻り値の型が互換性あることを確認（getStatistics()はgetStats()のエイリアスのため完全互換）
+- [x] テストケースの更新（既存テストで後方互換性確認済み）
 
 ### process2 Phase 2: 中程度の影響（extractWords系）
 @target: denops/hellshake-yano/word.ts

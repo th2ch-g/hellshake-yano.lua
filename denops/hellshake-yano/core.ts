@@ -4205,8 +4205,8 @@ export class HellshakeYanoCore {
         currentHintsCount: state.currentHints.length,
       },
       cacheStats: {
-        words: state.caches.words.getStatistics(),
-        hints: state.caches.hints.getStatistics(),
+        words: state.caches.words.getStats(),
+        hints: state.caches.hints.getStats(),
       },
     };
   }
@@ -4408,8 +4408,8 @@ export class HellshakeYanoCore {
     }
 
     // Import and clear character cache from unified cache system
-    const { UnifiedCache, CacheType } = await import("./cache.ts");
-    const CHAR_WIDTH_CACHE = UnifiedCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
+    const { GlobalCache, CacheType } = await import("./cache.ts");
+    const CHAR_WIDTH_CACHE = GlobalCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
     CHAR_WIDTH_CACHE.clear();
 
     // ASCII文字キャッシュを再初期化
@@ -4427,8 +4427,8 @@ export class HellshakeYanoCore {
    * ```
    */
   static async getDisplayWidthCacheStats() {
-    const { UnifiedCache, CacheType } = await import("./cache.ts");
-    const CHAR_WIDTH_CACHE = UnifiedCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
+    const { GlobalCache, CacheType } = await import("./cache.ts");
+    const CHAR_WIDTH_CACHE = GlobalCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
     const cache = await this.getGlobalDisplayWidthCache();
 
     return {
