@@ -1165,7 +1165,6 @@ export async function detectWords(
   }
 
   const denops = arg1 as Denops;
-  // console.warn("[DEPRECATED] detectWords: Use detectWordsWithManager for enhanced capabilities");
 
   const words: Word[] = [];
 
@@ -1262,8 +1261,6 @@ export async function detectWordsWithManager(
 
     return initialResult;
   } catch (error) {
-    // console.error("[detectWordsWithManager] Error:", error);
-
     // フォールバックとして従来のメソッドを使用
     const fallbackConfig = createPartialUnifiedConfig({
       useJapanese: config.useJapanese,
@@ -1405,7 +1402,6 @@ async function detectWordsOptimizedForLargeFiles(
         await new Promise((resolve) => setTimeout(resolve, 1));
       }
     } catch (error) {
-      // console.error(`[hellshake-yano] Error processing batch ${startLine}-${endLine}:`, error);
       // エラーが発生したバッチはスキップして続行
       continue;
     }
@@ -1773,7 +1769,6 @@ export async function detectWordsInRange(
 
     return words;
   } catch (error) {
-    // console.error("[hellshake-yano] Error in detectWordsInRange:", error);
     return [];
   }
 }
@@ -5378,7 +5373,6 @@ export class WordDetectionManager {
       };
     } catch (error) {
       this.stats.errors++;
-      // console.error("[WordDetectionManager] Detection failed:", error);
 
       // Try fallback detector if enabled
       if (this.config.enableFallback) {
@@ -5399,7 +5393,6 @@ export class WordDetectionManager {
             };
           }
         } catch (fallbackError) {
-          // console.error("[WordDetectionManager] Fallback detection also failed:", fallbackError);
         }
       }
 
@@ -5445,7 +5438,6 @@ export class WordDetectionManager {
 
       return this.detectWords(text, topLine, denops, context);
     } catch (error) {
-      // console.error("[WordDetectionManager] Failed to detect words from buffer:", error);
       return {
         words: [],
         detector: "none",
@@ -5850,7 +5842,6 @@ export class WordDetectionManager {
       this.registerDetector(segmenterDetector);
       this.registerDetector(hybridDetector);
     } catch (error) {
-      // console.error("[WordDetectionManager] Failed to reinitialize detectors:", error);
     }
   }
 
