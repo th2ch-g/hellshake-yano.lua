@@ -1,27 +1,26 @@
 /**
  * 設定管理モジュール
  *
- * ⚠️ 重要な移行通知 ⚠️
+ * 📝 v3.0.0 破壊的変更
  * ===================
- * Process2 Sub9: 旧インターフェース廃止予定
+ * Process4: 旧型定義の削除完了
  *
- * 以下のインターフェースはv3.0.0で削除される予定です:
- * - CoreConfig      (@deprecated)
- * - HintConfig      (@deprecated)
- * - WordConfig      (@deprecated)
- * - PerformanceConfig (@deprecated)
+ * 以下のインターフェースはv3.0.0で削除されました:
+ * - CoreConfig      (削除完了 - process4 sub1)
+ * - HintConfig      (削除完了 - process4 sub3)
+ * - WordConfig      (削除完了 - process4 sub2)
+ * - PerformanceConfig (削除完了 - process4 sub3)
+ * - DebugConfig     (削除完了 - process4 sub3)
  *
- * 🔄 移行パス:
- * 1. UnifiedConfigを使用するように既存のコードを更新
- * 2. 階層構造からフラット構造（camelCase）への変更
- * 3. 直接UnifiedConfigを使用（変換関数は削除されました）
+ * 🔄 移行方法:
+ * 1. UnifiedConfig (Config型エイリアス) を使用してください
+ * 2. フラット化されたcamelCase構造を使用してください
+ * 3. Partial<Config>を使用して部分的な設定を定義してください
  *
  * 📅 タイムライン:
  * - v2.5.0: 廃止予定警告開始
  * - v2.8.0: 廃止予定警告強化
- * - v3.0.0: 完全削除
- *
- * 詳細な移行ガイドは各インターフェースの@deprecatedコメントを参照
+ * - v3.0.0: 完全削除（2025年）
  */
 
 // Import consolidated types from types.ts
@@ -36,54 +35,10 @@ export type { HighlightColor };
 // HighlightColor interface moved to types.ts for consolidation
 // Use: import type { HighlightColor } from "./types.ts";
 
-/**
- * 基本設定インターフェース
- * プラグインの基本的な動作を制御する設定項目を定義します。
- * Phase 2の階層化された設定構造の一部として使用されます。
- *
- * @deprecated このインターフェースはv3.0.0で削除される予定です。
- * 代わりにUnifiedConfigを使用してください。
- * 移行方法: CoreConfig → UnifiedConfigのフラット構造
- * @see UnifiedConfig - 統一設定インターフェース * @remove v3.0.0
- *
- * @interface CoreConfig
- * @example
- * ```typescript
- * // 廃止予定 - 使用しないでください
- * const coreConfig: CoreConfig = {
- *   enabled: true,
- *   markers: ['A', 'S', 'D', 'F'],
- *   motionCount: 3
- * };
- *
- * // 推奨: UnifiedConfigを使用
- * const unifiedConfig: UnifiedConfig = {
- *   enabled: true,
- *   markers: ['A', 'S', 'D', 'F'],
- *   motionCount: 3,
- *   // その他のプロパティ...
- * };
- * ```
- */
-// CoreConfig削除: process4 sub2-2で削除（未使用のため）
-
-// HintConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
-
-// WordConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
-
-// PerformanceConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
-
-// DebugConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
-
-// CamelCaseConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
-
-// ModernConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
-// 代わりにUnifiedConfigを使用してください
+// v3.0.0で削除された型の記録:
+// - CoreConfig, HintConfig, WordConfig, PerformanceConfig, DebugConfig
+// - CamelCaseConfig, ModernConfig
+// 移行方法: UnifiedConfig (Config型エイリアス) または Partial<Config> を使用してください
 
 /**
  * 統一設定インターフェース (UnifiedConfig)
@@ -220,16 +175,8 @@ export type UnifiedConfig = Config;
 export type CamelCaseConfig = Config;
 export type ModernConfig = Config;
 
-// Partial types for specific configurations (deprecated - use Partial<Config> instead)
-export type HintConfig = Pick<Config,
-  'hintPosition' | 'maxHints' | 'highlightSelected'>;
-export type WordConfig = Pick<Config,
-  'useJapanese' | 'enableTinySegmenter' | 'perKeyMinLength' |
-  'defaultMinWordLength'>;
-export type PerformanceConfig = Pick<Config,
-  'maxHints' | 'debounceDelay' | 'performanceLog'>;
-export type DebugConfig = Pick<Config,
-  'debugMode' | 'debugCoordinates' | 'performanceLog'>;
+// v3.0.0で削除: HintConfig, WordConfig, PerformanceConfig, DebugConfig
+// 代わりにPartial<Config>を使用してください
 
 /**
  * デフォルト設定定数
@@ -707,7 +654,6 @@ export function validateUnifiedConfig(
  * validateUnifiedConfig()にリダイレクトされる統合バリデーション
  * snake_caseとcamelCase両方の入力をサポート
  *
- * @deprecated この関数は内部的にvalidateUnifiedConfig()を使用します。新しいコードではvalidateUnifiedConfig()を直接使用してください。
  * @param config 検証する設定オブジェクト
  * @returns バリデーション結果
  */
@@ -1056,7 +1002,6 @@ export interface NamingValidation {
  * @param {Partial<Config>} [input={}] - 初期設定値（オプション）
  * @returns {Config} 作成された設定オブジェクト
  * @throws {Error} 設定値のバリデーションに失敗した場合
- * @deprecated 内部的にcreateMinimalConfig()を使用します。新しいコードでは直接createMinimalConfig()を使用してください。
  */
 export function createModernConfig(input: Partial<Config> = {}): Config {
   return createMinimalConfig(input);
@@ -1140,13 +1085,10 @@ export function validateNamingConvention(name: string): NamingValidation {
  * @param {Partial<Config>} config - チェックする設定オブジェクト
  * @returns {DeprecationWarning[]} 非推奨警告の配列（常に空配列）
  * @throws {never} この関数は例外をスローしません
- * @deprecated 階層設定システムの削除により、この関数は常に空配列を返します。
  */
 export function getDeprecationWarnings(
   config: Partial<Config>,
 ): DeprecationWarning[] {
-  // Simplified implementation - no longer checks for deprecated properties
-  // as hierarchical config system has been removed
   return [];
 }
 

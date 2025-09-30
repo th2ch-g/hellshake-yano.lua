@@ -1877,11 +1877,6 @@ export class Core {
       const dictConfig = await this.vimConfigBridge!.getConfig(denops);
       const dictionary = await this.dictionaryLoader!.loadUserDictionary(dictConfig);
 
-      // Update word detection manager with new dictionary
-      if (dictionary) {
-        // Note: dictionary is handled internally by the manager
-      }
-
       await denops.cmd('echo "Dictionary reloaded successfully"');
     } catch (error) {
       await denops.cmd(`echoerr "Failed to reload dictionary: ${error}"`);
@@ -3869,7 +3864,6 @@ export class Core {
 /* * ハイライト色設定インターフェース
  * fg（前景色）とbg（背景色）を個別に指定するための型定義 * @interface HighlightColor - Already defined in types.ts, importing from there
  */
-// Note: HighlightColor interface is already defined in types.ts and imported above
 
 /* * ハイライトグループ名の検証
  * Vimのハイライトグループ名の命名規則に従って検証を行う * @param {string} groupName - 検証するハイライトグループ名

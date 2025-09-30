@@ -76,8 +76,79 @@ console.log(`Cache hit rate: ${stats.WORDS.hitRate}%`);
 For detailed documentation, see:
 - [API Reference](docs/unified-cache-api.md)
 - [Cache Types Guide](docs/cache-types.md)
-- [Migration Guide](docs/migration-guide.md)
+- [Migration Guide](MIGRATION.md)
 - [Performance Metrics](docs/performance-metrics.md)
+- [Changelog](CHANGELOG.md)
+
+## Version 3.0.0 Changes
+
+### New APIs
+
+hellshake-yano.vim v3.0.0 introduces cleaner, more consistent APIs:
+
+#### GlobalCache (New Preferred Name)
+
+```typescript
+import { GlobalCache, CacheType } from "./cache.ts";
+
+// Get singleton instance
+const cache = GlobalCache.getInstance();
+
+// Access specific cache
+const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
+
+// Get statistics
+const stats = cache.getStats(); // New API
+```
+
+**Note**: `UnifiedCache` is still available as an alias for backward compatibility.
+
+#### getStats() (New Statistics API)
+
+```typescript
+// New concise API
+const stats = cache.getStats();
+console.log(`Hit rate: ${stats.WORDS.hitRate}%`);
+
+// Old API still works
+const stats2 = cache.getStatistics(); // Alias for getStats()
+```
+
+#### detectWordsWithManager (Enhanced Word Detection)
+
+```typescript
+import { detectWordsWithManager, getWordDetectionManager } from "./word.ts";
+
+// Get word detection manager
+const manager = await getWordDetectionManager(denops);
+
+// Detect words with explicit screen range
+const words = await detectWordsWithManager(denops, manager);
+```
+
+### Breaking Changes (v3.0.0)
+
+The following type definitions have been removed. Please use `UnifiedConfig` or `Config` instead:
+
+```typescript
+// ❌ Removed in v3.0.0
+CoreConfig
+WordConfig
+HintConfig
+PerformanceConfig
+DebugConfig
+
+// ✅ Use instead
+import { UnifiedConfig, Config } from "./config.ts";
+
+const config: UnifiedConfig = {
+  useJapanese: true,
+  minWordLength: 3,
+  // ... other options
+};
+```
+
+For detailed migration instructions, see [MIGRATION.md](MIGRATION.md).
 
 ## Installation
 

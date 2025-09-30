@@ -44,19 +44,6 @@ interface LineContext {
 }
 
 /**
- * 日本語除外機能の設定インターフェース（後方互換性のため保持）
- *
- * @deprecated v2.0.0以降は新しいEnhancedWordConfigを使用してください
- * @since 1.0.0
- */
-export interface WordConfig {
-  /** 日本語を含む単語検出を行うか（デフォルト: false） */
-  useJapanese?: boolean;
-  /** 互換性のためのフラグ（未使用） */
-  useImprovedDetection?: boolean;
-}
-
-/**
  * 新しい単語検出設定インターフェース
  *
  * WordDetectionManagerConfigを拡張し、後方互換性を保ちつつ
@@ -1132,7 +1119,6 @@ export class HybridWordDetector implements WordDetector {
   }
 }
 
-/** @deprecated Use detectWordsWithManager instead */
 /**
  * 単語検出のメイン関数（オーバーロード版）
  * @param text - 検出対象のテキスト
@@ -1149,7 +1135,6 @@ export function detectWords(
  * 単語検出のメイン関数（Denops版）
  * @param denops - Denopsインスタンス
  * @returns 検出された単語のリスト
- * @deprecated detectWordsWithManagerを使用してください
  */
 export function detectWords(denops: Denops): Promise<Word[]>;
 /**
@@ -1338,8 +1323,7 @@ function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext |
 }
 
 /**
- * @deprecated Use detectWordsWithEnhancedConfig instead for better performance and features
- * @description 設定に基づいて単語検出を行う中級レベルの関数。日本語サポートと改善版検出を含む
+ * 設定に基づいて単語検出を行う中級レベルの関数。日本語サポートと改善版検出を含む
  * @param denops - Denopsインスタンス
  * @param config - 単語検出設定（省略時はデフォルト設定）
  * @returns Promise<Word[]> - 検出された単語の配列
@@ -1605,7 +1589,6 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
  * @param useImprovedDetection - 改善版検出を使用するかどうか（デフォルト: false）
  * @param excludeJapanese - 日本語を除外するかどうか（デフォルト: false）
  * @returns 抽出された単語のリスト
- * @deprecated extractWordsUnifiedを使用してください
  */
 export function extractWordsFromLine(
   lineText: string,
@@ -1753,7 +1736,6 @@ export function extractWordsFromLine(
   return words;
 }
 
-/** @deprecated Use extractWordsUnified instead */
 export function extractWordsFromLineWithConfig(
   lineText: string,
   lineNumber: number,
@@ -1871,16 +1853,17 @@ export function getWordDetectionCacheStats(): {
  */
 
 /**
- * WordConfigをEnhancedWordConfigに変換する
- * @description レガシーWordConfigを新しいEnhancedWordConfig形式に変換する
- * @param wordConfig - 変換元のWordConfig
+ * UnifiedConfigをEnhancedWordConfigに変換する
+ * @description UnifiedConfigを新しいEnhancedWordConfig形式に変換する（v3.0.0でWordConfigサポート削除）
+ * @param config - 変換元のUnifiedConfig
  * @returns EnhancedWordConfig - 変換されたEnhancedWordConfig
  * @since 1.0.0
+ * @updated v3.0.0 - WordConfigサポート削除
  */
-export function convertWordConfigToEnhanced(config: WordConfig | UnifiedConfig): EnhancedWordConfig {
-  // UnifiedConfigまたはWordConfigを受け入れ、EnhancedWordConfigに変換
-  const useJapanese = 'useJapanese' in config ? config.useJapanese : config.useJapanese;
-  
+export function convertWordConfigToEnhanced(config: UnifiedConfig): EnhancedWordConfig {
+  // UnifiedConfigを受け入れ、EnhancedWordConfigに変換
+  const useJapanese = 'useJapanese' in config ? config.useJapanese : false;
+
   return {useJapanese: useJapanese ?? false,
     strategy: "regex", // デフォルト戦略
     enableTinySegmenter: useJapanese === true,
@@ -1952,7 +1935,6 @@ export async function detectWordsWithEnhancedConfig(
   }
 }
 
-/** @deprecated Use extractWordsUnified instead */
 export function extractWordsFromLineWithEnhancedConfig(
   lineText: string,
   lineNumber: number,
@@ -1964,7 +1946,6 @@ export function extractWordsFromLineWithEnhancedConfig(
 
 /**
  * レガシー互換性アダプター関数
- * @deprecated Use extractWordsUnified with legacyMode: true for the same behavior
  * @description extractWordsFromLineOriginalと100%互換性のある結果を返すアダプター関数。
  * 将来的には新しい実装をベースとした最適化版に切り替え可能な設計。
  *
