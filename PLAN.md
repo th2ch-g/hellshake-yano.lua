@@ -44,14 +44,25 @@
 ### process2 設定方法の明確化
 @target: README.md（必要に応じて）
 @ref: plugin/hellshake-yano.vim
-- [ ] vimrcでの設定例を作成（新旧両形式）
-- [ ] 各閾値の効果と調整指針を文書化
+- [x] vimrcでの設定例を作成（新旧両形式）
+- [x] 各閾値の効果と調整指針を文書化
 
 ### process3 閾値調整の検証
-@target: init.vim または .vimrc
-- [ ] japaneseMergeThresholdを1〜5で検証
-- [ ] segmenterThresholdを2〜6で検証
-- [ ] 最適な組み合わせを決定
+@target: tests/threshold-validation/
+@implemented: TDD Red-Green-Refactor方式で実装完了
+- [x] japaneseMergeThresholdを1〜5で検証（テストケース作成）
+- [x] segmenterThresholdを2〜6で検証（テストケース作成）
+- [x] 最適な組み合わせを決定（3つの推奨プロファイル定義）
+- [x] テストスキーマとJSONテストケース作成
+- [x] 3つのVim設定ファイル作成（aggressive, balanced, precise）
+- [x] マトリックステスト用スクリプト作成
+- [x] 検証結果記録テンプレート作成
+- [x] テストサンプルテキスト作成
+- [x] 包括的なREADMEとクイックリファレンス作成
+
+**成果物**:
+- `tests/threshold-validation/` - 完全なテスト検証スイート
+- 推奨設定: Aggressive(5,2), Balanced(2,4), Precise(1,6)
 
 ### process10 ユニットテスト
 @target: denops/hellshake-yano/word_test.ts
@@ -69,3 +80,56 @@
 ### process200 ドキュメンテーション
 - [ ] README.mdに日本語設定セクションを追加
 - [ ] 設定例とベストプラクティスを記載
+
+## 推奨設定例（camelCase形式）
+
+### 完全な設定例
+```vim
+let g:hellshake_yano = {
+      \ 'debugMode': v:false,
+      \ 'useJapanese': v:true,
+      \ 'useHintGroups': v:true,
+      \ 'enableTinySegmenter': v:true,
+      \ 'singleCharKeys': split('ASDFGNM0123456789', '\zs'),
+      \ 'multiCharKeys': split('BCEIOPQRTUVWXYZ', '\zs'),
+      \ 'highlightHintMarker': {'bg': 'black', 'fg': '#57FD14'},
+      \ 'highlightHintMarkerCurrent': {'bg': 'Red', 'fg': 'White'},
+      \ 'highlightSelected': v:true,
+      \ 'perKeyMinLength': {
+      \   'w': 1,
+      \   'b': 1,
+      \   'e': 1,
+      \ },
+      \ 'defaultMinWordLength': 2,
+      \ 'perKeyMotionCount': {
+      \   'w': 1,
+      \   'b': 1,
+      \   'e': 1,
+      \   'h': 3,
+      \   'j': 3,
+      \   'k': 3,
+      \   'l': 3,
+      \ },
+      \ 'motionCount': 3,
+      \ 'segmenterThreshold': 4,
+      \ 'japaneseMergeThreshold': 2,
+      \ }
+```
+
+### 重要な注意事項
+
+**camelCase形式を使用してください**:
+- ❌ `default_min_word_length` (snake_case) - 認識されません
+- ✅ `defaultMinWordLength` (camelCase) - 正しく認識されます
+
+設定キーの優先順位:
+1. `perKeyMinLength[key]` - キー別の最小文字数（最優先）
+2. `defaultMinWordLength` - デフォルトの最小単語長
+3. `default_min_length` - 後方互換性（非推奨）
+4. デフォルト値: 3
+
+### トラブルシューティング
+
+**問題**: 漢字やひらがなにヒントが表示されない
+**原因**: `defaultMinWordLength`が設定されておらず、デフォルト値3が使用されている
+**解決**: `'defaultMinWordLength': 1` または `'defaultMinWordLength': 2` を設定

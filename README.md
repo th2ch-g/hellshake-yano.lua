@@ -150,6 +150,10 @@ let g:hellshake_yano = {
 | `key_repeat_reset_delay`        | number      | 300             | Delay before reset after key repeat (ms)                |
 | `per_key_min_length`            | dict        | {}              | Set minimum word length per key                         |
 | `default_min_word_length`       | number      | 2               | Default minimum word length for hints                   |
+| `segmenter_threshold`           | number      | 4               | Min characters to use TinySegmenter (snake_case)        |
+| `segmenterThreshold`            | number      | 4               | Min characters to use TinySegmenter (camelCase)         |
+| `japanese_merge_threshold`      | number      | 2               | Max characters for particle merging (snake_case)        |
+| `japaneseMergeThreshold`        | number      | 2               | Max characters for particle merging (camelCase)         |
 | `debug_mode`                    | boolean     | v:false         | Enable debug mode                                       |
 | `performance_log`               | boolean     | v:false         | Enable performance logging                              |
 
@@ -470,6 +474,202 @@ let g:hellshake_yano = {
   \ }
 " Result: v(1), h(2), g(3), d(3) are all tracked
 ```
+
+### Japanese Word Segmentation Settings
+
+hellshake-yano.vim provides advanced Japanese word segmentation (分かち書き) features using TinySegmenter and particle merging. These settings allow you to fine-tune how Japanese text is analyzed and how word boundaries are detected.
+
+#### Configuration Keys
+
+The plugin supports both **snake_case** (legacy) and **camelCase** (modern) configuration keys:
+
+| Feature | snake_case (Legacy) | camelCase (Modern) | Default | Description |
+|---------|---------------------|-------------------|---------|-------------|
+| TinySegmenter threshold | `segmenter_threshold` | `segmenterThreshold` | `4` | Minimum character count to use TinySegmenter |
+| Particle merge threshold | `japanese_merge_threshold` | `japaneseMergeThreshold` | `2` | Maximum character count for particle merging |
+
+#### Basic Configuration Examples
+
+**Using modern camelCase format (recommended)**:
+```vim
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   segmenterThreshold: 4,
+\   japaneseMergeThreshold: 2,
+\   japaneseMergeParticles: v:true
+\ }
+```
+
+**Using legacy snake_case format (still supported)**:
+```vim
+let g:hellshake_yano = {
+  \ 'use_japanese': v:true,
+  \ 'segmenter_threshold': 4,
+  \ 'japanese_merge_threshold': 2,
+  \ 'japanese_merge_particles': v:true
+  \ }
+```
+
+#### Configuration Parameter Details
+
+##### segmenterThreshold (TinySegmenter閾値)
+
+**Purpose**: Controls when TinySegmenter (形態素解析エンジン) is used for Japanese text analysis.
+
+**How it works**:
+- When a Japanese text segment has **4 or more characters** (default), TinySegmenter is used for precise morphological analysis
+- For shorter segments, faster pattern-based detection is used
+- Higher values = faster performance, but less accurate segmentation for longer words
+- Lower values = more accurate segmentation, but slightly slower
+
+**Tuning Guidelines**:
+```vim
+" Fast mode - Use pattern-based detection more often
+" 速度優先 - パターンベース検出を多用
+let g:hellshake_yano = #{
+\   segmenterThreshold: 6,
+\ }
+
+" Balanced mode - Default setting
+" バランス型 - デフォルト設定
+let g:hellshake_yano = #{
+\   segmenterThreshold: 4,
+\ }
+
+" Precision mode - Use TinySegmenter even for short words
+" 精度優先 - 短い単語でも形態素解析を使用
+let g:hellshake_yano = #{
+\   segmenterThreshold: 2,
+\ }
+```
+
+**Recommended values**:
+- **2-3**: For technical documents with many compound words (技術文書、複合語が多い場合)
+- **4**: Default balanced setting (デフォルト・バランス設定)
+- **5-6**: For general text with simpler vocabulary (一般的なテキスト)
+
+##### japaneseMergeThreshold (助詞結合閾値)
+
+**Purpose**: Controls particle merging behavior - when Japanese particles (の, を, に, が, etc.) are merged with the preceding word.
+
+**How it works**:
+- When a particle appears after a word with **2 or fewer characters** (default), it's merged into the previous word
+- Example: "私の" (watashi-no) stays as one unit instead of splitting into "私" + "の"
+- Higher values = more aggressive merging, creating longer word units
+- Lower values = less merging, keeping words and particles separate
+
+**Tuning Guidelines**:
+```vim
+" Minimal merging - Keep particles mostly separate
+" 最小結合 - 助詞を分離
+let g:hellshake_yano = #{
+\   japaneseMergeThreshold: 1,
+\ }
+" Example: "私" "の" "本" (3 separate words)
+
+" Default merging - Natural reading units
+" デフォルト結合 - 自然な読みやすさ
+let g:hellshake_yano = #{
+\   japaneseMergeThreshold: 2,
+\ }
+" Example: "私の" "本" (2 word units)
+
+" Aggressive merging - Longer context units
+" 積極的結合 - 長いコンテキスト単位
+let g:hellshake_yano = #{
+\   japaneseMergeThreshold: 3,
+\ }
+" Example: "私の本" (single unit if conditions met)
+```
+
+**Recommended values**:
+- **1**: For precise, character-level navigation (文字レベルの精密ナビゲーション)
+- **2**: Default natural reading units (デフォルト・自然な読み単位)
+- **3**: For code comments where phrases should stay together (コメント内でフレーズを保持)
+
+#### Complete Japanese Development Configuration
+
+**For Japanese software development** (日本語ソフトウェア開発向け):
+```vim
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   enableTinySegmenter: v:true,
+\   segmenterThreshold: 3,
+\   japaneseMergeThreshold: 2,
+\   japaneseMergeParticles: v:true,
+\   japaneseMinWordLength: 2,
+\   perKeyMinLength: #{
+\     'v': 1,
+\     'w': 2,
+\     'b': 2
+\   }
+\ }
+```
+
+**For Japanese documentation/writing** (日本語文書作成向け):
+```vim
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   enableTinySegmenter: v:true,
+\   segmenterThreshold: 4,
+\   japaneseMergeThreshold: 2,
+\   japaneseMergeParticles: v:true,
+\   japaneseMinWordLength: 2
+\ }
+```
+
+**For maximum performance** (最大パフォーマンス重視):
+```vim
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   enableTinySegmenter: v:false,
+\   segmenterThreshold: 10,
+\   japaneseMergeThreshold: 1,
+\   japaneseMergeParticles: v:false
+\ }
+```
+
+#### Testing Your Configuration
+
+After changing Japanese segmentation settings, test with various text patterns:
+
+```vim
+" Enable debug mode to see word boundaries
+let g:hellshake_yano = #{
+\   debugMode: v:true,
+\   performanceLog: v:true
+\ }
+
+" Then use :HellshakeDebug to inspect current settings
+:HellshakeDebug
+```
+
+#### Migration from Legacy Format
+
+If you're using the old snake_case format, you can gradually migrate:
+
+```vim
+" Old format (still works)
+let g:hellshake_yano = {
+  \ 'use_japanese': v:true,
+  \ 'segmenter_threshold': 4
+  \ }
+
+" New format (recommended)
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   segmenterThreshold: 4
+\ }
+
+" Both formats work simultaneously during migration
+let g:hellshake_yano = #{
+\   useJapanese: v:true,
+\   segmenterThreshold: 4,
+\   'segmenter_threshold': 4
+\ }
+```
+
+The plugin automatically detects and converts legacy snake_case configuration to the modern camelCase format.
 
 #### Performance Considerations
 

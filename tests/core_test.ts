@@ -2402,6 +2402,7 @@ Deno.test("showHints should call waitForUserInput after display", async () => {
   const mockDenops = new MockDenops();
 
   let waitForUserInputCalled = false;
+  let displayStarted = false;
   let displayCompleted = false;
 
   // Setup mocks
@@ -2410,7 +2411,7 @@ Deno.test("showHints should call waitForUserInput after display", async () => {
   mockDenops.setCallResponse("getbufvar", () => 0);
   mockDenops.setCallResponse("nvim_create_namespace", () => 1);
   mockDenops.setCallResponse("nvim_buf_set_extmark", () => {
-    displayCompleted = true;
+    displayStarted = true;
     return 1;
   });
   mockDenops.setCallResponse("line", () => 10);
@@ -2418,6 +2419,7 @@ Deno.test("showHints should call waitForUserInput after display", async () => {
     waitForUserInputCalled = true;
     return 27; // ESC to exit
   });
+  mockDenops.setCallResponse("getpos", () => [0, 1, 1, 0]);
 
   // Mock word detection to return a test word
   const originalDetectWords = core.detectWordsOptimized;
@@ -2425,7 +2427,14 @@ Deno.test("showHints should call waitForUserInput after display", async () => {
     { text: "test", line: 1, col: 1, byteCol: 1 }
   ];
 
-  // Mock waitForUserInput to track when it's called
+  // Mock displayHintsOptimized to track completion
+  const originalDisplayHints = core.displayHintsOptimized;
+  core.displayHintsOptimized = async (denops, hints, mode, signal) => {
+    await originalDisplayHints.call(core, denops, hints, mode, signal);
+    displayCompleted = true;
+  };
+
+  // Mock waitForUserInput to verify it's called after display completes
   const originalWaitForInput = core.waitForUserInput;
   core.waitForUserInput = async (denops) => {
     // Ensure display was completed before this is called
@@ -2437,12 +2446,14 @@ Deno.test("showHints should call waitForUserInput after display", async () => {
   try {
     await core.showHints(mockDenops as any);
 
-    // Verify the sequence: display completed, then waitForUserInput was called
+    // Verify the sequence: display started and completed, then waitForUserInput was called
+    assert(displayStarted, "Display should have started");
     assert(displayCompleted, "Display should have completed");
     assert(waitForUserInputCalled, "waitForUserInput should have been called after display");
   } finally {
     // Restore original methods
     core.detectWordsOptimized = originalDetectWords;
+    core.displayHintsOptimized = originalDisplayHints;
     core.waitForUserInput = originalWaitForInput;
     core.cleanup();
   }
