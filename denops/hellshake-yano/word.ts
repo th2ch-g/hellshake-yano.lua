@@ -461,7 +461,7 @@ export class RegexWordDetector implements WordDetector {
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
     return {
       strategy: "regex",
-      useJapanese: true,
+      useJapanese: true, // デフォルトで日本語を含める（既存の動作を維持）
       minWordLength: 1,
       maxWordLength: 50,
       exclude_numbers: false,
@@ -493,7 +493,9 @@ export class RegexWordDetector implements WordDetector {
   ): Promise<Word[]> {
     // RegexWordDetectorは正規表現ベースの処理のみを行う
     // 日本語処理はTinySegmenterWordDetectorに委譲される
-    const excludeJapanese = !this.config.useJapanese;
+    // contextのuseJapaneseを優先し、未定義の場合はthis.config.useJapaneseを使用
+    const useJapanese = context?.config?.useJapanese ?? this.config.useJapanese;
+    const excludeJapanese = !useJapanese;
     return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
   }
 
@@ -940,6 +942,15 @@ export class HybridWordDetector implements WordDetector {
     }
 
     try {
+      // useJapaneseがfalseの場合はRegexWordDetectorのみを使用
+      // undefinedの場合はデフォルトで日本語を含める（既存の動作を維持）
+      const useJapanese = context?.config?.useJapanese ?? true;
+
+      if (!useJapanese) {
+        // 日本語を除外する場合はRegexWordDetectorのみ使用
+        return await this.regexDetector.detectWords(text, startLine, context, denops);
+      }
+
       // 両方のDetectorを並行実行（レスポンス時間の最適化）
       const [regexWordsResult, tinySegmenterWordsResult] = await Promise.allSettled([
         this.regexDetector.detectWords(text, startLine, context, denops),
@@ -1170,31 +1181,50 @@ export async function detectWords(
     return words;
   }
 
+  // Denopsインスタンスが渡された場合は、新APIに委譲
   const denops = arg1 as Denops;
 
-  const words: Word[] = [];
-
-  // 画面の表示範囲を取得（環境差異対策: bottom と winheight からtopを導出）
+  // 画面範囲を元の実装と同じ方法で取得（環境差異対策）
   const bottomLine = await denops.call("line", "w$") as number;
   const winHeight = await denops.call("winheight", 0) as number;
   const topLine = Math.max(1, bottomLine - winHeight + 1);
 
-  // 改善版抽出で画面内の各行を処理（日本語はデフォルトで除外しない）
-  for (let line = topLine; line <= bottomLine; line++) {
-    const lineText = await denops.call("getline", line) as string;
-    const lineWords = extractWordsFromLine(lineText, line, true, false);
+  // 画面範囲を取得してcontextとして渡す
+  const lines = await denops.call("getbufline", "%", topLine, bottomLine) as string[];
+  const text = lines.join("\n");
 
-    // Heuristic: if exactly two identical words appear on the same line,
-    // keep only the first occurrence. This matches expected behavior in tests
-    // where pairs like "hello ... hello" count once, while triples remain.
+  // getWordDetectionManagerを使用して単語検出を実行
+  const manager = getWordDetectionManager({
+    useJapanese: true,
+    enableTinySegmenter: false, // 従来の動作に合わせる
+  });
+
+  const result = await manager.detectWords(text, topLine, denops);
+
+  // 従来の動作を再現: 行ごとに重複除去を行う
+  // 同じ行に2回だけ出現する単語は、最初のものだけを保持
+  const wordsByLine = new Map<number, Word[]>();
+
+  // 行ごとにグループ化
+  for (const word of result.words) {
+    if (!wordsByLine.has(word.line)) {
+      wordsByLine.set(word.line, []);
+    }
+    wordsByLine.get(word.line)!.push(word);
+  }
+
+  // 行ごとに重複除去処理を適用
+  const filteredWords: Word[] = [];
+  for (const [_line, words] of wordsByLine) {
     const byText: Record<string, { count: number; indices: number[] }> = {};
-    lineWords.forEach((w, idx) => {
+    words.forEach((w, idx) => {
       const key = w.text;
       if (!byText[key]) byText[key] = { count: 0, indices: [] };
       byText[key].count++;
       byText[key].indices.push(idx);
     });
-    const filteredLineWords = lineWords.filter((w, idx) => {
+
+    const filteredLineWords = words.filter((w, idx) => {
       for (const entry of Object.values(byText)) {
         if (entry.count === 2 && entry.indices.includes(idx) && w.text !== "test") {
           // keep only the first of the two
@@ -1204,10 +1234,10 @@ export async function detectWords(
       return true;
     });
 
-    words.push(...filteredLineWords);
+    filteredWords.push(...filteredLineWords);
   }
 
-  return words;
+  return filteredWords;
 }
 
 /**
@@ -1324,25 +1354,30 @@ export async function detectWordsWithConfig(
   denops: Denops,
   config: Partial<UnifiedConfig> = {},
 ): Promise<Word[]> {
-  // createMinimalConfigで完全なUnifiedConfigを生成
-  const fullConfig = { ...getDefaultUnifiedConfig(), ...config };
-  const words: Word[] = [];
+  // UnifiedConfigをEnhancedWordConfigに変換
+  // useJapaneseがundefinedの場合はデフォルトでtrueを設定（既存の動作を維持）
+  const enhancedConfig: Partial<EnhancedWordConfig> = {
+    useJapanese: config.useJapanese ?? true,
+    useImprovedDetection: config.useImprovedDetection,
+    enableTinySegmenter: false, // UnifiedConfigではTinySegmenterはサポートされていない
+  };
 
-  // 画面の表示範囲を取得
+  // 画面範囲を取得
   const topLine = await denops.call("line", "w0") as number;
   const bottomLine = await denops.call("line", "w$") as number;
+  const lines = await denops.call("getbufline", "%", topLine, bottomLine) as string[];
+  const text = (lines ?? []).join("\n");
 
-  // 各行から設定に基づいて単語を検出（常に改善版を使用）
-  for (let line = topLine; line <= bottomLine; line++) {
-    const lineText = await denops.call("getline", line) as string;
+  // DetectionContextを作成（useJapanese設定を渡すため）
+  const context: DetectionContext = {
+    config: enhancedConfig,
+  };
 
-    // useJapanese設定に基づいてexcludeJapaneseを決定
-    const excludeJapanese = fullConfig.useJapanese !== true;
-    const lineWords = extractWordsFromLine(lineText, line, true, excludeJapanese);
-    words.push(...lineWords);
-  }
+  // getWordDetectionManagerを使用して単語検出を実行
+  const manager = getWordDetectionManager(enhancedConfig);
+  const result = await manager.detectWords(text, topLine, denops, context);
 
-  return words;
+  return result.words;
 }
 
 /**

@@ -403,9 +403,9 @@ Deno.test("Core class detectWordsOptimized should be async and return Promise<Wo
     }
   });
 
-  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+  mockDenops.setCallResponse("getbufline", (bufnr: string | number, start: number, end?: number) => {
     if (end === undefined) {
-      return "hello world test";
+      return ["hello world test"];
     }
     const lines = [];
     for (let i = start; i <= end; i++) {
@@ -432,7 +432,7 @@ Deno.test("Core class detectWordsOptimized should handle invalid buffer number",
 
   // Setup mock for invalid buffer case
   mockDenops.setCallResponse("line", () => 1);
-  mockDenops.setCallResponse("getline", () => "");
+  mockDenops.setCallResponse("getbufline", () => [""]);
   mockDenops.setCallResponse("col", () => 1);
 
   const invalidBufnr = -1;
@@ -456,9 +456,9 @@ Deno.test("Core class detectWordsOptimized should respect cache configuration", 
     }
   });
 
-  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+  mockDenops.setCallResponse("getbufline", (bufnr: string | number, start: number, end?: number) => {
     if (end === undefined) {
-      return "test words here";
+      return ["test words here"];
     }
     const lines = [];
     for (let i = start; i <= end; i++) {
@@ -485,9 +485,9 @@ Deno.test("Core class detectWordsOptimized should handle config changes", async 
 
   // Setup mock responses
   mockDenops.setCallResponse("line", (arg: string) => arg === "w0" ? 1 : 20);
-  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+  mockDenops.setCallResponse("getbufline", (bufnr: string | number, start: number, end?: number) => {
     if (end === undefined) {
-      return "test words";
+      return ["test words"];
     }
     const lines = [];
     for (let i = start; i <= end; i++) {
@@ -513,9 +513,9 @@ Deno.test("Core class detectWordsOptimized should integrate with existing word d
 
   // Setup mock for word detection
   mockDenops.setCallResponse("line", (arg: string) => arg === "w0" ? 1 : 20);
-  mockDenops.setCallResponse("getline", (start: number, end?: number) => {
+  mockDenops.setCallResponse("getbufline", (bufnr: string | number, start: number, end?: number) => {
     if (end === undefined) {
-      return "integration test words";
+      return ["integration test words"];
     }
     const lines = [];
     for (let i = start; i <= end; i++) {
@@ -814,7 +814,7 @@ Deno.test("Core class showHints should be async and integrate full workflow", as
       default: return 1;
     }
   });
-  mockDenops.setCallResponse("getline", () => "test words here");
+  mockDenops.setCallResponse("getbufline", () => ["test words here"]);
   mockDenops.setCallResponse("col", () => 1);
   mockDenops.setCallResponse("nvim_create_namespace", () => 1);
   mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
@@ -843,7 +843,7 @@ Deno.test("Core class showHintsInternal should handle mode parameter", async () 
   mockDenops.setCallResponse("bufnr", () => 1);
   mockDenops.setCallResponse("getbufvar", () => 0);
   mockDenops.setCallResponse("line", () => 1);
-  mockDenops.setCallResponse("getline", () => "test");
+  mockDenops.setCallResponse("getbufline", () => ["test"]);
   mockDenops.setCallResponse("col", () => 1);
   mockDenops.setCallResponse("matchadd", () => 1);
 
@@ -869,7 +869,7 @@ Deno.test("Core class showHintsWithKey should handle key context", async () => {
   mockDenops.setCallResponse("bufnr", () => 1);
   mockDenops.setCallResponse("getbufvar", () => 0);
   mockDenops.setCallResponse("line", () => 1);
-  mockDenops.setCallResponse("getline", () => "test words");
+  mockDenops.setCallResponse("getbufline", () => ["test words"]);
   mockDenops.setCallResponse("col", () => 1);
   mockDenops.setCallResponse("matchadd", () => 1);
 
@@ -897,7 +897,7 @@ Deno.test("Core class showHints should handle multiple calls", async () => {
   mockDenops.setCallResponse("bufnr", () => 1);
   mockDenops.setCallResponse("getbufvar", () => 0);
   mockDenops.setCallResponse("line", () => 1);
-  mockDenops.setCallResponse("getline", () => "test");
+  mockDenops.setCallResponse("getbufline", () => ["test"]);
   mockDenops.setCallResponse("col", () => 1);
   mockDenops.setCallResponse("matchadd", () => 1);
 

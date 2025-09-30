@@ -6,8 +6,8 @@
  */
 
 import { assertEquals } from "@std/assert";
-import { describe, it } from "@std/testing/bdd";
-import { detectWordsWithConfig, extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
+import { beforeEach, describe, it } from "@std/testing/bdd";
+import { detectWordsWithConfig, extractWordsFromLine, resetWordDetectionManager } from "../denops/hellshake-yano/word.ts";
 
 describe("Japanese Filtering Tests", () => {
   describe("extractWordsFromLine with Japanese exclusion", () => {
@@ -75,6 +75,18 @@ describe("Japanese Filtering Tests", () => {
           if (args[0] === "w0") return 1;
           if (args[0] === "w$") return 3;
         }
+        if (fn === "getbufline") {
+          // getbufline("%", topLine, bottomLine)
+          const lines = [
+            "",
+            "hello こんにちは world",
+            "テスト test 試験",
+            "A B C あ い う",
+          ];
+          const topLine = args[1] as number;
+          const bottomLine = args[2] as number;
+          return lines.slice(topLine, bottomLine + 1);
+        }
         if (fn === "getline") {
           const lineNumber = args[0];
           const lines = [
@@ -88,6 +100,11 @@ describe("Japanese Filtering Tests", () => {
         return null;
       },
     };
+
+    beforeEach(() => {
+      // Reset global manager before each test to ensure clean state
+      resetWordDetectionManager();
+    });
 
     it("should respect useJapanese=false setting", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
@@ -127,18 +144,18 @@ describe("Japanese Filtering Tests", () => {
       assertEquals(texts.includes("試験"), true);
     });
 
-    it("should default to excluding Japanese when useJapanese is undefined", async () => {
+    it("should default to including Japanese when useJapanese is undefined", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
         // useJapanese is undefined
       });
 
       const texts = words.map((w) => w.text);
 
-      // デフォルトでは日本語を除外すべき
+      // デフォルトでは日本語を含めるべき（既存の動作を維持）
       assertEquals(texts.includes("hello"), true);
       assertEquals(texts.includes("world"), true);
-      assertEquals(texts.includes("こんにちは"), false);
-      assertEquals(texts.includes("テスト"), false);
+      assertEquals(texts.includes("こんにちは"), true);
+      assertEquals(texts.includes("テスト"), true);
     });
   });
 
