@@ -3225,20 +3225,17 @@ export class Core {
    */
   async updateConfigAdvanced(newConfig: Partial<Config>): Promise<void> {
     try {
-      // 後方互換性のあるフラグを正規化
-      const normalizedConfig = this.normalizeBackwardCompatibleFlags(newConfig);
-
       // カスタムマーカー設定の検証と適用
-      this.validateAndApplyMarkers(normalizedConfig);
+      this.validateAndApplyMarkers(newConfig);
 
       // motion_count の検証と適用
-      this.validateAndApplyMotionCount(normalizedConfig);
+      this.validateAndApplyMotionCount(newConfig);
 
       // motion_timeout の検証と適用
-      this.validateAndApplyMotionTimeout(normalizedConfig);
+      this.validateAndApplyMotionTimeout(newConfig);
 
       // その他の設定項目の検証と適用
-      this.validateAndApplyOtherConfigs(normalizedConfig);
+      this.validateAndApplyOtherConfigs(newConfig);
 
       // マネージャーの設定を同期
       this.syncManagerConfigInternal();
@@ -3426,31 +3423,6 @@ export class Core {
   // =============================================================================
   // Private Helper Methods (dispatcher.ts からの移行)
   // =============================================================================
-
-  /*   * 後方互換性のあるフラグを正規化
-   */
-  private normalizeBackwardCompatibleFlags(cfg: Partial<Config>): Partial<Config> {
-    const normalized = { ...cfg };
-
-    // snake_case から camelCase への変換
-    const legacyMappings: Record<string, string> = {
-      'motion_timeout': 'motionTimeout',
-      'hint_position': 'hintPosition',
-      'debug_mode': 'debugMode',
-      'performance_log': 'performanceLog',
-    };
-
-    for (const [legacyKey, modernKey] of Object.entries(legacyMappings)) {
-      if (legacyKey in normalized) {
-        // @ts-ignore: 動的プロパティアクセス
-        normalized[modernKey] = normalized[legacyKey];
-        // @ts-ignore: 動的プロパティアクセス
-        delete normalized[legacyKey];
-      }
-    }
-
-    return normalized;
-  }
 
   /*   * カスタムマーカー設定の検証と適用
    */

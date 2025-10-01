@@ -113,17 +113,17 @@
 @ref: denops/hellshake-yano/main.ts
 
 #### sub1 core.tsの互換性コード削除
-- [ ] 3209行目のnormalizeBackwardCompatibleFlags呼び出し削除
-- [ ] 3412行目のprivateメソッドnormalizeBackwardCompatibleFlags削除
-- [ ] 直接configオブジェクトを使用するように変更
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] 3209行目のnormalizeBackwardCompatibleFlags呼び出し削除
+- [x] 3412行目のprivateメソッドnormalizeBackwardCompatibleFlags削除
+- [x] 直接configオブジェクトを使用するように変更
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 #### sub2 compatibility.tsファイルの削除
-- [ ] `rm denops/hellshake-yano/compatibility.ts`実行
-- [ ] インポートエラーが発生しないことを確認
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] `rm denops/hellshake-yano/compatibility.ts`実行
+- [x] インポートエラーが発生しないことを確認
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 ### process8 config.tsとword.tsのクリーンアップ
 @target: denops/hellshake-yano/config.ts, denops/hellshake-yano/word.ts
