@@ -1302,6 +1302,196 @@ export interface HintOperations {
   getCurrentHints: () => HintMapping[];
 }
 
+// ===== Process50 Sub4: core.ts のany型削減用の型定義 =====
+
+/**
+ * コマンドオブジェクト
+ * @description CommandFactoryのcreateCommandメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface CommandObject {
+  /** コマンド文字列 */
+  command: string;
+  /** 設定オブジェクト */
+  config: Config;
+}
+
+/**
+ * コントローラーオブジェクト
+ * @description CommandFactoryのgetControllerメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface Controller {
+  /** プラグインを有効化する */
+  enable: () => void;
+  /** プラグインを無効化する */
+  disable: () => void;
+  /** プラグインの有効/無効を切り替える */
+  toggle: () => void;
+}
+
+/**
+ * 設定管理オブジェクト
+ * @description CommandFactoryのgetConfigManagerメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface ConfigManager {
+  /** 現在の設定を取得する */
+  getConfig: () => Config;
+  /** 設定を更新する */
+  updateConfig: (newConfig: Partial<Config>) => void;
+  /** モーションカウントを設定する */
+  setCount: (count: number) => void;
+  /** モーションタイムアウトを設定する */
+  setTimeout: (timeout: number) => void;
+}
+
+/**
+ * デバッグコントローラーオブジェクト
+ * @description CommandFactoryのgetDebugControllerメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface DebugController {
+  /** 統計情報を取得する */
+  getStatistics: () => PluginStatistics;
+  /** キャッシュをクリアする */
+  clearCache: () => void;
+  /** デバッグモードを切り替える */
+  toggleDebugMode: () => void;
+}
+
+/**
+ * 拡張デバッグ情報
+ * @description getExtendedDebugInfoメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface ExtendedDebugInfo extends DebugInfo {
+  /** パフォーマンス詳細情報（オプション） */
+  performanceDetails?: {
+    /** 最小実行時間（ミリ秒） */
+    minExecutionTime?: number;
+    /** 最大実行時間（ミリ秒） */
+    maxExecutionTime?: number;
+    /** 平均実行時間（ミリ秒） */
+    avgExecutionTime?: number;
+  };
+  /** キャッシュ詳細統計（オプション） */
+  cacheDetails?: {
+    /** 単語キャッシュサイズ */
+    wordCacheSize?: number;
+    /** ヒントキャッシュサイズ */
+    hintCacheSize?: number;
+    /** キャッシュヒット率 */
+    cacheHitRate?: number;
+  };
+}
+
+/**
+ * 初期化オプション
+ * @description initializeメソッドのoptionsパラメータの型
+ * Process50 Sub4 Phase 2で追加
+ */
+export interface InitializeOptions {
+  /** 強制初期化フラグ（既に初期化済みでも再初期化する） */
+  force?: boolean;
+  /** デバッグモードフラグ */
+  debug?: boolean;
+  /** カスタム設定（部分的な設定オブジェクト） */
+  config?: Partial<Config>;
+  /** キャッシュサイズの設定 */
+  cacheSizes?: {
+    /** 単語キャッシュのサイズ */
+    words?: number;
+    /** ヒントキャッシュのサイズ */
+    hints?: number;
+  };
+}
+
+/**
+ * 初期化結果
+ * @description initializePluginメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface InitializeResult {
+  /** Extmark名前空間（Neovim用、nullの場合あり） */
+  extmarkNamespace: number | null;
+  /** キャッシュオブジェクト */
+  caches: {
+    words: import("./cache.ts").LRUCache<string, Word[]>;
+    hints: import("./cache.ts").LRUCache<string, string[]>;
+  };
+}
+
+/**
+ * ヘルスチェック結果
+ * @description healthCheckメソッドの戻り値型
+ * Process50 Sub4 Phase 1で追加
+ */
+export interface HealthCheckResult {
+  /** ヘルシーかどうか */
+  healthy: boolean;
+  /** 検出された問題のリスト */
+  issues: string[];
+  /** 推奨事項のリスト */
+  recommendations: string[];
+}
+
+/**
+ * 拡張設定型
+ * @description unifiedConfigの型アサーション用
+ * Process50 Sub4 Phase 3で追加
+ */
+export interface EnhancedConfig extends Config {
+  /** デフォルト最小長（レガシー設定） */
+  default_min_length?: number;
+  /** 最小長（レガシー設定） */
+  min_length?: number;
+  /** 最小単語長（レガシー設定） */
+  minWordLength?: number;
+}
+
+/**
+ * パフォーマンス統計情報
+ * @description 操作のパフォーマンス統計
+ * Process50 Sub4 Phase 1で追加（core.tsから移動）
+ */
+export interface PerformanceStats {
+  /** 実行回数 */
+  count: number;
+  /** 平均実行時間（ミリ秒） */
+  average: number;
+  /** 最大実行時間（ミリ秒） */
+  max: number;
+  /** 最小実行時間（ミリ秒） */
+  min: number;
+}
+
+/**
+ * プラグイン統計情報
+ * @description プラグイン全体の統計情報
+ * Process50 Sub4 Phase 1で追加（core.tsから移動）
+ */
+export interface PluginStatistics {
+  /** キャッシュ統計 */
+  cacheStats: {
+    words: import("./cache.ts").CacheStatistics;
+    hints: import("./cache.ts").CacheStatistics;
+  };
+  /** パフォーマンス統計 */
+  performanceStats: {
+    showHints: PerformanceStats;
+    hideHints: PerformanceStats;
+    wordDetection: PerformanceStats;
+    hintGeneration: PerformanceStats;
+  };
+  /** 現在の状態 */
+  currentState: {
+    initialized: boolean;
+    hintsVisible: boolean;
+    currentHintsCount: number;
+  };
+}
+
 /** 型定義ファイルのバージョン番号 */
 export const TYPES_VERSION = "2.0.0";
 

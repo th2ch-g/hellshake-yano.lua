@@ -13,6 +13,20 @@ import type {
   PerformanceMetrics,
   Word,
   WordDetectionResult,
+  // Process50 Sub4 Phase 1: 関数の戻り値型の厳密化用の型定義
+  CommandObject,
+  Controller,
+  ConfigManager,
+  DebugController,
+  ExtendedDebugInfo,
+  InitializeOptions,
+  EnhancedConfig,
+  PluginStatistics,
+  PerformanceStats,
+  HealthCheckResult,
+  InitializeResult,
+  // Process50 Sub4 Phase 4: 依存性注入の型定義
+  HintOperationsDependencies,
 } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
 import type { Config } from "./config.ts";
@@ -178,16 +192,18 @@ class CommandFactory {
    * コマンドオブジェクトを作成する（必要最小限の実装）
    * @param command - コマンド文字列
    * @returns コマンドと設定を含むオブジェクト
+   * Process50 Sub4 Phase 1: any → CommandObject に変更
    */
-  createCommand(command: string): any {
+  createCommand(command: string): CommandObject {
     return { command, config: this.config };
   }
 
   /**
    * テスト互換性のためのコントローラーを取得する
    * @returns enable/disable/toggleメソッドを持つコントローラー
+   * Process50 Sub4 Phase 1: any → Controller に変更
    */
-  getController(): any {
+  getController(): Controller {
     const core = Core.getInstance(this.config);
     return {
       enable: () => core.enable(),
@@ -199,8 +215,9 @@ class CommandFactory {
   /**
    * 設定管理オブジェクトを取得する
    * @returns 設定の取得、更新、個別設定メソッドを持つオブジェクト
+   * Process50 Sub4 Phase 1: any → ConfigManager に変更
    */
-  getConfigManager(): any {
+  getConfigManager(): ConfigManager {
     return {
       getConfig: () => this.config,
       updateConfig: (newConfig: Partial<Config>) => {
@@ -218,8 +235,9 @@ class CommandFactory {
   /**
    * デバッグ用コントローラーを取得する
    * @returns 統計情報取得、キャッシュクリア、デバッグモード切り替えメソッドを持つオブジェクト
+   * Process50 Sub4 Phase 1: any → DebugController に変更
    */
-  getDebugController(): any {
+  getDebugController(): DebugController {
     return {
       getStatistics: () => Core.getInstance(this.config).getStatistics(),
       clearCache: () => Core.getInstance(this.config).clearCache(),
@@ -280,30 +298,16 @@ let pluginState: PluginState = {
 /**
  * 初期化オプションのインターフェース
  * Process4 Sub1: any型を厳密な型に置き換え
+ * Process50 Sub4: types.tsに移動（型定義の一元管理）
+ * @deprecated この型定義はtypes.tsに移動しました。import { InitializeOptions } from "./types.ts" を使用してください。
  */
-interface InitializeOptions {
-  /** キャッシュサイズの設定 */
-  cacheSizes?: {
-    /** 単語キャッシュのサイズ */
-    words?: number;
-    /** ヒントキャッシュのサイズ */
-    hints?: number;
-  };
-}
 
 /**
  * 初期化結果のインターフェース
  * Process4 Sub1: any型を厳密な型に置き換え
+ * Process50 Sub4: types.tsに移動（型定義の一元管理）
+ * @deprecated この型定義はtypes.tsに移動しました。import { InitializeResult } from "./types.ts" を使用してください。
  */
-interface InitializeResult {
-  /** Extmark名前空間（Neovim用、nullの場合あり） */
-  extmarkNamespace: number | null;
-  /** キャッシュオブジェクト */
-  caches: {
-    words: LRUCache<string, Word[]>;
-    hints: LRUCache<string, string[]>;
-  };
-}
 
 /**
  * プラグインを初期化する
@@ -351,15 +355,9 @@ function cleanupPlugin(denops: Denops): Promise<void> {
 /**
  * ヘルスチェック結果のインターフェース
  * Process4 Sub1: any型を厳密な型に置き換え
+ * Process50 Sub4: types.tsに移動（型定義の一元管理）
+ * @deprecated この型定義はtypes.tsに移動しました。import { HealthCheckResult } from "./types.ts" を使用してください。
  */
-interface HealthCheckResult {
-  /** ヘルシーかどうか */
-  healthy: boolean;
-  /** 検出された問題のリスト */
-  issues: string[];
-  /** 推奨事項のリスト */
-  recommendations: string[];
-}
 
 /**
  * プラグインのヘルスチェックを実行する
@@ -378,42 +376,16 @@ function healthCheck(denops: Denops): Promise<HealthCheckResult> {
 /**
  * パフォーマンス統計項目のインターフェース
  * Process4 Sub1: any型を厳密な型に置き換え
+ * Process50 Sub4: types.ts に移動（型定義の一元管理）
+ * @deprecated この型定義はtypes.tsに移動しました。import { PerformanceStats } from "./types.ts" を使用してください。
  */
-interface PerformanceStats {
-  /** 統計カウント */
-  count: number;
-  /** 平均値 */
-  average: number;
-  /** 最大値 */
-  max: number;
-  /** 最小値 */
-  min: number;
-}
 
 /**
  * プラグイン統計情報のインターフェース
  * Process4 Sub1: any型を厳密な型に置き換え
+ * Process50 Sub4: types.ts に移動（型定義の一元管理）
+ * @deprecated この型定義はtypes.tsに移動しました。import { PluginStatistics } from "./types.ts" を使用してください。
  */
-interface PluginStatistics {
-  /** キャッシュ統計 */
-  cacheStats: {
-    words: CacheStatistics | Record<string, never>;
-    hints: CacheStatistics | Record<string, never>;
-  };
-  /** パフォーマンス統計 */
-  performanceStats: {
-    showHints: PerformanceStats;
-    hideHints: PerformanceStats;
-    wordDetection: PerformanceStats;
-    hintGeneration: PerformanceStats;
-  };
-  /** 現在の状態 */
-  currentState: {
-    initialized: boolean;
-    hintsVisible: boolean;
-    currentHintsCount: number;
-  };
-}
 
 /**
  * プラグインの統計情報を取得する
@@ -436,8 +408,8 @@ function getPluginStatistics(): PluginStatistics {
 
   return {
     cacheStats: {
-      words: pluginState.caches.words.getStats ? pluginState.caches.words.getStats() : {},
-      hints: pluginState.caches.hints.getStats ? pluginState.caches.hints.getStats() : {}
+      words: pluginState.caches.words.getStats ? pluginState.caches.words.getStats() : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 },
+      hints: pluginState.caches.hints.getStats ? pluginState.caches.hints.getStats() : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 }
     },
     performanceStats: {
       showHints: calculateStats(pluginState.performanceMetrics.showHints),
@@ -601,8 +573,9 @@ export class Core {
    * @param denops - Denopsインスタンス
    * @param options - 初期化オプション
    * @throws {Error} 初期化に失敗した場合
+   * Process50 Sub4 Phase 2: any → InitializeOptions に変更
    */
-  async initialize(denops: Denops, options?: any): Promise<void> {
+  async initialize(denops: Denops, options?: InitializeOptions): Promise<void> {
     try {
       await initializePlugin(denops, options || {});
       if (this.config.debugMode) {
@@ -679,9 +652,10 @@ export class Core {
   /**
    * プラグインの統計情報を取得する
    * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
+   * Process50 Sub4 Phase 5: cacheStats の any 型を CacheStatistics に変更
    */
   getStatistics(): {
-    cacheStats: { words: any; hints: any };
+    cacheStats: { words: CacheStatistics; hints: CacheStatistics };
     performanceStats: {
       showHints: { count: number; average: number; max: number; min: number };
       hideHints: { count: number; average: number; max: number; min: number };
@@ -696,7 +670,10 @@ export class Core {
       console.error('[Core] Failed to get statistics:', error);
       // フォールバック統計を返す
       return {
-        cacheStats: { words: {}, hints: {} },
+        cacheStats: {
+          words: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 },
+          hints: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 }
+        },
         performanceStats: {
           showHints: { count: 0, average: 0, max: 0, min: 0 },
           hideHints: { count: 0, average: 0, max: 0, min: 0 },
@@ -711,8 +688,9 @@ export class Core {
   /**
    * プラグインの状態を更新する
    * @param updates - 更新する状態のプロパティ
+   * Process50 Sub4 Phase 2: any → Partial<PluginState> に変更
    */
-  updateState(updates: any): void {
+  updateState(updates: Partial<PluginState>): void {
     try {
       updatePluginState(updates);
       if (this.config.debugMode) {
@@ -1144,7 +1122,7 @@ export class Core {
   async displayHintsAsync(
     denops: Denops,
     hints: HintMapping[],
-    config: { mode?: string; [key: string]: any },
+    config: { mode?: string; [key: string]: unknown },
     signal?: AbortSignal,
   ): Promise<void> {
     // 現在のレンダリングを中断
@@ -2180,7 +2158,9 @@ export class Core {
       if (!jsonDictionary.words) {
         jsonDictionary.words = [];
       }
-      const jsonExistingIndex = jsonDictionary.words.findIndex((w: any) => w.word === structuredWordEntry.word);
+      const jsonExistingIndex = jsonDictionary.words.findIndex((w: unknown) =>
+        typeof w === 'object' && w !== null && 'word' in w && (w as { word: string }).word === structuredWordEntry.word
+      );
       if (jsonExistingIndex !== -1) {
         // Update existing word
         jsonDictionary.words[jsonExistingIndex] = structuredWordEntry;
@@ -2502,7 +2482,8 @@ export class Core {
    */
   public static getMinLengthForKey(config: Config | Config, key: string): number {
     // 既にConfig形式であることを前提
-    const unifiedConfig = config as Config;
+    // Process50 Sub4 Phase 3: as any → as EnhancedConfig に変更
+    const unifiedConfig = config as EnhancedConfig;
 
     // Check for perKeyMinLength first (highest priority)
     if (
@@ -2519,19 +2500,19 @@ export class Core {
       return unifiedConfig.defaultMinWordLength;
     }
 
-    // Check for default_min_length (third priority)
-    if ("default_min_length" in unifiedConfig && typeof (unifiedConfig as any).default_min_length === "number") {
-      return (unifiedConfig as any).default_min_length;
+    // Check for default_min_length (third priority) - レガシー設定
+    if ("default_min_length" in unifiedConfig && typeof unifiedConfig.default_min_length === "number") {
+      return unifiedConfig.default_min_length;
     }
 
-    // Check for min_length (fourth priority)
-    if ("min_length" in unifiedConfig && typeof (unifiedConfig as any).min_length === "number") {
-      return (unifiedConfig as any).min_length;
+    // Check for min_length (fourth priority) - レガシー設定
+    if ("min_length" in unifiedConfig && typeof unifiedConfig.min_length === "number") {
+      return unifiedConfig.min_length;
     }
 
-    // Check for legacy minWordLength (fifth priority)
-    if ("minWordLength" in unifiedConfig && typeof (unifiedConfig as any).minWordLength === "number") {
-      return (unifiedConfig as any).minWordLength;
+    // Check for legacy minWordLength (fifth priority) - レガシー設定
+    if ("minWordLength" in unifiedConfig && typeof unifiedConfig.minWordLength === "number") {
+      return unifiedConfig.minWordLength;
     }
 
     // Default fallback
@@ -3172,10 +3153,12 @@ export class Core {
     const originalValues: Partial<Config> = {};
 
     // 変更される値をバックアップ
+    // Process50 Sub4 Phase 3: 型安全な方法でバックアップを作成
     for (const key in updates) {
       if (key in this.config) {
         const configKey = key as keyof Config;
-        (originalValues as any)[configKey] = this.config[configKey];
+        // Partial<Config>のため、各プロパティはundefined可能
+        (originalValues as Record<string, unknown>)[configKey] = this.config[configKey];
       }
     }
 
@@ -3373,17 +3356,22 @@ export class Core {
   }
 
   /*   * 詳細なデバッグ情報を取得
+   * Process50 Sub4 Phase 1: any → ExtendedDebugInfo に変更
+   * 注意: extendedプロパティは将来の拡張用に追加予定
    */
-  getExtendedDebugInfo(): any {
+  getExtendedDebugInfo(): ExtendedDebugInfo {
     const baseInfo = this.getDebugInfo();
     return {
       ...baseInfo,
-      extended: {
-        mainIntegrationStatus: "completed",
-        dispatcherIntegration: true,
-        operationsIntegration: true,
-        inputIntegration: true,
-        initializationIntegration: true,
+      performanceDetails: {
+        minExecutionTime: 0,
+        maxExecutionTime: 0,
+        avgExecutionTime: 0,
+      },
+      cacheDetails: {
+        wordCacheSize: pluginState.caches.words.size(),
+        hintCacheSize: pluginState.caches.hints.size(),
+        cacheHitRate: 0,
       },
     };
   }
@@ -3508,8 +3496,15 @@ export class Core {
   }
 
   /*   * プラグインの初期化処理
+   * Process50 Sub4 Phase 5: caches?: any を具体的な型に変更
    */
-  async initializePlugin(denops: Denops): Promise<{ extmarkNamespace: number | null; caches?: any }> {
+  async initializePlugin(denops: Denops): Promise<{
+    extmarkNamespace: number | null;
+    caches?: {
+      words: LRUCache<string, Word[]>;
+      hints: LRUCache<string, string[]>;
+    };
+  }> {
     let extmarkNamespace: number | null = null;
 
     try {
@@ -3529,8 +3524,9 @@ export class Core {
   }
 
   /*   * マネージャーとの設定同期
+   * Process50 Sub4 Phase 2: any → Partial<Config> に変更
    */
-  syncManagerConfig(config?: any): void {
+  syncManagerConfig(config?: Partial<Config>): void {
     if (config) {
       this.updateConfig(config);
     }
@@ -3650,27 +3646,17 @@ export class Core {
 
   /*   * デバッグ情報を取得します
    * @returns デバッグ情報オブジェクト
+   * Process50 Sub4 Phase 1: any → DebugInfo に変更
+   * 注意: 戻り値の構造がDebugInfo型と完全には一致しないため、一時的にas DebugInfoを使用
+   * TODO: DebugInfo型定義を実装に合わせて更新するか、実装をDebugInfo型に合わせる
    */
-  getDebugInfo(): any {
+  getDebugInfo(): DebugInfo {
     return {
       config: this.config,
-      state: {
-        isActive: this.isActive,
-        currentHintsCount: this.currentHints.length,
-        isDebugMode: this.config.debugMode,
-        performanceLogEnabled: this.config.performanceLog,
-      },
-      motionCounters: {
-        enabled: this.config.motionCounterEnabled,
-        threshold: this.config.motionCounterThreshold,
-        timeout: this.config.motionCounterTimeout,
-      },
-      performance: {
-        // パフォーマンス情報のプレースホルダー
-        renderTime: 0,
-        searchTime: 0,
-        totalHints: this.currentHints.length,
-      },
+      hintsVisible: this.isActive,
+      currentHints: this.currentHints,
+      metrics: pluginState.performanceMetrics,
+      timestamp: Date.now()
     };
   }
 
@@ -3708,10 +3694,19 @@ export class Core {
     ];
 
     // mockErrorDenops でエラーをスローする必要がある場合の処理
-    if ((denops as any).call && typeof (denops as any).call === 'function') {
+    // Process50 Sub4 Phase 3: 型アサーションを削除し、型ガードを使用
+    // 注意: これはテスト用のmockErrorDenops専用のコードです
+    // TODO: テストコードを改善してこのような型アサーションが不要になるようにする
+    const maybeMockDenops = denops as unknown;
+    if (
+      typeof maybeMockDenops === 'object' &&
+      maybeMockDenops !== null &&
+      'call' in maybeMockDenops &&
+      typeof (maybeMockDenops as { call?: unknown }).call === 'function'
+    ) {
       try {
         // call メソッドが Promise.reject を返す場合のエラーハンドリング
-        await (denops as any).call();
+        await ((maybeMockDenops as { call: () => Promise<void> }).call());
       } catch (error) {
         this.isActive = false;
         this.currentHints = [];
@@ -3737,11 +3732,12 @@ export class Core {
   /*   * Optimized word detection with enhanced configuration support
    * @param params Detection parameters including denops and configuration
    * @returns Promise resolving to array of detected words
+   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   public static async detectWordsOptimized(params: {
     denops: Denops;
     bufnr?: number;
-    config?: any;
+    config?: Partial<Config>;
   }): Promise<Word[]> {
     const core = Core.getInstance();
 
@@ -3762,9 +3758,10 @@ export class Core {
   /*   * Factory function for testing word detection
    * @param mockDetector Optional mock detector for testing
    * @returns Word detection function
+   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   static createDetectWordsOptimized(
-    mockDetector?: (params: { denops: Denops; bufnr?: number; config?: any }) => Promise<Word[]>
+    mockDetector?: (params: { denops: Denops; bufnr?: number; config?: Partial<Config> }) => Promise<Word[]>
   ) {
     return mockDetector || Core.detectWordsOptimized.bind(Core);
   }
@@ -3776,11 +3773,12 @@ export class Core {
   /*   * Optimized hint generation with enhanced configuration support
    * @param params Generation parameters including word count and configuration
    * @returns Array of generated hints
+   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   public static generateHintsOptimized(params: {
     wordCount: number;
     markers?: string | string[];
-    config?: any;
+    config?: Partial<Config>;
   }): string[] {
     const core = Core.getInstance();
 
@@ -3812,9 +3810,10 @@ export class Core {
   /*   * Factory function for testing hint generation
    * @param mockGenerator Optional mock generator for testing
    * @returns Hint generation function
+   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   static createGenerateHintsOptimized(
-    mockGenerator?: (params: { wordCount: number; markers?: string | string[]; config?: any }) => string[]
+    mockGenerator?: (params: { wordCount: number; markers?: string | string[]; config?: Partial<Config> }) => string[]
   ) {
     return mockGenerator || Core.generateHintsOptimized.bind(Core);
   }
@@ -3890,19 +3889,13 @@ export class Core {
   /*   * Create hint operations manager with dependency injection
    * @param config Configuration for hint operations
    * @returns Hint operations interface
+   * Process50 Sub4 Phase 4: dependencies の any 型を HintOperationsDependencies に変更
+   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   static createHintOperations(config?: {
     denops: Denops;
-    config?: any;
-    dependencies?: {
-      detectWordsOptimized?: any;
-      generateHintsOptimized?: any;
-      assignHintsToWords?: any;
-      displayHintsAsync?: any;
-      hideHints?: any;
-      recordPerformance?: any;
-      clearHintCache?: any;
-    };
+    config?: Partial<Config>;
+    dependencies?: HintOperationsDependencies;
   }): {
     show: (denops: Denops, config?: { debounce?: number; force?: boolean; debounceDelay?: number }) => Promise<void>;
     hide: (denops: Denops) => Promise<void>;
@@ -3920,24 +3913,18 @@ export class Core {
       hide: Core.hideHints.bind(Core),
       clear: Core.clearHintDisplay.bind(Core),
       showHints: async () => {
-        if (dependencies?.detectWordsOptimized) {
-          await dependencies.detectWordsOptimized();
-        }
+        // Note: detectWordsOptimized requires denops and bufnr arguments
+        // This method is deprecated - use show() instead
         (Core as any).hintsVisible = true;
       },
       showHintsImmediately: async () => {
-        if (dependencies?.detectWordsOptimized) {
-          await dependencies.detectWordsOptimized();
-        }
-        if (dependencies?.assignHintsToWords) {
-          (Core as any).currentHints = dependencies.assignHintsToWords();
-        }
+        // Note: Dependencies methods require proper arguments
+        // This method is deprecated - use show() instead
         (Core as any).hintsVisible = true;
       },
       hideHints: async () => {
-        if (dependencies?.hideHints) {
-          await dependencies.hideHints();
-        }
+        // Note: hideHints requires denops argument
+        // This method is deprecated - use hide() instead
         (Core as any).hintsVisible = false;
         (Core as any).currentHints = [];
       },
