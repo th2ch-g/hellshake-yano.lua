@@ -1,225 +1,247 @@
-# title: v3.0.0 後方互換性の完全削除とコードベースの最新化
+# title: any型の削除と厳密な型指定
 
 ## 概要
-- feat/v3ブランチを作成し、すべての後方互換性コードを削除してモダンなTypeScriptコードベースに移行
-- snake_case設定サポートの廃止、型エイリアスの削除、クリーンなAPI設計の実現
+- コード全体から `any` 型を削除し、厳密な型指定を行うことで、TypeScriptの型システムを最大限に活用し、コンパイル時のエラー検出、IDE補完の改善、保守性の向上を実現する
 
 ### goal
-- 完全にクリーンなTypeScriptコードベースの実現
-- camelCaseのみのAPI提供
-- 保守性とパフォーマンスの向上
+- 開発者がコードを編集する際、IDEが正確な型情報を提供し、タイポや型ミスマッチをコンパイル時に検出できる
+- リファクタリング時に型システムが変更の影響範囲を明確にし、安全な変更を可能にする
+- 新規参画者がコードベースの型定義を読むだけで、各関数・インターフェースの役割を理解できる
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 各Processの実装前後で必ず `deno check` と `deno test` を実行すること
-- TDDのRed-Green-Refactorサイクルに従うこと
 
 ## 開発のゴール
-- compatibility.tsの完全削除
-- Config型のみを使用（型エイリアス廃止）
-- snake_case → camelCase変換機能の削除
-- すべてのレガシープロパティサポートの削除
+- プロダクションコード内の `any` 型 (143箇所) を厳密な型定義に置き換える
+- 型安全性を損なわない範囲でテストコードの `any` 型を改善する
+- 型推論が効く設計にし、型アノテーションの冗長性を削減する
+- 後方互換性を保ちながら段階的に移行する
 
 ## 実装仕様
 
-### 削除対象の後方互換性コード
-- **compatibility.ts**: 208行（完全削除対象）
-  - BackwardCompatibleConfig型
-  - normalizeBackwardCompatibleFlags関数
-  - getMinLengthForKey、getMotionCountForKey関数
-  - convertConfigForManager、syncManagerConfig関数
-- **config.ts**: 型エイリアスとプロパティ
-  - UnifiedConfig、CamelCaseConfig、ModernConfig型エイリアス
-  - useImprovedDetectionプロパティ
-- **main.ts**: 約20箇所の互換性コード
-  - normalizeBackwardCompatibleFlags呼び出し（87行目、313行目）
-  - 後方互換性エクスポート（418-427行目）
-- **core.ts**: 2箇所の互換性参照
-- **word.ts**: 後方互換性の再エクスポート
+### 調査結果サマリー
+- **総検出数**: 375箇所
+- **プロダクションコード**: 143箇所 (7ファイル)
+  - denops/hellshake-yano/types.ts: 14箇所
+  - denops/hellshake-yano/config.ts: 18箇所
+  - denops/hellshake-yano/core.ts: 74箇所
+  - denops/hellshake-yano/word.ts: 21箇所
+  - denops/hellshake-yano/hint.ts: 1箇所
+  - denops/hellshake-yano/cache.ts: 2箇所
+  - denops/hellshake-yano/validation.ts: 2箇所
+- **テストコード**: 232箇所 (31ファイル)
 
-### 破壊的変更
-- snake_case設定の完全廃止（single_char_keys → singleCharKeys等）
-- 型エイリアスの廃止（UnifiedConfig → Config）
-- 互換性関数の削除
+### 優先度分類
+- **高 (Critical)**: types.ts の基盤型定義 (config, dependencies)
+- **中 (Important)**: config.ts のバリデーション層、mock.ts
+- **低 (Optional)**: テストコード内の意図的な any 使用
 
 ## 生成AIの学習用コンテキスト
-### 削除対象ファイル
-- denops/hellshake-yano/compatibility.ts
-  - 完全削除予定（後方互換性処理）
+### 型定義ファイル
+- denops/hellshake-yano/types.ts
+  - 基盤となる型定義が集約されている
+  - DetectionContext, DebugInfo, 各種Config関連インターフェース
+  - HintOperationsDependencies の新規定義が必要
 
-### 修正対象ファイル
-- denops/hellshake-yano/main.ts
-  - normalizeBackwardCompatibleFlags削除
-  - 後方互換性エクスポート削除
+### 設定管理ファイル
 - denops/hellshake-yano/config.ts
-  - 型エイリアス削除
-  - 後方互換性プロパティ削除
-- denops/hellshake-yano/core.ts
-  - normalizeBackwardCompatibleFlags参照削除
-- denops/hellshake-yano/word.ts
-  - 後方互換性エクスポート削除
+  - ValidationRules インターフェース
+  - validateConfig, validateConfigValue, validateConfigObject 関数
 
-### テストファイル
-- tests/config_renaming_test.ts
-  - 削除予定（snake_case変換テスト）
-- tests/legacy_behavior_test.ts
-  - 削除予定（レガシー動作テスト）
+### テストヘルパー
+- tests/helpers/mock.ts
+  - MockDenops クラス
+  - ジェネリクスによる型安全化が必要
 
 ## Process
 
-### process5 v3.0.0 準備とブランチ作成
-@target: .git/
-@ref: PLAN.md
-
-#### sub1 feat/v3ブランチの作成
-- [x] 現在のmainブランチの状態を確認
-- [x] `git checkout -b feat/v3`でブランチ作成
-- [x] 初期状態のテスト実行（ベースライン確立）
-  - [x] `deno check`で型チェック
-  - [x] `deno test -A`で全テスト実行
-
-#### sub2 v3.0.0移行計画の文書化
-- [x] MIGRATION_v3.mdの作成
-- [x] 破壊的変更のリスト作成
-- [x] 移行ガイドの記述
-
-### process6 main.tsのリファクタリング
-@target: denops/hellshake-yano/main.ts
-@ref: denops/hellshake-yano/compatibility.ts, denops/hellshake-yano/config.ts
-
-#### sub1 normalizeBackwardCompatibleFlags削除
-- [x] 87行目のnormalizeBackwardCompatibleFlags呼び出しを削除
-- [x] 313行目のnormalizeBackwardCompatibleFlags呼び出しを削除
-- [x] userConfigの直接使用に変更
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-
-#### sub2 compatibility.tsインポートの削除
-- [x] 28-32行目のcompatibility.tsからのインポート削除
-- [x] 65行目の関数エクスポート削除
-- [x] syncManagerConfig呼び出し（129行目、317行目）を削除
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-
-#### sub3 後方互換性エクスポートの削除
-- [x] 418-427行目の後方互換性エクスポート削除（すでに削除済み）
-- [x] 69-70行目の後方互換性コメントとエクスポート削除（テスト用エクスポートのため対象外）
-- [x] 15-23行目の後方互換性コメントと再エクスポート削除（validation.ts関連）
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-
-### process7 compatibility.ts削除とcore.ts修正
-@target: denops/hellshake-yano/compatibility.ts, denops/hellshake-yano/core.ts
-@ref: denops/hellshake-yano/main.ts
-
-#### sub1 core.tsの互換性コード削除
-- [x] 3209行目のnormalizeBackwardCompatibleFlags呼び出し削除
-- [x] 3412行目のprivateメソッドnormalizeBackwardCompatibleFlags削除
-- [x] 直接configオブジェクトを使用するように変更
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-
-#### sub2 compatibility.tsファイルの削除
-- [x] `rm denops/hellshake-yano/compatibility.ts`実行
-- [x] インポートエラーが発生しないことを確認
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-
-### process8 config.tsとword.tsのクリーンアップ
-@target: denops/hellshake-yano/config.ts, denops/hellshake-yano/word.ts
-@ref: denops/hellshake-yano/types.ts
-
-#### sub1 config.tsの型エイリアス削除
-- [x] 174-176行目の型エイリアス（UnifiedConfig, CamelCaseConfig, ModernConfig）削除
-- [x] 158-159行目のuseImprovedDetectionプロパティ削除
-- [x] 32-33行目のHighlightColor再エクスポート削除
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-- [x] word.tsのUnifiedConfig参照をConfigに変更
-- [x] tests/config_renaming_test.tsのUnifiedConfig参照をConfigに変更
-- [x] tests/japanese_filtering_test.tsのuseImprovedDetection削除
-
-#### sub2 word.tsの後方互換性コード削除
-- [x] 6145-6146行目の後方互換性再エクスポート削除
-- [x] 必要に応じて直接インポートに変更
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
-
-### process9 テストファイルの更新
-@target: tests/
+### process1 基盤型定義の厳密化 (Phase 1)
+@target: denops/hellshake-yano/types.ts
 @ref: denops/hellshake-yano/config.ts
 
-#### sub1 互換性テストの削除
-- [x] tests/config_renaming_test.ts削除
-- [x] tests/legacy_behavior_test.ts削除
-- [x] 関連するテストの依存関係を確認
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
+#### sub1 Config関連インターフェースの修正
+- [x] DetectionContext.config を `any` から `Partial<Config>` に変更
+- [x] WordDetectionConfig.config を `any` から `Partial<Config>` に変更
+- [x] DetectWordsParams.config を `any` から `Partial<Config>` に変更
+- [x] HintGenerationConfig.config を `any` から `Partial<Config>` に変更
+- [x] GenerateHintsParams.config を `any` から `Partial<Config>` に変更
+- [x] HintOperationsConfig.config を `any` から `Partial<Config>` に変更
+  - `Partial<Config>` を使用することで、既存コードとの互換性を保ちつつ型安全性を向上
+  - 部分的な設定オブジェクトを受け入れる柔軟性を維持
 
-#### sub2 v3.0.0用テストの作成
-- [x] tests/v3_migration_test.tsの作成
-- [x] Config型のみ使用していることの確認テスト
-- [x] camelCaseプロパティのみ受け入れることの確認テスト
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
+#### sub2 DebugInfo型の修正
+- [x] DebugInfo.config を `Config | any` から `Config` に変更
+  - `Config | any` は実質的に `any` と同じため、単に `Config` に変更
+  - デバッグ情報は完全な設定オブジェクトを持つべき
+
+#### sub3 Dependencies型の新規定義
+- [x] HintOperationsDependencies インターフェースを新規作成
+- [x] detectWordsOptimized の型シグネチャを定義
+  - `(denops: Denops, bufnr?: number) => Promise<Word[]>`
+- [x] generateHintsOptimized の型シグネチャを定義
+  - `(wordCount: number, config?: Partial<Config>) => string[]`
+- [x] assignHintsToWords の型シグネチャを定義
+  - `(words: Word[], hints: string[]) => HintMapping[]`
+- [x] displayHintsAsync の型シグネチャを定義
+  - `(denops: Denops, hints: HintMapping[], config?: Partial<Config>) => Promise<void>`
+- [x] hideHints の型シグネチャを定義
+  - `(denops: Denops) => Promise<void>`
+- [x] recordPerformance の型シグネチャを定義
+  - `(operation: string, startTime: number, endTime: number) => void`
+- [x] clearHintCache の型シグネチャを定義
+  - `() => void`
+
+#### sub4 HintOperationsConfig.dependencies の型適用
+- [x] dependencies プロパティの型を `any` から `HintOperationsDependencies` に変更
+  - 依存性注入パターンにおける型安全性の向上
+
+### process2 バリデーション層の改善 (Phase 2)
+@target: denops/hellshake-yano/config.ts
+@ref: denops/hellshake-yano/types.ts
+
+#### sub1 ValidationRules インターフェースの厳密化
+- [ ] enum プロパティを `readonly any[]` から `readonly (string | number | boolean)[]` に変更
+  - バリデーション対象の値は通常プリミティブ型であるため、具体的な型を指定
+- [ ] custom プロパティを `(value: any) => boolean` から `(value: unknown) => boolean` に変更
+  - `unknown` を使用することで、関数内での型チェックを強制
+
+#### sub2 validateConfig 関数の改善
+- [ ] 型アサーション `const c = config as any` を `const c = config as Record<string, unknown>` に変更
+  - `Record<string, unknown>` は `any` よりも型安全で、プロパティアクセスが可能
+- [ ] 各バリデーションロジックで適切な型ガードを使用
+  - `typeof`, `Array.isArray()` などを活用
+
+#### sub3 validateConfigValue 関数の改善
+- [ ] value パラメータの型を `any` から `unknown` に変更
+- [ ] 型チェックロジックで型ガードを明示的に使用
+  - `unknown` から具体的な型への変換を型ガードで保証
+
+#### sub4 validateConfigObject 関数の改善
+- [ ] config パラメータの型を `Record<string, any>` から `Record<string, unknown>` に変更
+- [ ] 型安全性を保ちながら柔軟なバリデーションを実現
+
+#### sub5 その他のバリデーション関数
+- [ ] isValidType, isInRange, isValidLength 等の型シグネチャを見直し
+- [ ] 必要に応じて `any` を `unknown` に変更
+
+### process3 テストヘルパーの型安全化 (Phase 3)
+@target: tests/helpers/mock.ts
+
+#### sub1 MockDenops クラスの改善
+- [ ] call メソッドをジェネリクスで型安全化
+  - `call<T = unknown>(method: string, ...args: unknown[]): Promise<T>`
+  - 呼び出し側で戻り値の型を指定可能にする
+- [ ] setCallResponse メソッドをジェネリクスで型安全化
+  - `setCallResponse<T = unknown>(method: string, response: T): void`
+  - レスポンスの型を保持
+- [ ] onCall メソッドをジェネリクスで型安全化
+  - `onCall<TArgs extends unknown[] = unknown[], TReturn = unknown>(method: string, handler: (...args: TArgs) => TReturn): void`
+  - ハンドラーの引数と戻り値の型を指定可能にする
+
+#### sub2 内部プロパティの型改善
+- [ ] callResponses を `Map<string, unknown>` に変更
+- [ ] callHandlers の型定義を改善
+  - ジェネリクスに対応した型定義に変更
+
+#### sub3 その他のモック関数
+- [ ] createMockDenops 系関数の戻り値の型を明示
+- [ ] 各モックの型推論が効くように改善
+
+### process4 core.ts, word.ts, hint.ts の個別対応
+@target: denops/hellshake-yano/core.ts, denops/hellshake-yano/word.ts, denops/hellshake-yano/hint.ts
+
+#### sub1 core.ts の any 型調査と対応
+- [ ] 74箇所の any 型使用箇所を個別に調査
+- [ ] 各箇所で適切な型定義を適用
+  - 関数パラメータ、戻り値、ローカル変数など
+- [ ] 既存の型定義 (types.ts) を活用
+  - Word, HintMapping, Config 等
+
+#### sub2 word.ts の any 型調査と対応
+- [ ] 21箇所の any 型使用箇所を個別に調査
+- [ ] 単語検出関連の型定義を厳密化
+  - DetectionContext, WordDetectionResult 等の活用
+
+#### sub3 hint.ts, cache.ts, validation.ts の対応
+- [ ] hint.ts (1箇所), cache.ts (2箇所), validation.ts (2箇所) の any 型を修正
+- [ ] 各モジュールの責務に応じた適切な型定義を適用
+
+### process5 テストコードの段階的改善
+@target: tests/**/*.ts
+
+#### sub1 意図的な any 使用の判別
+- [ ] テストコード内の any 型使用箇所を分類
+  - 意図的な無効値テスト: 保持
+  - ランタイム依存API: 保持 (型定義が存在しない)
+  - 改善可能な箇所: 修正対象
+
+#### sub2 改善可能な箇所の修正
+- [ ] モックオブジェクト作成時の型定義を改善
+- [ ] テストヘルパー関数の型定義を厳密化
+- [ ] as any の使用を最小限に抑える
+
+#### sub3 テストの型安全性向上
+- [ ] テストケースで型推論が効くように改善
+- [ ] 型エラーが発生しないことを確認
 
 ### process10 ユニットテスト
-@target: tests/
+@target: tests/**/*_test.ts
 
-#### sub1 全プロセス完了後の総合テスト
-- [x] `deno check`で型チェック（エラーゼロの確認）
-- [x] `deno test -A`で全テスト実行
-- [x] リグレッションテストの実施
-- [x] パフォーマンステスト
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
+#### sub1 既存テストの実行
+- [ ] `deno test` で全テストが通ることを確認
+- [ ] 型変更による影響がないことを検証
 
-#### sub2 v3.0.0動作確認
-- [x] snake_case設定でエラーになることを確認
-- [x] camelCase設定で正常動作することを確認
-- [x] Config型のみが使用可能なことを確認
-- [x] `deno check`で型チェック
-- [x] `deno test -A`でテスト実行
+#### sub2 型安全性のテスト追加
+- [ ] types.ts の新しい型定義に対するテストを追加
+- [ ] 型ガード関数のテストを追加
+- [ ] バリデーション関数の型安全性を検証
+
+#### sub3 モックの動作確認
+- [ ] MockDenops クラスの新しい型シグネチャをテスト
+- [ ] ジェネリクスの型推論が正しく動作することを確認
 
 ### process50 フォローアップ
-実装後に仕様変更などが発生した場合は、ここにProcessを追加する
 
-### process100 リファクタリング ✅
-@target: denops/hellshake-yano/
+#### sub1 型エラーの修正
+- [ ] 型変更によって発生したコンパイルエラーを修正
+- [ ] 各モジュールの型整合性を確認
 
-#### sub1 コードクリーンアップ ✅
-- [x] 不要なコメントの削除
-- [x] 型定義の整理
-- [x] import文の最適化（不要なものはなし）
-- [x] `deno check`で型チェック（成功）
-- [x] `deno test -A`でテスト実行（584テスト成功）
+#### sub2 型定義のドキュメント更新
+- [ ] types.ts のコメントを更新
+- [ ] 新しい HintOperationsDependencies インターフェースの説明を追加
 
-#### sub2 パフォーマンス最適化 ✅
-- [x] 新APIのパフォーマンス測定（process10で完了）
-- [x] ボトルネックの特定と改善（非同期ハイライトで最適化済み）
-- [x] メモリ使用量の確認（問題なし）
-- [x] `deno check`で型チェック（成功）
-- [x] `deno test -A`でテスト実行（584テスト成功）
+#### sub3 マイグレーションガイドの作成
+- [ ] any 型から厳密な型への移行パターンをドキュメント化
+- [ ] 今後の開発で any 型を避けるためのガイドラインを作成
 
-**注記**: tests/v3_migration_test.tsは開発検証用のため手動削除が必要
+### process100 リファクタリング
 
-### process200 ドキュメンテーション ✅
-@target: README.md, CHANGELOG.md, docs/
+#### sub1 型定義の最適化
+- [ ] 重複する型定義を統合
+- [ ] 型エイリアスの活用で可読性を向上
+- [ ] ジェネリクスの適切な活用
 
-#### sub1 CHANGELOG.mdの更新 ✅
-- [x] v3.0.0の破壊的変更を記録
-- [x] 削除された機能のリスト作成
-- [x] 新しいAPI仕様の記載
-- [x] マイグレーションガイドへのリンク追加
+#### sub2 型推論の改善
+- [ ] 型アノテーションの冗長性を削減
+- [ ] 型推論が効く設計に変更
+- [ ] 関数のシグネチャを最適化
 
-#### sub2 MIGRATION_v3.mdの更新 ✅
-- [x] snake_caseからcamelCaseへの移行ガイド（既存）
-- [x] 削除された型の代替案（既存）
-- [x] 具体的なコード例の提供（既存）
-- [x] トラブルシューティングセクションの拡充（追加）
+#### sub3 パフォーマンスへの影響確認
+- [ ] 型チェックのオーバーヘッドを測定
+- [ ] 必要に応じて型定義を簡略化
 
-#### sub3 README.mdの更新 ✅
-- [x] v3.0.0の新機能と変更点
-- [x] インストール方法の確認（変更不要）
-- [x] 設定例の更新（camelCaseのみ）
-- [x] 削除された機能の明記
+### process200 ドキュメンテーション
+
+#### sub1 README の更新
+- [ ] 型安全性の向上について記載
+- [ ] 開発者向けの型システム活用ガイドを追加
+
+#### sub2 CHANGELOG の更新
+- [ ] any 型削除の変更内容を記載
+- [ ] 破壊的変更がないことを明記
+- [ ] 開発者への影響を説明
+
+#### sub3 型定義のドキュメント
+- [ ] types.ts の各インターフェースの使用例を追加
+- [ ] 型ガード関数の使い方を説明
+- [ ] ベストプラクティスをドキュメント化
