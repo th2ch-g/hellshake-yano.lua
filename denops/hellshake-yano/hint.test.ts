@@ -236,6 +236,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
 // ===== Process3: 数字専用モードのヒント生成 =====
 // Note: isNumericOnlyKeys と generateMultiCharHintsFromKeys は実装後にexportする必要があります
 
+Deno.test("Sub3: isNumericOnlyKeys - 数字専用キー判定", async () => {
   const { isNumericOnlyKeys } = await import("./hint.ts");
 
   // 数字のみの配列
@@ -258,6 +259,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(isNumericOnlyKeys(["10", "20"]), false);
 });
 
+Deno.test("Sub3: generateMultiCharHintsFromKeys - 数字専用モードで01-99,00の生成", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   // 10個の数字キーで数字専用モード
@@ -281,6 +283,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[99], "00");
 });
 
+Deno.test("Sub3: generateMultiCharHintsFromKeys - 数字専用モードで途中まで生成", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   const keys = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -296,6 +299,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[49], "50");
 });
 
+Deno.test("Sub3: generateMultiCharHintsFromKeys - アルファベットキーで通常モード", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   // アルファベットキー
@@ -307,6 +311,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints, ["AA", "AB", "AC", "BA", "BB", "BC", "CA", "CB", "CC"]);
 });
 
+Deno.test("Sub3: generateMultiCharHintsFromKeys - 数字とアルファベット混在時は通常モード", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   // 混在キー
@@ -321,6 +326,9 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[3], "0B");
   // 数字専用モードの優先順位は適用されない
 });
+
+Deno.test("Sub4: generateHintsWithGroups - アルファベットsingle + 数字専用multi", async () => {
+  const { generateHintsWithGroups } = await import("./hint.ts");
 
   const config = {
     singleCharKeys: ["A", "S", "D"], // 通常のキー
@@ -339,6 +347,9 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[11], "09");
   assertEquals(hints[12], "10");
 });
+
+Deno.test("Sub4: generateHintsWithGroups - 記号single + 数字専用multi", async () => {
+  const { generateHintsWithGroups } = await import("./hint.ts");
 
   const config = {
     singleCharKeys: [".", ",", ";"], // 記号
@@ -360,6 +371,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
 
 // ===== Process5: useNumericMultiCharHints機能のテスト =====
 
+Deno.test("Sub5: useNumericMultiCharHints - プロパティ存在確認", () => {
   // useNumericMultiCharHintsプロパティが存在することを確認
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D"],
@@ -370,6 +382,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(typeof config.useNumericMultiCharHints, "boolean");
 });
 
+Deno.test("Sub6: generateNumericHints - 100個の数字ヒント生成", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   // 100個の数字ヒントを生成
@@ -390,6 +403,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[99], "00");
 });
 
+Deno.test("Sub6: generateNumericHints - 途中まで生成", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   // 50個のみ要求
@@ -411,6 +425,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints1[0], "01");
 });
 
+Deno.test("Sub6: generateNumericHints - ゼロまたは負の数", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   assertEquals(generateNumericHints(0), []);
@@ -418,6 +433,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(generateNumericHints(-10), []);
 });
 
+Deno.test("Sub6: generateNumericHints - 最大100個制限", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   const hints = generateNumericHints(150);
@@ -425,6 +441,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[99], "00");
 });
 
+Deno.test("Sub7: HintKeyConfig - 完全な設定オブジェクト", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D"],
     multiCharKeys: ["B", "C", "E"],
@@ -459,6 +476,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[19], "08");
 });
 
+Deno.test("Sub7: generateHintsWithGroups - useNumericMultiCharHints=false時の動作", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S"],
     multiCharKeys: ["B", "C"],
@@ -486,6 +504,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(multiCharHints.every(h => !/^\d+$/.test(h)), true, "数字のみのヒントは含まれない");
 });
 
+Deno.test("Sub5: generateHintsWithGroups - useNumericMultiCharHints未定義時の動作", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A"],
     multiCharKeys: ["B"],
@@ -504,6 +523,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   // useNumericMultiCharHints未定義（デフォルトfalse）なので数字ヒントは追加されない
 });
 
+Deno.test("Sub7: generateHintsWithGroups - 大量のヒント要求時の数字ヒント追加", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D", "F"], // 4個
     multiCharKeys: ["B", "C", "E", "I"], // 4個 → 16個の2文字ヒント
@@ -531,6 +551,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[119], "00");
 });
 
+Deno.test("Sub7: generateHintsWithGroups - multiCharKeys空配列時の数字ヒント", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D"],
     multiCharKeys: [], // 空配列
@@ -551,6 +572,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(hints[14], "12");
 });
 
+Deno.test("Sub8: validateHintKeyConfig - useNumericMultiCharHintsの型検証", async () => {
   const { validateHintKeyConfig } = await import("./hint.ts");
 
   // boolean値は有効
@@ -569,6 +591,7 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
   assertEquals(validUndefined.valid, true);
 });
 
+Deno.test("Sub9: generateHintsWithGroups - useNumericMultiCharHints優先順位の確認", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S"],
     multiCharKeys: ["B", "C"],

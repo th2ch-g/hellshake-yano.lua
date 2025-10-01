@@ -295,6 +295,7 @@ export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolea
 
 /**
  * 表示幅を考慮したヒント位置の計算
+ * @deprecated calculateHintPosition(word, { hintPosition: position, tabWidth }).col を使用してください
  *
  * 単語に対するヒント配置の最適な表示column位置を決定し、異なる配置
  * ストラテジーをサポートします。この関数はヒント表示システムの中核であり、
@@ -324,6 +325,7 @@ export function calculateHintDisplayPosition(
   position: "start" | "end" | "overlay",
   tabWidth = 8,
 ): number {
+  // 内部で使用されている可能性があるため、実装は残す
   switch (position) {
     case "start":
       return word.col;
@@ -506,25 +508,101 @@ function storeAssignmentCache(
 // Use: import type { HintMapping } from "./types.ts";
 
 /**
- * 指定数のヒントを生成する（最適化版）
+ * ヒント生成のオプション
+ * @since 1.0.0
+ */
+export interface GenerateHintsOptions {
+  /** ヒント文字として使用するマーカー配列 */
+  markers?: string[];
+  /** 最大ヒント数制限 */
+  maxHints?: number;
+  /** 複数文字ヒント用のキー配列 */
+  keys?: string[];
+  /** 数字専用モード */
+  numeric?: boolean;
+  /** グループベースのヒント生成 */
+  groups?: boolean;
+  /** 1文字ヒント用のキー配列（groupsモード時） */
+  singleCharKeys?: string[];
+  /** 複数文字ヒント用のキー配列（groupsモード時） */
+  multiCharKeys?: string[];
+  /** 1文字ヒントの最大数（groupsモード時） */
+  maxSingleCharHints?: number;
+  /** 数字複数文字ヒントを使用（groupsモード時） */
+  useNumericMultiCharHints?: boolean;
+}
+
+/**
+ * 指定数のヒントを生成する（統合版）
  * @description 指定された単語数に対してヒント文字列を生成。キャッシュ機能付きで高速動作
  * @param wordCount - 必要なヒント数
- * @param markers - ヒント文字として使用するマーカー配列（省略時はデフォルトのアルファベット）
- * @param maxHints - 最大ヒント数制限（省略時は制限なし）
+ * @param options - ヒント生成のオプション
  * @returns string[] - 生成されたヒント文字列の配列
  * @since 1.0.0
  * @example
  * ```typescript
- * generateHints(5, ['A', 'B', 'C']); // ['A', 'B', 'C', 'AA', 'AB']
+ * // 基本的な使用例
+ * generateHints(5, { markers: ['A', 'B', 'C'] }); // ['A', 'B', 'C', 'AA', 'AB']
  * generateHints(3); // ['A', 'B', 'C'] (デフォルトマーカー使用)
- * generateHints(100, undefined, 50); // 最大50個のヒントを生成
+ * generateHints(100, { maxHints: 50 }); // 最大50個のヒントを生成
+ *
+ * // 数字専用モード
+ * generateHints(10, { numeric: true }); // ['01', '02', ..., '10']
+ *
+ * // グループベースのヒント生成
+ * generateHints(5, {
+ *   groups: true,
+ *   singleCharKeys: ['A', 'S', 'D'],
+ *   multiCharKeys: ['Q', 'W', 'E'],
+ *   maxSingleCharHints: 2
+ * }); // ['A', 'S', 'QQ', 'QW', 'QE']
  * ```
  */
-export function generateHints(wordCount: number, markers?: string[], maxHints?: number): string[] {
-  const defaultMarkers = markers || "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+export function generateHints(wordCount: number, options?: GenerateHintsOptions): string[];
+/**
+ * @deprecated 旧シグネチャとの互換性のため残されています。新しいコードでは options オブジェクトを使用してください。
+ */
+export function generateHints(wordCount: number, markers?: string[], maxHints?: number): string[];
+export function generateHints(
+  wordCount: number,
+  optionsOrMarkers?: GenerateHintsOptions | string[],
+  maxHints?: number
+): string[] {
+  // 旧シグネチャとの互換性を保つ
+  let options: GenerateHintsOptions;
+  if (Array.isArray(optionsOrMarkers)) {
+    // 旧シグネチャ: generateHints(wordCount, markers, maxHints)
+    options = {
+      markers: optionsOrMarkers,
+      maxHints: maxHints,
+    };
+  } else {
+    // 新シグネチャ: generateHints(wordCount, options)
+    options = optionsOrMarkers || {};
+  }
+
+  // 数字専用モード
+  if (options.numeric) {
+    return generateNumericHintsImpl(wordCount);
+  }
+
+  // グループベースのヒント生成
+  if (options.groups) {
+    const config: HintKeyConfig = {
+      singleCharKeys: options.singleCharKeys,
+      multiCharKeys: options.multiCharKeys,
+      maxSingleCharHints: options.maxSingleCharHints,
+      useNumericMultiCharHints: options.useNumericMultiCharHints,
+      markers: options.markers,
+    };
+    return generateHintsWithGroupsImpl(wordCount, config);
+  }
+
+  // 基本的なヒント生成（デフォルト）
+  const defaultMarkers = options.markers || "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   // ヒント数制限を適用
-  const effectiveWordCount = maxHints ? Math.min(wordCount, maxHints) : wordCount;
+  const effectiveWordCount = options.maxHints ? Math.min(wordCount, options.maxHints) : wordCount;
 
   if (effectiveWordCount <= 0) {
     return [];
@@ -1060,59 +1138,159 @@ export function getGlobalCacheStats(): HintCacheStatistics {
 }
 
 /**
- * ヒント表示位置を計算する
+ * ヒント位置計算のオプション
+ * @since 1.0.0
+ */
+export interface CalculateHintPositionOptions {
+  /** ヒント位置設定（"start", "end", "overlay", "both"） */
+  hintPosition?: string;
+  /** 座標系（"vim" または "nvim"）。指定するとVim/Neovim座標変換が有効になる */
+  coordinateSystem?: 'vim' | 'nvim';
+  /** 表示モード（"before", "after", "overlay"） */
+  displayMode?: 'before' | 'after' | 'overlay';
+  /** デバッグログの有効化 */
+  enableDebug?: boolean;
+  /** タブ幅（デフォルト: 8） */
+  tabWidth?: number;
+}
+
+/**
+ * ヒント表示位置を計算する（統合版）
  * @description 単語とヒント位置設定に基づいてヒントの表示位置を計算
+ * coordinateSystemオプションを指定すると、Vim/Neovim両方の座標系に対応した位置情報を返す
  * @param word - 対象の単語
- * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
- * @returns HintPosition 計算されたヒント表示位置
+ * @param hintPositionOrOptions - ヒント位置設定（文字列）またはオプションオブジェクト
+ * @returns HintPosition または HintPositionWithCoordinateSystem
  * @since 1.0.0
  * @example
  * ```typescript
+ * // シンプルな使用法（後方互換性）
  * const word = { text: 'hello', line: 1, col: 5 };
  * const position = calculateHintPosition(word, 'start');
  * // { line: 1, col: 5, display_mode: 'before' }
+ *
+ * // オプション指定（座標系変換なし）
+ * const position2 = calculateHintPosition(word, { hintPosition: 'end' });
+ * // { line: 1, col: 9, display_mode: 'after' }
+ *
+ * // オプション指定（座標系変換あり）
+ * const position3 = calculateHintPosition(word, { hintPosition: 'start', coordinateSystem: 'nvim' });
+ * // { line: 1, col: 5, display_mode: 'before', vim_col: 5, nvim_col: 4, vim_line: 1, nvim_line: 0 }
  * ```
  */
 export function calculateHintPosition(
   word: Word,
-  hintPosition: string,
-): HintPosition {
+  hintPositionOrOptions?: string | CalculateHintPositionOptions,
+): HintPosition | HintPositionWithCoordinateSystem {
+  // オプションの正規化
+  const options: CalculateHintPositionOptions = typeof hintPositionOrOptions === 'string'
+    ? { hintPosition: hintPositionOrOptions }
+    : (hintPositionOrOptions || {});
+
+  const hintPosition = options.hintPosition || 'start';
+  const tabWidth = options.tabWidth || 8;
+  const enableDebug = options.enableDebug || false;
+  const coordinateSystem = options.coordinateSystem;
+
+  // 座標系変換が必要な場合（coordinateSystemが指定されている）
+  if (coordinateSystem) {
+    let col: number;
+    let byteCol: number;
+    let display_mode: "before" | "after" | "overlay";
+
+    // displayModeが明示的に指定されている場合は優先
+    if (options.displayMode) {
+      display_mode = options.displayMode;
+    }
+
+    switch (hintPosition) {
+      case "start":
+        col = word.col; // 1ベース
+        byteCol = word.byteCol || word.col;
+        if (!options.displayMode) display_mode = "before";
+        break;
+      case "end":
+        col = word.col + word.text.length - 1; // 1ベース
+        if (word.byteCol) {
+          const textByteLength = getByteLength(word.text);
+          byteCol = word.byteCol + textByteLength - 1;
+        } else {
+          byteCol = col;
+        }
+        if (!options.displayMode) display_mode = "after";
+        break;
+      case "overlay":
+        col = word.col; // 1ベース
+        byteCol = word.byteCol || word.col;
+        if (!options.displayMode) display_mode = "overlay";
+        break;
+      case "both":
+        // bothモードはstartの位置を返す
+        col = word.col;
+        byteCol = word.byteCol || word.col;
+        if (!options.displayMode) display_mode = "before";
+        break;
+      default:
+        col = word.col; // 1ベース
+        byteCol = word.byteCol || word.col;
+        if (!options.displayMode) display_mode = "before";
+        break;
+    }
+
+    // 座標系変換 - Vimは表示列、Neovimはバイト位置を使用
+    const vim_line = word.line; // Vim: 1ベース行番号
+    const nvim_line = word.line - 1; // Neovim: 0ベース行番号
+    const vim_col = col; // Vim: 1ベース表示列番号
+    const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号
+
+    if (enableDebug) {
+      // デバッグログ（必要に応じて実装）
+    }
+
+    return {
+      line: word.line,
+      col: col,
+      display_mode: display_mode!,
+      vim_col,
+      nvim_col,
+      vim_line,
+      nvim_line,
+    };
+  }
+
+  // 通常の処理（座標系変換なし）
   let col: number;
   let display_mode: "before" | "after" | "overlay";
 
-  // Default tab width - should be retrieved from Vim settings in production
-  const tabWidth = 8;
-
-  // ヒント位置の設定
-  let effectiveHintPosition = hintPosition;
-
-  // デバッグログ追加（パフォーマンスのためコメントアウト）
+  // displayModeが明示的に指定されている場合は優先
+  if (options.displayMode) {
+    display_mode = options.displayMode;
+  }
 
   // bothモードの場合はstartとend両方の位置を計算する必要があるが、
   // この関数は単一のHintPositionを返すため、startの位置を返す
-  // bothモードの完全な処理はcalculateHintPositionWithCoordinateSystemで行う
-  if (effectiveHintPosition === "both") {
+  if (hintPosition === "both") {
     col = word.col;
-    display_mode = "before";
+    if (!options.displayMode) display_mode = "before";
   } else {
-    switch (effectiveHintPosition) {
+    switch (hintPosition) {
       case "start":
         col = word.col;
-        display_mode = "before";
+        if (!options.displayMode) display_mode = "before";
         break;
       case "end":
         // 表示幅を使用してend位置を計算
         col = calculateHintDisplayPosition(word, "end", tabWidth);
-        display_mode = "after";
+        if (!options.displayMode) display_mode = "after";
         break;
       case "overlay":
         col = word.col;
-        display_mode = "overlay";
+        if (!options.displayMode) display_mode = "overlay";
         break;
       default:
         // 無効な設定の場合はデフォルトで "start" 動作
         col = word.col;
-        display_mode = "before";
+        if (!options.displayMode) display_mode = "before";
         break;
     }
   }
@@ -1120,12 +1298,13 @@ export function calculateHintPosition(
   return {
     line: word.line,
     col: col,
-    display_mode: display_mode,
+    display_mode: display_mode!,
   };
 }
 
 /**
  * 座標系対応版：ヒント表示位置を計算する（Vim/Neovim両方対応）
+ * @deprecated calculateHintPosition(word, { coordinateSystem: 'nvim', hintPosition, enableDebug }) を使用してください
  * @description Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方に対応したヒント位置計算
  * @param word - 単語情報（1ベース座標で提供されることを前提）
  * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
@@ -1144,73 +1323,20 @@ export function calculateHintPositionWithCoordinateSystem(
   hintPosition: string,
   enableDebug: boolean = false,
 ): HintPositionWithCoordinateSystem {
-  let col: number;
-  let byteCol: number;
-  let display_mode: "before" | "after" | "overlay";
-
-  // ヒント位置の設定
-  let effectiveHintPosition = hintPosition;
-
-  // デバッグログ追加
-  if (enableDebug) {
-  }
-
-  switch (effectiveHintPosition) {
-    case "start":
-      col = word.col; // 1ベース
-      byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
-      display_mode = "before";
-      break;
-    case "end":
-      col = word.col + word.text.length - 1; // 1ベース
-      // If we have byteCol, calculate end position using byte length
-      if (word.byteCol) {
-        const textByteLength = getByteLength(word.text);
-        byteCol = word.byteCol + textByteLength - 1;
-      } else {
-        byteCol = col;
-      }
-      display_mode = "after";
-      break;
-    case "overlay":
-      col = word.col; // 1ベース
-      byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
-      display_mode = "overlay";
-      break;
-    default:
-      // 無効な設定の場合はデフォルトで "start" 動作
-      col = word.col; // 1ベース
-      byteCol = word.byteCol || word.col; // バイト位置があれば優先使用
-      display_mode = "before";
-      break;
-  }
-
-  // 座標系変換 - Vimは表示列、Neovimはバイト位置を使用
-  const vim_line = word.line; // Vim: 1ベース行番号
-  const nvim_line = word.line - 1; // Neovim: 0ベース行番号
-  const vim_col = col; // Vim: 1ベース表示列番号（matchadd用、タブと全角文字考慮済み）
-  const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号（extmark用）
-
-  if (enableDebug) {
-  }
-
-  return {
-    line: word.line,
-    col: col,
-    display_mode: display_mode,
-    vim_col,
-    nvim_col,
-    vim_line,
-    nvim_line,
-  };
+  return calculateHintPosition(word, {
+    hintPosition,
+    coordinateSystem: 'nvim', // 座標系変換を有効にする
+    enableDebug,
+  }) as HintPositionWithCoordinateSystem;
 }
 
 // HintKeyConfig interface moved to types.ts for consolidation
 // Use: import type { HintKeyConfig } from "./types.ts";
 
 /**
- * キーグループを使用したヒント生成（高度な振り分けロジック付き）
+ * キーグループを使用したヒント生成（高度な振り分けロジック付き）- 内部実装
  * @description 1文字ヒント用と2文字以上ヒント用のキーを分けて管理し、効率的なヒント生成を行う。数字専用モード自動検出機能付き
+ * @internal
  *
  * ## ヒントグループ生成ロジック
  * 1. **1文字ヒント優先**: max_single_char_hints で指定された数まで単一文字ヒントを生成
@@ -1282,7 +1408,7 @@ export function calculateHintPositionWithCoordinateSystem(
  * // 結果: ['A', 'QQ', '00', '01', '02']
  * ```
  */
-export function generateHintsWithGroups(
+function generateHintsWithGroupsImpl(
   wordCount: number,
   config: HintKeyConfig,
 ): string[] {
@@ -1330,30 +1456,19 @@ export function generateHintsWithGroups(
   let remainingCount = wordCount - singleCharCount;
 
   if (remainingCount > 0) {
-    // useNumericMultiCharHintsが有効な場合、数字ヒント用のスペースを予約
-    let alphaDoubleCount = remainingCount;
-    let numericCount = 0;
-
-    if (config.useNumericMultiCharHints) {
-      // 残りを半々に分ける、または数字ヒントを最低20個確保
-      numericCount = Math.min(remainingCount, Math.max(20, Math.floor(remainingCount / 2)));
-      alphaDoubleCount = remainingCount - numericCount;
+    // まずアルファベット2文字ヒントを生成（multiCharKeysが利用可能な範囲で）
+    const doubleLimit = multiCharKeys.length * multiCharKeys.length;
+    const actualAlphaCount = Math.min(remainingCount, doubleLimit);
+    if (actualAlphaCount > 0) {
+      hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, actualAlphaCount, 2));
+      remainingCount -= actualAlphaCount;
     }
 
-    // アルファベット2文字ヒントを生成
-    const doubleLimit = multiCharKeys.length * multiCharKeys.length;
-    const actualAlphaCount = Math.min(alphaDoubleCount, doubleLimit);
-    hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, actualAlphaCount, 2));
-    remainingCount -= actualAlphaCount;
-
-    // 数字2文字ヒントを生成
-    if (config.useNumericMultiCharHints && (numericCount > 0 || remainingCount > 0)) {
-      const targetNumericCount = Math.min(numericCount + remainingCount, wordCount - hints.length); // 要求数を超えない
-      if (targetNumericCount > 0) {
-        const numericHints = generateNumericHints(targetNumericCount);
-        hints.push(...numericHints);
-        remainingCount -= numericHints.length;
-      }
+    // アルファベット2文字ヒントを使い切った後、数字2文字ヒントを生成
+    if (config.useNumericMultiCharHints && remainingCount > 0) {
+      const numericHints = generateNumericHintsImpl(remainingCount);
+      hints.push(...numericHints);
+      remainingCount -= numericHints.length;
     }
   }
 
@@ -1450,7 +1565,7 @@ export function isNumericOnlyKeys(keys: string[]): boolean {
 }
 
 /**
- * 数字2文字ヒントを優先順位順に生成する
+ * 数字2文字ヒントを優先順位順に生成する - 内部実装
  *
  * @description
  * 01-09, 10-99, 00の順序で数字2文字ヒントを生成します。
@@ -1472,8 +1587,9 @@ export function isNumericOnlyKeys(keys: string[]): boolean {
  * ```
  *
  * @since 1.0.0
+ * @internal
  */
-export function generateNumericHints(count: number): string[] {
+function generateNumericHintsImpl(count: number): string[] {
   const hints: string[] = [];
 
   // 0個以下の要求は空配列を返す
@@ -2464,4 +2580,37 @@ export class HintManager {
   getConfig(): Readonly<Config> {
     return this.config;
   }
+}
+
+// ===== 互換性のための非推奨エイリアス =====
+
+/**
+ * @deprecated generateHints() を options.groups: true で使用してください。
+ * このエイリアスは後方互換性のためのもので、将来的に削除される予定です。
+ *
+ * 推奨される移行方法:
+ * ```typescript
+ * // 旧: generateHintsWithGroups(wordCount, config)
+ * // 新: generateHints(wordCount, { groups: true, ...config })
+ * ```
+ */
+export function generateHintsWithGroups(
+  wordCount: number,
+  config: HintKeyConfig,
+): string[] {
+  return generateHintsWithGroupsImpl(wordCount, config);
+}
+
+/**
+ * @deprecated generateHints() を options.numeric: true で使用してください。
+ * このエイリアスは後方互換性のためのもので、将来的に削除される予定です。
+ *
+ * 推奨される移行方法:
+ * ```typescript
+ * // 旧: generateNumericHints(count)
+ * // 新: generateHints(count, { numeric: true })
+ * ```
+ */
+export function generateNumericHints(count: number): string[] {
+  return generateNumericHintsImpl(count);
 }
