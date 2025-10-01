@@ -1101,6 +1101,7 @@ export class HybridWordDetector implements WordDetector {
  * @param startLine - 開始行番号
  * @param excludeJapanese - 日本語を除外するかどうか
  * @returns 検出された単語のリスト
+ * @deprecated テスト用途にはextractWordsを直接使用してください
  */
 export function detectWords(
   text: string,
@@ -1110,25 +1111,26 @@ export function detectWords(
 /**
  * 単語検出のメイン関数（Denops版）
  * @param denops - Denopsインスタンス
+ * @param config - 設定（オプション）
  * @returns 検出された単語のリスト
  */
-export function detectWords(denops: Denops): Promise<Word[]>;
+export function detectWords(denops: Denops, config?: Partial<Config>): Promise<Word[]>;
 /**
  * 単語検出のメイン関数（実装）
  * @param arg1 - Denopsインスタンスまたはテキスト
- * @param arg2 - 開始行番号（オプション）
- * @param arg3 - 日本語除外フラグ（オプション）
+ * @param arg2 - 設定またはstartLine（オプション）
+ * @param arg3 - 日本語除外フラグ（オプション、文字列API用）
  * @returns 検出された単語のリスト
  */
 export async function detectWords(
   arg1: Denops | string,
-  arg2?: number,
+  arg2?: Partial<Config> | number,
   arg3?: boolean,
 ): Promise<Word[]> {
-  // Overload: string-based API for tests
+  // Overload: string-based API for tests (deprecated)
   if (typeof arg1 === "string") {
     const text = arg1 as string;
-    const startLine = (arg2 ?? 1) as number;
+    const startLine = (arg2 as number ?? 1);
     const excludeJapanese = (arg3 ?? false) as boolean;
 
     const words: Word[] = [];
@@ -1142,8 +1144,9 @@ export async function detectWords(
     return words;
   }
 
-  // Denopsインスタンスが渡された場合は、新APIに委譲
+  // Denopsインスタンスが渡された場合
   const denops = arg1 as Denops;
+  const config = (typeof arg2 === "object" ? arg2 : undefined) as Partial<Config> | undefined;
 
   // 画面範囲を元の実装と同じ方法で取得（環境差異対策）
   const bottomLine = await denops.call("line", "w$") as number;
@@ -1564,6 +1567,7 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
  * @param useImprovedDetection - 改善版検出を使用するかどうか（デフォルト: false）
  * @param excludeJapanese - 日本語を除外するかどうか（デフォルト: false）
  * @returns 抽出された単語のリスト
+ * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {useImprovedDetection, excludeJapanese})
  */
 export function extractWordsFromLine(
   lineText: string,
@@ -1711,6 +1715,9 @@ export function extractWordsFromLine(
   return words;
 }
 
+/**
+ * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {useJapanese: config.useJapanese})
+ */
 export function extractWordsFromLineWithConfig(
   lineText: string,
   lineNumber: number,
@@ -1910,6 +1917,9 @@ export async function detectWordsWithEnhancedConfig(
   }
 }
 
+/**
+ * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {strategy: config.strategy, minWordLength: config.minWordLength})
+ */
 export function extractWordsFromLineWithEnhancedConfig(
   lineText: string,
   lineNumber: number,
@@ -1956,6 +1966,7 @@ export function extractWordsFromLineWithEnhancedConfig(
  * const filteredWords = extractWordsFromLineLegacy('a bb 123 word1', 1);
  * console.log(filteredWords.map(w => w.text)); // ["bb", "word1"]
  * ```
+ * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {legacyMode: true, excludeJapanese})
  */
 export function extractWordsFromLineLegacy(
   lineText: string,
@@ -2008,14 +2019,14 @@ export function extractWordsFromLineLegacy(
 }
 
 /**
- * 統合された単語抽出設定インターフェース
+ * 単語抽出オプションインターフェース
  *
  * すべての既存の単語抽出関数の設定を統合し、
  * 一貫したAPIを提供します。
  *
  * @since 2.1.0
  */
-export interface UnifiedWordExtractionConfig {
+export interface ExtractWordsOptions {
   // Core settings
   useImprovedDetection?: boolean;
   excludeJapanese?: boolean;
@@ -2029,11 +2040,17 @@ export interface UnifiedWordExtractionConfig {
   defaultMinWordLength?: number;
   currentKeyContext?: string;
   minWordLength?: number;
+  maxWordLength?: number;
   enableTinySegmenter?: boolean;
 
   // Mode selection
   legacyMode?: boolean;
 }
+
+/**
+ * @deprecated UnifiedWordExtractionConfigはExtractWordsOptionsに名前変更されました
+ */
+export type UnifiedWordExtractionConfig = ExtractWordsOptions;
 
 /**
  * 統合された単語抽出関数
@@ -2043,22 +2060,22 @@ export interface UnifiedWordExtractionConfig {
  *
  * @param lineText - 解析する行のテキスト
  * @param lineNumber - 行番号（1ベース）
- * @param config - 統合された設定オブジェクト
+ * @param options - 単語抽出オプション
  * @returns Word[] - 抽出された単語の配列
  *
  * @example
  * ```typescript
  * // Legacy behavior (default)
- * const words1 = extractWordsUnified("hello world", 1);
+ * const words1 = extractWords("hello world", 1);
  *
  * // Improved detection
- * const words2 = extractWordsUnified("hello-world", 1, { useImprovedDetection: true });
+ * const words2 = extractWords("hello-world", 1, { useImprovedDetection: true });
  *
  * // WordConfig compatibility
- * const words3 = extractWordsUnified("hello こんにちは", 1, {useJapanese: true });
+ * const words3 = extractWords("hello こんにちは", 1, {useJapanese: true });
  *
  * // Enhanced config compatibility
- * const words4 = extractWordsUnified("test", 1, {
+ * const words4 = extractWords("test", 1, {
  *   strategy: "hybrid",
  *   minWordLength: 3
  * });
@@ -2066,13 +2083,13 @@ export interface UnifiedWordExtractionConfig {
  *
  * @since 2.1.0
  */
-export function extractWordsUnified(
+export function extractWords(
   lineText: string,
   lineNumber: number,
-  config: UnifiedWordExtractionConfig = {},
+  options: ExtractWordsOptions = {},
 ): Word[] {
   // Configuration normalization
-  const normalizedConfig = normalizeConfig(config);
+  const normalizedConfig = normalizeConfig(options);
 
   // Route to appropriate implementation based on config
   if (normalizedConfig.legacyMode) {
@@ -2094,8 +2111,8 @@ export function extractWordsUnified(
   // Check if we should use improved detection via extractWordsFromLine
   if (
     normalizedConfig.useImprovedDetection ||
-    config.useImprovedDetection !== undefined ||
-    config.excludeJapanese !== undefined
+    options.useImprovedDetection !== undefined ||
+    options.excludeJapanese !== undefined
   ) {
     return extractWordsFromLine(
       lineText,
@@ -2107,6 +2124,17 @@ export function extractWordsUnified(
 
   // Default to legacy behavior
   return extractWordsFromLineLegacy(lineText, lineNumber, normalizedConfig.excludeJapanese);
+}
+
+/**
+ * @deprecated extractWordsUnifiedはextractWordsに名前変更されました。extractWordsを使用してください。
+ */
+export function extractWordsUnified(
+  lineText: string,
+  lineNumber: number,
+  config: ExtractWordsOptions = {},
+): Word[] {
+  return extractWords(lineText, lineNumber, config);
 }
 
 /**
@@ -2127,7 +2155,7 @@ interface NormalizedConfig {
   useWordConfig: boolean;
 }
 
-function normalizeConfig(config: UnifiedWordExtractionConfig): NormalizedConfig {
+function normalizeConfig(config: ExtractWordsOptions): NormalizedConfig {
   // Legacy mode detection
   const legacyMode = config.legacyMode === true;
 
@@ -2439,6 +2467,7 @@ export function byteIndexToCharIndex(text: string, byteIndex: number): number {
  * getCharByteLength(text, 1); // 1 ('A' - ASCII文字)
  * getCharByteLength(text, 2); // 3 ('い' - ひらがな)
  * getCharByteLength(text, 3); // 4 ('😀' - 絵文字)
+ * @deprecated getByteLength(text[charIndex])を使用してください
  * getCharByteLength(text, -1); // 0 (範囲外)
  * getCharByteLength(text, 10); // 0 (範囲外)
  * ```
@@ -2578,6 +2607,7 @@ export function getEncodingInfo(text: string): {
  * // 順序が保持される例
  * const mixedIndices = [4, 0, 2]; // 順序はそのまま
  * const mixedBytes = charIndicesToByteIndices(text, mixedIndices);
+ * @deprecated charIndices.map(i => charIndexToByteIndex(text, i))を使用してください
  * console.log(mixedBytes); // [10, 0, 6]
  *
  * // 範囲外も安全に処理
