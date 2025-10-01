@@ -57,6 +57,12 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   defaultMinWordLength?: number;
   /** 現在のキーコンテキスト（内部用） */
   currentKeyContext?: string;
+  /**
+   * 単語検出ストラテジー（snake_case形式）
+   * Process4 Sub2: 型安全なアクセスのため追加
+   * @deprecated strategy を使用してください
+   */
+  wordDetectionStrategy?: "regex" | "tinysegmenter" | "hybrid";
 }
 
 import { CacheType, GlobalCache } from "./cache.ts";
@@ -4675,9 +4681,13 @@ export class DictionaryLoader {
 
   /**
    * YAML形式の辞書をパース
+   *
+   * @description
+   * parseYamlの戻り値をunknown型として扱い、型安全にUserDictionaryに変換する
+   * Process4 Sub2: any型を削除し、unknown型で型安全性を向上
    */
   private parseYamlDictionary(content: string): UserDictionary {
-    const data = parseYaml(content) as any;
+    const data = parseYaml(content) as unknown;
     return this.convertToUserDictionary(data);
   }
 
@@ -4718,37 +4728,62 @@ export class DictionaryLoader {
 
   /**
    * データオブジェクトをUserDictionaryに変換
+   *
+   * @description
+   * unknown型のデータを型ガードを使って検証し、UserDictionary型に安全に変換する
+   * Process4 Sub2: any型をunknown型に変更し、型安全性を向上
+   *
+   * @param data - パース後の辞書データ（unknown型）
+   * @returns 検証済みのUserDictionary
    */
-  private convertToUserDictionary(data: any): UserDictionary {
+  private convertToUserDictionary(data: unknown): UserDictionary {
     const dictionary = this.createEmptyDictionary();
 
-    if (data.customWords && Array.isArray(data.customWords)) {
-      dictionary.customWords = data.customWords;
+    // 型ガード: dataがオブジェクトであることを確認
+    if (typeof data !== 'object' || data === null) {
+      return dictionary;
     }
 
-    if (data.preserveWords && Array.isArray(data.preserveWords)) {
-      dictionary.preserveWords = data.preserveWords;
+    // Record<string, unknown>として扱う
+    const dataObj = data as Record<string, unknown>;
+
+    // customWordsの検証と変換
+    if (dataObj.customWords && Array.isArray(dataObj.customWords)) {
+      dictionary.customWords = dataObj.customWords.filter((item): item is string => typeof item === 'string');
     }
 
-    if (data.mergeRules && typeof data.mergeRules === 'object') {
-      dictionary.mergeRules = new Map(Object.entries(data.mergeRules));
+    // preserveWordsの検証と変換
+    if (dataObj.preserveWords && Array.isArray(dataObj.preserveWords)) {
+      dictionary.preserveWords = dataObj.preserveWords.filter((item): item is string => typeof item === 'string');
     }
 
-    if (data.compoundPatterns && Array.isArray(data.compoundPatterns)) {
-      dictionary.compoundPatterns = data.compoundPatterns.map((pattern: string) => new RegExp(pattern, 'g'));
+    // mergeRulesの検証と変換
+    if (dataObj.mergeRules && typeof dataObj.mergeRules === 'object' && dataObj.mergeRules !== null) {
+      dictionary.mergeRules = new Map(Object.entries(dataObj.mergeRules));
     }
 
-    if (data.hintPatterns && Array.isArray(data.hintPatterns)) {
-      dictionary.hintPatterns = data.hintPatterns.map((pattern: any) => ({
-        pattern: typeof pattern.pattern === 'string' ? new RegExp(pattern.pattern) : pattern.pattern,
-        hintPosition: pattern.hintPosition,
-        priority: pattern.priority || 0,
-        description: pattern.description,
-      }));
+    // compoundPatternsの検証と変換
+    if (dataObj.compoundPatterns && Array.isArray(dataObj.compoundPatterns)) {
+      dictionary.compoundPatterns = dataObj.compoundPatterns
+        .filter((item): item is string => typeof item === 'string')
+        .map((pattern: string) => new RegExp(pattern, 'g'));
     }
 
-    if (data.metadata) {
-      dictionary.metadata = data.metadata;
+    // hintPatternsの検証と変換
+    if (dataObj.hintPatterns && Array.isArray(dataObj.hintPatterns)) {
+      dictionary.hintPatterns = dataObj.hintPatterns
+        .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+        .map((pattern: Record<string, unknown>) => ({
+          pattern: typeof pattern.pattern === 'string' ? new RegExp(pattern.pattern) : pattern.pattern as RegExp,
+          hintPosition: pattern.hintPosition as HintPositionRule,
+          priority: typeof pattern.priority === 'number' ? pattern.priority : 0,
+          description: typeof pattern.description === 'string' ? pattern.description : undefined,
+        }));
+    }
+
+    // metadataの検証と変換
+    if (dataObj.metadata && typeof dataObj.metadata === 'object' && dataObj.metadata !== null) {
+      dictionary.metadata = dataObj.metadata as UserDictionary['metadata'];
     }
 
     return dictionary;
@@ -5041,18 +5076,35 @@ export class DictionaryManager {
 }
 
 /**
+ * ヒント優先度を持つWord型
+ * Process4 Sub2: 型安全性の向上のため、any型の代わりに明示的な型を定義
+ */
+interface WordWithPriority extends Word {
+  hintPriority?: number;
+}
+
+/**
  * ヒントパターンプロセッサークラス
+ * Process4 Sub2: any型をWordWithPriority型に変更し、型安全性を向上
  */
 export class HintPatternProcessor {
   /**
    * ヒントパターンを適用
+   *
+   * @description
+   * Process4 Sub2: any[]をWordWithPriority[]に変更し、型安全性を向上
+   *
+   * @param words - 単語配列
+   * @param text - 検索対象テキスト
+   * @param patterns - ヒントパターン配列
+   * @returns 優先度付き単語配列
    */
-  applyHintPatterns(words: any[], text: string, patterns: HintPattern[]): any[] {
+  applyHintPatterns(words: Word[], text: string, patterns: HintPattern[]): WordWithPriority[] {
     if (!patterns || patterns.length === 0) {
-      return words;
+      return words as WordWithPriority[];
     }
 
-    const enhancedWords = [...words];
+    const enhancedWords: WordWithPriority[] = [...words];
 
     // 優先度でソート
     const sortedPatterns = patterns.sort((a, b) => b.priority - a.priority);
@@ -5066,8 +5118,8 @@ export class HintPatternProcessor {
         if (hintTarget) {
           const targetWord = this.findWordAtPosition(enhancedWords, hintTarget.position);
           if (targetWord) {
-            // ヒント優先度を設定
-            (targetWord as any).hintPriority = pattern.priority;
+            // ヒント優先度を設定（型安全）
+            targetWord.hintPriority = pattern.priority;
           }
         }
       }
@@ -5107,22 +5159,35 @@ export class HintPatternProcessor {
 
   /**
    * 指定位置の単語を検索
+   *
+   * @description
+   * Process4 Sub2: any[]をWordWithPriority[]に変更し、型安全性を向上
+   *
+   * @param words - 単語配列
+   * @param position - 検索位置
+   * @returns 見つかった単語、または null
    */
-  private findWordAtPosition(words: any[], position: number): any | null {
+  private findWordAtPosition(words: WordWithPriority[], position: number): WordWithPriority | null {
     return words.find(word =>
       word.col && word.text &&
       position >= word.col &&
       position < word.col + word.text.length
-    );
+    ) || null;
   }
 
   /**
    * ヒント優先度で並び替え
+   *
+   * @description
+   * Process4 Sub2: any[]をWordWithPriority[]に変更し、型アサーション (as any) を削減
+   *
+   * @param words - 単語配列
+   * @returns 優先度順にソートされた単語配列
    */
-  private sortByHintPriority(words: any[]): any[] {
+  private sortByHintPriority(words: WordWithPriority[]): WordWithPriority[] {
     return words.sort((a, b) => {
-      const priorityA = (a as any).hintPriority || 0;
-      const priorityB = (b as any).hintPriority || 0;
+      const priorityA = a.hintPriority || 0;
+      const priorityB = b.hintPriority || 0;
       return priorityB - priorityA;
     });
   }
@@ -5482,8 +5547,10 @@ export class WordDetectionManager {
 
     // Strategy-based selection
     // word_detection_strategyとstrategyの両方をサポート
-    const strategy = (this.config as any).wordDetectionStrategy || this.config.strategy ||
-      this.config.defaultStrategy;
+    // Process4 Sub2: 型アサーション (as any) を削減し、型安全なアクセスに変更
+    const enhancedConfig = this.config as EnhancedWordConfig;
+    const strategy = enhancedConfig.wordDetectionStrategy || enhancedConfig.strategy ||
+      enhancedConfig.defaultStrategy;
 
     switch (strategy) {
       case "regex":
@@ -5596,8 +5663,10 @@ export class WordDetectionManager {
   }
 
   private generateConfigHash(): string {
+    // Process4 Sub2: 型安全なアクセスに変更
+    const enhancedConfig = this.config as EnhancedWordConfig;
     const relevantConfig = {
-      strategy: (this.config as any).wordDetectionStrategy || this.config.strategy,
+      strategy: enhancedConfig.wordDetectionStrategy || enhancedConfig.strategy,
       useJapanese: this.config.useJapanese,
       // useImprovedDetection: 統合済み（常に有効）
       minWordLength: this.config.minWordLength,
@@ -5785,9 +5854,11 @@ export class WordDetectionManager {
     this.config = { ...this.config, ...newConfig };
 
     // word_detection_strategyがある場合はstrategyに反映
-    if ((newConfig as any).wordDetectionStrategy) {
-      this.config.strategy = (newConfig as any).wordDetectionStrategy;
-      this.config.defaultStrategy = (newConfig as any).wordDetectionStrategy;
+    // Process4 Sub2: 型安全なアクセスに変更
+    const enhancedConfig = newConfig as EnhancedWordConfig;
+    if (enhancedConfig.wordDetectionStrategy) {
+      this.config.strategy = enhancedConfig.wordDetectionStrategy;
+      this.config.defaultStrategy = enhancedConfig.wordDetectionStrategy;
     }
 
     // 設定変更に影響するキャッシュをクリア
@@ -5925,10 +5996,12 @@ export class WordDetectionManager {
       }
 
       // Get strategy from context, or fall back to config
+      // Process4 Sub2: 型安全なアクセスに変更
+      const enhancedConfig = this.config as EnhancedWordConfig;
       const strategy = context?.strategy ||
-        (this.config as any).wordDetectionStrategy ||
-        this.config.strategy ||
-        this.config.defaultStrategy;
+        enhancedConfig.wordDetectionStrategy ||
+        enhancedConfig.strategy ||
+        enhancedConfig.defaultStrategy;
 
       // Filter detectors by text handling capability if text is provided
       let availableDetectors = Array.from(this.detectors.values());
@@ -6071,8 +6144,10 @@ export class WordDetectionManager {
     }
 
     // word_detection_strategyがある場合はstrategyに反映
-    if ((config as any).wordDetectionStrategy) {
-      merged.strategy = (config as any).wordDetectionStrategy;
+    // Process4 Sub2: 型安全なアクセスに変更
+    const enhancedConfig = config as EnhancedWordConfig;
+    if (enhancedConfig.wordDetectionStrategy) {
+      merged.strategy = enhancedConfig.wordDetectionStrategy;
     }
 
     return merged as Required<WordDetectionManagerConfig>;

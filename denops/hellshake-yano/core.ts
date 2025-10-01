@@ -17,7 +17,7 @@ import type {
 import { createMinimalConfig } from "./types.ts";
 import type { Config } from "./config.ts";
 import { getDefaultConfig } from "./config.ts";
-import { LRUCache } from "./cache.ts";
+import { LRUCache, type CacheStatistics } from "./cache.ts";
 import type { EnhancedWordConfig } from "./word.ts";
 import {
   detectWordsWithManager,
@@ -231,18 +231,43 @@ class CommandFactory {
 }
 
 /**
+ * プラグインの状態インターフェース
+ * Process4 Sub1: any型を厳密な型に置き換え
+ */
+interface PluginState {
+  /** プラグインの現在のステータス */
+  status: "uninitialized" | "initialized" | "cleaned";
+  /** 初期化済みフラグ */
+  initialized: boolean;
+  /** ヘルスステータス */
+  healthy: boolean;
+  /** ヒント表示状態 */
+  hintsVisible: boolean;
+  /** 現在のヒントマッピング配列 */
+  currentHints: HintMapping[];
+  /** キャッシュオブジェクト */
+  caches: {
+    words: LRUCache<string, Word[]>;
+    hints: LRUCache<string, string[]>;
+  };
+  /** パフォーマンスメトリクス */
+  performanceMetrics: PerformanceMetrics;
+}
+
+/**
  * プラグインの状態を管理するグローバルオブジェクト
  * lifecycle.tsから統合した簡易プラグイン状態管理
+ * Process4 Sub1: 厳密な型定義を適用
  */
-let pluginState: any = {
+let pluginState: PluginState = {
   status: "uninitialized",
   initialized: false,
   healthy: true,
   hintsVisible: false,
   currentHints: [],
   caches: {
-    words: new LRUCache(100),
-    hints: new LRUCache(50)
+    words: new LRUCache<string, Word[]>(100),
+    hints: new LRUCache<string, string[]>(50)
   },
   performanceMetrics: {
     showHints: [],
@@ -253,22 +278,51 @@ let pluginState: any = {
 };
 
 /**
+ * 初期化オプションのインターフェース
+ * Process4 Sub1: any型を厳密な型に置き換え
+ */
+interface InitializeOptions {
+  /** キャッシュサイズの設定 */
+  cacheSizes?: {
+    /** 単語キャッシュのサイズ */
+    words?: number;
+    /** ヒントキャッシュのサイズ */
+    hints?: number;
+  };
+}
+
+/**
+ * 初期化結果のインターフェース
+ * Process4 Sub1: any型を厳密な型に置き換え
+ */
+interface InitializeResult {
+  /** Extmark名前空間（Neovim用、nullの場合あり） */
+  extmarkNamespace: number | null;
+  /** キャッシュオブジェクト */
+  caches: {
+    words: LRUCache<string, Word[]>;
+    hints: LRUCache<string, string[]>;
+  };
+}
+
+/**
  * プラグインを初期化する
+ * Process4 Sub1: Denops型とInitializeOptions型を使用
  * @param denops - Denopsインスタンス
  * @param options - 初期化オプション（キャッシュサイズなど）
  * @returns extmarkNamespaceとcachesを含むPromise
  */
-function initializePlugin(denops: any, options?: any): Promise<any> {
+function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<InitializeResult> {
   pluginState.status = "initialized";
   pluginState.initialized = true;
 
   // オプションでキャッシュサイズを設定可能に
   if (options?.cacheSizes) {
     if (options.cacheSizes.words) {
-      pluginState.caches.words = new LRUCache(options.cacheSizes.words);
+      pluginState.caches.words = new LRUCache<string, Word[]>(options.cacheSizes.words);
     }
     if (options.cacheSizes.hints) {
-      pluginState.caches.hints = new LRUCache(options.cacheSizes.hints);
+      pluginState.caches.hints = new LRUCache<string, string[]>(options.cacheSizes.hints);
     }
   }
 
@@ -280,10 +334,11 @@ function initializePlugin(denops: any, options?: any): Promise<any> {
 
 /**
  * プラグインをクリーンアップする
+ * Process4 Sub1: Denops型を使用
  * @param denops - Denopsインスタンス
  * @returns クリーンアップ完了を示すPromise
  */
-function cleanupPlugin(denops: any): Promise<void> {
+function cleanupPlugin(denops: Denops): Promise<void> {
   pluginState.status = "cleaned";
   pluginState.initialized = false;
   pluginState.hintsVisible = false;
@@ -294,11 +349,25 @@ function cleanupPlugin(denops: any): Promise<void> {
 }
 
 /**
+ * ヘルスチェック結果のインターフェース
+ * Process4 Sub1: any型を厳密な型に置き換え
+ */
+interface HealthCheckResult {
+  /** ヘルシーかどうか */
+  healthy: boolean;
+  /** 検出された問題のリスト */
+  issues: string[];
+  /** 推奨事項のリスト */
+  recommendations: string[];
+}
+
+/**
  * プラグインのヘルスチェックを実行する
+ * Process4 Sub1: Denops型とHealthCheckResult型を使用
  * @param denops - Denopsインスタンス
  * @returns ヘルスチェック結果を含むPromise
  */
-function healthCheck(denops: any): Promise<any> {
+function healthCheck(denops: Denops): Promise<HealthCheckResult> {
   return Promise.resolve({
     healthy: true,
     issues: [],
@@ -307,12 +376,53 @@ function healthCheck(denops: any): Promise<any> {
 }
 
 /**
+ * パフォーマンス統計項目のインターフェース
+ * Process4 Sub1: any型を厳密な型に置き換え
+ */
+interface PerformanceStats {
+  /** 統計カウント */
+  count: number;
+  /** 平均値 */
+  average: number;
+  /** 最大値 */
+  max: number;
+  /** 最小値 */
+  min: number;
+}
+
+/**
+ * プラグイン統計情報のインターフェース
+ * Process4 Sub1: any型を厳密な型に置き換え
+ */
+interface PluginStatistics {
+  /** キャッシュ統計 */
+  cacheStats: {
+    words: CacheStatistics | Record<string, never>;
+    hints: CacheStatistics | Record<string, never>;
+  };
+  /** パフォーマンス統計 */
+  performanceStats: {
+    showHints: PerformanceStats;
+    hideHints: PerformanceStats;
+    wordDetection: PerformanceStats;
+    hintGeneration: PerformanceStats;
+  };
+  /** 現在の状態 */
+  currentState: {
+    initialized: boolean;
+    hintsVisible: boolean;
+    currentHintsCount: number;
+  };
+}
+
+/**
  * プラグインの統計情報を取得する
+ * Process4 Sub1: PluginStatistics型を使用
  * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
  */
-function getPluginStatistics(): any {
+function getPluginStatistics(): PluginStatistics {
   // Calculate statistics from performance metrics
-  const calculateStats = (metrics: number[]) => {
+  const calculateStats = (metrics: number[]): PerformanceStats => {
     if (metrics.length === 0) {
       return { count: 0, average: 0, max: 0, min: 0 };
     }
@@ -345,62 +455,69 @@ function getPluginStatistics(): any {
 
 /**
  * プラグインの状態を更新する
+ * Process4 Sub1: Partial<PluginState>型を使用
  * @param updates - 更新する状態のプロパティ
  */
-function updatePluginState(updates: any): void {
+function updatePluginState(updates: Partial<PluginState>): void {
   Object.assign(pluginState, updates);
 }
 
 /**
  * 現在のプラグイン状態を取得する
+ * Process4 Sub1: PluginState型を使用
  * @returns プラグインの状態オブジェクト
  */
-function getPluginState(): any {
+function getPluginState(): PluginState {
   return pluginState;
 }
 
 /**
  * プラグインを有効化する
  * commands.tsから統合した簡易関数
+ * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  */
-function enable(config: any): void {
+function enable(config: Config): void {
   config.enabled = true;
 }
 
 /**
  * プラグインを無効化する
+ * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  */
-function disable(config: any): void {
+function disable(config: Config): void {
   config.enabled = false;
 }
 
 /**
  * プラグインの有効/無効を切り替える
+ * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  * @returns 切り替え後の有効状態
  */
-function toggle(config: any): boolean {
+function toggle(config: Config): boolean {
   config.enabled = !config.enabled;
   return config.enabled;
 }
 
 /**
  * モーションカウントを設定する
+ * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  * @param count - 設定するカウント数
  */
-function setCount(config: any, count: number): void {
+function setCount(config: Config, count: number): void {
   config.motionCount = count;
 }
 
 /**
  * モーションタイムアウトを設定する
+ * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  * @param timeout - 設定するタイムアウト値（ミリ秒）
  */
-function setTimeoutCommand(config: any, timeout: number): void {
+function setTimeoutCommand(config: Config, timeout: number): void {
   config.motionTimeout = timeout;
 }
 
