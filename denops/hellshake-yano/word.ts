@@ -1858,20 +1858,6 @@ const sharedTextEncoder = new TextEncoder();
 const byteLengthCache = GlobalCache.getInstance().getCache<string, number>(CacheType.BYTE_LENGTH);
 
 /**
- * ASCII文字のみかどうかを高速チェック
- *
- * @param text チェック対象の文字列
- */
-export function isAscii(text: string): boolean {
-  for (let i = 0; i < text.length; i++) {
-    if (text.charCodeAt(i) > 0x7f) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
  * 統一されたバイト長計算関数（キャッシュ付き、ASCII最適化）
  *
  * @param text バイト長を計算する文字列
@@ -1882,8 +1868,15 @@ export function getByteLength(text: string): number {
     return 0;
   }
 
-  // ASCII文字のみの場合は高速パス
-  if (isAscii(text)) {
+  // ASCII文字のみの場合は高速パス（isAsciiをインライン化）
+  let isAscii = true;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) {
+      isAscii = false;
+      break;
+    }
+  }
+  if (isAscii) {
     return text.length;
   }
 
@@ -2030,10 +2023,11 @@ export function getEncodingInfo(text: string): {
     bytePosition += charBytes.length;
   }
 
+  const byteLength = encoder.encode(text).length;
   return {
     charLength: text.length,
-    byteLength: encoder.encode(text).length,
-    hasMultibyte: hasMultibyteCharacters(text),
+    byteLength,
+    hasMultibyte: byteLength > text.length, // hasMultibyteCharactersをインライン化
     charToByteMap,
   };
 }
