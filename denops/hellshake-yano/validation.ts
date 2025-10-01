@@ -12,7 +12,9 @@ import { validateConfig as validateConfigFromConfig } from "./config.ts";
 export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: string[] } {
   // null値の明示的チェック
   const errors: string[] = [];
-  const c = cfg as any;
+  // Process4 Sub3: as any → as Record<string, unknown> に変更
+  // unknown型により型ガードを強制し、型安全性を向上
+  const c = cfg as Record<string, unknown>;
 
   // highlightHintMarker のnullチェック
   if (c.highlightHintMarker === null) {
@@ -245,11 +247,11 @@ export function generateHighlightCommand(groupName: string, color: HighlightColo
 
 /**
  * ハイライト設定の妥当性を検証する
- * @param config - ハイライト設定オブジェクト
+ * @param config - ハイライト設定オブジェクト（Process4 Sub3: any → unknown に変更）
  * @returns 検証結果（有効性とエラーメッセージ）
  */
 export function validateHighlightConfig(
-  config: { [key: string]: any },
+  config: Record<string, unknown>,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 

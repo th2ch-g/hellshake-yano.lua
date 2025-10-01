@@ -192,9 +192,9 @@ export class LRUCache<K, V> {
   /**
    * キャッシュの各エントリに対して関数を実行
    * @param callbackfn 各エントリに対して実行する関数
-   * @param thisArg コールバック関数内でthisとして使用する値
+   * @param thisArg コールバック関数内でthisとして使用する値（Process4 Sub3: any → unknown に変更）
    */
-  forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
+  forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: unknown): void {
     this.cache.forEach(callbackfn, thisArg);
   }
 
@@ -294,7 +294,9 @@ interface CacheConfig {
  */
 export class GlobalCache {
   private static instance: GlobalCache;
-  private readonly caches: Map<CacheType, LRUCache<any, any>>;
+  // Process4 Sub3: Map<CacheType, LRUCache<any, any>> → Map<CacheType, LRUCache<unknown, unknown>> に変更
+  // 型安全性を保ちながら、ジェネリック型で具体的な型を指定できるようにする
+  private readonly caches: Map<CacheType, LRUCache<unknown, unknown>>;
   private readonly cacheConfigs: Record<CacheType, CacheConfig>;
 
   /**

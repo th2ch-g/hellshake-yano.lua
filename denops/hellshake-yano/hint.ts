@@ -8,7 +8,7 @@ import type {
 import type { Config } from "./config.ts";
 // Utility functions migrated from hint-utils.ts are now defined in this file
 // Display width calculation functions integrated from utils/display.ts
-import { CacheType, GlobalCache } from "./cache.ts";
+import { CacheType, GlobalCache, type CacheStatistics } from "./cache.ts";
 import { Core } from "./core.ts";
 
 /**
@@ -1016,7 +1016,19 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
  * console.log(`キャッシュ総サイズ: ${stats.totalSize}`);
  * ```
  */
-export function getGlobalCacheStats() {
+/**
+ * ヒント関連のキャッシュ統計を集約した型
+ * @description Process4 Sub3 で any 型を削減
+ */
+interface HintCacheStatistics {
+  [key: string]: CacheStatistics | number;
+  totalSize: number;
+  totalHits: number;
+  totalMisses: number;
+  overallHitRate: number;
+}
+
+export function getGlobalCacheStats(): HintCacheStatistics {
   const allStats = globalCache.getAllStats();
   const hintRelatedTypes = [
     'HINTS',
@@ -1025,7 +1037,8 @@ export function getGlobalCacheStats() {
     'HINT_ASSIGNMENT_OTHER'
   ];
 
-  const hintStats: Record<string, any> = {};
+  // Process4 Sub3: Record<string, any> → Record<string, CacheStatistics> に変更
+  const hintStats: Record<string, CacheStatistics> = {};
   let totalSize = 0;
   let totalHits = 0;
   let totalMisses = 0;

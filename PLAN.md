@@ -240,9 +240,23 @@
   - IDE補完が効き、コンパイル時の型チェックが機能
 - ✅ ドキュメントコメントを追加し、Process4 Sub2での改善内容を明記
 
-#### sub3 hint.ts, cache.ts, validation.ts の対応
-- [ ] hint.ts (1箇所), cache.ts (2箇所), validation.ts (2箇所) の any 型を修正
-- [ ] 各モジュールの責務に応じた適切な型定義を適用
+#### sub3 hint.ts, cache.ts, validation.ts の対応 ✅ 完了 (2025-10-01)
+- [x] hint.ts (1箇所), cache.ts (2箇所), validation.ts (2箇所) の any 型を修正
+- [x] 各モジュールの責務に応じた適切な型定義を適用
+  - ✅ TDD Red-Green-Refactorサイクルで実装完了
+  - ✅ tests/process4_sub3_test.ts に7個のテストを追加（全て通過）
+  - ✅ any型の削減実績: 5箇所 → 0箇所（100%削減）
+  - ✅ 型安全性の向上:
+    - hint.ts: `Record<string, any>` → `Record<string, CacheStatistics>` + HintCacheStatistics インターフェース定義
+    - cache.ts (2箇所):
+      - `LRUCache.forEach` の `thisArg?: any` → `thisArg?: unknown` に変更
+      - `Map<CacheType, LRUCache<any, any>>` → `Map<CacheType, LRUCache<unknown, unknown>>` に変更
+    - validation.ts (2箇所):
+      - `const c = cfg as any` → `const c = cfg as Record<string, unknown>` に変更
+      - `validateHighlightConfig(config: { [key: string]: any })` → `validateHighlightConfig(config: Record<string, unknown>)` に変更
+  - ✅ unknown型 + 型ガードによる実行時型検証の導入
+  - ✅ ジェネリック型の活用により型安全性を保ちながら柔軟性を維持
+  - ✅ ドキュメントコメントを追加し、Process4 Sub3での改善内容を明記
 
 ### process5 テストコードの段階的改善
 @target: tests/**/*.ts
