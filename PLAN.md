@@ -257,6 +257,8 @@
 - [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] テストの更新
 - [ ] detectWords 系の統合
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] extractWords 系の統合
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
@@ -267,6 +269,8 @@
 - [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] テストの更新
 - [ ] generateHints 系の統合
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] calculateHintPosition 系の統合
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
@@ -288,6 +292,8 @@
 - [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] 未使用の型定義の特定
 - [ ] 型エイリアスの整理
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] 型ガード関数の簡略化
 - [ ] ファクトリ関数の削除
 - [ ] deno checkで型エラーがないことを確認
@@ -298,6 +304,8 @@
 @status: pending
 - [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] word.ts の小関数統合
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] hint.ts の小関数統合
 - [ ] autoload/hellshake_yano.vim の統合
 - [ ] deno checkで型エラーがないことを確認
