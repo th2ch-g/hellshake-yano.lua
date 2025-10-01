@@ -5,7 +5,7 @@
  */
 
 import { assertEquals } from "jsr:@std/assert";
-import { normalizeBackwardCompatibleFlags } from "../denops/hellshake-yano/main.ts";
+import { normalizeBackwardCompatibleFlags } from "../denops/hellshake-yano/compatibility.ts";
 
 Deno.test("normalizeBackwardCompatibleFlags - snake_case to camelCase conversion", async (t) => {
 

@@ -156,9 +156,9 @@ Deno.test("Legacy functions should still work for backward compatibility", () =>
 
 // Test Group 6: main.ts related tests
 Deno.test("normalizeBackwardCompatibleFlags function should exist", async () => {
-  // main.tsから関数をインポートしてテスト
+  // compatibility.tsから関数をインポートしてテスト
   try {
-    const { normalizeBackwardCompatibleFlags } = await import("../denops/hellshake-yano/main.ts");
+    const { normalizeBackwardCompatibleFlags } = await import("../denops/hellshake-yano/compatibility.ts");
     assertExists(normalizeBackwardCompatibleFlags);
   } catch (error) {
     // 関数がまだ存在しないことを確認（Red phase）

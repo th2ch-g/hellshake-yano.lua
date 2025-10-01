@@ -65,7 +65,8 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
 import { CacheType, GlobalCache } from "./cache.ts";
 // Segmenter import removed - integrated below
 import type { UnifiedConfig } from "./config.ts";
-import { type Config, getMinLengthForKey } from "./main.ts";
+import type { Config } from "./config.ts";
+import { Core } from "./core.ts";
 
 // パフォーマンス設定
 const LARGE_FILE_THRESHOLD = 1000;
@@ -386,7 +387,7 @@ export class RegexWordDetector implements WordDetector {
       return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
     }
     if (this.globalConfig && key) {
-      return getMinLengthForKey(this.globalConfig, key);
+      return Core.getMinLengthForKey(this.globalConfig, key);
     }
 
     // 3. ローカル設定のmin_word_length

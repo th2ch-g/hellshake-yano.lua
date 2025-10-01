@@ -8,10 +8,20 @@ import { Core } from "./core.ts";
 import type { DebugInfo, HintMapping, Word } from "./types.ts";
 import { Config, DEFAULT_CONFIG } from "./config.ts";
 
-// 後方互換性のための型の再エクスポート
-export type { Config, HighlightColor } from "./types.ts";
-// テスト用関数の再エクスポート
+// 設定関連のエクスポート
 export { getDefaultConfig } from "./config.ts";
+export type { Config } from "./config.ts";
+
+// validation.tsからの再エクスポート（後方互換性）
+export {
+  generateHighlightCommand,
+  isValidColorName,
+  isValidHexColor,
+  normalizeColorName,
+  validateHighlightColor,
+  validateHighlightConfig,
+} from "./validation.ts";
+export type { HighlightColor } from "./types.ts";
 
 // 新しいモジュールからのインポート
 import {
@@ -24,12 +34,6 @@ import {
   resetPerformanceMetrics,
 } from "./performance.ts";
 import { validateConfig } from "./validation.ts";
-import {
-  getMinLengthForKey,
-  getMotionCountForKey,
-  normalizeBackwardCompatibleFlags,
-  syncManagerConfig,
-} from "./compatibility.ts";
 import {
   addToDictionary,
   editDictionary,
@@ -44,6 +48,7 @@ import {
   displayHintsOptimized as displayHintsOptimizedInternal,
   hideHints as hideHintsDisplay,
   highlightCandidateHintsAsync as highlightCandidateHintsAsyncInternal,
+  highlightCandidateHintsHybrid,
 } from "./display.ts";
 
 /** プラグインの設定 */
@@ -62,12 +67,8 @@ let extmarkNamespace: number | undefined;
 let fallbackMatchIds: number[] = [];
 
 // テスト用に関数を再エクスポート
-export { getMinLengthForKey, getMotionCountForKey, normalizeBackwardCompatibleFlags };
 export { detectWordsOptimized, generateHintsFromConfig, validateConfig };
-export { cleanupPendingTimers, collectDebugInfo, syncManagerConfig };
-
-// 後方互換性のためのエクスポート
-export { clearDebugInfo } from "./performance.ts";
+export { cleanupPendingTimers, collectDebugInfo };
 
 /**
  * プラグインのメインエントリーポイント
@@ -84,11 +85,10 @@ export async function main(denops: Denops): Promise<void> {
     const userConfig = await denops.eval("g:hellshake_yano").catch(() => ({})) as Partial<
       Config
     >;
-    const normalizedUserConfig = normalizeBackwardCompatibleFlags(userConfig);
 
     // Configを直接使用
     const defaultConfig = DEFAULT_CONFIG;
-    config = { ...defaultConfig, ...normalizedUserConfig } as Config;
+    config = { ...defaultConfig, ...userConfig } as Config;
 
     // デバッグログ: 設定の内容を確認
     if (config.debug || config.debugMode) {
@@ -126,7 +126,6 @@ export async function main(denops: Denops): Promise<void> {
 
     // Coreインスタンスの設定を更新（use_japanese, enable_tinysegmenterなどが反映される）
     core.updateConfig(config);
-    syncManagerConfig(config);
 
     if (denops.meta.host === "nvim") {
       extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake-yano") as number;
@@ -309,12 +308,9 @@ export async function main(denops: Denops): Promise<void> {
         if (typeof cfg === "object" && cfg !== null) {
           const core = Core.getInstance(config);
           const configUpdate = cfg as Partial<Config>;
-          // 正規化を追加（snake_case -> camelCase変換）
-          const normalizedConfig = normalizeBackwardCompatibleFlags(configUpdate);
-          core.updateConfig(normalizedConfig);
+          core.updateConfig(configUpdate);
           // グローバル設定も更新（直接Configを使用）
-          config = { ...config, ...normalizedConfig };
-          syncManagerConfig(config);
+          config = { ...config, ...configUpdate };
         }
       },
 
@@ -415,21 +411,6 @@ export function highlightCandidateHintsAsync(
   );
 }
 
-// 後方互換性のためのエクスポート（必要なもののみ）
-export {
-  generateHighlightCommand,
-  isValidColorName,
-  isValidHexColor,
-  normalizeColorName,
-  validateHighlightColor,
-  validateHighlightConfig,
-  validateHighlightGroupName,
-} from "./validation.ts";
+// Re-export highlightCandidateHintsHybrid from display.ts
+export { highlightCandidateHintsHybrid };
 
-// 必要な追加のエクスポート
-export { generateHintsOptimized } from "./performance.ts";
-export {
-  abortCurrentRendering,
-  highlightCandidateHintsHybrid,
-  isRenderingHints,
-} from "./display.ts";

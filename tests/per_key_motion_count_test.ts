@@ -10,7 +10,7 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
-import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
+import { Core } from "../denops/hellshake-yano/core.ts";
 
 // Test helper to create minimal config with required fields
 function createTestConfig(partial: Partial<Config>): Config {
@@ -47,13 +47,13 @@ Deno.test("perKeyMotionCount: basic functionality", () => {
   });
 
   // Test per-key specific values
-  assertEquals(getMotionCountForKey("v", config), 1);
-  assertEquals(getMotionCountForKey("w", config), 1);
-  assertEquals(getMotionCountForKey("b", config), 1);
-  assertEquals(getMotionCountForKey("h", config), 3);
-  assertEquals(getMotionCountForKey("j", config), 3);
-  assertEquals(getMotionCountForKey("k", config), 3);
-  assertEquals(getMotionCountForKey("l", config), 3);
+  assertEquals(Core.getMotionCountForKey("v", config), 1);
+  assertEquals(Core.getMotionCountForKey("w", config), 1);
+  assertEquals(Core.getMotionCountForKey("b", config), 1);
+  assertEquals(Core.getMotionCountForKey("h", config), 3);
+  assertEquals(Core.getMotionCountForKey("j", config), 3);
+  assertEquals(Core.getMotionCountForKey("k", config), 3);
+  assertEquals(Core.getMotionCountForKey("l", config), 3);
 });
 
 Deno.test("perKeyMotionCount: fallback to defaultMotionCount", () => {
@@ -65,9 +65,9 @@ Deno.test("perKeyMotionCount: fallback to defaultMotionCount", () => {
   });
 
   // Test fallback to defaultMotionCount for undefined keys
-  assertEquals(getMotionCountForKey("v", config), 1); // specific value
-  assertEquals(getMotionCountForKey("x", config), 2); // defaultMotionCount
-  assertEquals(getMotionCountForKey("z", config), 2); // defaultMotionCount
+  assertEquals(Core.getMotionCountForKey("v", config), 1); // specific value
+  assertEquals(Core.getMotionCountForKey("x", config), 2); // defaultMotionCount
+  assertEquals(Core.getMotionCountForKey("z", config), 2); // defaultMotionCount
 });
 
 Deno.test("perKeyMotionCount: fallback to motionCount when defaultMotionCount is undefined", () => {
@@ -79,8 +79,8 @@ Deno.test("perKeyMotionCount: fallback to motionCount when defaultMotionCount is
   });
 
   // Test fallback to motionCount for backward compatibility
-  assertEquals(getMotionCountForKey("v", config), 1); // specific value
-  assertEquals(getMotionCountForKey("x", config), 3); // motionCount (backward compatibility)
+  assertEquals(Core.getMotionCountForKey("v", config), 1); // specific value
+  assertEquals(Core.getMotionCountForKey("x", config), 3); // motionCount (backward compatibility)
 });
 
 Deno.test("perKeyMotionCount: undefined perKeyMotionCount uses defaultMotionCount", () => {
@@ -90,8 +90,8 @@ Deno.test("perKeyMotionCount: undefined perKeyMotionCount uses defaultMotionCoun
   });
 
   // Test fallback to defaultMotionCount when perKeyMotionCount is undefined
-  assertEquals(getMotionCountForKey("v", config), 2);
-  assertEquals(getMotionCountForKey("h", config), 2);
+  assertEquals(Core.getMotionCountForKey("v", config), 2);
+  assertEquals(Core.getMotionCountForKey("h", config), 2);
 });
 
 Deno.test("perKeyMotionCount: both undefined uses motionCount", () => {
@@ -100,8 +100,8 @@ Deno.test("perKeyMotionCount: both undefined uses motionCount", () => {
   });
 
   // Test fallback to motionCount for complete backward compatibility
-  assertEquals(getMotionCountForKey("v", config), 3);
-  assertEquals(getMotionCountForKey("h", config), 3);
+  assertEquals(Core.getMotionCountForKey("v", config), 3);
+  assertEquals(Core.getMotionCountForKey("h", config), 3);
 });
 
 Deno.test("perKeyMotionCount: edge cases", () => {
@@ -114,8 +114,8 @@ Deno.test("perKeyMotionCount: edge cases", () => {
   });
 
   // Zero and negative values should fallback to default (only values >= 1 are valid)
-  assertEquals(getMotionCountForKey("v", config), 2);
-  assertEquals(getMotionCountForKey("w", config), 2);
+  assertEquals(Core.getMotionCountForKey("v", config), 2);
+  assertEquals(Core.getMotionCountForKey("w", config), 2);
 });
 
 Deno.test("perKeyMotionCount: empty string key", () => {
@@ -127,10 +127,10 @@ Deno.test("perKeyMotionCount: empty string key", () => {
   });
 
   // Empty string key should work
-  assertEquals(getMotionCountForKey("", config), 1);
+  assertEquals(Core.getMotionCountForKey("", config), 1);
 
   // Other keys should use default
-  assertEquals(getMotionCountForKey("v", config), 2);
+  assertEquals(Core.getMotionCountForKey("v", config), 2);
 });
 
 Deno.test("perKeyMotionCount: priority test", () => {
@@ -142,17 +142,17 @@ Deno.test("perKeyMotionCount: priority test", () => {
   });
 
   // Priority: perKeyMotionCount > defaultMotionCount > motionCount
-  assertEquals(getMotionCountForKey("v", config), 1); // perKeyMotionCount
-  assertEquals(getMotionCountForKey("x", config), 2); // defaultMotionCount
+  assertEquals(Core.getMotionCountForKey("v", config), 1); // perKeyMotionCount
+  assertEquals(Core.getMotionCountForKey("x", config), 2); // defaultMotionCount
 
   // Test without perKeyMotionCount
   const configWithoutPerKey = createTestConfig({motionCount: 5,
     defaultMotionCount: 2,
   });
-  assertEquals(getMotionCountForKey("v", configWithoutPerKey), 2); // defaultMotionCount
+  assertEquals(Core.getMotionCountForKey("v", configWithoutPerKey), 2); // defaultMotionCount
 
   // Test without both perKeyMotionCount and custom defaultMotionCount
   const configMinimal = createTestConfig({motionCount: 5,
   });
-  assertEquals(getMotionCountForKey("v", configMinimal), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMotionCount
+  assertEquals(Core.getMotionCountForKey("v", configMinimal), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMotionCount
 });

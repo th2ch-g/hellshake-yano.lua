@@ -1,7 +1,7 @@
 import { assertEquals, assertExists, assertThrows } from "jsr:@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
-import { getMinLengthForKey } from "../denops/hellshake-yano/main.ts";
+import { Core } from "../denops/hellshake-yano/core.ts";
 import { HintManager } from "../denops/hellshake-yano/hint.ts";
 
 Deno.test("Config interface - should have perKeyMinLength property", () => {
@@ -58,9 +58,9 @@ const config: Config = {
 
   // main.tsからエクスポートされた実際の関数を使用
 
-  assertEquals(getMinLengthForKey(config, "v"), 1);
-  assertEquals(getMinLengthForKey(config, "h"), 2);
-  assertEquals(getMinLengthForKey(config, "x"), 3); // defaultMinWordLengthを使用
+  assertEquals(Core.getMinLengthForKey(config, "v"), 1);
+  assertEquals(Core.getMinLengthForKey(config, "h"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "x"), 3); // defaultMinWordLengthを使用
 });
 
 Deno.test("Config validation - should handle legacy minWordLength", () => {
@@ -105,34 +105,34 @@ const config: Config = {
   };
 
   // 精密移動キー
-  assertEquals(getMinLengthForKey(config, "v"), 1);
-  assertEquals(getMinLengthForKey(config, "V"), 1);
-  assertEquals(getMinLengthForKey(config, "w"), 1);
-  assertEquals(getMinLengthForKey(config, "b"), 1);
-  assertEquals(getMinLengthForKey(config, "e"), 1);
+  assertEquals(Core.getMinLengthForKey(config, "v"), 1);
+  assertEquals(Core.getMinLengthForKey(config, "V"), 1);
+  assertEquals(Core.getMinLengthForKey(config, "w"), 1);
+  assertEquals(Core.getMinLengthForKey(config, "b"), 1);
+  assertEquals(Core.getMinLengthForKey(config, "e"), 1);
 
   // 基本移動キー
-  assertEquals(getMinLengthForKey(config, "h"), 2);
-  assertEquals(getMinLengthForKey(config, "j"), 2);
-  assertEquals(getMinLengthForKey(config, "k"), 2);
-  assertEquals(getMinLengthForKey(config, "l"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "h"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "j"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "k"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "l"), 2);
 
   // 検索系キー
-  assertEquals(getMinLengthForKey(config, "f"), 3);
-  assertEquals(getMinLengthForKey(config, "F"), 3);
-  assertEquals(getMinLengthForKey(config, "t"), 3);
-  assertEquals(getMinLengthForKey(config, "T"), 3);
+  assertEquals(Core.getMinLengthForKey(config, "f"), 3);
+  assertEquals(Core.getMinLengthForKey(config, "F"), 3);
+  assertEquals(Core.getMinLengthForKey(config, "t"), 3);
+  assertEquals(Core.getMinLengthForKey(config, "T"), 3);
 
   // 長距離移動キー
-  assertEquals(getMinLengthForKey(config, "0"), 4);
-  assertEquals(getMinLengthForKey(config, "$"), 4);
-  assertEquals(getMinLengthForKey(config, "G"), 5);
-  assertEquals(getMinLengthForKey(config, "gg"), 5);
+  assertEquals(Core.getMinLengthForKey(config, "0"), 4);
+  assertEquals(Core.getMinLengthForKey(config, "$"), 4);
+  assertEquals(Core.getMinLengthForKey(config, "G"), 5);
+  assertEquals(Core.getMinLengthForKey(config, "gg"), 5);
 
   // 未定義キーはデフォルト値を使用
-  assertEquals(getMinLengthForKey(config, "x"), 2); // defaultMinWordLength
-  assertEquals(getMinLengthForKey(config, "y"), 2);
-  assertEquals(getMinLengthForKey(config, "p"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "x"), 2); // defaultMinWordLength
+  assertEquals(Core.getMinLengthForKey(config, "y"), 2);
+  assertEquals(Core.getMinLengthForKey(config, "p"), 2);
 });
 
 Deno.test("Per-key configuration - edge cases and validation", () => {
@@ -149,10 +149,10 @@ const config: Config = {
 
   // エッジケースの動作確認
   // 0や負の値は無効なのでdefaultMinWordLengthにフォールバック
-  assertEquals(getMinLengthForKey(config, "zero"), 2); // defaultMinWordLengthにフォールバック
-  assertEquals(getMinLengthForKey(config, "negative"), 2); // defaultMinWordLengthにフォールバック
-  assertEquals(getMinLengthForKey(config, "large"), 100); // 有効な値
-  assertEquals(getMinLengthForKey(config, "empty"), 2); // defaultMinWordLengthにフォールバック
+  assertEquals(Core.getMinLengthForKey(config, "zero"), 2); // defaultMinWordLengthにフォールバック
+  assertEquals(Core.getMinLengthForKey(config, "negative"), 2); // defaultMinWordLengthにフォールバック
+  assertEquals(Core.getMinLengthForKey(config, "large"), 100); // 有効な値
+  assertEquals(Core.getMinLengthForKey(config, "empty"), 2); // defaultMinWordLengthにフォールバック
 
   // 特殊文字キー
 const specialConfig: Config = {
@@ -166,11 +166,11 @@ const specialConfig: Config = {
     },
   };
 
-  assertEquals(getMinLengthForKey(specialConfig, " "), 1);
-  assertEquals(getMinLengthForKey(specialConfig, "\t"), 2);
-  assertEquals(getMinLengthForKey(specialConfig, "\n"), 3);
-  assertEquals(getMinLengthForKey(specialConfig, "<CR>"), 1);
-  assertEquals(getMinLengthForKey(specialConfig, "<Esc>"), 2);
+  assertEquals(Core.getMinLengthForKey(specialConfig, " "), 1);
+  assertEquals(Core.getMinLengthForKey(specialConfig, "\t"), 2);
+  assertEquals(Core.getMinLengthForKey(specialConfig, "\n"), 3);
+  assertEquals(Core.getMinLengthForKey(specialConfig, "<CR>"), 1);
+  assertEquals(Core.getMinLengthForKey(specialConfig, "<Esc>"), 2);
 });
 
 // ========================================
@@ -185,8 +185,8 @@ const config1: Config = {
     defaultMinWordLength: 3,
   };
 
-  assertEquals(getMinLengthForKey(config1, "v"), 1); // per_key設定を使用
-  assertEquals(getMinLengthForKey(config1, "h"), 3); // defaultMinWordLengthを使用
+  assertEquals(Core.getMinLengthForKey(config1, "v"), 1); // per_key設定を使用
+  assertEquals(Core.getMinLengthForKey(config1, "h"), 3); // defaultMinWordLengthを使用
 
   // パターン2: defaultMinWordLength → minWordLength
 const config2: Config = {
@@ -194,14 +194,14 @@ const config2: Config = {
     defaultMinWordLength: 4,
   };
 
-  assertEquals(getMinLengthForKey(config2, "any"), 4); // defaultMinWordLengthを使用
+  assertEquals(Core.getMinLengthForKey(config2, "any"), 4); // defaultMinWordLengthを使用
 
   // パターン3: DEFAULT_UNIFIED_CONFIGのデフォルト値
 const config3: Config = {
     ...DEFAULT_UNIFIED_CONFIG,
   };
 
-  assertEquals(getMinLengthForKey(config3, "any"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLength
+  assertEquals(Core.getMinLengthForKey(config3, "any"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLength
 
   // パターン4: minWordLengthのみ（レガシー）
 const config4: Config = {
@@ -210,7 +210,7 @@ const config4: Config = {
     minWordLength: 7,
   } as Config;
 
-  assertEquals(getMinLengthForKey(config4, "any"), 7); // minWordLengthを使用
+  assertEquals(Core.getMinLengthForKey(config4, "any"), 7); // minWordLengthを使用
 });
 
 Deno.test("Fallback behavior - missing configurations", () => {
@@ -220,7 +220,7 @@ const config1: Config = {
     defaultMinWordLength: 3,
   };
 
-  assertEquals(getMinLengthForKey(config1, "v"), 3); // defaultMinWordLengthを使用
+  assertEquals(Core.getMinLengthForKey(config1, "v"), 3); // defaultMinWordLengthを使用
 
   // 部分的な設定
 const config2: Config = {
@@ -231,8 +231,8 @@ const config2: Config = {
     },
   };
 
-  assertEquals(getMinLengthForKey(config2, "v"), 1); // per_key設定
-  assertEquals(getMinLengthForKey(config2, "h"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLengthにフォールバック
+  assertEquals(Core.getMinLengthForKey(config2, "v"), 1); // per_key設定
+  assertEquals(Core.getMinLengthForKey(config2, "h"), 3); // DEFAULT_UNIFIED_CONFIGのdefaultMinWordLengthにフォールバック
 
   // undefined値の扱い
 const config3: Config = {
@@ -243,7 +243,7 @@ const config3: Config = {
     defaultMinWordLength: 6,
   };
 
-  assertEquals(getMinLengthForKey(config3, "v"), 6); // undefinedなのでdefaultMinWordLengthを使用
+  assertEquals(Core.getMinLengthForKey(config3, "v"), 6); // undefinedなのでdefaultMinWordLengthを使用
 });
 
 // ========================================

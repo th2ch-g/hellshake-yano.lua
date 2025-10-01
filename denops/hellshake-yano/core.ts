@@ -2381,23 +2381,43 @@ export class Core {
   /*   * キー別最小文字数設定を取得する（Process3 Sub2-2-1実装）   * TDD GREEN Phase: テストをパスする最小限の実装
    * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
    * @param key 対象のキー文字（例: 'f', 't', 'w'など）
-   * @returns そのキーに対する最小文字数値（デフォルト: 2）
+   * @returns そのキーに対する最小文字数値（デフォルト: 3）
    */
   public static getMinLengthForKey(config: Config | Config, key: string): number {
     // 既にConfig形式であることを前提
     const unifiedConfig = config as Config;
 
-    // キー別設定が存在し、そのキーの設定があれば使用
-    if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
-      return unifiedConfig.perKeyMinLength[key];
+    // Check for perKeyMinLength first (highest priority)
+    if (
+      "perKeyMinLength" in unifiedConfig && unifiedConfig.perKeyMinLength &&
+      typeof unifiedConfig.perKeyMinLength === "object"
+    ) {
+      const perKeyValue = (unifiedConfig.perKeyMinLength as Record<string, number>)[key];
+      // Validate that the value is positive (0 and negative values are invalid)
+      if (perKeyValue !== undefined && perKeyValue > 0) return perKeyValue;
     }
 
-    // defaultMinWordLength が設定されていれば使用
-    if (unifiedConfig.defaultMinWordLength !== undefined) {
+    // Check for defaultMinWordLength (second priority)
+    if ("defaultMinWordLength" in unifiedConfig && typeof unifiedConfig.defaultMinWordLength === "number") {
       return unifiedConfig.defaultMinWordLength;
     }
 
-    // デフォルト値
+    // Check for default_min_length (third priority - for backward compatibility)
+    if ("default_min_length" in unifiedConfig && typeof (unifiedConfig as any).default_min_length === "number") {
+      return (unifiedConfig as any).default_min_length;
+    }
+
+    // Check for min_length (fourth priority - for backward compatibility)
+    if ("min_length" in unifiedConfig && typeof (unifiedConfig as any).min_length === "number") {
+      return (unifiedConfig as any).min_length;
+    }
+
+    // Check for legacy minWordLength (fifth priority)
+    if ("minWordLength" in unifiedConfig && typeof (unifiedConfig as any).minWordLength === "number") {
+      return (unifiedConfig as any).minWordLength;
+    }
+
+    // Default fallback
     return 3;
   }
 

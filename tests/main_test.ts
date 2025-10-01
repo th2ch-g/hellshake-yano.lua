@@ -4,8 +4,9 @@
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { getDefaultConfig, validateConfig, getMinLengthForKey, getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
+import { getDefaultConfig, validateConfig } from "../denops/hellshake-yano/main.ts";
 import { getDefaultConfig as getDefaultConfigFromConfig, validateConfig as validateConfigFromConfig } from "../denops/hellshake-yano/config.ts";
+import { Core } from "../denops/hellshake-yano/core.ts";
 
 Deno.test("getDefaultConfig() should delegate to config.ts", () => {
   const config = getDefaultConfig();
@@ -48,13 +49,13 @@ Deno.test("validateConfig() should delegate to config.ts", () => {
 Deno.test("getMinLengthForKey() should work with both Config and Config", () => {
   // Config形式でのテスト
   const configFromConfigModule = getDefaultConfigFromConfig();
-  const minLength1 = getMinLengthForKey(configFromConfigModule, "f");
+  const minLength1 = Core.getMinLengthForKey(configFromConfigModule, "f");
   assertEquals(typeof minLength1, "number");
   assertEquals(minLength1 >= 1, true);
 
   // Config形式でのテスト（後方互換性）
   const config = getDefaultConfig();
-  const minLength2 = getMinLengthForKey(config, "f");
+  const minLength2 = Core.getMinLengthForKey(config, "f");
   assertEquals(typeof minLength2, "number");
   assertEquals(minLength2 >= 1, true);
 
@@ -65,13 +66,13 @@ Deno.test("getMinLengthForKey() should work with both Config and Config", () => 
 Deno.test("getMotionCountForKey() should work with both Config and Config", () => {
   // Config形式でのテスト
   const configFromConfigModule = getDefaultConfigFromConfig();
-  const motionCount1 = getMotionCountForKey("f", configFromConfigModule);
+  const motionCount1 = Core.getMotionCountForKey("f", configFromConfigModule);
   assertEquals(typeof motionCount1, "number");
   assertEquals(motionCount1 >= 1, true);
 
   // Config形式でのテスト（後方互換性）
   const config = getDefaultConfig();
-  const motionCount2 = getMotionCountForKey("f", config);
+  const motionCount2 = Core.getMotionCountForKey("f", config);
   assertEquals(typeof motionCount2, "number");
   assertEquals(motionCount2 >= 1, true);
 
@@ -123,14 +124,14 @@ Deno.test("motion detection functions should have proper types", () => {
 
   // countedMotions内の各キーに対してgetMinLengthForKeyが正しく動作することを確認
   config.countedMotions.forEach((key: string) => {
-    const minLength = getMinLengthForKey(config, key);
+    const minLength = Core.getMinLengthForKey(config, key);
     assertEquals(typeof minLength, "number");
     assertEquals(minLength >= 1, true);
   });
 
   // getMotionCountForKeyも同様に確認
   config.countedMotions.forEach((key: string) => {
-    const motionCount = getMotionCountForKey(key, config);
+    const motionCount = Core.getMotionCountForKey(key, config);
     assertEquals(typeof motionCount, "number");
     assertEquals(motionCount >= 1, true);
   });

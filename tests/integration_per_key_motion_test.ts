@@ -2,7 +2,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
-import { getMotionCountForKey } from "../denops/hellshake-yano/main.ts";
+import { Core } from "../denops/hellshake-yano/core.ts";
 
 /**
  * Integration tests for per-key motion count feature
@@ -69,7 +69,7 @@ class MotionCountTracker {
       clearTimeout(this.timers.get(key));
     }
 
-    const requiredCount = getMotionCountForKey(key, this.config);
+    const requiredCount = Core.getMotionCountForKey(key, this.config);
 
     // Set timeout to reset count
     const timer = setTimeout(() => {
@@ -317,7 +317,7 @@ describe("Integration: パフォーマンステスト", () => {
 
     for (let i = 0; i < iterations; i++) {
       const key = ["h", "j", "k", "l", "v", "w", "b"][i % 7];
-      getMotionCountForKey(key, config);
+      Core.getMotionCountForKey(key, config);
     }
 
     const endTime = performance.now();

@@ -9,7 +9,7 @@ import type { Config } from "./config.ts";
 // Utility functions migrated from hint-utils.ts are now defined in this file
 // Display width calculation functions integrated from utils/display.ts
 import { CacheType, GlobalCache } from "./cache.ts";
-import { getMinLengthForKey } from "./main.ts";
+import { Core } from "./core.ts";
 
 /**
  * 後方互換性のための型の再エクスポート
@@ -2409,7 +2409,7 @@ export class HintManager {
    * @returns キーに対応する最小文字数（設定に基づく）
    */
   getMinLengthForKey(key: string): number {
-    return getMinLengthForKey(this.config, key);
+    return Core.getMinLengthForKey(this.config, key);
   }
 
   /**
