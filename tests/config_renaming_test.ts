@@ -11,7 +11,6 @@
 import { assertEquals, assertExists } from "@std/assert";
 import {
   Config,
-  UnifiedConfig,
   getDefaultConfig,
   getDefaultUnifiedConfig,
   validateConfig,
@@ -95,10 +94,11 @@ Deno.test("validateConfig function should exist and validate Config objects", ()
   assertEquals(result.errors.length, 0);
 });
 
-// Test Group 4: Backward compatibility - UnifiedConfig alias should work
+// Test Group 4: Backward compatibility - Config type should work
+// v3.0.0: UnifiedConfig型エイリアスは削除されました
 Deno.test("UnifiedConfig alias should work for backward compatibility", () => {
-  // UnifiedConfigエイリアスが使用できることを確認
-  const config: UnifiedConfig = {
+  // v3.0.0: 直接Config型を使用します
+  const config: Config = {
     enabled: true,
     markers: ["A", "B", "C"],
     motionCount: 3,
@@ -168,42 +168,32 @@ Deno.test("normalizeBackwardCompatibleFlags function should exist", async () => 
 
 // Test Group 8: Verify the actual requirements of Process 1
 Deno.test("Process1 requirements verification", async () => {
-  // 要件: interface UnifiedConfig は interface Config に名前変更されている必要がある
-  // 要件: type Config = UnifiedConfig エイリアスは削除されている必要がある
-  // 要件: type UnifiedConfig = Config エイリアスが追加されている必要がある
+  // v3.0.0要件: UnifiedConfig型エイリアスは完全に削除されている必要がある
+  // 要件: interface Config のみが存在する
 
   // config.tsの内容を読み取ってチェック
   const configTsContent = await Deno.readTextFile("denops/hellshake-yano/config.ts");
 
-  // 要件確認1: "interface UnifiedConfig" があるか（これはfalseになるべき）
-  const hasInterfaceUnifiedConfig = configTsContent.includes("interface UnifiedConfig");
-
-  // 要件確認2: "interface Config" があるか（これはtrueになるべき）
+  // v3.0.0要件確認1: "interface Config" があるか（これはtrueになるべき）
   const hasInterfaceConfig = configTsContent.includes("interface Config");
 
-  // 要件確認3: "type Config = UnifiedConfig" があるか（これはfalseになるべき）
-  const hasTypeConfigAlias = configTsContent.includes("type Config = UnifiedConfig");
-
-  // 要件確認4: "type UnifiedConfig = Config" があるか（これはtrueになるべき）
+  // v3.0.0要件確認2: UnifiedConfig型エイリアスは存在しない（これはfalseになるべき）
   const hasUnifiedConfigAlias = configTsContent.includes("type UnifiedConfig = Config");
 
   console.log("Current state analysis:");
-  console.log(`  interface UnifiedConfig exists: ${hasInterfaceUnifiedConfig}`);
   console.log(`  interface Config exists: ${hasInterfaceConfig}`);
-  console.log(`  type Config = UnifiedConfig exists: ${hasTypeConfigAlias}`);
   console.log(`  type UnifiedConfig = Config exists: ${hasUnifiedConfigAlias}`);
 
-  // After Process1 implementation: これらの要件が満たされていることを確認
-  assertEquals(hasInterfaceUnifiedConfig, false, "Should no longer have interface UnifiedConfig");
-  assertEquals(hasInterfaceConfig, true, "Should now have interface Config");
-  assertEquals(hasTypeConfigAlias, false, "Should no longer have type Config = UnifiedConfig");
-  assertEquals(hasUnifiedConfigAlias, true, "Should now have type UnifiedConfig = Config for backward compatibility");
+  // v3.0.0の要件を確認
+  assertEquals(hasInterfaceConfig, true, "Should have interface Config");
+  assertEquals(hasUnifiedConfigAlias, false, "v3.0.0: UnifiedConfig type alias should be removed");
 });
 
 // Test Group 7: Type compatibility tests
+// v3.0.0: UnifiedConfig型エイリアスは削除されたため、このテストは不要
 Deno.test("Config and UnifiedConfig should be compatible types", () => {
   const config1: Config = getDefaultConfig();
-  const config2: UnifiedConfig = config1; // これがコンパイルエラーにならないことを確認
+  const config2: Config = config1; // v3.0.0: 直接Config型を使用
   const config3: Config = config2; // これもコンパイルエラーにならないことを確認
 
   assertEquals(config1.enabled, config2.enabled);

@@ -130,11 +130,14 @@
 @ref: denops/hellshake-yano/types.ts
 
 #### sub1 config.tsの型エイリアス削除
-- [ ] 174-176行目の型エイリアス（UnifiedConfig, CamelCaseConfig, ModernConfig）削除
-- [ ] 158-159行目のuseImprovedDetectionプロパティ削除
-- [ ] 32-33行目のHighlightColor再エクスポート削除
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] 174-176行目の型エイリアス（UnifiedConfig, CamelCaseConfig, ModernConfig）削除
+- [x] 158-159行目のuseImprovedDetectionプロパティ削除
+- [x] 32-33行目のHighlightColor再エクスポート削除
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
+- [x] word.tsのUnifiedConfig参照をConfigに変更
+- [x] tests/config_renaming_test.tsのUnifiedConfig参照をConfigに変更
+- [x] tests/japanese_filtering_test.tsのuseImprovedDetection削除
 
 #### sub2 word.tsの後方互換性コード削除
 - [ ] 6145-6146行目の後方互換性再エクスポート削除

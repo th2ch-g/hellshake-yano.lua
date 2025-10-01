@@ -4,7 +4,7 @@ import { TinySegmenter as NpmTinySegmenter } from "https://esm.sh/@birchill/tiny
 import { exists } from "https://deno.land/std@0.212.0/fs/exists.ts";
 import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
-import { DEFAULT_UNIFIED_CONFIG, getDefaultUnifiedConfig } from "./config.ts";
+import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
 
 // Re-export Word for backward compatibility
 export type { Word };
@@ -64,7 +64,6 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
 
 import { CacheType, GlobalCache } from "./cache.ts";
 // Segmenter import removed - integrated below
-import type { UnifiedConfig } from "./config.ts";
 import type { Config } from "./config.ts";
 import { Core } from "./core.ts";
 
@@ -149,7 +148,7 @@ export interface WordDetectionConfig {
   /** バッチ処理のサイズ */
   batchSize?: number;
 
-  /** デフォルトの最小単語長（UnifiedConfigから） */
+  /** デフォルトの最小単語長（Configから） */
   defaultMinWordLength?: number;
   /** 現在のキー（グローバル設定用） */
   currentKey?: string;
@@ -172,15 +171,15 @@ export interface WordDetectionConfig {
 }
 
 /**
- * UnifiedConfigかConfigかを判定するヘルパー関数
+ * ConfigかConfigかを判定するヘルパー関数
  * @param config - 判定対象の設定
  * @returns [unifiedConfig, legacyConfig] のタプル
  */
 function resolveConfigType(
-  config?: Config | UnifiedConfig,
-): [UnifiedConfig | undefined, Config | undefined] {
+  config?: Config | Config,
+): [Config | undefined, Config | undefined] {
   if (config && "useJapanese" in config) {
-    return [config as UnifiedConfig, undefined];
+    return [config as Config, undefined];
   }
   return [undefined, config as unknown as Config];
 }
@@ -356,7 +355,7 @@ export class RegexWordDetector implements WordDetector {
 
   private config: WordDetectionConfig;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
-  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
+  private unifiedConfig?: Config; // Configへの移行対応
 
   /**
    * RegexWordDetectorのコンストラクタ
@@ -364,7 +363,7 @@ export class RegexWordDetector implements WordDetector {
    * @param config - ディテクター設定（省略時はデフォルト設定）
    * @param globalConfig - グローバル設定（統一的なmin_length処理のため）
    */
-  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | UnifiedConfig) {
+  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | Config) {
     this.config = this.mergeWithDefaults(config);
     [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
   }
@@ -382,7 +381,7 @@ export class RegexWordDetector implements WordDetector {
       return context.minWordLength;
     }
 
-    // 2. UnifiedConfig/グローバル設定のper_key_min_length
+    // 2. Config/グローバル設定のper_key_min_length
     if (this.unifiedConfig && key) {
       return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
     }
@@ -1284,7 +1283,7 @@ export async function detectWordsWithManager(
     return initialResult;
   } catch (error) {
     // フォールバックとして従来のメソッドを使用
-    const fallbackConfig = createPartialUnifiedConfig({
+    const fallbackConfig = createPartialConfig({
       useJapanese: config.useJapanese,
     });
     const fallbackWords = await detectWordsWithConfig(denops, fallbackConfig);
@@ -1337,14 +1336,13 @@ function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext |
  */
 export async function detectWordsWithConfig(
   denops: Denops,
-  config: Partial<UnifiedConfig> = {},
+  config: Partial<Config> = {},
 ): Promise<Word[]> {
-  // UnifiedConfigをEnhancedWordConfigに変換
+  // ConfigをEnhancedWordConfigに変換
   // useJapaneseがundefinedの場合はデフォルトでtrueを設定（既存の動作を維持）
   const enhancedConfig: Partial<EnhancedWordConfig> = {
     useJapanese: config.useJapanese ?? true,
-    useImprovedDetection: config.useImprovedDetection,
-    enableTinySegmenter: false, // UnifiedConfigではTinySegmenterはサポートされていない
+    enableTinySegmenter: false, // ConfigではTinySegmenterはサポートされていない
   };
 
   // 画面範囲を取得
@@ -1740,10 +1738,10 @@ export function extractWordsFromLine(
 export function extractWordsFromLineWithConfig(
   lineText: string,
   lineNumber: number,
-  config: Partial<UnifiedConfig> = {},
+  config: Partial<Config> = {},
 ): Word[] {
-  // createMinimalConfigで完全なUnifiedConfigを生成
-  const fullConfig = { ...getDefaultUnifiedConfig(), ...config };
+  // createMinimalConfigで完全なConfigを生成
+  const fullConfig = { ...getDefaultConfig(), ...config };
   const excludeJapanese = fullConfig.useJapanese !== true;
   return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
 }
@@ -1854,15 +1852,15 @@ export function getWordDetectionCacheStats(): {
  */
 
 /**
- * UnifiedConfigをEnhancedWordConfigに変換する
- * @description UnifiedConfigを新しいEnhancedWordConfig形式に変換する（v3.0.0でWordConfigサポート削除）
- * @param config - 変換元のUnifiedConfig
+ * ConfigをEnhancedWordConfigに変換する
+ * @description Configを新しいEnhancedWordConfig形式に変換する（v3.0.0でWordConfigサポート削除）
+ * @param config - 変換元のConfig
  * @returns EnhancedWordConfig - 変換されたEnhancedWordConfig
  * @since 1.0.0
  * @updated v3.0.0 - WordConfigサポート削除
  */
-export function convertWordConfigToEnhanced(config: UnifiedConfig): EnhancedWordConfig {
-  // UnifiedConfigを受け入れ、EnhancedWordConfigに変換
+export function convertWordConfigToEnhanced(config: Config): EnhancedWordConfig {
+  // Configを受け入れ、EnhancedWordConfigに変換
   const useJapanese = 'useJapanese' in config ? config.useJapanese : false;
 
   return {useJapanese: useJapanese ?? false,
@@ -1872,11 +1870,11 @@ export function convertWordConfigToEnhanced(config: UnifiedConfig): EnhancedWord
 }
 
 /**
- * UnifiedConfigの部分的なオブジェクトを作成するヘルパー関数
- * WordConfigとの後方互換性を保ちつつ、UnifiedConfigの型要件を満たします
+ * Configの部分的なオブジェクトを作成するヘルパー関数
+ * WordConfigとの後方互換性を保ちつつ、Configの型要件を満たします
  */
-export function createPartialUnifiedConfig(options: { useJapanese?: boolean }): UnifiedConfig {
-  // UnifiedConfigの最小必須プロパティのデフォルト値
+export function createPartialConfig(options: { useJapanese?: boolean }): Config {
+  // Configの最小必須プロパティのデフォルト値
   return {
     enabled: true,
     markers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
@@ -1908,7 +1906,7 @@ export function createPartialUnifiedConfig(options: { useJapanese?: boolean }): 
     defaultMotionCount: 3,
     debugMode: false,
     performanceLog: false,
-  } as UnifiedConfig;
+  } as Config;
 }
 
 /**
@@ -1929,7 +1927,7 @@ export async function detectWordsWithEnhancedConfig(
     return result.words;
   } catch (error) {
     // フォールバックとしてレガシー版を使用
-    const legacyConfig = createPartialUnifiedConfig({
+    const legacyConfig = createPartialConfig({
       useJapanese: config.useJapanese,
     });
     return await detectWordsWithConfig(denops, legacyConfig);
@@ -2098,7 +2096,7 @@ export function extractWordsUnified(
   config: UnifiedWordExtractionConfig = {},
 ): Word[] {
   // Configuration normalization
-  const normalizedConfig = normalizeUnifiedConfig(config);
+  const normalizedConfig = normalizeConfig(config);
 
   // Route to appropriate implementation based on config
   if (normalizedConfig.legacyMode) {
@@ -2153,7 +2151,7 @@ interface NormalizedConfig {
   useWordConfig: boolean;
 }
 
-function normalizeUnifiedConfig(config: UnifiedWordExtractionConfig): NormalizedConfig {
+function normalizeConfig(config: UnifiedWordExtractionConfig): NormalizedConfig {
   // Legacy mode detection
   const legacyMode = config.legacyMode === true;
 
@@ -5238,7 +5236,7 @@ export class WordDetectionManager {
   private initialized = false;
   private sessionContext: DetectionContext | null = null;
   private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
-  private unifiedConfig?: UnifiedConfig; // UnifiedConfigへの移行対応
+  private unifiedConfig?: Config; // Configへの移行対応
 
   /**
    * WordDetectionManagerのコンストラクタ
@@ -5247,7 +5245,7 @@ export class WordDetectionManager {
    * @param globalConfig - グローバル設定（統一的なmin_length処理のため）
    * @since 1.0.0
    */
-  constructor(config: WordDetectionManagerConfig = {}, globalConfig?: Config | UnifiedConfig) {
+  constructor(config: WordDetectionManagerConfig = {}, globalConfig?: Config | Config) {
     this.config = this.mergeWithDefaults(config);
     [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
     this.stats = this.initializeStats();
@@ -5269,7 +5267,7 @@ export class WordDetectionManager {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Register default detectors with globalConfig (UnifiedConfig takes precedence)
+    // Register default detectors with globalConfig (Config takes precedence)
     const configToUse = this.unifiedConfig || this.globalConfig;
     const regexDetector = new RegexWordDetector(this.config, configToUse);
     const segmenterDetector = new TinySegmenterWordDetector();
@@ -6105,7 +6103,7 @@ let globalManager: WordDetectionManager | null = null;
  */
 export function getWordDetectionManager(
   config?: WordDetectionManagerConfig,
-  globalConfig?: Config | UnifiedConfig,
+  globalConfig?: Config | Config,
 ): WordDetectionManager {
   if (!globalManager) {
     globalManager = new WordDetectionManager(config, globalConfig);

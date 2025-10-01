@@ -108,7 +108,6 @@ describe("Japanese Filtering Tests", () => {
 
     it("should respect useJapanese=false setting", async () => {
       const words = await detectWordsWithConfig(mockDenops as any, {
-        useImprovedDetection: true,
         useJapanese: false,
       });
 

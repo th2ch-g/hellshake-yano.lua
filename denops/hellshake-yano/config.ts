@@ -26,11 +26,6 @@
 // Import consolidated types from types.ts
 import type { HighlightColor, HintPositionType } from "./types.ts";
 
-/**
- * 後方互換性のためのHighlightColor型の再エクスポート
- * types.tsから型定義をインポートして再エクスポートしています。
- */
-export type { HighlightColor };
 
 // HighlightColor interface moved to types.ts for consolidation
 // Use: import type { HighlightColor } from "./types.ts";
@@ -154,10 +149,6 @@ export interface Config {
   /** パフォーマンスログの出力有効/無効 */
   performanceLog: boolean;
 
-  // Additional settings for backward compatibility
-  /** 改善された単語検出を使用するか（WordConfig互換性のため） */
-  useImprovedDetection?: boolean;
-
   // Debug settings
   /** デバッグモード - コンソールログ出力の有効化 */
   debug?: boolean;
@@ -167,13 +158,6 @@ export interface Config {
   useNumericMultiCharHints?: boolean;
 }
 
-/**
- * 後方互換性のための型エイリアス
- * 旧バージョンとの互換性を保つために提供されています。
- */
-export type UnifiedConfig = Config;
-export type CamelCaseConfig = Config;
-export type ModernConfig = Config;
 
 // v3.0.0で削除: HintConfig, WordConfig, PerformanceConfig, DebugConfig
 // 代わりにPartial<Config>を使用してください
@@ -251,9 +235,6 @@ export const DEFAULT_CONFIG: Config = {
   performanceLog: false,
   debug: false,
 
-  // Additional settings for backward compatibility
-  useImprovedDetection: true,
-
   // Hint generation settings
   useNumericMultiCharHints: false,
 };
@@ -262,7 +243,7 @@ export const DEFAULT_CONFIG: Config = {
  * 後方互換性のためのデフォルト設定定数エイリアス
  * DEFAULT_CONFIGと同じ値を参照します。
  */
-export const DEFAULT_UNIFIED_CONFIG: UnifiedConfig = DEFAULT_CONFIG;
+export const DEFAULT_UNIFIED_CONFIG: Config = DEFAULT_CONFIG;
 
 // UnifiedConfig interface削除: Process1で型定義の統合実装により削除
 // 代わりにConfigを使用してください
@@ -294,7 +275,7 @@ export function getDefaultConfig(): Config {
  * DEFAULT_UNIFIED_CONSTANTの値を返し、デフォルト値管理を統一
  * TDD Red-Green-Refactor方式で実装された型安全なデフォルト値取得
  *
- * @returns {UnifiedConfig} 完全なUnifiedConfigデフォルト値
+ * @returns {Config} 完全なConfigデフォルト値
  * @example
  * ```typescript
  * const config = getDefaultUnifiedConfig();
@@ -304,17 +285,17 @@ export function getDefaultConfig(): Config {
  * console.log(config.enabled);         // true
  * ```
  */
-export function getDefaultUnifiedConfig(): UnifiedConfig {
+export function getDefaultUnifiedConfig(): Config {
   return DEFAULT_UNIFIED_CONFIG;
 }
 
 /**
  * 最小設定を作成する関数 (Process2 Sub4対応)
- * UnifiedConfigベースの部分設定を受け取り、デフォルト値で補完した完全なUnifiedConfigを返す
+ * Configベースの部分設定を受け取り、デフォルト値で補完した完全なConfigを返す
  * TDD Red-Green-Refactor方式で実装された型安全な最小設定作成
  *
- * @param {Partial<UnifiedConfig>} [partialConfig={}] 部分的な設定値
- * @returns {UnifiedConfig} デフォルト値で補完された完全なUnifiedConfig
+ * @param {Partial<Config>} [partialConfig={}] 部分的な設定値
+ * @returns {Config} デフォルト値で補完された完全なConfig
  * @example
  * ```typescript
  * const config = createMinimalConfig({
@@ -334,10 +315,10 @@ export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config
 
 /**
  * 設定値のバリデーション関数
- * camelCaseとsnake_caseの両方の命名規則に対応した設定値検証を行います。
+ * Config型の設定値検証を行います。
  * 各設定項目の型、範囲、必須条件をチェックし、エラー情報を返します。
  *
- * @param {Partial<UnifiedConfig>} config 検証する設定オブジェクト
+ * @param {Partial<Config>} config 検証する設定オブジェクト
  * @returns {{ valid: boolean; errors: string[] }} バリデーション結果
  * @example
  * ```typescript
@@ -349,7 +330,7 @@ export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config
  * }
  *
  * const invalidResult = validateConfig({motionCount: -1 });
- * // { valid: false, errors: ['motion_count/motionCount must be a positive integer'] }
+ * // { valid: false, errors: ['motionCount must be a positive integer'] }
  * ```
  */
 /**
@@ -384,11 +365,11 @@ export function isValidHighlightGroup(name: string): boolean {
 }
 
 /**
- * UnifiedConfig用統合バリデーション関数 (Process2 Sub3)
+ * Config用統合バリデーション関数 (Process2 Sub3)
  * TDD Red-Green-Refactor方式で実装された単一バリデーション関数
  * camelCase形式のエラーメッセージで統一されたバリデーション
  *
- * @param config 検証するUnifiedConfig（部分設定可）
+ * @param config 検証するConfig（部分設定可）
  * @returns バリデーション結果（valid: boolean, errors: string[]）
  * @example
  * ```typescript
@@ -652,7 +633,6 @@ export function validateUnifiedConfig(
 /**
  * 既存validateConfig関数（互換性維持）
  * validateUnifiedConfig()にリダイレクトされる統合バリデーション
- * snake_caseとcamelCase両方の入力をサポート
  *
  * @param config 検証する設定オブジェクト
  * @returns バリデーション結果
@@ -858,40 +838,11 @@ export function getPerKeyValue<T>(
   return fallbackValue;
 }
 
-/**
- * snake_caseからcamelCaseへの変換マッピング定数
- * Phase 3の命名規則統一化で使用される変換テーブルです。
- * snake_caseのプロパティ名を対応するcamelCaseにマッピングします。
- * 双方向アクセスや移行支援に使用され、後方互換性を維持します。
- *
- * @constant {Record<string, string>}
- * @example
- * ```typescript
- * console.log(SNAKE_TO_CAMEL_MAPPING.motionCount); // 'motionCount'
- * console.log(SNAKE_TO_CAMEL_MAPPING.hintPosition); // 'hintPosition'
- * console.log(SNAKE_TO_CAMEL_MAPPING.useNumbers); // 'useNumbers'
- * ```
- */
 // SNAKE_TO_CAMEL_MAPPING constant removed as part of Process4 Sub2-4
 
 /**
- * 非推奨警告情報インターフェース
- * snake_caseのプロパティが使用された時の警告情報を表現します。
- * 新しいcamelCaseのプロパティへの移行を支援します。
- *
- * @interface DeprecationWarning
- * @example
- * ```typescript
- * const warning: DeprecationWarning = {
- *   property: 'motion_count',
- *   replacement: 'motionCount',
- *   message: "Property 'motion_count' is deprecated. Use 'motionCount' instead."
- * };
- * ```
- */
-/**
  * 非推奨プロパティの警告情報を表すインターフェース
- * snake_caseプロパティからcamelCaseプロパティへの移行を支援します。
+ * v3.0.0では使用されていませんが、後方互換性のため残存しています。
  */
 export interface DeprecationWarning {
   /** 非推奨のプロパティ名 */
@@ -933,66 +884,8 @@ export interface NamingValidation {
   hasBooleanPrefix: boolean;
 }
 
-/**
- * snake_case設定をcamelCase設定に変換する関数
- * 既存のsnake_caseの設定プロパティをcamelCaseに変換します。
- * 元のプロパティも保持されるため、互換性が維持されます。
- *
- * @param {Partial<Config>} config 変換元のsnake_case設定
- * @returns {CamelCaseConfig} 変換されたcamelCase設定
- * @example
- * ```typescript
- * const snakeConfig = {
- *   motion_count: 5,
- *   hint_position: 'end',
- *   use_numbers: true,
- *   debug_mode: false
- * };
- *
- * const camelConfig = convertSnakeToCamelConfig(snakeConfig);
- * console.log(camelConfig.motionCount);    // 5
- * console.log(camelConfig.hintPosition);   // 'end'
- * console.log(camelConfig.useNumbers);     // true
- * console.log(camelConfig.debugMode);      // false
- * // 元のsnake_caseプロパティも保持される
- * console.log(camelConfig.motionCount);   // 5
- * ```
- */
 // convertSnakeToCamelConfig function removed as part of Process4 Sub2-4
 
-/**
- * モダン設定を作成する関数
- * Proxyを使用してsnake_caseとcamelCaseの双方向アクセスを可能にする設定オブジェクトを作成します。
- * 既存コードとの互換性を保ちながら、モダンなコーディングスタイルをサポートします。
- * 設定値のバリデーションも自動的に実行されます。
- *
- * @param {Partial<CamelCaseConfig | Config>} [input={}] 初期設定値
- * @returns {ModernConfig} 双方向アクセス可能なモダン設定
- * @throws {Error} 設定値のバリデーションに失敗した場合
- * @example
- * ```typescript
- * const config = createModernConfig({
- *   motionCount: 5,        // camelCase
- *   hint_position: 'end',  // snake_case
- *   enabled: true
- * });
- *
- * // 両方のアクセス方法が有効
- * console.log(config.motionCount);    // 5
- * console.log(config.motionCount);   // 5 (同じ値)
- *
- * console.log(config.hintPosition);   // 'end'
- * console.log(config.hintPosition);  // 'end' (同じ値)
- *
- * // ブール型の命名規則アクセスも可能
- * console.log(config.isEnabled);      // true
- * console.log(config.shouldUseNumbers); // 設定に応じた値
- *
- * // 設定値の更新も双方向で同期
- * config.motionCount = 10;
- * console.log(config.motionCount);   // 10
- * ```
- */
 // createModernConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
 // 代わりにcreateMinimalConfig()を使用してください
 /**
@@ -1045,46 +938,16 @@ export function validateNamingConvention(name: string): NamingValidation {
 
 /**
  * 非推奨警告を取得する関数
- * 設定オブジェクトから非推奨のsnake_caseプロパティを検出し、適切な警告メッセージを生成します。
- * 新しいcamelCaseプロパティへの移行を支援するための情報を提供します。
+ * v3.0.0では常に空配列を返します（後方互換性のため残存）。
  *
- * @param {Partial<UnifiedConfig>} config チェックする設定オブジェクト
- * @returns {DeprecationWarning[]} 非推奨警告の配列
+ * @param {Partial<Config>} config チェックする設定オブジェクト
+ * @returns {DeprecationWarning[]} 非推奨警告の配列（常に空配列）
  * @example
  * ```typescript
- * const config = {
- *   motion_count: 3,      // 非推奨
- *   hint_position: 'end', // 非推奨
- *   enabled: true,        // OK (共通)
- *   motionTimeout: 2000   // OK (camelCase)
- * };
- *
+ * const config = { motionCount: 3, enabled: true };
  * const warnings = getDeprecationWarnings(config);
- * console.log(warnings);
- * // [
- * //   {
- * //     property: 'motion_count',
- * //     replacement: 'motionCount',
- * //     message: "Property 'motion_count' is deprecated. Use 'motionCount' instead."
- * //   },
- * //   {
- * //     property: 'hint_position',
- * //     replacement: 'hintPosition',
- * //     message: "Property 'hint_position' is deprecated. Use 'hintPosition' instead."
- * //   }
- * // ]
+ * console.log(warnings); // []
  * ```
- */
-// getDeprecationWarnings function simplified as part of Process4 Sub2-4
-// SNAKE_TO_CAMEL_MAPPING dependency removed
-/**
- * 非推奨警告を取得する関数（簡素化済み）
- * Process4 Sub2-4で簡素化され、常に空配列を返します。
- * 階層設定システムの削除により、非推奨プロパティのチェックは不要になりました。
- *
- * @param {Partial<Config>} config - チェックする設定オブジェクト
- * @returns {DeprecationWarning[]} 非推奨警告の配列（常に空配列）
- * @throws {never} この関数は例外をスローしません
  */
 export function getDeprecationWarnings(
   config: Partial<Config>,
@@ -1092,27 +955,9 @@ export function getDeprecationWarnings(
   return [];
 }
 
-/**
- * 設定変換レイヤー (Process2 Sub2)
- * 旧設定(Config)からUnifiedConfigへの変換
- * TDD Red-Green-Refactor方式で実装
- * 全32個のプロパティをsnake_case → camelCaseに変換
- */
-
-/**
- * プロパティ値を取得するヘルパー関数
- * snake_case、camelCase両方からの値取得を支援する
- *
- * @param config 設定オブジェクト
- * @param snakeProp snake_caseのプロパティ名
- * @param camelProp camelCaseのプロパティ名
- * @param defaultValue デフォルト値
- * @returns 取得された値またはデフォルト値
- */
-// getConfigValue function removed as part of Process4 Sub2-4
-
-// 変換関数は削除されました (Process4 Sub3-2)
-// 直接UnifiedConfigを使用してください
+// 設定変換レイヤー削除 (Process8 Sub1)
+// v3.0.0では後方互換性のための変換関数は削除されました
+// 直接Config型を使用してください
 
 // ============================================================================
 // VALIDATION FUNCTIONS
