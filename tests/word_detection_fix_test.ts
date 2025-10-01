@@ -1,9 +1,10 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { generateTestBuffer, test } from "./testRunner.ts";
 import { mockBuffer, mockCursor } from "./helpers/mock.ts";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // 単語検出機能をインポート
-import { extractWordsFromLine, type Word } from "../denops/hellshake-yano/word.ts";
+import { extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
 
 /**
  * Process 50 Sub6: 単語の取りこぼし改善のテスト

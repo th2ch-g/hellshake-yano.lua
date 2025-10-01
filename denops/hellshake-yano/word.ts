@@ -6,9 +6,6 @@ import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
 import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
 
-// Re-export Word for backward compatibility
-export type { Word };
-
 /**
  * コンテキスト統合から欠落した型定義 - 構文コンテキスト
  * 現在のカーソル位置の構文的な状況を表現します
@@ -6127,19 +6124,3 @@ export function getWordDetectionManager(
 export function resetWordDetectionManager(): void {
   globalManager = null;
 }
-
-
-// ========== Integrated from word/detector.ts ==========
-
-/**
- * Word Detection Abstraction Layer for Hellshake-Yano
- *
- * @deprecated This module is being migrated to ../word.ts
- * Import from ../word.ts for new code.
- *
- * This module provides backward compatibility by re-exporting
- * detector functionality from word.ts
- */
-
-// Re-export from word.ts for backward compatibility
-// Re-export types from types.ts for backward compatibility

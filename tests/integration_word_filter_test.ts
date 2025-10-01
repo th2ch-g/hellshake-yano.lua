@@ -5,10 +5,10 @@
 
 import { assert, assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
+import type { Word } from "../denops/hellshake-yano/types.ts";
 import {
   type EnhancedWordConfig,
   extractWordsFromLineWithEnhancedConfig,
-  type Word,
 } from "../denops/hellshake-yano/word.ts";
 import {
   assignHintsToWords,

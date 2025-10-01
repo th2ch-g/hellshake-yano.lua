@@ -140,10 +140,10 @@
 - [x] tests/japanese_filtering_test.tsのuseImprovedDetection削除
 
 #### sub2 word.tsの後方互換性コード削除
-- [ ] 6145-6146行目の後方互換性再エクスポート削除
-- [ ] 必要に応じて直接インポートに変更
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] 6145-6146行目の後方互換性再エクスポート削除
+- [x] 必要に応じて直接インポートに変更
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 ### process9 テストファイルの更新
 @target: tests/
