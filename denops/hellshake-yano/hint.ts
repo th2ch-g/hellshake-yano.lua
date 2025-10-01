@@ -1018,7 +1018,6 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
  */
 /**
  * ヒント関連のキャッシュ統計を集約した型
- * @description Process4 Sub3 で any 型を削減
  */
 interface HintCacheStatistics {
   [key: string]: CacheStatistics | number;
@@ -1037,7 +1036,6 @@ export function getGlobalCacheStats(): HintCacheStatistics {
     'HINT_ASSIGNMENT_OTHER'
   ];
 
-  // Process4 Sub3: Record<string, any> → Record<string, CacheStatistics> に変更
   const hintStats: Record<string, CacheStatistics> = {};
   let totalSize = 0;
   let totalHits = 0;

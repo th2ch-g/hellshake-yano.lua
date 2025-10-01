@@ -37,7 +37,6 @@ import type { HighlightColor, HintPositionType } from "./types.ts";
 
 /**
  * 統一設定インターフェース (UnifiedConfig)
- * Process2 sub1で導入された完全にフラット化されたcamelCase設定インターフェース。
  * 階層構造を排除し、32個の設定項目をすべて一つの階層で定義します。
  * TDD Red-Green-Refactor方式で実装された型安全な設定システムです。
  *
@@ -248,7 +247,6 @@ export const DEFAULT_UNIFIED_CONFIG: Config = DEFAULT_CONFIG;
 // config.ts で interface Config として定義されています
 
 /**
- * デフォルト設定を取得する関数 (Process2 Sub4で統一)
  * プラグインの標準的な設定値を返します。既存コードとの互換性を維持しています。
  * 内部的にはgetDefaultUnifiedConfig()を使用し、デフォルト値管理を統一しています。
  * この設定はパフォーマンス、ユーザビリティ、日本語対応を考慮して最適化されています。
@@ -269,7 +267,6 @@ export function getDefaultConfig(): Config {
 }
 
 /**
- * 統一デフォルト設定を取得する関数 (Process2 Sub4)
  * DEFAULT_UNIFIED_CONSTANTの値を返し、デフォルト値管理を統一
  * TDD Red-Green-Refactor方式で実装された型安全なデフォルト値取得
  *
@@ -288,7 +285,6 @@ export function getDefaultUnifiedConfig(): Config {
 }
 
 /**
- * 最小設定を作成する関数 (Process2 Sub4対応)
  * Configベースの部分設定を受け取り、デフォルト値で補完した完全なConfigを返す
  * TDD Red-Green-Refactor方式で実装された型安全な最小設定作成
  *
@@ -363,7 +359,6 @@ export function isValidHighlightGroup(name: string): boolean {
 }
 
 /**
- * Config用統合バリデーション関数 (Process2 Sub3)
  * TDD Red-Green-Refactor方式で実装された単一バリデーション関数
  * camelCase形式のエラーメッセージで統一されたバリデーション
  *
@@ -420,7 +415,6 @@ export function validateUnifiedConfig(
     }
   }
 
-  // hintPosition - 列挙値 (Process4 sub3-2-3: "overlay"を正しい値として認識)
   if (config.hintPosition !== undefined) {
     const validPositions = ["start", "end", "overlay"];
     if (config.hintPosition === null || !validPositions.includes(config.hintPosition)) {
@@ -632,7 +626,6 @@ export function validateUnifiedConfig(
  * 既存validateConfig関数（互換性維持）
  * validateUnifiedConfig()にリダイレクトされる統合バリデーション
  *
- * Process2 Sub2: 型安全性の向上
  * - as any から as Record<string, unknown> に変更
  * - 型ガードを使用してプロパティの型を検証
  *
@@ -712,7 +705,6 @@ export function validateConfig(
   const configObj = config as Config;
   const result = validateUnifiedConfig(configObj);
 
-  // Process4 sub3-2-3: camelCase統一 - エラーメッセージはそのまま返す
   // snake_caseは完全に廃止されたため、変換は不要
   const allErrors = [...errors, ...result.errors];
   return { valid: result.valid && errors.length === 0, errors: allErrors };
@@ -837,7 +829,6 @@ export function getPerKeyValue<T>(
   return fallbackValue;
 }
 
-// SNAKE_TO_CAMEL_MAPPING constant removed as part of Process4 Sub2-4
 
 /**
  * 非推奨プロパティの警告情報を表すインターフェース
@@ -882,9 +873,7 @@ export interface NamingValidation {
   hasBooleanPrefix: boolean;
 }
 
-// convertSnakeToCamelConfig function removed as part of Process4 Sub2-4
 
-// createModernConfig削除: Process4 Sub3-2-2 型定義の統合実装により削除
 // 代わりにcreateMinimalConfig()を使用してください
 /**
  * モダン設定オブジェクトを作成する関数
@@ -953,12 +942,10 @@ export function getDeprecationWarnings(
   return [];
 }
 
-// 設定変換レイヤー削除 (Process8 Sub1)
 // 直接Config型を使用してください
 
 // ============================================================================
 // VALIDATION FUNCTIONS
-// Moved from utils/validation.ts as part of Process4 Sub6-2
 // ============================================================================
 
 /**
@@ -971,7 +958,6 @@ export function getDeprecationWarnings(
  * バリデーションルールを定義するインターフェース
  * 設定値の検証に使用される各種ルールを定義します。
  *
- * Process2 Sub1: 型安全性の向上
  * - enum: any[] から (string | number | boolean)[] に厳密化
  * - custom: (value: any) から (value: unknown) に変更し、型ガードを強制
  */
@@ -1015,7 +1001,6 @@ export interface ValidationResult {
  * 設定値の型チェック
  * 指定された値が期待される型と一致するかを検証
  *
- * Process2 Sub5: 型安全性の向上
  * - value パラメータを any から unknown に変更
  * - 型ガードとして機能し、型の絞り込みを可能にする
  *
@@ -1098,7 +1083,6 @@ export function isValidLength(value: string, minLength?: number, maxLength?: num
  * 配列の要素数チェック
  * 配列の要素数が指定された範囲内にあるかを検証
  *
- * Process2 Sub5: 型安全性の向上
  * - array パラメータを any[] から unknown[] に変更
  * - より厳密な型チェックを実現
  *
@@ -1125,7 +1109,6 @@ export function isValidArrayLength(array: unknown[], minLength?: number, maxLeng
  * 列挙値のチェック
  * 値が指定された有効な値のリストに含まれているかを検証
  *
- * Process2 Sub5: 型安全性の向上
  * - value パラメータを any から unknown に変更
  * - validValues を readonly (string | number | boolean)[] に厳密化
  * - プリミティブ型のみを列挙値として扱う
@@ -1150,7 +1133,6 @@ export function isValidEnum(value: unknown, validValues: readonly (string | numb
  * 設定値の総合バリデーション
  * 複数のルールを適用して設定値を検証し、詳細なエラーメッセージを提供
  *
- * Process2 Sub3: 型安全性の向上
  * - value パラメータを any から unknown に変更
  * - 型ガードを明示的に使用して型を絞り込む
  *
@@ -1268,7 +1250,6 @@ export function validateConfigValue(
  * オブジェクトの各プロパティに対してルールを適用して、まとめて検証を行います。
  * 個別のエラーメッセージと全体の結果を同時に取得できます。
  *
- * Process2 Sub4: 型安全性の向上
  * - config パラメータを Record<string, any> から Record<string, unknown> に変更
  * - より型安全なバリデーションを実現
  *

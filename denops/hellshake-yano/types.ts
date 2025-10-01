@@ -25,7 +25,6 @@ import type { Denops as DenopsStd } from "@denops/std";
 // Config型を再エクスポート（テストファイルがインポートできるように）
 export type { Config } from "./config.ts";
 
-// ===== 頻出する型のエイリアス (Process100 Sub1で追加) =====
 
 /**
  * Denops型エイリアス
@@ -191,7 +190,6 @@ export interface PerformanceMetrics {
 }
 
 /**
- * デバッグ情報インターフェース（Process1 Sub2: any型削除）
  *
  * @description システムの現在状態とパフォーマンス情報を包含
  *
@@ -225,7 +223,6 @@ export interface DebugInfo {
 }
 
 /**
- * 単語検出コンテキストインターフェース（Process1 Sub1: any型削除）
  *
  * @description 単語検出処理に渡されるコンテキスト情報
  * キー別の設定やモーション情報を含む
@@ -614,7 +611,6 @@ export function isHintMapping(obj: unknown): obj is HintMapping {
 
 /**
  * Config型の型ガード関数（統合後）
- * Process4 Sub3-2-2: 型定義の統合実装
  *
  * @description オブジェクトがConfig型の最小要件を満たしているかを判定
  * camelCase形式のプロパティをチェックします
@@ -959,7 +955,6 @@ export function validateConfigType(config: unknown): ValidationResult<ConfigType
  * @param col 列番号（デフォルト: 1）
  * @returns デフォルト値が設定されたWordオブジェクト
  *
- * Process100 Sub2: 戻り値の型アノテーション削除（型推論により自動的にWord型が推論される）
  */
 export function createDefaultWord(text: string, line = 1, col = 1) {
   return { text, line, col };
@@ -972,7 +967,6 @@ export function createDefaultWord(text: string, line = 1, col = 1) {
  * @param hint ヒント文字列
  * @returns デフォルト値が設定されたHintMappingオブジェクト
  *
- * Process100 Sub2: 戻り値の型アノテーション削除（型推論により自動的にHintMapping型が推論される）
  */
 export function createDefaultHintMapping(word: Word, hint: string) {
   return {
@@ -985,7 +979,6 @@ export function createDefaultHintMapping(word: Word, hint: string) {
 
 /**
  * 最小限のConfig値を作成する（統合後）
- * Process4 Sub3-2-2: 型定義の統合実装
  *
  * @description 最小限の必須プロパティを持つConfigオブジェクト（camelCase形式）を作成
  * config.tsのcreateMinimalConfig()を使用することを推奨
@@ -1041,7 +1034,6 @@ export function createMinimalConfig(): Config {
  * @param ttl 生存時間（ミリ秒、オプショナル）
  * @returns CacheEntryオブジェクト
  *
- * Process100 Sub2: 戻り値の型アノテーション削除（型推論により自動的にCacheEntry<T>型が推論される）
  */
 export function createCacheEntry<T>(key: CacheKey, value: T, ttl?: number) {
   return {
@@ -1061,7 +1053,6 @@ export function createCacheEntry<T>(key: CacheKey, value: T, ttl?: number) {
  * @param errors エラーメッセージ配列（デフォルト: 空配列）
  * @returns ValidationResultオブジェクト
  *
- * Process100 Sub2: 戻り値の型アノテーション削除（型推論により自動的にValidationResult<T>型が推論される）
  */
 export function createValidationResult<T>(
   isValid: boolean,
@@ -1075,7 +1066,6 @@ export function createValidationResult<T>(
 
 /**
  * よく使用される型のエイリアス（REFACTORフェーズで整理）
- * Process4 Sub3-1: 設定型の統合と型定義の整理
  */
 export type {
   Word as W,
@@ -1090,7 +1080,6 @@ export type {
 // ===== Core Directory Consolidation Types =====
 
 /**
- * 単語検出設定インターフェース（Process1 Sub1: any型削除）
  *
  * @description 単語検出処理の設定パラメータを定義
  * core/detection.tsから統合された設定項目
@@ -1188,7 +1177,6 @@ export interface ShowHintsConfig {
 }
 
 /**
- * ヒント操作依存関数インターフェース（Process1 Sub3: DI型の厳密化）
  *
  * @description ヒント操作に必要な依存関数群の型定義
  * 依存性注入(DI)パターンで使用される関数の型シグネチャを定義
@@ -1228,7 +1216,6 @@ export interface HintOperationsDependencies {
 }
 
 /**
- * ヒント操作設定インターフェース（Process1 Sub1, Sub4: 型安全性の向上）
  *
  * @description ヒント操作処理の設定とDI（依存性注入）パラメータを定義
  * core/operations.tsから統合された設定項目
@@ -1302,12 +1289,10 @@ export interface HintOperations {
   getCurrentHints: () => HintMapping[];
 }
 
-// ===== Process50 Sub4: core.ts のany型削減用の型定義 =====
 
 /**
  * コマンドオブジェクト
  * @description CommandFactoryのcreateCommandメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface CommandObject {
   /** コマンド文字列 */
@@ -1319,7 +1304,6 @@ export interface CommandObject {
 /**
  * コントローラーオブジェクト
  * @description CommandFactoryのgetControllerメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface Controller {
   /** プラグインを有効化する */
@@ -1333,7 +1317,6 @@ export interface Controller {
 /**
  * 設定管理オブジェクト
  * @description CommandFactoryのgetConfigManagerメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface ConfigManager {
   /** 現在の設定を取得する */
@@ -1349,7 +1332,6 @@ export interface ConfigManager {
 /**
  * デバッグコントローラーオブジェクト
  * @description CommandFactoryのgetDebugControllerメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface DebugController {
   /** 統計情報を取得する */
@@ -1363,7 +1345,6 @@ export interface DebugController {
 /**
  * 拡張デバッグ情報
  * @description getExtendedDebugInfoメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface ExtendedDebugInfo extends DebugInfo {
   /** パフォーマンス詳細情報（オプション） */
@@ -1389,7 +1370,6 @@ export interface ExtendedDebugInfo extends DebugInfo {
 /**
  * 初期化オプション
  * @description initializeメソッドのoptionsパラメータの型
- * Process50 Sub4 Phase 2で追加
  */
 export interface InitializeOptions {
   /** 強制初期化フラグ（既に初期化済みでも再初期化する） */
@@ -1410,7 +1390,6 @@ export interface InitializeOptions {
 /**
  * 初期化結果
  * @description initializePluginメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface InitializeResult {
   /** Extmark名前空間（Neovim用、nullの場合あり） */
@@ -1425,7 +1404,6 @@ export interface InitializeResult {
 /**
  * ヘルスチェック結果
  * @description healthCheckメソッドの戻り値型
- * Process50 Sub4 Phase 1で追加
  */
 export interface HealthCheckResult {
   /** ヘルシーかどうか */
@@ -1439,7 +1417,6 @@ export interface HealthCheckResult {
 /**
  * 拡張設定型
  * @description unifiedConfigの型アサーション用
- * Process50 Sub4 Phase 3で追加
  */
 export interface EnhancedConfig extends Config {
   /** デフォルト最小長（レガシー設定） */
@@ -1453,7 +1430,6 @@ export interface EnhancedConfig extends Config {
 /**
  * パフォーマンス統計情報
  * @description 操作のパフォーマンス統計
- * Process50 Sub4 Phase 1で追加（core.tsから移動）
  */
 export interface PerformanceStats {
   /** 実行回数 */
@@ -1469,7 +1445,6 @@ export interface PerformanceStats {
 /**
  * プラグイン統計情報
  * @description プラグイン全体の統計情報
- * Process50 Sub4 Phase 1で追加（core.tsから移動）
  */
 export interface PluginStatistics {
   /** キャッシュ統計 */

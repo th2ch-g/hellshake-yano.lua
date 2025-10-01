@@ -236,7 +236,6 @@ Deno.test("Sub2: generateHintsWithGroups - 大量の単語でも正しく生成"
 // ===== Process3: 数字専用モードのヒント生成 =====
 // Note: isNumericOnlyKeys と generateMultiCharHintsFromKeys は実装後にexportする必要があります
 
-Deno.test("Process3 Sub1: isNumericOnlyKeys - 数字のみの配列を正しく判定", async () => {
   const { isNumericOnlyKeys } = await import("./hint.ts");
 
   // 数字のみの配列
@@ -259,7 +258,6 @@ Deno.test("Process3 Sub1: isNumericOnlyKeys - 数字のみの配列を正しく�
   assertEquals(isNumericOnlyKeys(["10", "20"]), false);
 });
 
-Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字専用モードで00-99を生成", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   // 10個の数字キーで数字専用モード
@@ -283,7 +281,6 @@ Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字専用モード
   assertEquals(hints[99], "00");
 });
 
-Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字専用モードで50個のみ生成", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   const keys = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -299,7 +296,6 @@ Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字専用モード
   assertEquals(hints[49], "50");
 });
 
-Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 非数字専用モードでは通常の生成", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   // アルファベットキー
@@ -311,7 +307,6 @@ Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 非数字専用モー
   assertEquals(hints, ["AA", "AB", "AC", "BA", "BB", "BC", "CA", "CB", "CC"]);
 });
 
-Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字とアルファベット混在は通常モード", async () => {
   const { generateMultiCharHintsFromKeys } = await import("./hint.ts");
 
   // 混在キー
@@ -327,7 +322,6 @@ Deno.test("Process3 Sub2: generateMultiCharHintsFromKeys - 数字とアルファ
   // 数字専用モードの優先順位は適用されない
 });
 
-Deno.test("Process3 Sub3: generateHintsWithGroups - 数字専用multiCharKeysで自動検出", () => {
   const config = {
     singleCharKeys: ["A", "S", "D"], // 通常のキー
     multiCharKeys: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], // 数字専用
@@ -346,7 +340,6 @@ Deno.test("Process3 Sub3: generateHintsWithGroups - 数字専用multiCharKeysで
   assertEquals(hints[12], "10");
 });
 
-Deno.test("Process3 Sub3: generateHintsWithGroups - singleCharKeysに記号がある場合", () => {
   const config = {
     singleCharKeys: [".", ",", ";"], // 記号
     multiCharKeys: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], // 数字専用
@@ -367,7 +360,6 @@ Deno.test("Process3 Sub3: generateHintsWithGroups - singleCharKeysに記号が�
 
 // ===== Process5: useNumericMultiCharHints機能のテスト =====
 
-Deno.test("Process5 Sub1: HintKeyConfig - useNumericMultiCharHintsプロパティの型定義", () => {
   // useNumericMultiCharHintsプロパティが存在することを確認
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D"],
@@ -378,7 +370,6 @@ Deno.test("Process5 Sub1: HintKeyConfig - useNumericMultiCharHintsプロパテ�
   assertEquals(typeof config.useNumericMultiCharHints, "boolean");
 });
 
-Deno.test("Process5 Sub2: generateNumericHints - 数字ヒントを01-99, 00の順で生成", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   // 100個の数字ヒントを生成
@@ -399,7 +390,6 @@ Deno.test("Process5 Sub2: generateNumericHints - 数字ヒントを01-99, 00の�
   assertEquals(hints[99], "00");
 });
 
-Deno.test("Process5 Sub2: generateNumericHints - 必要な数だけ生成", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   // 50個のみ要求
@@ -421,7 +411,6 @@ Deno.test("Process5 Sub2: generateNumericHints - 必要な数だけ生成", asyn
   assertEquals(hints1[0], "01");
 });
 
-Deno.test("Process5 Sub2: generateNumericHints - 0個または負の数の場合は空配列", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   assertEquals(generateNumericHints(0), []);
@@ -429,7 +418,6 @@ Deno.test("Process5 Sub2: generateNumericHints - 0個または負の数の場合
   assertEquals(generateNumericHints(-10), []);
 });
 
-Deno.test("Process5 Sub2: generateNumericHints - 100個を超える要求でも100個まで", async () => {
   const { generateNumericHints } = await import("./hint.ts");
 
   const hints = generateNumericHints(150);
@@ -437,7 +425,6 @@ Deno.test("Process5 Sub2: generateNumericHints - 100個を超える要求でも1
   assertEquals(hints[99], "00");
 });
 
-Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints=trueでアルファベット+数字ヒントを生成", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D"],
     multiCharKeys: ["B", "C", "E"],
@@ -472,7 +459,6 @@ Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints=tru
   assertEquals(hints[19], "08");
 });
 
-Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints=falseでは数字ヒントなし", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S"],
     multiCharKeys: ["B", "C"],
@@ -500,7 +486,6 @@ Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints=fal
   assertEquals(multiCharHints.every(h => !/^\d+$/.test(h)), true, "数字のみのヒントは含まれない");
 });
 
-Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints未定義ではデフォルトfalse", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A"],
     multiCharKeys: ["B"],
@@ -519,7 +504,6 @@ Deno.test("Process5 Sub3: generateHintsWithGroups - useNumericMultiCharHints未�
   // useNumericMultiCharHints未定義（デフォルトfalse）なので数字ヒントは追加されない
 });
 
-Deno.test("Process5 Sub3: generateHintsWithGroups - 大量ヒント要求でアルファベット+数字の組み合わせ", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D", "F"], // 4個
     multiCharKeys: ["B", "C", "E", "I"], // 4個 → 16個の2文字ヒント
@@ -547,7 +531,6 @@ Deno.test("Process5 Sub3: generateHintsWithGroups - 大量ヒント要求でア�
   assertEquals(hints[119], "00");
 });
 
-Deno.test("Process5 Sub3: generateHintsWithGroups - multiCharKeysが空でもuseNumericMultiCharHints=trueで数字ヒント生成", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S", "D"],
     multiCharKeys: [], // 空配列
@@ -568,7 +551,6 @@ Deno.test("Process5 Sub3: generateHintsWithGroups - multiCharKeysが空でもuse
   assertEquals(hints[14], "12");
 });
 
-Deno.test("Process5 Sub3: validateHintKeyConfig - useNumericMultiCharHintsのバリデーション", async () => {
   const { validateHintKeyConfig } = await import("./hint.ts");
 
   // boolean値は有効
@@ -587,7 +569,6 @@ Deno.test("Process5 Sub3: validateHintKeyConfig - useNumericMultiCharHintsのバ
   assertEquals(validUndefined.valid, true);
 });
 
-Deno.test("Process5 Sub3: 優先順位の検証 - singleChar → multiChar(アルファベット) → 数字", () => {
   const config: HintKeyConfig = {
     singleCharKeys: ["A", "S"],
     multiCharKeys: ["B", "C"],

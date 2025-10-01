@@ -12,7 +12,6 @@ import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
 import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
 
-// Process100 Sub1: 重複型定義を削除し、types.tsからインポート
 // SyntaxContextとLineContextはtypes.tsで定義されている
 
 /**
@@ -34,7 +33,6 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   currentKeyContext?: string;
   /**
    * 単語検出ストラテジー（snake_case形式）
-   * Process4 Sub2: 型安全なアクセスのため追加
    * @deprecated strategy を使用してください
    */
   wordDetectionStrategy?: "regex" | "tinysegmenter" | "hybrid";
@@ -4659,7 +4657,6 @@ export class DictionaryLoader {
    *
    * @description
    * parseYamlの戻り値をunknown型として扱い、型安全にUserDictionaryに変換する
-   * Process4 Sub2: any型を削除し、unknown型で型安全性を向上
    */
   private parseYamlDictionary(content: string): UserDictionary {
     const data = parseYaml(content) as unknown;
@@ -4706,7 +4703,6 @@ export class DictionaryLoader {
    *
    * @description
    * unknown型のデータを型ガードを使って検証し、UserDictionary型に安全に変換する
-   * Process4 Sub2: any型をunknown型に変更し、型安全性を向上
    *
    * @param data - パース後の辞書データ（unknown型）
    * @returns 検証済みのUserDictionary
@@ -5052,7 +5048,6 @@ export class DictionaryManager {
 
 /**
  * ヒント優先度を持つWord型
- * Process4 Sub2: 型安全性の向上のため、any型の代わりに明示的な型を定義
  */
 interface WordWithPriority extends Word {
   hintPriority?: number;
@@ -5060,14 +5055,12 @@ interface WordWithPriority extends Word {
 
 /**
  * ヒントパターンプロセッサークラス
- * Process4 Sub2: any型をWordWithPriority型に変更し、型安全性を向上
  */
 export class HintPatternProcessor {
   /**
    * ヒントパターンを適用
    *
    * @description
-   * Process4 Sub2: any[]をWordWithPriority[]に変更し、型安全性を向上
    *
    * @param words - 単語配列
    * @param text - 検索対象テキスト
@@ -5136,7 +5129,6 @@ export class HintPatternProcessor {
    * 指定位置の単語を検索
    *
    * @description
-   * Process4 Sub2: any[]をWordWithPriority[]に変更し、型安全性を向上
    *
    * @param words - 単語配列
    * @param position - 検索位置
@@ -5154,7 +5146,6 @@ export class HintPatternProcessor {
    * ヒント優先度で並び替え
    *
    * @description
-   * Process4 Sub2: any[]をWordWithPriority[]に変更し、型アサーション (as any) を削減
    *
    * @param words - 単語配列
    * @returns 優先度順にソートされた単語配列
@@ -5522,7 +5513,6 @@ export class WordDetectionManager {
 
     // Strategy-based selection
     // word_detection_strategyとstrategyの両方をサポート
-    // Process4 Sub2: 型アサーション (as any) を削減し、型安全なアクセスに変更
     const enhancedConfig = this.config as EnhancedWordConfig;
     const strategy = enhancedConfig.wordDetectionStrategy || enhancedConfig.strategy ||
       enhancedConfig.defaultStrategy;
@@ -5638,7 +5628,6 @@ export class WordDetectionManager {
   }
 
   private generateConfigHash(): string {
-    // Process4 Sub2: 型安全なアクセスに変更
     const enhancedConfig = this.config as EnhancedWordConfig;
     const relevantConfig = {
       strategy: enhancedConfig.wordDetectionStrategy || enhancedConfig.strategy,
@@ -5829,7 +5818,6 @@ export class WordDetectionManager {
     this.config = { ...this.config, ...newConfig };
 
     // word_detection_strategyがある場合はstrategyに反映
-    // Process4 Sub2: 型安全なアクセスに変更
     const enhancedConfig = newConfig as EnhancedWordConfig;
     if (enhancedConfig.wordDetectionStrategy) {
       this.config.strategy = enhancedConfig.wordDetectionStrategy;
@@ -5971,7 +5959,6 @@ export class WordDetectionManager {
       }
 
       // Get strategy from context, or fall back to config
-      // Process4 Sub2: 型安全なアクセスに変更
       const enhancedConfig = this.config as EnhancedWordConfig;
       const strategy = context?.strategy ||
         enhancedConfig.wordDetectionStrategy ||
@@ -6119,7 +6106,6 @@ export class WordDetectionManager {
     }
 
     // word_detection_strategyがある場合はstrategyに反映
-    // Process4 Sub2: 型安全なアクセスに変更
     const enhancedConfig = config as EnhancedWordConfig;
     if (enhancedConfig.wordDetectionStrategy) {
       merged.strategy = enhancedConfig.wordDetectionStrategy;

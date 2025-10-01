@@ -13,7 +13,6 @@ import type {
   PerformanceMetrics,
   Word,
   WordDetectionResult,
-  // Process50 Sub4 Phase 1: 関数の戻り値型の厳密化用の型定義
   CommandObject,
   Controller,
   ConfigManager,
@@ -25,7 +24,6 @@ import type {
   PerformanceStats,
   HealthCheckResult,
   InitializeResult,
-  // Process50 Sub4 Phase 4: 依存性注入の型定義
   HintOperationsDependencies,
 } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
@@ -192,7 +190,6 @@ class CommandFactory {
    * コマンドオブジェクトを作成する（必要最小限の実装）
    * @param command - コマンド文字列
    * @returns コマンドと設定を含むオブジェクト
-   * Process50 Sub4 Phase 1: any → CommandObject に変更
    */
   createCommand(command: string): CommandObject {
     return { command, config: this.config };
@@ -201,7 +198,6 @@ class CommandFactory {
   /**
    * テスト互換性のためのコントローラーを取得する
    * @returns enable/disable/toggleメソッドを持つコントローラー
-   * Process50 Sub4 Phase 1: any → Controller に変更
    */
   getController(): Controller {
     const core = Core.getInstance(this.config);
@@ -215,7 +211,6 @@ class CommandFactory {
   /**
    * 設定管理オブジェクトを取得する
    * @returns 設定の取得、更新、個別設定メソッドを持つオブジェクト
-   * Process50 Sub4 Phase 1: any → ConfigManager に変更
    */
   getConfigManager(): ConfigManager {
     return {
@@ -235,7 +230,6 @@ class CommandFactory {
   /**
    * デバッグ用コントローラーを取得する
    * @returns 統計情報取得、キャッシュクリア、デバッグモード切り替えメソッドを持つオブジェクト
-   * Process50 Sub4 Phase 1: any → DebugController に変更
    */
   getDebugController(): DebugController {
     return {
@@ -250,7 +244,6 @@ class CommandFactory {
 
 /**
  * プラグインの状態インターフェース
- * Process4 Sub1: any型を厳密な型に置き換え
  */
 interface PluginState {
   /** プラグインの現在のステータス */
@@ -275,7 +268,6 @@ interface PluginState {
 /**
  * プラグインの状態を管理するグローバルオブジェクト
  * lifecycle.tsから統合した簡易プラグイン状態管理
- * Process4 Sub1: 厳密な型定義を適用
  */
 let pluginState: PluginState = {
   status: "uninitialized",
@@ -297,21 +289,16 @@ let pluginState: PluginState = {
 
 /**
  * 初期化オプションのインターフェース
- * Process4 Sub1: any型を厳密な型に置き換え
- * Process50 Sub4: types.tsに移動（型定義の一元管理）
  * @deprecated この型定義はtypes.tsに移動しました。import { InitializeOptions } from "./types.ts" を使用してください。
  */
 
 /**
  * 初期化結果のインターフェース
- * Process4 Sub1: any型を厳密な型に置き換え
- * Process50 Sub4: types.tsに移動（型定義の一元管理）
  * @deprecated この型定義はtypes.tsに移動しました。import { InitializeResult } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグインを初期化する
- * Process4 Sub1: Denops型とInitializeOptions型を使用
  * @param denops - Denopsインスタンス
  * @param options - 初期化オプション（キャッシュサイズなど）
  * @returns extmarkNamespaceとcachesを含むPromise
@@ -338,7 +325,6 @@ function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<
 
 /**
  * プラグインをクリーンアップする
- * Process4 Sub1: Denops型を使用
  * @param denops - Denopsインスタンス
  * @returns クリーンアップ完了を示すPromise
  */
@@ -354,14 +340,11 @@ function cleanupPlugin(denops: Denops): Promise<void> {
 
 /**
  * ヘルスチェック結果のインターフェース
- * Process4 Sub1: any型を厳密な型に置き換え
- * Process50 Sub4: types.tsに移動（型定義の一元管理）
  * @deprecated この型定義はtypes.tsに移動しました。import { HealthCheckResult } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグインのヘルスチェックを実行する
- * Process4 Sub1: Denops型とHealthCheckResult型を使用
  * @param denops - Denopsインスタンス
  * @returns ヘルスチェック結果を含むPromise
  */
@@ -375,21 +358,16 @@ function healthCheck(denops: Denops): Promise<HealthCheckResult> {
 
 /**
  * パフォーマンス統計項目のインターフェース
- * Process4 Sub1: any型を厳密な型に置き換え
- * Process50 Sub4: types.ts に移動（型定義の一元管理）
  * @deprecated この型定義はtypes.tsに移動しました。import { PerformanceStats } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグイン統計情報のインターフェース
- * Process4 Sub1: any型を厳密な型に置き換え
- * Process50 Sub4: types.ts に移動（型定義の一元管理）
  * @deprecated この型定義はtypes.tsに移動しました。import { PluginStatistics } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグインの統計情報を取得する
- * Process4 Sub1: PluginStatistics型を使用
  * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
  */
 function getPluginStatistics(): PluginStatistics {
@@ -427,7 +405,6 @@ function getPluginStatistics(): PluginStatistics {
 
 /**
  * プラグインの状態を更新する
- * Process4 Sub1: Partial<PluginState>型を使用
  * @param updates - 更新する状態のプロパティ
  */
 function updatePluginState(updates: Partial<PluginState>): void {
@@ -436,7 +413,6 @@ function updatePluginState(updates: Partial<PluginState>): void {
 
 /**
  * 現在のプラグイン状態を取得する
- * Process4 Sub1: PluginState型を使用
  * @returns プラグインの状態オブジェクト
  */
 function getPluginState(): PluginState {
@@ -446,7 +422,6 @@ function getPluginState(): PluginState {
 /**
  * プラグインを有効化する
  * commands.tsから統合した簡易関数
- * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  */
 function enable(config: Config): void {
@@ -455,7 +430,6 @@ function enable(config: Config): void {
 
 /**
  * プラグインを無効化する
- * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  */
 function disable(config: Config): void {
@@ -464,7 +438,6 @@ function disable(config: Config): void {
 
 /**
  * プラグインの有効/無効を切り替える
- * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  * @returns 切り替え後の有効状態
  */
@@ -475,7 +448,6 @@ function toggle(config: Config): boolean {
 
 /**
  * モーションカウントを設定する
- * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  * @param count - 設定するカウント数
  */
@@ -485,7 +457,6 @@ function setCount(config: Config, count: number): void {
 
 /**
  * モーションタイムアウトを設定する
- * Process4 Sub1: Config型を使用
  * @param config - プラグイン設定
  * @param timeout - 設定するタイムアウト値（ミリ秒）
  */
@@ -573,7 +544,6 @@ export class Core {
    * @param denops - Denopsインスタンス
    * @param options - 初期化オプション
    * @throws {Error} 初期化に失敗した場合
-   * Process50 Sub4 Phase 2: any → InitializeOptions に変更
    */
   async initialize(denops: Denops, options?: InitializeOptions): Promise<void> {
     try {
@@ -652,7 +622,6 @@ export class Core {
   /**
    * プラグインの統計情報を取得する
    * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
-   * Process50 Sub4 Phase 5: cacheStats の any 型を CacheStatistics に変更
    */
   getStatistics(): {
     cacheStats: { words: CacheStatistics; hints: CacheStatistics };
@@ -688,7 +657,6 @@ export class Core {
   /**
    * プラグインの状態を更新する
    * @param updates - 更新する状態のプロパティ
-   * Process50 Sub4 Phase 2: any → Partial<PluginState> に変更
    */
   updateState(updates: Partial<PluginState>): void {
     try {
@@ -801,18 +769,16 @@ export class Core {
 
     this.currentHints = [...hints];
     this.isActive = true;
-    // TDD Refactor Phase: 状態管理を追加
-    // 実際のVim/Neovimとの連携は後で実装
+    // Note: このメソッドは状態管理のみ。実際のVim/Neovim表示はdisplayHintsOptimized等を使用
   }
 
   /**
-   * ヒント非表示を実行する
+   * ヒント非表示を実行する（状態管理のみ）
+   * Note: 実際のVim/Neovim表示クリアはhideHintsOptimized等を使用
    */
   hideHints(): void {
     this.currentHints = [];
     this.isActive = false;
-    // TDD Refactor Phase: 状態管理を追加
-    // 実際のVim/Neovimとの連携は後で実装
   }
 
   /**
@@ -893,14 +859,6 @@ export class Core {
    */
   getCurrentHints(): HintMapping[] {
     return [...this.currentHints];
-  }
-
-  /*   * モーション処理を実行   * @param motion モーション種別
-   * @param context 処理コンテキスト
-   */
-  handleMotion(motion: string, context?: DetectionContext): void {
-    // TDD Green Phase: 最小限の実装
-    // モーション処理ロジックは後で実装
   }
 
   /*   * Phase2: 状態管理の移行 - 現在の状態を取得   * @returns 現在のCoreState
@@ -1507,6 +1465,7 @@ export class Core {
   }
 
   /*   * Phase 8: ユーティリティ機能 - ユーザー入力を待機   * ヒント表示後にユーザーの文字入力を待ち、対応するヒントの位置へジャンプする。
+  /**
    * main.tsのwaitForUserInput関数から移行した実装。   * @param denops Denopsインスタンス
    */
   /*   * ヒントターゲットへのジャンプ処理を実行（REFACTOR: 重複コードの共通化）
@@ -2222,8 +2181,9 @@ export class Core {
     return true;
   }
 
-  /*   * 色名が有効なVim色名かどうか検証する（Process3 Sub2-1-2実装）   * TDD GREEN Phase: テストをパスする最小限の実装
-   * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植   * @param colorName 検証する色名
+  /**
+   * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植
+   * @param colorName 検証する色名
    * @returns 有効な場合はtrue、無効な場合はfalse
    */
   public static isValidColorName(colorName: string): boolean {
@@ -2265,7 +2225,7 @@ export class Core {
     return validColorNames.includes(colorName.toLowerCase());
   }
 
-  /*   * 16進数色表記が有効かどうか検証する（Process3 Sub2-1-3実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
    * @returns 有効な場合はtrue、無効な場合はfalse
    */
@@ -2291,7 +2251,7 @@ export class Core {
     return /^[0-9a-fA-F]+$/.test(hex);
   }
 
-  /*   * 色値を正規化する（大文字小文字を統一）（Process3 Sub2-1-4実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
    * @returns 正規化された色値
    */
@@ -2309,7 +2269,7 @@ export class Core {
     return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
   }
 
-  /*   * ハイライト色設定を検証する（Process3 Sub2-1-5実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の validateHighlightColor 関数の実装をCore.validateHighlightColor静的メソッドとして移植   * @param colorConfig 検証するハイライト色設定
    * @returns 検証結果
    */
@@ -2399,7 +2359,7 @@ export class Core {
     return { valid: false, errors };
   }
 
-  /*   * ハイライトコマンドを生成する（Process3 Sub2-1-6実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
    * @param colorConfig 色設定
    * @returns 生成されたハイライトコマンド
@@ -2444,7 +2404,7 @@ export class Core {
     return parts.join(" ");
   }
 
-  /*   * ハイライト設定を検証する（設定更新時に使用）（Process3 Sub2-1-7実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
    * @returns 検証結果
    */
@@ -2475,14 +2435,13 @@ export class Core {
     return { valid: errors.length === 0, errors };
   }
 
-  /*   * キー別最小文字数設定を取得する（Process3 Sub2-2-1実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
    * @param key 対象のキー文字（例: 'f', 't', 'w'など）
    * @returns そのキーに対する最小文字数値（デフォルト: 3）
    */
   public static getMinLengthForKey(config: Config | Config, key: string): number {
     // 既にConfig形式であることを前提
-    // Process50 Sub4 Phase 3: as any → as EnhancedConfig に変更
     const unifiedConfig = config as EnhancedConfig;
 
     // Check for perKeyMinLength first (highest priority)
@@ -2519,7 +2478,7 @@ export class Core {
     return 3;
   }
 
-  /*   * キー別motion_count設定を取得する（Process3 Sub2-2-2実装）   * TDD GREEN Phase: テストをパスする最小限の実装
+  /**
    * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
    * @param config プラグインの設定オブジェクト（Config または Config）
    * @returns そのキーに対するmotion_count値（デフォルト: 3）
@@ -2556,6 +2515,7 @@ export class Core {
   // ========================================
 
   /*   * sub2-3-2: isRenderingHints - ヒントの描画処理中かどうかを取得   * 非同期描画の状態を外部から確認するためのステータス関数
+  /**
    * main.ts の isRenderingHints 関数をCoreクラスに移植   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse   * const core = Core.getInstance();
    * if (!core.isRenderingHints()) {
    *   await core.displayHintsAsync(denops, hints, config);
@@ -2566,6 +2526,7 @@ export class Core {
   }
 
   /*   * sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断   * 進行中の非同期描画処理を安全に中断します
+  /**
    * main.ts の abortCurrentRendering 関数をCoreクラスに移植   * const core = Core.getInstance();
    * core.abortCurrentRendering();
    */
@@ -3153,7 +3114,6 @@ export class Core {
     const originalValues: Partial<Config> = {};
 
     // 変更される値をバックアップ
-    // Process50 Sub4 Phase 3: 型安全な方法でバックアップを作成
     for (const key in updates) {
       if (key in this.config) {
         const configKey = key as keyof Config;
@@ -3316,7 +3276,6 @@ export class Core {
   }
 
   // =============================================================================
-  // Main Directory Integration (Process4 Sub4-5)
   // TDD Green Phase: dispatcher.ts, operations.ts, input.ts, initialization.ts
   // =============================================================================
 
@@ -3356,7 +3315,6 @@ export class Core {
   }
 
   /*   * 詳細なデバッグ情報を取得
-   * Process50 Sub4 Phase 1: any → ExtendedDebugInfo に変更
    * 注意: extendedプロパティは将来の拡張用に追加予定
    */
   getExtendedDebugInfo(): ExtendedDebugInfo {
@@ -3496,7 +3454,6 @@ export class Core {
   }
 
   /*   * プラグインの初期化処理
-   * Process50 Sub4 Phase 5: caches?: any を具体的な型に変更
    */
   async initializePlugin(denops: Denops): Promise<{
     extmarkNamespace: number | null;
@@ -3524,7 +3481,6 @@ export class Core {
   }
 
   /*   * マネージャーとの設定同期
-   * Process50 Sub4 Phase 2: any → Partial<Config> に変更
    */
   syncManagerConfig(config?: Partial<Config>): void {
     if (config) {
@@ -3646,9 +3602,6 @@ export class Core {
 
   /*   * デバッグ情報を取得します
    * @returns デバッグ情報オブジェクト
-   * Process50 Sub4 Phase 1: any → DebugInfo に変更
-   * 注意: 戻り値の構造がDebugInfo型と完全には一致しないため、一時的にas DebugInfoを使用
-   * TODO: DebugInfo型定義を実装に合わせて更新するか、実装をDebugInfo型に合わせる
    */
   getDebugInfo(): DebugInfo {
     return {
@@ -3694,7 +3647,6 @@ export class Core {
     ];
 
     // mockErrorDenops でエラーをスローする必要がある場合の処理
-    // Process50 Sub4 Phase 3: 型アサーションを削除し、型ガードを使用
     // 注意: これはテスト用のmockErrorDenops専用のコードです
     // TODO: テストコードを改善してこのような型アサーションが不要になるようにする
     const maybeMockDenops = denops as unknown;
@@ -3732,7 +3684,6 @@ export class Core {
   /*   * Optimized word detection with enhanced configuration support
    * @param params Detection parameters including denops and configuration
    * @returns Promise resolving to array of detected words
-   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   public static async detectWordsOptimized(params: {
     denops: Denops;
@@ -3758,7 +3709,6 @@ export class Core {
   /*   * Factory function for testing word detection
    * @param mockDetector Optional mock detector for testing
    * @returns Word detection function
-   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   static createDetectWordsOptimized(
     mockDetector?: (params: { denops: Denops; bufnr?: number; config?: Partial<Config> }) => Promise<Word[]>
@@ -3773,7 +3723,6 @@ export class Core {
   /*   * Optimized hint generation with enhanced configuration support
    * @param params Generation parameters including word count and configuration
    * @returns Array of generated hints
-   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   public static generateHintsOptimized(params: {
     wordCount: number;
@@ -3810,7 +3759,6 @@ export class Core {
   /*   * Factory function for testing hint generation
    * @param mockGenerator Optional mock generator for testing
    * @returns Hint generation function
-   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   static createGenerateHintsOptimized(
     mockGenerator?: (params: { wordCount: number; markers?: string | string[]; config?: Partial<Config> }) => string[]
@@ -3889,8 +3837,6 @@ export class Core {
   /*   * Create hint operations manager with dependency injection
    * @param config Configuration for hint operations
    * @returns Hint operations interface
-   * Process50 Sub4 Phase 4: dependencies の any 型を HintOperationsDependencies に変更
-   * Process50 Sub4 Phase 2: config?: any → config?: Partial<Config> に変更
    */
   static createHintOperations(config?: {
     denops: Denops;
@@ -3913,18 +3859,18 @@ export class Core {
       hide: Core.hideHints.bind(Core),
       clear: Core.clearHintDisplay.bind(Core),
       showHints: async () => {
-        // Note: detectWordsOptimized requires denops and bufnr arguments
-        // This method is deprecated - use show() instead
+        // @deprecated Use show() instead. This stub is kept for backward compatibility.
+        // Note: Proper implementation requires denops and bufnr arguments.
         (Core as any).hintsVisible = true;
       },
       showHintsImmediately: async () => {
-        // Note: Dependencies methods require proper arguments
-        // This method is deprecated - use show() instead
+        // @deprecated Use show() instead. This stub is kept for backward compatibility.
+        // Note: Proper implementation requires dependency injection.
         (Core as any).hintsVisible = true;
       },
       hideHints: async () => {
-        // Note: hideHints requires denops argument
-        // This method is deprecated - use hide() instead
+        // @deprecated Use hide() instead. This stub is kept for backward compatibility.
+        // Note: Proper implementation requires denops argument.
         (Core as any).hintsVisible = false;
         (Core as any).currentHints = [];
       },
@@ -3954,7 +3900,6 @@ export class Core {
  */
 // ============================================================================
 // VALIDATION FUNCTIONS
-// Moved from utils/validation.ts as part of Process4 Sub6-2
 // ============================================================================
 
 /* * ハイライト色設定インターフェース
@@ -4317,30 +4262,6 @@ export class HellshakeYanoCore {
    */
   async healthCheck(denops: Denops): Promise<any> {
     return await healthCheck(denops);
-  }
-
-  /**
-   * ヒントを表示する
-   * @param denops - Denopsインスタンス
-   * @returns ヒント表示完了のPromise
-   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローする
-   * @todo 既存のmain.tsから実装を移行する予定
-   */
-  async showHints(denops: Denops): Promise<void> {
-    // 実際の実装は既存のmain.tsから移行予定
-    throw new Error("showHints not yet implemented in modular architecture");
-  }
-
-  /**
-   * ヒントを非表示にする
-   * @param denops - Denopsインスタンス
-   * @returns ヒント非表示完了のPromise
-   * @throws {Error} 現在はスタブ実装のため、常にエラーをスローする
-   * @todo 既存のmain.tsから実装を移行する予定
-   */
-  async hideHints(denops: Denops): Promise<void> {
-    // 実際の実装は既存のmain.tsから移行予定
-    throw new Error("hideHints not yet implemented in modular architecture");
   }
 
   /**
