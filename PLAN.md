@@ -352,6 +352,7 @@ export function calculateHintPosition(
 - [ ] extractWords 系の統合
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process3: hint.ts の重複統合実装
 @target: denops/hellshake-yano/hint.ts
@@ -364,6 +365,7 @@ export function calculateHintPosition(
 - [ ] calculateHintPosition 系の統合
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process4: コメントの最適化
 @target: types.ts, config.ts, word.ts, hint.ts
@@ -375,6 +377,7 @@ export function calculateHintPosition(
 - [ ] hint.ts のコメント削減
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process5: 型定義の最適化
 @target: denops/hellshake-yano/types.ts
@@ -388,6 +391,7 @@ export function calculateHintPosition(
 - [ ] ファクトリ関数の削除
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process6: 小関数のインライン化
 @target: denops/hellshake-yano/word.ts, hint.ts
@@ -400,6 +404,7 @@ export function calculateHintPosition(
 - [ ] autoload/hellshake_yano.vim の統合
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process7: 非推奨APIの削除
 @target: denops/hellshake-yano/*.ts
@@ -410,6 +415,7 @@ export function calculateHintPosition(
 - [ ] 削除実装
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process8: バリデーション処理の簡略化
 @target: denops/hellshake-yano/config.ts, validation.ts
@@ -419,6 +425,7 @@ export function calculateHintPosition(
 - [ ] validation.ts への集約
 - [ ] deno checkで型エラーがないことを確認
 - [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] コードの削減量の計測
 
 ### process9: 最終確認とドキュメント更新
 @status: pending
@@ -427,6 +434,7 @@ export function calculateHintPosition(
 - [ ] パフォーマンステスト
 - [ ] ドキュメントの更新
 - [ ] 削減行数の最終確認
+- [ ] コードの削減量の計測
 
 ## 生成AIの学習用コンテキスト
 
