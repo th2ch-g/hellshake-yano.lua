@@ -76,17 +76,86 @@ console.log(`Cache hit rate: ${stats.WORDS.hitRate}%`);
 For detailed documentation, see:
 - [API Reference](docs/unified-cache-api.md)
 - [Cache Types Guide](docs/cache-types.md)
-- [Migration Guide](MIGRATION.md)
+- [Migration Guide v3.0.0](MIGRATION_v3.md) - **Important for v3.0.0 users**
 - [Performance Metrics](docs/performance-metrics.md)
 - [Changelog](CHANGELOG.md)
 
-## Version 3.0.0 Changes
+## Version 3.0.0 - Breaking Changes
+
+hellshake-yano.vim v3.0.0 is a **major breaking release** that completely removes all backward compatibility code for a cleaner, modern TypeScript codebase.
+
+### 🔥 Breaking Changes
+
+#### 1. snake_case Configuration Support Removed
+
+**v2.x (NO LONGER WORKS):**
+```vim
+let g:hellshake_yano = #{
+\   single_char_keys: ['f', 'F', 't', 'T'],
+\   multi_char_keys: ['w', 'b', 'e'],
+\   hint_position: 'start'
+\ }
+```
+
+**v3.0.0 (REQUIRED):**
+```vim
+let g:hellshake_yano = #{
+\   singleCharKeys: ['f', 'F', 't', 'T'],
+\   multiCharKeys: ['w', 'b', 'e'],
+\   hintPosition: 'start'
+\ }
+```
+
+#### 2. Type Aliases Removed
+
+**v2.x (NO LONGER WORKS):**
+```typescript
+// ❌ Removed type aliases
+import type { UnifiedConfig, CamelCaseConfig, ModernConfig } from "./config.ts";
+```
+
+**v3.0.0 (REQUIRED):**
+```typescript
+// ✅ Use Config type only
+import type { Config } from "./config.ts";
+
+const config: Config = {
+  hintPosition: "start",
+  useJapanese: true,
+  minWordLength: 3,
+  // ... other options
+};
+```
+
+#### 3. Compatibility Functions Removed
+
+The following functions have been completely removed:
+- `normalizeBackwardCompatibleFlags()`
+- `convertConfigForManager()`
+- `syncManagerConfig()`
+- `getMinLengthForKey()` (compatibility layer)
+- `getMotionCountForKey()` (compatibility layer)
+
+**File Removed:**
+- `denops/hellshake-yano/compatibility.ts` (208 lines - completely removed)
+
+#### 4. Deprecated Properties Removed
+
+- `useImprovedDetection` property (always enabled now)
+
+### Migration Guide
+
+For detailed migration instructions, see [MIGRATION_v3.md](MIGRATION_v3.md).
+
+**Quick Migration Checklist:**
+- [ ] Update all snake_case properties to camelCase in your Vim config
+- [ ] Change `UnifiedConfig` to `Config` in TypeScript code
+- [ ] Remove references to compatibility functions
+- [ ] Test your configuration with `:echo g:hellshake_yano`
 
 ### New APIs
 
-hellshake-yano.vim v3.0.0 introduces cleaner, more consistent APIs:
-
-#### GlobalCache (New Preferred Name)
+#### GlobalCache (Preferred Name)
 
 ```typescript
 import { GlobalCache, CacheType } from "./cache.ts";
@@ -126,29 +195,15 @@ const manager = await getWordDetectionManager(denops);
 const words = await detectWordsWithManager(denops, manager);
 ```
 
-### Breaking Changes (v3.0.0)
+### Benefits of v3.0.0
 
-The following type definitions have been removed. Please use `UnifiedConfig` or `Config` instead:
+- ✅ **Cleaner Codebase**: ~250 lines of legacy code removed
+- ✅ **Better Performance**: Removed compatibility overhead
+- ✅ **Type Safety**: Single `Config` type for consistency
+- ✅ **Modern API**: camelCase-only naming convention
+- ✅ **Easier Maintenance**: No legacy code to maintain
 
-```typescript
-// ❌ Removed in v3.0.0
-CoreConfig
-WordConfig
-HintConfig
-PerformanceConfig
-DebugConfig
-
-// ✅ Use instead
-import { UnifiedConfig, Config } from "./config.ts";
-
-const config: UnifiedConfig = {
-  useJapanese: true,
-  minWordLength: 3,
-  // ... other options
-};
-```
-
-For detailed migration instructions, see [MIGRATION.md](MIGRATION.md).
+For more details, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Installation
 
@@ -230,9 +285,9 @@ let g:hellshake_yano = {
 | `performance_log`               | boolean     | v:false         | Enable performance logging                              |
 
 
-## UnifiedConfig System (New in v3.x)
+## Config System (v3.0.0)
 
-hellshake-yano.vim v3.x introduces a revolutionary configuration system that unifies all settings into a single, flat structure with camelCase naming conventions. This replaces the previous hierarchical snake_case configuration approach.
+hellshake-yano.vim v3.0.0 provides a unified configuration system with a single, flat structure using camelCase naming conventions.
 
 ### Key Benefits
 
@@ -240,14 +295,14 @@ hellshake-yano.vim v3.x introduces a revolutionary configuration system that uni
 - **camelCase Convention**: Consistent naming throughout all settings
 - **Type Safety**: Full TypeScript support with strict validation
 - **Performance**: Direct property access without nested lookups
-- **Migration Support**: Automatic conversion from legacy configurations
+- **Clean API**: No legacy compatibility overhead
 
-### UnifiedConfig Interface
+### Config Interface
 
-The new configuration system consolidates all settings into a single `UnifiedConfig` interface:
+The configuration system consolidates all settings into a single `Config` interface:
 
 ```typescript
-interface UnifiedConfig {
+interface Config {
   // Core settings
   enabled: boolean;
   markers: string[];
@@ -270,9 +325,9 @@ interface UnifiedConfig {
 }
 ```
 
-### Modern Configuration Example
+### Configuration Example (v3.0.0)
 
-**New v3.x camelCase Style:**
+**camelCase Style (REQUIRED in v3.0.0):**
 ```vim
 let g:hellshake_yano = #{
 \   enabled: v:true,
@@ -288,23 +343,36 @@ let g:hellshake_yano = #{
 \ }
 ```
 
-**Legacy snake_case (still supported):**
+**⚠️ snake_case is NO LONGER supported in v3.0.0:**
 ```vim
+" ❌ This will NOT work in v3.0.0
 let g:hellshake_yano = {
-  \ 'core': { 'enabled': v:true },
-  \ 'hint': { 'hint_position': 'start' },
-  \ 'word': { 'min_word_length': 3, 'use_japanese': v:true }
+  \ 'single_char_keys': ['f', 'F'],
+  \ 'hint_position': 'start'
   \ }
 ```
 
-### Migration Guide
+### Migration from v2.x
 
-The plugin provides seamless migration from v2.x configurations:
+If you are upgrading from v2.x, you **must** convert all snake_case properties to camelCase:
 
-1. **Automatic Detection**: Legacy configurations are automatically converted
-2. **Gradual Migration**: Both formats work during transition period
-3. **Validation**: Built-in validation ensures configuration correctness
-4. **Helper Functions**: `toUnifiedConfig()` for manual conversion
+```vim
+" Before (v2.x)
+let g:hellshake_yano = #{
+\   single_char_keys: ['f', 'F', 't', 'T'],
+\   multi_char_keys: ['w', 'b', 'e'],
+\   hint_position: 'start'
+\ }
+
+" After (v3.0.0)
+let g:hellshake_yano = #{
+\   singleCharKeys: ['f', 'F', 't', 'T'],
+\   multiCharKeys: ['w', 'b', 'e'],
+\   hintPosition: 'start'
+\ }
+```
+
+For detailed migration instructions, see [MIGRATION_v3.md](MIGRATION_v3.md)
 
 ### Configuration Examples
 
@@ -340,14 +408,11 @@ let g:hellshake_yano = #{
 ### API Documentation
 
 For comprehensive configuration documentation:
-- [UnifiedConfig API Reference](docs/unified-config-api.md) - Complete API documentation
+- [Config API Reference](docs/unified-config-api.md) - Complete API documentation
 - [Configuration Examples](docs/unified-config-api.md#usage-examples) - Real-world usage patterns
-- [Migration Guide](MIGRATION.md) - Step-by-step migration from v2.x
+- [Migration Guide v3.0.0](MIGRATION_v3.md) - Step-by-step migration from v2.x
 - [Type Definitions](docs/unified-config-api.md#type-definitions) - TypeScript interfaces
-
-### backward compatibility
-
-The plugin maintains full backward compatibility with v2.x configurations while providing deprecation warnings to guide users toward the new system. Legacy configurations will continue to work until v4.0.0.
+- [Changelog](CHANGELOG.md) - Version history and breaking changes
 
 ### Per-Key Minimum Word Length Configuration
 
