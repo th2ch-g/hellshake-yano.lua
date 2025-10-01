@@ -199,7 +199,7 @@ export class LRUCache<K, V> {
   }
 
   /**
-   * 統計情報を取得（getStatsのエイリアス - 後方互換性のため）
+   * 統計情報を取得（getStatsのエイリアス）
    * @returns キャッシュ統計情報
    */
   getStatistics(): CacheStatistics {
@@ -483,6 +483,6 @@ export class GlobalCache {
 }
 
 /**
- * 後方互換性のためのエイリアス
+ * GlobalCacheのエイリアス
  */
 export const UnifiedCache = GlobalCache;

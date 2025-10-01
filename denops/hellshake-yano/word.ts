@@ -43,13 +43,13 @@ interface LineContext {
 /**
  * 新しい単語検出設定インターフェース
  *
- * WordDetectionManagerConfigを拡張し、後方互換性を保ちつつ
+ * WordDetectionManagerConfigを拡張し、
  * 高度な単語検出機能を提供します。
  *
  * @since 2.0.0
  */
 export interface EnhancedWordConfig extends WordDetectionManagerConfig {
-  /** 後方互換性のための単語検出ストラテジー */
+  /** 単語検出ストラテジー */
   strategy?: "regex" | "tinysegmenter" | "hybrid";
   /** キー別の最小文字数設定 */
   perKeyMinLength?: Record<string, number>;
@@ -120,7 +120,7 @@ export interface WordDetectionConfig {
   strategy?: "regex" | "tinysegmenter" | "hybrid";
   /** 日本語処理を有効にするかどうか */
   useJapanese?: boolean;
-  /** 後方互換性のためのフラグ（実装では無視される） */
+  /** 実装では無視されるフラグ */
   useImprovedDetection?: boolean;
 
   /** TinySegmenterを有効にするかどうか */
@@ -1868,7 +1868,7 @@ export function convertWordConfigToEnhanced(config: Config): EnhancedWordConfig 
 
 /**
  * Configの部分的なオブジェクトを作成するヘルパー関数
- * WordConfigとの後方互換性を保ちつつ、Configの型要件を満たします
+ * Configの型要件を満たします
  */
 export function createPartialConfig(options: { useJapanese?: boolean }): Config {
   // Configの最小必須プロパティのデフォルト値
@@ -2031,7 +2031,7 @@ export function extractWordsFromLineLegacy(
 /**
  * 統合された単語抽出設定インターフェース
  *
- * すべての既存の単語抽出関数の設定を統合し、後方互換性を保ちつつ
+ * すべての既存の単語抽出関数の設定を統合し、
  * 一貫したAPIを提供します。
  *
  * @since 2.1.0
@@ -2041,10 +2041,10 @@ export interface UnifiedWordExtractionConfig {
   useImprovedDetection?: boolean;
   excludeJapanese?: boolean;
 
-  // Legacy WordConfig compatibility
+  // WordConfig
   useJapanese?: boolean;
 
-  // Enhanced config compatibility
+  // Enhanced config
   strategy?: "regex" | "tinysegmenter" | "hybrid";
   perKeyMinLength?: Record<string, number>;
   defaultMinWordLength?: number;
@@ -2126,7 +2126,7 @@ export function extractWordsUnified(
     );
   }
 
-  // Default to legacy behavior for backward compatibility
+  // Default to legacy behavior
   return extractWordsFromLineLegacy(lineText, lineNumber, normalizedConfig.excludeJapanese);
 }
 
@@ -2180,7 +2180,7 @@ function normalizeConfig(config: UnifiedWordExtractionConfig): NormalizedConfig 
     useJapanese = config.useJapanese;
     excludeJapanese = !config.useJapanese;
   } else {
-    useJapanese = true; // Default: include Japanese for legacy compatibility
+    useJapanese = true; // Default: include Japanese
     excludeJapanese = false;
   }
 
@@ -2190,7 +2190,7 @@ function normalizeConfig(config: UnifiedWordExtractionConfig): NormalizedConfig 
   // 3. default based on mode
   const useImprovedDetection = config.useImprovedDetection ??
     config.useImprovedDetection ??
-    false; // Default to false for legacy compatibility
+    false; // Default to false
 
   return {
     useImprovedDetection,
@@ -5481,7 +5481,7 @@ export class WordDetectionManager {
     }
 
     // Strategy-based selection
-    // word_detection_strategyとstrategyの両方をサポート（後方互換性）
+    // word_detection_strategyとstrategyの両方をサポート
     const strategy = (this.config as any).wordDetectionStrategy || this.config.strategy ||
       this.config.defaultStrategy;
 
@@ -5784,7 +5784,7 @@ export class WordDetectionManager {
     // 設定をマージ
     this.config = { ...this.config, ...newConfig };
 
-    // word_detection_strategyがある場合はstrategyに反映（後方互換性）
+    // word_detection_strategyがある場合はstrategyに反映
     if ((newConfig as any).wordDetectionStrategy) {
       this.config.strategy = (newConfig as any).wordDetectionStrategy;
       this.config.defaultStrategy = (newConfig as any).wordDetectionStrategy;

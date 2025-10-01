@@ -55,8 +55,6 @@ import type { HighlightColor, HintPositionType } from "./types.ts";
  * };
  * ```
  */
-// UnifiedConfigインターフェースに useImprovedDetection プロパティを追加
-// WordConfig削除後の後方互換性のため
 
 export interface Config {
   // Core settings (6 properties)
@@ -240,7 +238,7 @@ export const DEFAULT_CONFIG: Config = {
 };
 
 /**
- * 後方互換性のためのデフォルト設定定数エイリアス
+ * デフォルト設定定数エイリアス
  * DEFAULT_CONFIGと同じ値を参照します。
  */
 export const DEFAULT_UNIFIED_CONFIG: Config = DEFAULT_CONFIG;
@@ -718,7 +716,7 @@ export function validateConfig(
 
 /**
  * 設定マージ関数
- * 部分的な設定更新をサポートし、バリデーションと後方互換性を維持します。
+ * 部分的な設定更新をサポートし、バリデーションを実行します。
  * 更新される設定値はバリデーションが実行され、無効な値の場合はエラーがスローされます。
  *
  * @param {Config} baseConfig ベースとなる設定
@@ -729,14 +727,13 @@ export function validateConfig(
  * ```typescript
  * const base = getDefaultConfig();
  * const updates = {
- *   motion_count: 5,
+ *   motionCount: 5,
  *   enabled: false,
- *   enable: true  // 後方互換性のため自動でenabledにマッピング
  * };
  *
  * const merged = mergeConfig(base, updates);
  * console.log(merged.motionCount); // 5
- * console.log(merged.enabled);      // true (enableが優先される)
+ * console.log(merged.enabled);      // false
  *
  * // バリデーションエラーの例
  * try {
@@ -752,8 +749,6 @@ export function mergeConfig(baseConfig: Config, updates: Partial<Config>): Confi
   if (!validation.valid) {
     throw new Error(`Invalid config: ${validation.errors.join(", ")}`);
   }
-
-  // Process4 Sub3-2-2: 後方互換性処理は削除（UnifiedConfigは純粋なcamelCase）
 
   return { ...baseConfig, ...updates };
 }
@@ -842,7 +837,6 @@ export function getPerKeyValue<T>(
 
 /**
  * 非推奨プロパティの警告情報を表すインターフェース
- * v3.0.0では使用されていませんが、後方互換性のため残存しています。
  */
 export interface DeprecationWarning {
   /** 非推奨のプロパティ名 */
@@ -938,7 +932,7 @@ export function validateNamingConvention(name: string): NamingValidation {
 
 /**
  * 非推奨警告を取得する関数
- * v3.0.0では常に空配列を返します（後方互換性のため残存）。
+ * v3.0.0では常に空配列を返します。
  *
  * @param {Partial<Config>} config チェックする設定オブジェクト
  * @returns {DeprecationWarning[]} 非推奨警告の配列（常に空配列）
@@ -956,7 +950,6 @@ export function getDeprecationWarnings(
 }
 
 // 設定変換レイヤー削除 (Process8 Sub1)
-// v3.0.0では後方互換性のための変換関数は削除されました
 // 直接Config型を使用してください
 
 // ============================================================================

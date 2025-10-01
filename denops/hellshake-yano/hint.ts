@@ -12,7 +12,7 @@ import { CacheType, GlobalCache } from "./cache.ts";
 import { Core } from "./core.ts";
 
 /**
- * 後方互換性のための型の再エクスポート
+ * 型の再エクスポート
  */
 export type { HintKeyConfig, HintMapping, HintPosition };
 
@@ -1184,8 +1184,8 @@ export function calculateHintPositionWithCoordinateSystem(
   }
 
   return {
-    line: word.line, // 後方互換性のため
-    col: col, // 後方互換性のため
+    line: word.line,
+    col: col,
     display_mode: display_mode,
     vim_col,
     nvim_col,
@@ -2412,7 +2412,6 @@ export class HintManager {
    *
    * main.tsのgetMinLengthForKey関数に委譲することで:
    * - 設定の一元管理を維持
-   * - 後方互換性を保持
    * - 単一責任の原則を遵守
    *
    * @param key - 最小文字数を取得したいキー

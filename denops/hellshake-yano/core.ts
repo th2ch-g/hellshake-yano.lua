@@ -2402,12 +2402,12 @@ export class Core {
       return unifiedConfig.defaultMinWordLength;
     }
 
-    // Check for default_min_length (third priority - for backward compatibility)
+    // Check for default_min_length (third priority)
     if ("default_min_length" in unifiedConfig && typeof (unifiedConfig as any).default_min_length === "number") {
       return (unifiedConfig as any).default_min_length;
     }
 
-    // Check for min_length (fourth priority - for backward compatibility)
+    // Check for min_length (fourth priority)
     if ("min_length" in unifiedConfig && typeof (unifiedConfig as any).min_length === "number") {
       return (unifiedConfig as any).min_length;
     }
@@ -2444,7 +2444,7 @@ export class Core {
       return unifiedConfig.defaultMotionCount;
     }
 
-    // 後方互換性：既存のmotionCountを使用
+    // 既存のmotionCountを使用
     if (unifiedConfig.motionCount !== undefined && unifiedConfig.motionCount >= 1) {
       return unifiedConfig.motionCount;
     }
@@ -3669,7 +3669,7 @@ export class Core {
 
     // If already implemented in core, delegate to existing implementation
     if (core.generateHints) {
-      // Create empty words array with the specified count for compatibility
+      // Create empty words array with the specified count
       const words: Word[] = Array.from({ length: params.wordCount }, (_, i) => ({
         text: `word${i}`,
         line: 1,
@@ -4548,7 +4548,7 @@ export class HellshakeYanoCore {
   }
 }
 
-// Export functions for backward compatibility with main/ directory files
+// Export functions for main/ directory files
 export function analyzeInputCharacter(char: string, config: any) {
   const charCode = char.charCodeAt(0);
   return {
@@ -4645,7 +4645,7 @@ export const {
   getCurrentHints,
 } = Core;
 
-// Export classes for testing compatibility
+// Export classes for testing
 export { CommandFactory, MotionCounter, MotionManager };
 
 // Export lifecycle functions for testing

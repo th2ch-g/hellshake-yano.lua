@@ -275,7 +275,7 @@ export interface HintKeyConfig {
   singleCharKeys?: string[];
   /** 2文字以上ヒント専用キー */
   multiCharKeys?: string[];
-  /** 従来のmarkers（後方互換性） */
+  /** 従来のmarkers */
   markers?: string[];
   /** 1文字ヒントの最大数 */
   maxSingleCharHints?: number;
@@ -1010,8 +1010,8 @@ export function createValidationResult<T>(
 export type {
   Word as W,
   HintMapping as HM,
-  ConfigType as CT,     // 新しい統合型のエイリアス
-  Config as C,          // 後方互換性のため保持
+  ConfigType as CT,
+  Config as C,
   HintPosition as HP,
   DetectionContext as DC,
   WordDetectionResult as WDR,
