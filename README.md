@@ -1012,7 +1012,7 @@ let g:hellshake_yano = {
 
 ### Advanced Highlight Configuration
 
-You can customize highlights using either highlight group names or color dictionaries:
+You can customize highlights using either highlight group names or color dictionaries. For more detailed examples and advanced configurations, see `samples/highlight_examples.vim`.
 
 ```vim
 " Using existing highlight groups

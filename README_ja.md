@@ -626,6 +626,8 @@ let g:hellshake_yano = {
 
 ハイライトグループ名または色辞書を使用してハイライトをカスタマイズできます：
 
+より詳細な例やテーマ別設定については、`samples/highlight_examples.vim`を参照してください。
+
 ```vim
 " 既存のハイライトグループを使用
 let g:hellshake_yano = {
