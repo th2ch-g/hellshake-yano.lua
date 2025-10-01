@@ -12,17 +12,6 @@ import { Config, DEFAULT_CONFIG } from "./config.ts";
 export { getDefaultConfig } from "./config.ts";
 export type { Config } from "./config.ts";
 
-// validation.tsからの再エクスポート（後方互換性）
-export {
-  generateHighlightCommand,
-  isValidColorName,
-  isValidHexColor,
-  normalizeColorName,
-  validateHighlightColor,
-  validateHighlightConfig,
-} from "./validation.ts";
-export type { HighlightColor } from "./types.ts";
-
 // 新しいモジュールからのインポート
 import {
   clearCaches,

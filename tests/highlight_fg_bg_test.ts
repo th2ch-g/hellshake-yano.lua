@@ -1,14 +1,14 @@
 import { assertEquals, assertThrows, fail } from "@std/assert";
+import { type Config } from "../denops/hellshake-yano/main.ts";
 import {
-  type Config,
   generateHighlightCommand,
-  type HighlightColor,
   isValidColorName,
   isValidHexColor,
   normalizeColorName,
   validateHighlightColor,
   validateHighlightConfig,
-} from "../denops/hellshake-yano/main.ts";
+} from "../denops/hellshake-yano/validation.ts";
+import type { HighlightColor } from "../denops/hellshake-yano/types.ts";
 
 /**
  * ハイライト色のfg/bg個別指定機能のテストケース

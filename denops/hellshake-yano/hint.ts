@@ -1281,8 +1281,17 @@ export function generateHintsWithGroups(
   const defaultMultiCharKeys = "BCEIOPQRTUVWXYZ".split("");
 
   // 厳密な分離: single_char_keysとmulti_char_keysを独立して扱う
-  const singleCharKeys = config.singleCharKeys || [];
-  const multiCharKeys = config.multiCharKeys || [];
+  // 型ガード: 文字列が渡された場合は配列に変換
+  const singleCharKeys = Array.isArray(config.singleCharKeys)
+    ? config.singleCharKeys
+    : (typeof config.singleCharKeys === 'string'
+        ? (config.singleCharKeys as string).split('')
+        : []);
+  const multiCharKeys = Array.isArray(config.multiCharKeys)
+    ? config.multiCharKeys
+    : (typeof config.multiCharKeys === 'string'
+        ? (config.multiCharKeys as string).split('')
+        : []);
 
   // 両方とも未定義の場合のみ、従来のロジックにフォールバック
   if (singleCharKeys.length === 0 && multiCharKeys.length === 0) {
@@ -1422,7 +1431,8 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
  * ```
  */
 export function isNumericOnlyKeys(keys: string[]): boolean {
-  if (keys.length === 0) {
+  // 型チェックを追加（文字列が渡された場合の防御）
+  if (!Array.isArray(keys) || keys.length === 0) {
     return false;
   }
   return keys.every(key => key.length === 1 && key >= "0" && key <= "9");

@@ -95,18 +95,18 @@
 - [x] `deno test -A`でテスト実行
 
 #### sub2 compatibility.tsインポートの削除
-- [ ] 28-32行目のcompatibility.tsからのインポート削除
-- [ ] 65行目の関数エクスポート削除
-- [ ] syncManagerConfig呼び出し（129行目、317行目）を削除
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] 28-32行目のcompatibility.tsからのインポート削除
+- [x] 65行目の関数エクスポート削除
+- [x] syncManagerConfig呼び出し（129行目、317行目）を削除
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 #### sub3 後方互換性エクスポートの削除
-- [ ] 418-427行目の後方互換性エクスポート削除
-- [ ] 69-70行目の後方互換性コメントとエクスポート削除
-- [ ] 11-14行目の後方互換性コメントと再エクスポート削除
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] 418-427行目の後方互換性エクスポート削除（すでに削除済み）
+- [x] 69-70行目の後方互換性コメントとエクスポート削除（テスト用エクスポートのため対象外）
+- [x] 15-23行目の後方互換性コメントと再エクスポート削除（validation.ts関連）
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 ### process7 compatibility.ts削除とcore.ts修正
 @target: denops/hellshake-yano/compatibility.ts, denops/hellshake-yano/core.ts
