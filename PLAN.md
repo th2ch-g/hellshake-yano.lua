@@ -167,19 +167,19 @@
 @target: tests/
 
 #### sub1 全プロセス完了後の総合テスト
-- [ ] `deno check`で型チェック（エラーゼロの確認）
-- [ ] `deno test -A`で全テスト実行
-- [ ] リグレッションテストの実施
-- [ ] パフォーマンステスト
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] `deno check`で型チェック（エラーゼロの確認）
+- [x] `deno test -A`で全テスト実行
+- [x] リグレッションテストの実施
+- [x] パフォーマンステスト
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 #### sub2 v3.0.0動作確認
-- [ ] snake_case設定でエラーになることを確認
-- [ ] camelCase設定で正常動作することを確認
-- [ ] Config型のみが使用可能なことを確認
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] snake_case設定でエラーになることを確認
+- [x] camelCase設定で正常動作することを確認
+- [x] Config型のみが使用可能なことを確認
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 ### process50 フォローアップ
 実装後に仕様変更などが発生した場合は、ここにProcessを追加する
