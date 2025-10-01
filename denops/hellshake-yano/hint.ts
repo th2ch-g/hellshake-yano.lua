@@ -145,7 +145,6 @@ export function getCharDisplayWidth(char: string, tabWidth = 8): number {
 
 /**
  * テキストが絵文字シーケンスかどうかを判定する
- * @param text - 判定対象のテキスト
  * @returns 絵文字シーケンスの場合true
  */
 function isEmojiSequence(text: string): boolean {
@@ -294,31 +293,10 @@ export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolea
 }
 
 /**
- * 表示幅を考慮したヒント位置の計算
  * @deprecated calculateHintPosition(word, { hintPosition: position, tabWidth }).col を使用してください
  *
- * 単語に対するヒント配置の最適な表示column位置を決定し、異なる配置
- * ストラテジーをサポートします。この関数はヒント表示システムの中核であり、
- * ヒントが視覚的に適切な位置に配置されることを保証します。
  *
- * @param word - ヒント位置を計算する単語オブジェクト
- * @param word.col - 開始column位置（1ベース）
- * @param word.text - 単語のテキスト内容
- * @param position - ヒント配置のストラテジー
- *   - "start": 単語の始まりにヒントを配置
- *   - "end": 単語の終わりにヒントを配置
- *   - "overlay": 単語に重ねてヒントを配置（startと同じ）
- * @param tabWidth - 表示計算用のtab幅設定（デフォルト: 8）
- * @returns ヒント配置用の表示column位置（1ベース座標系）
- * @since 1.0.0
- * @example
- * ```typescript
- * const word = { text: "function", col: 5, line: 1 };
  *
- * calculateHintDisplayPosition(word, "start", 8);   // Returns 5 (word start)
- * calculateHintDisplayPosition(word, "end", 8);     // Returns 12 (word end)
- * calculateHintDisplayPosition(word, "overlay", 8); // Returns 5 (overlay on start)
- * ```
  */
 export function calculateHintDisplayPosition(
   word: Word,
@@ -360,8 +338,6 @@ function getAssignmentCacheForMode(mode: string) {
  * @param words - キー生成元の単語配列
  * @param cursorLine - 現在のカーソル行位置
  * @param cursorCol - 現在のカーソル列位置
- * @param hintPositionSetting - ヒント位置設定
- * @param optimizationConfig - オプションの最適化設定
  * @returns string 割り当てcache用に生成されたキー
  * @since 1.0.0
  * @internal
@@ -402,7 +378,6 @@ function hashString(value: string): string {
  * @param word - ヒント割り当て対象の単語
  * @param hint - 割り当てるヒント文字列
  * @param effectiveHintPosition - 有効なヒント位置（"start", "end", "overlay", "both"）
- * @param endHint - "both"モード用のオプション終了ヒント
  * @returns HintMapping | HintMapping[] 単一マッピングまたは"both"モード用の配列
  * @since 1.0.0
  * @internal
@@ -489,7 +464,6 @@ function createSingleHintMapping(
 
 /**
  * 割り当てキャッシュに保存
- * @param cache - 保存先のGlobalCache LRUCacheインスタンス
  * @param cacheKey - cacheエントリのキー
  * @param sortedWords - cacheする並び替え済み単語配列
  * @since 1.0.0
@@ -534,29 +508,6 @@ export interface GenerateHintsOptions {
 
 /**
  * 指定数のヒントを生成する（統合版）
- * @description 指定された単語数に対してヒント文字列を生成。キャッシュ機能付きで高速動作
- * @param wordCount - 必要なヒント数
- * @param options - ヒント生成のオプション
- * @returns string[] - 生成されたヒント文字列の配列
- * @since 1.0.0
- * @example
- * ```typescript
- * // 基本的な使用例
- * generateHints(5, { markers: ['A', 'B', 'C'] }); // ['A', 'B', 'C', 'AA', 'AB']
- * generateHints(3); // ['A', 'B', 'C'] (デフォルトマーカー使用)
- * generateHints(100, { maxHints: 50 }); // 最大50個のヒントを生成
- *
- * // 数字専用モード
- * generateHints(10, { numeric: true }); // ['01', '02', ..., '10']
- *
- * // グループベースのヒント生成
- * generateHints(5, {
- *   groups: true,
- *   singleCharKeys: ['A', 'S', 'D'],
- *   multiCharKeys: ['Q', 'W', 'E'],
- *   maxSingleCharHints: 2
- * }); // ['A', 'S', 'QQ', 'QW', 'QE']
- * ```
  */
 export function generateHints(wordCount: number, options?: GenerateHintsOptions): string[];
 /**
@@ -634,21 +585,6 @@ export function generateHints(
 
 /**
  * 単語にヒントを割り当てる（最適化版）
- * @description 検出された単語にヒント文字列を割り当て。カーソル位置からの距離でソートしてより近い単語に短いヒントを割り当て
- * @param words - ヒントを割り当てる単語の配列
- * @param hints - 使用可能なヒント文字列の配列
- * @param cursorLine - カーソルの現在行番号
- * @param cursorCol - カーソルの現在列番号
- * @returns HintMapping[] - 単語とヒントのマッピング配列
- * @throws {Error} 単語またはヒントが空の場合（空の配列を返す）
- * @since 1.0.0
- * @example
- * ```typescript
- * const words = [{text: 'hello', line: 1, col: 5}, {text: 'world', line: 1, col: 15}];
- * const hints = ['A', 'B'];
- * const mappings = assignHintsToWords(words, hints, 1, 1);
- * // カーソルに近い単語に短いヒントが割り当てられる
- * ```
  */
 export function assignHintsToWords(
   words: Word[],
@@ -773,11 +709,6 @@ export function assignHintsToWords(
 
 /**
  * 複数文字ヒントを最適化して生成
- * @description 単一文字ヒントを使い切った後の複数文字ヒントを効率的に生成
- * @param wordCount - 必要な総ヒント数
- * @param markers - ヒント文字として使用するマーカー配列
- * @returns string[] 生成されたヒント文字列の配列
- * @since 1.0.0
  */
 function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): string[] {
   const hints: string[] = [];
@@ -804,48 +735,11 @@ function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): 
 
 /**
  * カーソル位置からの距離で単語を最適化してソート
- * @description カーソル位置から近い順に単語をソート。マンハッタン距離計算を使用し、大量の単語がある場合は効率的なバッチ処理を適用
- *
- * ## 距離計算アルゴリズム
- * - **マンハッタン距離**を使用: distance = |word.line - cursorLine| * 1000 + |word.col - cursorCol|
- * - 行の差を1000倍して重み付けすることで、同じ行内の単語を優先
- * - 同一距離の場合は安定ソートで行番号 → 列番号の順で決定
- *
- * ## 最適化アルゴリズム
- * - **閾値ベース分岐**: 1000個以下は通常のクイックソート、1000個超はバッチ処理
- * - **バッチ処理**: 500個ずつに分割してソート後、マージソートで結合
- * - **メモリ効率**: 中間配列を最小限に抑制
- *
- * ## パフォーマンス特性
- * - **小規模データ** (≤1000): O(n log n) - ネイティブソート使用
- * - **大規模データ** (>1000): O(n log n) - 分割統治法でメモリ使用量削減
- * - **最適ケース**: カーソル近くに集中した単語群
- * - **最悪ケース**: 全画面に均等分散した単語群
- *
  * @param words - ソートする単語の配列
- * @param cursorLine - カーソルの現在行番号（1ベース）
  * @param cursorCol - カーソルの現在列番号（1ベース）
  * @returns Word[] - 距離順にソートされた単語配列（カーソルに最も近い単語が先頭）
  * @complexity O(n log n) - n は単語数
  * @since 1.0.0
- * @example
- * ```typescript
- * // カーソル位置(1, 5)から単語をソート
- * const words = [
- *   { text: 'hello', line: 1, col: 10 },  // 距離: 0*1000 + 5 = 5
- *   { text: 'world', line: 2, col: 1 },   // 距離: 1*1000 + 4 = 1004
- *   { text: 'test', line: 1, col: 1 }     // 距離: 0*1000 + 4 = 4
- * ];
- * const sorted = sortWordsByDistanceOptimized(words, 1, 5);
- * // 結果: [test, hello, world] (距離4, 5, 1004の順)
- *
- * // 大量データのバッチ処理例
- * const largeWords = new Array(2000).fill(null).map((_, i) => ({
- *   text: `word${i}`, line: Math.floor(i/50) + 1, col: (i % 50) + 1
- * }));
- * const batchSorted = sortWordsByDistanceOptimized(largeWords, 10, 25);
- * // バッチ処理により効率的にソート
- * ```
  */
 function sortWordsByDistanceOptimized(
   words: Word[],
@@ -884,53 +778,11 @@ function sortWordsByDistanceOptimized(
 
 /**
  * 大量の単語をバッチ処理でソート
- * @description 500個を超える単語を効率的にソートするためのバッチ処理アルゴリズム。メモリ使用量を抑制し、分割統治法を使用
- *
- * ## アルゴリズム詳細
- * 1. **バッチ分割**: 250個ずつのバッチに分割
- * 2. **個別ソート**: 各バッチを個別にsortWordsByDistanceOptimizedでソート
- * 3. **マージ処理**: ソート済みバッチをmergeSortedBatchesで結合
- * 4. **メモリ効率**: 一度に全データをメモリに展開せず、段階的処理
- *
- * ## パフォーマンス特性
- * - **時間計算量**: O(n log n) - nは総単語数
- * - **空間計算量**: O(n) - 最大バッチサイズ × バッチ数分のメモリ
- * - **バッチサイズ**: 250個（メモリとCPU効率のバランス点）
- * - **スケーラビリティ**: 10万個以上の単語でも安定動作
- *
  * @param words - ソートする単語の配列（1000個以上推奨）
- * @param cursorLine - カーソルの現在行番号（1ベース）
  * @param cursorCol - カーソルの現在列番号（1ベース）
  * @returns Word[] - カーソル位置からの距離順にソートされた単語配列
  * @complexity O(n log n) - nは単語数、メモリ使用量はO(バッチサイズ)に最適化
  * @since 1.0.0
- * @example
- * ```typescript
- * // 2000個の単語を効率的にソート
- * const largeWordSet = new Array(2000).fill(null).map((_, i) => ({
- *   text: `word${i}`,
- *   line: Math.floor(i / 50) + 1,  // 50個ずつ行を変える
- *   col: (i % 50) + 1,             // 1-50列に配置
- *   byteCol: (i % 50) + 1
- * }));
- *
- * const sorted = sortWordsInBatches(largeWordSet, 20, 25);
- * // カーソル位置(20, 25)から最も近い単語が先頭に配置される
- *
- * // バッチ処理により、メモリ使用量を抑制しながら効率的にソート
- * console.log(`最も近い単語: ${sorted[0].text} at (${sorted[0].line}, ${sorted[0].col})`);
- *
- * // 極大データセット例（10万個）
- * const hugeWordSet = new Array(100000).fill(null).map((_, i) => ({
- *   text: `item${i}`,
- *   line: Math.floor(i / 100) + 1,
- *   col: (i % 100) + 1,
- *   byteCol: (i % 100) + 1
- * }));
- *
- * const hugeSorted = sortWordsInBatches(hugeWordSet, 500, 50);
- * // 10万個でも500個ずつのバッチ処理により効率的にソート完了
- * ```
  */
 function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number): Word[] {
   const batchSize = BATCH_BATCH_SIZE;
@@ -949,67 +801,11 @@ function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number
 
 /**
  * ソート済みバッチをマージ（k-wayマージアルゴリズム）
- * @description 複数のソート済みバッチを効率的にマージしてひとつのソート済み配列にする。k-wayマージ手法を使用してメモリ効率と実行速度を両立
- *
- * ## アルゴリズム詳細
- * 1. **k-wayマージ**: 複数のソート済み配列を同時に処理
- * 2. **ポインタ管理**: 各バッチの現在位置をポインタ配列で追跡
- * 3. **最小値選択**: 各バッチの現在要素から最小距離の要素を選択
- * 4. **距離再計算**: 各要素の距離を動的に計算してマージ順序を決定
- *
- * ## パフォーマンス特性
- * - **時間計算量**: O(n log k) - nは総要素数、kはバッチ数
- * - **空間計算量**: O(k) - ポインタ配列とバッファのみ
- * - **安定性**: 同一距離の要素は元の順序を保持
- * - **効率性**: 全要素の再ソートを避けて段階的マージ
- *
- * ## 距離計算の詳細
- * - マンハッタン距離: |word.line - cursorLine| * 1000 + |word.col - cursorCol|
- * - 行重視の重み付け（1000倍）により行内移動を優先
- * - 実時間計算により正確な距離順序を保証
- *
  * @param batches - ソート済み単語バッチの配列（各バッチは距離順にソート済み）
- * @param cursorLine - カーソルの現在行番号（1ベース、距離計算用）
  * @param cursorCol - カーソルの現在列番号（1ベース、距離計算用）
  * @returns Word[] - マージされたソート済み単語配列（カーソルからの距離順）
  * @complexity O(n log k) - nは総要素数、kはバッチ数
  * @since 1.0.0
- * @example
- * ```typescript
- * // 3つのソート済みバッチをマージ
- * const batch1 = [
- *   { text: 'close', line: 1, col: 3 },  // 距離: 2
- *   { text: 'far', line: 5, col: 1 }     // 距離: 4004
- * ];
- * const batch2 = [
- *   { text: 'here', line: 1, col: 1 },   // 距離: 0
- *   { text: 'medium', line: 2, col: 1 }  // 距離: 1000
- * ];
- * const batch3 = [
- *   { text: 'next', line: 1, col: 2 }    // 距離: 1
- * ];
- *
- * const merged = mergeSortedBatches([batch1, batch2, batch3], 1, 1);
- * // 結果: [here, next, close, medium, far] (距離: 0, 1, 2, 1000, 4004)
- *
- * // 大量バッチのマージ例
- * const largeBatches = new Array(10).fill(null).map((_, batchIndex) =>
- *   new Array(100).fill(null).map((_, i) => ({
- *     text: `batch${batchIndex}_word${i}`,
- *     line: batchIndex * 10 + Math.floor(i / 10) + 1,
- *     col: (i % 10) + 1,
- *     byteCol: (i % 10) + 1
- *   })).sort((a, b) => {
- *     const distA = Math.abs(a.line - 50) * 1000 + Math.abs(a.col - 5);
- *     const distB = Math.abs(b.line - 50) * 1000 + Math.abs(b.col - 5);
- *     return distA - distB;
- *   })
- * );
- *
- * const largeMerged = mergeSortedBatches(largeBatches, 50, 5);
- * // 1000個の要素を10のバッチから効率的にマージ
- * console.log(`最も近い要素: ${largeMerged[0].text}`);
- * ```
  */
 function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: number): Word[] {
   if (batches.length === 0) return [];
@@ -1049,13 +845,6 @@ function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: nu
 
 /**
  * キャッシュをクリア
- * @description ヒント生成とヒント割り当てのキャッシュをクリアする
- * @returns void
- * @since 1.0.0
- * @example
- * ```typescript
- * clearHintCache(); // キャッシュをリセット
- * ```
  */
 export function clearHintCache(): void {
   hintCache.clear();
@@ -1066,14 +855,6 @@ export function clearHintCache(): void {
 
 /**
  * キャッシュの統計情報を取得
- * @description ヒント関連キャッシュの使用状況を取得
- * @returns {{ hintCacheSize: number, assignmentCacheSize: number }} キャッシュサイズ情報
- * @since 1.0.0
- * @example
- * ```typescript
- * const stats = getHintCacheStats();
- * console.log(`Hint cache: ${stats.hintCacheSize}, Assignment cache: ${stats.assignmentCacheSize}`);
- * ```
  */
 export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSize: number } {
   return {
@@ -1087,12 +868,6 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
  * GlobalCacheを使用したhintシステムの詳細統計情報を取得
  * @returns GlobalCacheからの詳細な統計情報とパフォーマンス指標
  * @since 1.0.0
- * @example
- * ```typescript
- * const stats = getGlobalCacheStats();
- * console.log(`HINTS ヒット率: ${stats.HINTS.hitRate}`);
- * console.log(`キャッシュ総サイズ: ${stats.totalSize}`);
- * ```
  */
 /**
  * ヒント関連のキャッシュ統計を集約した型
@@ -1156,27 +931,6 @@ export interface CalculateHintPositionOptions {
 
 /**
  * ヒント表示位置を計算する（統合版）
- * @description 単語とヒント位置設定に基づいてヒントの表示位置を計算
- * coordinateSystemオプションを指定すると、Vim/Neovim両方の座標系に対応した位置情報を返す
- * @param word - 対象の単語
- * @param hintPositionOrOptions - ヒント位置設定（文字列）またはオプションオブジェクト
- * @returns HintPosition または HintPositionWithCoordinateSystem
- * @since 1.0.0
- * @example
- * ```typescript
- * // シンプルな使用法（後方互換性）
- * const word = { text: 'hello', line: 1, col: 5 };
- * const position = calculateHintPosition(word, 'start');
- * // { line: 1, col: 5, display_mode: 'before' }
- *
- * // オプション指定（座標系変換なし）
- * const position2 = calculateHintPosition(word, { hintPosition: 'end' });
- * // { line: 1, col: 9, display_mode: 'after' }
- *
- * // オプション指定（座標系変換あり）
- * const position3 = calculateHintPosition(word, { hintPosition: 'start', coordinateSystem: 'nvim' });
- * // { line: 1, col: 5, display_mode: 'before', vim_col: 5, nvim_col: 4, vim_line: 1, nvim_line: 0 }
- * ```
  */
 export function calculateHintPosition(
   word: Word,
@@ -1303,20 +1057,7 @@ export function calculateHintPosition(
 }
 
 /**
- * 座標系対応版：ヒント表示位置を計算する（Vim/Neovim両方対応）
  * @deprecated calculateHintPosition(word, { coordinateSystem: 'nvim', hintPosition, enableDebug }) を使用してください
- * @description Vim座標系（1ベース）とNeovim extmark座標系（0ベース）の両方に対応したヒント位置計算
- * @param word - 単語情報（1ベース座標で提供されることを前提）
- * @param hintPosition - ヒント位置設定（"start", "end", "overlay"）
- * @param enableDebug - デバッグログの有効/無効（デフォルト: false）
- * @returns HintPositionWithCoordinateSystem Vim/Neovim両方の座標系に対応した位置情報
- * @since 1.0.0
- * @example
- * ```typescript
- * const word = { text: 'hello', line: 1, col: 5, byteCol: 5 };
- * const position = calculateHintPositionWithCoordinateSystem(word, 'start', true);
- * // { line: 1, col: 5, display_mode: 'before', vim_col: 5, nvim_col: 4, vim_line: 1, nvim_line: 0 }
- * ```
  */
 export function calculateHintPositionWithCoordinateSystem(
   word: Word,
@@ -1335,84 +1076,15 @@ export function calculateHintPositionWithCoordinateSystem(
 
 /**
  * キーグループを使用したヒント生成（高度な振り分けロジック付き）- 内部実装
- * @description 1文字ヒント用と2文字以上ヒント用のキーを分けて管理し、効率的なヒント生成を行う。数字専用モード自動検出機能付き
- * @internal
- *
- * ## ヒントグループ生成ロジック
- * 1. **1文字ヒント優先**: max_single_char_hints で指定された数まで単一文字ヒントを生成
- * 2. **複数文字ヒント**: 1文字ヒントを使い切った後、multi_char_keys から2文字の組み合わせを生成
- * 3. **数字専用モード自動検出**: multi_char_keysが0-9のみの場合、01-09→10-99→00の優先順位で生成
- * 4. **数字フォールバック**: アルファベット組み合わせを使い切った場合、00-99の数字ヒントを使用
- * 5. **3文字エクステンション**: 数字でも足りない場合、3文字の組み合わせまで拡張
- *
- * ## 単一文字と複数文字の振り分け
- * - **single_char_keys**: ホームポジション重視のキー配列（例: ASDFGHJKL、記号も可）
- * - **multi_char_keys**: 複数文字ヒント用のキー配列（例: QWERTYUIOP、数字専用も可）
- * - **分離の利点**: タイピング効率とヒント識別性を両立
- * - **重複防止**: 設定検証により同じキーが両方のグループに含まれることを防止
- *
- * ## 数字専用モード（Numeric-Only Mode）
- * - **検出条件**: multi_char_keysが['0','1','2','3','4','5','6','7','8','9']のような数字のみの配列
- * - **生成パターン**: 01,02,03,...,09,10,11,...,99,00（優先順位順）
- * - **最大数**: 100個の2桁数字ヒント
- * - **利点**: 視覚的に識別しやすく、テンキー操作に最適化
- *
- * ## 数字フォールバックの仕組み
- * - **発動条件**: アルファベット2文字組み合わせを使い切った場合
- * - **数字範囲**: 00から99まで（最大100個の追加ヒント）
- * - **フォーマット**: ゼロパディング付き2桁数字（例: 00, 01, 02...）
- * - **識別性**: アルファベットと明確に区別できる視覚的特徴
- *
  * @param wordCount - 必要なヒント数
- * @param config - ヒントキー設定（single_char_keys, multi_char_keys, max_single_char_hints等）
  * @returns string[] - 生成されたヒント文字列の配列（1文字 → 2文字 → 数字 → 3文字の順）
  * @complexity O(n) - n は要求されたヒント数
  * @since 1.0.0
- * @example
- * ```typescript
- * // 基本的な使用例
- * const config = {
- *   single_char_keys: ['A', 'S', 'D'],
- *   multi_char_keys: ['Q', 'W', 'E'],
- *   max_single_char_hints: 2
- * };
- * const hints = generateHintsWithGroups(5, config);
- * // 結果: ['A', 'S', 'QQ', 'QW', 'QE']
- *
- * // 数字専用モード自動検出例
- * const numericConfig = {
- *   single_char_keys: ['A', 'S', 'D'],
- *   multi_char_keys: ['0','1','2','3','4','5','6','7','8','9'],
- *   max_single_char_hints: 3
- * };
- * const numericHints = generateHintsWithGroups(10, numericConfig);
- * // 結果: ['A', 'S', 'D', '01', '02', '03', '04', '05', '06', '07']
- * // 説明: multi_char_keysが数字のみなので、01から優先順位順に生成
- *
- * // 記号とのsingle_char_keys混在例
- * const symbolConfig = {
- *   single_char_keys: ['.', ',', ';'],
- *   multi_char_keys: ['0','1','2','3','4','5','6','7','8','9'],
- *   max_single_char_hints: 3
- * };
- * const symbolHints = generateHintsWithGroups(8, symbolConfig);
- * // 結果: ['.', ',', ';', '01', '02', '03', '04', '05']
- *
- * // 数字フォールバック例
- * const smallConfig = {
- *   single_char_keys: ['A'],
- *   multi_char_keys: ['Q'],
- *   max_single_char_hints: 1
- * };
- * const manyHints = generateHintsWithGroups(5, smallConfig);
- * // 結果: ['A', 'QQ', '00', '01', '02']
- * ```
  */
 function generateHintsWithGroupsImpl(
   wordCount: number,
   config: HintKeyConfig,
 ): string[] {
-  // デフォルト値の設定
   const defaultMarkers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const defaultSingleCharKeys = "ASDFGHJKLNM0123456789".split("");
   const defaultMultiCharKeys = "BCEIOPQRTUVWXYZ".split("");
@@ -1480,11 +1152,6 @@ function generateHintsWithGroupsImpl(
 
 /**
  * 1文字ヒントの生成
- * @description 指定されたキーから1文字ヒントを生成
- * @param keys - 使用可能なキーの配列
- * @param count - 生成するヒント数
- * @returns string[] 生成された1文字ヒントの配列
- * @since 1.0.0
  */
 function generateSingleCharHints(keys: string[], count: number): string[] {
   return keys.slice(0, count);
@@ -1492,69 +1159,15 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
 
 /**
  * 指定されたキーから複数文字ヒントを生成（多段階フォールバック付き）
- * @description 2文字組み合わせ → 3文字組み合わせの段階的ヒント生成システム
- *
- * ## 数字専用モード（Numeric-Only Mode）
- * keysが0-9の数字のみで構成される場合、自動的に数字専用モードを有効化
- * - **生成パターン**: 00-99の2桁数字ヒント（最大100個）
- * - **優先順位**: 01-09 → 10-99 → 00 の順で生成
- * - **使用例**: ['0','1','2','3','4','5','6','7','8','9'] → 01,02,...,99,00
- *
- * ## 通常モード（Normal Mode）
- * アルファベットや記号が含まれる場合の生成アルゴリズム
- * 1. **2文字組み合わせ**: keys × keys の直積（例: ['A','B'] → ['AA','AB','BA','BB']）
- * 2. **3文字エクステンション**: 2文字でも不足時にkeys³の3文字組み合わせ
- * 3. **順序最適化**: より短いヒントを優先的に生成
- *
- * ## パフォーマンス特性とスケーラビリティ
- * - **数字専用モード**: O(min(count, 100)) - 固定上限100個
- * - **通常モード 2文字段階**: O(k²) - kはキー数
- * - **通常モード 3文字段階**: O(k³) - kはキー数
- * - **メモリ効率**: 必要分のみ生成、事前計算なし
- * - **最大容量（通常）**: k² + k³個のヒント（kはキー数）
- * - **最大容量（数字）**: 100個のヒント
- *
- * ## 実用的な容量計算
- * - 数字専用: 100個のヒント（固定）
- * - k=5キーの場合: 25 + 125 = 150個のヒント
- * - k=10キーの場合: 100 + 1000 = 1100個のヒント
- * - k=26キーの場合: 676 + 17576 = 18252個のヒント
- *
  * @param keys - 使用可能なキーの配列（数字のみまたはアルファベット/記号）
  * @param count - 生成するヒント数（最大値は数字モード:100、通常モード:keys² + keys³）
  * @returns string[] - 生成された複数文字ヒントの配列
  * @complexity 数字モード:O(min(count,100)) / 通常モード:O(min(count,k²+k³))
  * @since 1.0.0
- * @example
- * ```typescript
- * // 数字専用モード例
- * const numericHints = generateMultiCharHintsFromKeys(['0','1','2','3','4','5','6','7','8','9'], 10);
- * // 結果: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
- * // 説明: 優先順位に基づいて01から開始
- *
- * // 基本的な2文字ヒント生成（通常モード）
- * const basicHints = generateMultiCharHintsFromKeys(['A', 'B'], 5);
- * // 結果: ['AA', 'AB', 'BA', 'BB', 'AAA']
- * // 説明: 2文字組み合わせ4個 + 3文字1個
- *
- * // 実際のキーボード配列例
- * const homeRow = generateMultiCharHintsFromKeys(['A','S','D','F'], 20);
- * // ホームロウキーから20個のヒント生成（16の2文字 + 4の3文字）
- * ```
  */
 
 /**
  * キー配列が数字のみで構成されているかをチェック
- * @description multiCharKeys数字専用モードの判定に使用
- * @param keys - チェックするキー配列
- * @returns boolean - すべてのキーが0-9の1文字数字の場合true
- * @since 1.0.0
- * @example
- * ```typescript
- * isNumericOnlyKeys(["0", "1", "2"]) // => true
- * isNumericOnlyKeys(["0", "1", "A"]) // => false
- * isNumericOnlyKeys([]) // => false
- * ```
  */
 export function isNumericOnlyKeys(keys: string[]): boolean {
   // 型チェックを追加（文字列が渡された場合の防御）
@@ -1569,22 +1182,9 @@ export function isNumericOnlyKeys(keys: string[]): boolean {
  *
  * @description
  * 01-09, 10-99, 00の順序で数字2文字ヒントを生成します。
- * useNumericMultiCharHints機能で使用される関数です。
- *
- * ### 生成順序：
- * 1. 01-09（9個）
- * 2. 10-99（90個）
- * 3. 00（1個）
  *
  * @param count - 生成するヒント数（最大100）
  * @returns string[] 生成された数字ヒント配列
- *
- * @example
- * ```typescript
- * generateNumericHints(5);   // ["01", "02", "03", "04", "05"]
- * generateNumericHints(10);  // ["01", "02", ..., "09", "10"]
- * generateNumericHints(100); // ["01", "02", ..., "99", "00"]
- * ```
  *
  * @since 1.0.0
  * @internal
@@ -1684,7 +1284,6 @@ export function generateMultiCharHintsFromKeys(
 
 /**
  * 有効な記号のリスト定数
- * @description singleCharKeysで使用可能な記号文字
  */
 const VALID_SYMBOLS = [";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"];
 const VALID_SYMBOL_SET = new Set<string>(VALID_SYMBOLS);
@@ -1781,7 +1380,6 @@ function validateCharacterValidity(keys: string[]): string[] {
 
 /**
  * 数字専用モードの整合性を検証
- * @param config - 検証するヒントキー設定
  * @returns エラーメッセージの配列
  */
 function validateNumericOnlyMode(config: HintKeyConfig): string[] {
@@ -1803,20 +1401,6 @@ function validateNumericOnlyMode(config: HintKeyConfig): string[] {
 
 /**
  * ヒントキー設定の検証
- * @description ヒントキー設定の妥当性を検証し、エラーメッセージを返す
- * @param config - 検証するヒントキー設定
- * @returns {{ valid: boolean, errors: string[] }} 検証結果オブジェクト
- * @since 1.0.0
- * @example
- * ```typescript
- * const result = validateHintKeyConfig({
- *   single_char_keys: ['A', 'BB'], // 無効（2文字）
- *   multi_char_keys: ['Q']
- * });
- * if (!result.valid) {
- *   console.log('Errors:', result.errors);
- * }
- * ```
  */
 export function validateHintKeyConfig(config: HintKeyConfig): {
   valid: boolean;
@@ -1898,34 +1482,10 @@ let adjacencyCache = GlobalCache.getInstance().getCache<string, { word: Word; ad
 /**
  * 隣接する単語を検出する
  *
- * @description 同一行で隣接している単語（1カラム以内の間隔）を特定し、
- * ヒント表示の重複を防ぐ。タブ文字とマルチバイト文字の正確な
- * 位置計算に表示幅計算を使用する。
- *
- * ## アルゴリズムの詳細
- * - **同一行フィルタリング**: 同じ行番号の単語のみをチェック
- * - **表示幅対応**: タブ展開とマルチバイト文字幅を考慮
- * - **近接検出**: areWordsAdjacent ユーティリティを使用した正確な隣接判定
- * - **パフォーマンス最適化**: 繰り返し呼び出し用にキャッシュされる結果
- *
  * @param words - 検出対象の単語配列
  * @returns {{ word: Word; adjacentWords: Word[] }[]} 各単語とその隣接単語の配列
  * @complexity O(n²) - nは単語数
  * @since 1.0.0
- * @example
- * ```typescript
- * const words = [
- *   { text: 'hello', line: 1, col: 1 },
- *   { text: 'world', line: 1, col: 7 },   // Adjacent to 'hello'
- *   { text: 'test', line: 2, col: 1 }     // Different line, not adjacent
- * ];
- * const result = detectAdjacentWords(words);
- * // Returns: [
- * //   { word: words[0], adjacentWords: [words[1]] },
- * //   { word: words[1], adjacentWords: [words[0]] },
- * //   { word: words[2], adjacentWords: [] }
- * // ]
- * ```
  */
 export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords: Word[] }[] {
   if (words.length === 0) {
@@ -1971,28 +1531,10 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
 
 /**
  * 単語がマークダウン記号かどうかを判定する
- * Check if a word consists only of markdown symbols or punctuation
- *
- * @description マークダウン記号やその他の記号文字のみで構成されているかチェック
- * Determines if a word is composed entirely of markdown symbols or punctuation
- * characters. Used for prioritization in hint overlap resolution.
- *
- * ## Symbol Detection Pattern
- * - **Markdown symbols**: -, *, #, `, [, ], (, ), {, }
- * - **Punctuation**: ., ,, ;, :, !, ?
- * - **Pattern matching**: Uses regex `/^[\-\*#`\[\](){}.,;:!?]+$/`
  *
  * @param word - 判定対象の単語
  * @returns boolean 記号の場合true
  * @since 1.0.0
- * @example
- * ```typescript
- * isSymbolWord({ text: '**', line: 1, col: 5 });     // true (markdown bold)
- * isSymbolWord({ text: '[]', line: 1, col: 10 });    // true (markdown link)
- * isSymbolWord({ text: 'hello', line: 1, col: 15 }); // false (text word)
- * isSymbolWord({ text: '123', line: 1, col: 20 });   // false (numeric word)
- * isSymbolWord({ text: '', line: 1, col: 25 });      // false (empty)
- * ```
  */
 export function isSymbolWord(word: Word): boolean {
   if (!word.text || word.text.trim().length === 0) {
@@ -2007,22 +1549,6 @@ export function isSymbolWord(word: Word): boolean {
 
 /**
  * オーバーラップによりヒントをスキップするかどうかを判定する
- * Determine whether to skip hint display due to overlap conflicts
- *
- * @description 優先度ルールに基づいてヒント表示の要否を決定
- * Determines whether to skip hint display based on priority rules when words
- * are adjacent and would cause hint overlaps. Implements a sophisticated
- * prioritization system for optimal hint visibility.
- *
- * ## Priority Resolution Algorithm
- * 1. **Type Priority**: Text words > Symbol words (configurable)
- * 2. **Length Priority**: Longer words > Shorter words (same type)
- * 3. **Position Priority**: Right position > Left position (same type and length)
- *
- * ## Conflict Resolution Examples
- * - Symbol vs Text: Text word gets hint, symbol is skipped
- * - Same type, different length: Longer word gets hint
- * - Same type and length: Right-most word gets hint
  *
  * @param word - 判定対象の単語
  * @param adjacentWords - 隣接している単語の配列
@@ -2031,21 +1557,6 @@ export function isSymbolWord(word: Word): boolean {
  * @param priorityRules.wordsPriority - テキスト単語の優先度値（高い = 高優先度）
  * @returns boolean スキップする場合true
  * @since 1.0.0
- * @example
- * ```typescript
- * const word = { text: '*', line: 1, col: 5 };           // Symbol word
- * const adjacent = [{ text: 'hello', line: 1, col: 6 }]; // Text word
- * const rules = { symbolsPriority: 1, wordsPriority: 2 };
- *
- * const shouldSkip = shouldSkipHintForOverlap(word, adjacent, rules);
- * // Returns: true (symbol skipped in favor of text word)
- *
- * // Same type comparison
- * const shortWord = { text: 'a', line: 1, col: 1 };
- * const longWord = [{ text: 'hello', line: 1, col: 3 }];
- * const skipShort = shouldSkipHintForOverlap(shortWord, longWord, rules);
- * // Returns: true (shorter word skipped)
- * ```
  */
 export function shouldSkipHintForOverlap(
   word: Word,
@@ -2088,24 +1599,6 @@ export function shouldSkipHintForOverlap(
 
 /**
  * ヒントが利用可能なスペースに表示可能かチェック
- * Check if a hint can be displayed in the available space
- *
- * @description 隣接する単語と最小ヒント幅要件を考慮してヒント表示可能性を判定
- * Determines if a hint can be displayed considering adjacent words and minimum
- * hint width requirements. Performs precise space calculations using display
- * width for tab characters and multi-byte characters.
- *
- * ## Space Calculation Algorithm
- * 1. **Display width calculation**: Uses getDisplayWidth for accurate character width
- * 2. **Position analysis**: Calculates word end positions considering display width
- * 3. **Space availability**: Measures gaps between adjacent words
- * 4. **Minimum width check**: Ensures sufficient space for minimum hint display
- *
- * ## Edge Cases Handled
- * - **Different lines**: No conflict for words on different lines
- * - **Overlapping words**: Returns false for overlapping positions
- * - **Tab characters**: Proper expansion using tabWidth parameter
- * - **Multi-byte characters**: Accurate width calculation for Unicode
  *
  * @param word - ヒント表示をチェックする単語
  * @param adjacentWords - 競合を引き起こす可能性のある隣接単語の配列
@@ -2114,20 +1607,6 @@ export function shouldSkipHintForOverlap(
  * @returns boolean ヒントが表示可能な場合true、そうでなければfalse
  * @complexity O(n) - nは隣接単語数
  * @since 1.0.0
- * @example
- * ```typescript
- * const word = { text: 'hello', line: 1, col: 1 };        // cols 1-5
- * const adjacent = [{ text: 'world', line: 1, col: 10 }];  // cols 10-14
- *
- * const canDisplay = canDisplayHint(word, adjacent, 2, 8);
- * // Returns: true (4 columns gap: 6,7,8,9 >= minHintWidth of 2)
- *
- * // Tight spacing example
- * const tightWord = { text: 'hi', line: 1, col: 1 };       // cols 1-2
- * const closeAdj = [{ text: 'there', line: 1, col: 4 }];   // cols 4-8
- * const canDisplayTight = canDisplayHint(tightWord, closeAdj, 2);
- * // Returns: false (1 column gap: 3 < minHintWidth of 2)
- * ```
  */
 export function canDisplayHint(
   word: Word,
@@ -2179,40 +1658,11 @@ export function canDisplayHint(
 /**
  * 定義済みルールに基づいてヒントを優先順位付け
  *
- * @description 競合解決のために事前定義されたルールに基づいてヒントの優先順位を決定:
- * 1. テキスト > 記号 - テキスト単語が記号単語より優先
- * 2. 長い単語 > 短い単語（同じタイプ） - 長さベースの優先度
- * 3. 左位置 > 右位置（同じ長さとタイプ） - 位置ベースのタイブレーカー
- *
- * ## 処理アルゴリズム
- * 1. **行グルーピング**: 効率化のため行別に単語を処理
- * 2. **競合検出**: 隣接単語をスペース競合のために分析
- * 3. **優先度解決**: 複数単語競合を解決するためにルールを適用
- * 4. **最終選択**: 各競合グループからの勝者単語のみを返す
- *
- * ## 優先度ルールの実装
- * - **テキストvs記号**: isSymbolWord()分類を使用
- * - **長さ比較**: 直接的なtext.length比較
- * - **位置タイブレーカー**: 列ベースの左から右への優先
- * - **競合解決**: 重複領域に対する勝者総取りアプローチ
- *
  * @param words - 隣接単語情報を含む単語の配列
  * @param tabWidth - 表示計算用のタブ幅（デフォルト: 8）
  * @returns Word[] 優先度ルールに基づいてヒントを表示すべき単語の配列
  * @complexity 競合検出にO(n²)、ソートにO(n log n)
  * @since 1.0.0
- * @example
- * ```typescript
- * const wordsWithAdjacent = [
- *   { word: { text: '*', line: 1, col: 1 }, adjacentWords: [{ text: 'hello', line: 1, col: 2 }] },
- *   { word: { text: 'hello', line: 1, col: 2 }, adjacentWords: [{ text: '*', line: 1, col: 1 }] },
- *   { word: { text: 'world', line: 1, col: 10 }, adjacentWords: [] }
- * ];
- *
- * const prioritized = prioritizeHints(wordsWithAdjacent, 8);
- * // 結果: [{ text: 'hello', line: 1, col: 2 }, { text: 'world', line: 1, col: 10 }]
- * // '*'は'hello'より低優先度のためフィルタリングされる
- * ```
  */
 export function prioritizeHints(
   words: { word: Word; adjacentWords: Word[] }[],
@@ -2242,8 +1692,6 @@ export function prioritizeHints(
 
 /**
  * 単一行の単語を優先順位付け
- *
- * @description prioritizeHints関数の内部ヘルパー関数で、単一行の単語を処理して競合を解決し、優先度ルールを適用する。
  *
  * @param lineWords - 単一行の単語情報の配列
  * @param tabWidth - 表示計算用のタブ幅
@@ -2294,8 +1742,6 @@ function prioritizeWordsOnLine(
 /**
  * 指定された単語と競合する単語を検出
  *
- * @description 指定された単語のヒント表示と競合する単語を、間のスペース不足により特定する。
- *
  * @param wordInfo - 隣接単語を含む単語情報
  * @param allWords - 同じ行のすべての単語
  * @param tabWidth - 表示計算用のタブ幅
@@ -2328,8 +1774,6 @@ function findConflictingWords(
 /**
  * 優先順位ルールを使用して複数単語間の競合を解決
  *
- * @description 事前定義された優先度ルール（テキスト > 記号 > 長さ > 位置）に基づいて、競合する複数の単語から勝者を選択する。
- *
  * @param conflictingWords - 競合する単語情報の配列
  * @returns Word ヒントを表示すべき勝者単語
  * @since 1.0.0
@@ -2355,8 +1799,6 @@ function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }
 
 /**
  * 同じタイプの単語間の競合を解決
- *
- * @description タイプベースの優先度付けで勝者を決定できない場合に、長さと位置のルールを使用して同じタイプ（全てテキストまたは全て記号）の単語間の競合を解決する。
  *
  * @param words - 同じタイプの単語情報の配列
  * @returns Word 長さと位置ルールに基づく勝者単語
@@ -2386,20 +1828,10 @@ function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[])
 /**
  * 単語の表示開始column位置を取得
  *
- * 単語の開始表示column位置を返します。現在は単語がすでに表示位置を
- * 格納しているため、単語のcolumnを直接返しますが、この関数は単語境界
- * 計算のための一貫したAPIを提供します。
- *
  * @param word - 位置情報を含む単語オブジェクト
  * @param word.col - 開始column位置（1ベース）
- * @param tabWidth - tab幅設定（API一貫性のため含む、デフォルト: 8）
  * @returns 表示開始column位置（1ベース座標系）
  * @since 1.0.0
- * @example
- * ```typescript
- * const word = { text: "example", col: 10, line: 1 };
- * getWordDisplayStartCol(word, 8); // Returns 10
- * ```
  */
 export function getWordDisplayStartCol(word: Word, tabWidth = 8): number {
   return word.col;
@@ -2408,28 +1840,12 @@ export function getWordDisplayStartCol(word: Word, tabWidth = 8): number {
 /**
  * 位置が単語の表示範囲内にあるかをチェック
  *
- * 指定された表示column位置が単語の境界内にあるかを判定します。
- * tabやマルチバイト文字を含む単語の視覚的幅を考慮します。
- * これはカーソル位置決めと単語選択の検証に使用されます。
- *
  * @param position - チェックするcolumn位置（1ベース座標系）
  * @param word - チェック対象の単語オブジェクト
  * @param word.col - 単語の開始column位置（1ベース）
  * @param word.text - 単語のテキスト内容
- * @param tabWidth - 表示計算用のtab幅設定（デフォルト: 8）
  * @returns 位置が単語の表示範囲内（境界含む）にある場合はtrue、そうでなければfalse
  * @since 1.0.0
- * @example
- * ```typescript
- * const word = { text: "example", col: 5, line: 1 };
- * // 単語はcolumn 5-11にまたがる（column 5から始まる7文字）
- *
- * isPositionWithinWord(5, word, 8);  // Returns true (start of word)
- * isPositionWithinWord(8, word, 8);  // Returns true (middle of word)
- * isPositionWithinWord(11, word, 8); // Returns true (end of word)
- * isPositionWithinWord(4, word, 8);  // Returns false (before word)
- * isPositionWithinWord(12, word, 8); // Returns false (after word)
- * ```
  */
 export function isPositionWithinWord(position: number, word: Word, tabWidth = 8): boolean {
   const startCol = getWordDisplayStartCol(word, tabWidth);
@@ -2440,34 +1856,9 @@ export function isPositionWithinWord(position: number, word: Word, tabWidth = 8)
 /**
  * 表示位置での2つの単語間のギャップを計算
  *
- * 同じ行の2つの単語間の視覚的距離を表示column位置で測定して計算します。
- * 単語間の空の位置数を返すか、単語が重複している場合は負の値を返します。
- * これはヒントの間隔とレイアウト決定に不可欠です。
- *
  * @param word1 - 最初の単語オブジェクト
  * @param word2 - 2番目の単語オブジェクト
- * @param tabWidth - 表示計算用のtab幅設定（デフォルト: 8）
  * @returns 単語間の表示位置でのギャップ
- *   - 正数: 単語間の空のcolumn数
- *   - ゼロ: 単語が接触している（隣接）
- *   - 負数: 単語が重複している
- *   - Infinity: 単語が異なる行にある
- * @since 1.0.0
- * @example
- * ```typescript
- * const word1 = { text: "hello", col: 1, line: 1 };  // Spans columns 1-5
- * const word2 = { text: "world", col: 7, line: 1 };  // Spans columns 7-11
- * calculateWordGap(word1, word2, 8); // Returns 0 (touching: 5->6->7)
- *
- * const word3 = { text: "far", col: 10, line: 1 };   // Spans columns 10-12
- * calculateWordGap(word1, word3, 8); // Returns 3 (gap: columns 6,7,8,9)
- *
- * const word4 = { text: "overlap", col: 3, line: 1 }; // Spans columns 3-9
- * calculateWordGap(word1, word4, 8); // Returns -3 (overlapping by 3 columns)
- *
- * const word5 = { text: "other", col: 1, line: 2 };
- * calculateWordGap(word1, word5, 8); // Returns Infinity (different lines)
- * ```
  */
 export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number {
   if (word1.line !== word2.line) {
@@ -2492,11 +1883,6 @@ export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number
 
 /**
  * HintManagerクラス - ヒント管理システム
- *
- * 主要機能:
- * - キー別最小文字数設定の管理
- * - キーコンテキストの変更時のヒントクリア
- * - 設定値の委譲とアクセス
  */
 export class HintManager {
   /** ヒント管理に必要な設定オブジェクト */
@@ -2506,7 +1892,6 @@ export class HintManager {
 
   /**
    * HintManagerのコンストラクタ
-   * @param config - ヒント管理に必要な設定オブジェクト
    */
   constructor(config: Config) {
     this.config = config;
@@ -2515,10 +1900,6 @@ export class HintManager {
 
   /**
    * キー押下時の処理
-   *
-   * キーコンテキストが変更された場合の処理:
-   * 1. 既存ヒントのクリア（即座の表示更新）
-   * 2. 新しいキーコンテキストの設定（設定オブジェクトとの同期）
    *
    * @param key - 押下されたキー文字
    */
@@ -2536,10 +1917,6 @@ export class HintManager {
 
   /**
    * キー別最小文字数の取得
-   *
-   * main.tsのgetMinLengthForKey関数に委譲することで:
-   * - 設定の一元管理を維持
-   * - 単一責任の原則を遵守
    *
    * @param key - 最小文字数を取得したいキー
    * @returns キーに対応する最小文字数（設定に基づく）
@@ -2586,13 +1963,7 @@ export class HintManager {
 
 /**
  * @deprecated generateHints() を options.groups: true で使用してください。
- * このエイリアスは後方互換性のためのもので、将来的に削除される予定です。
  *
- * 推奨される移行方法:
- * ```typescript
- * // 旧: generateHintsWithGroups(wordCount, config)
- * // 新: generateHints(wordCount, { groups: true, ...config })
- * ```
  */
 export function generateHintsWithGroups(
   wordCount: number,
@@ -2603,13 +1974,7 @@ export function generateHintsWithGroups(
 
 /**
  * @deprecated generateHints() を options.numeric: true で使用してください。
- * このエイリアスは後方互換性のためのもので、将来的に削除される予定です。
  *
- * 推奨される移行方法:
- * ```typescript
- * // 旧: generateNumericHints(count)
- * // 新: generateHints(count, { numeric: true })
- * ```
  */
 export function generateNumericHints(count: number): string[] {
   return generateNumericHintsImpl(count);

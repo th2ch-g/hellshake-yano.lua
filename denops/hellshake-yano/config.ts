@@ -1,186 +1,58 @@
 /**
  * 設定管理モジュール
- *
- * 📝 v3.0.0 破壊的変更
- * ===================
- * Process4: 旧型定義の削除完了
- *
- * 以下のインターフェースはv3.0.0で削除されました:
- * - CoreConfig      (削除完了 - process4 sub1)
- * - HintConfig      (削除完了 - process4 sub3)
- * - WordConfig      (削除完了 - process4 sub2)
- * - PerformanceConfig (削除完了 - process4 sub3)
- * - DebugConfig     (削除完了 - process4 sub3)
- *
- * 🔄 移行方法:
- * 1. UnifiedConfig (Config型エイリアス) を使用してください
- * 2. フラット化されたcamelCase構造を使用してください
- * 3. Partial<Config>を使用して部分的な設定を定義してください
- *
- * 📅 タイムライン:
- * - v2.5.0: 廃止予定警告開始
- * - v2.8.0: 廃止予定警告強化
- * - v3.0.0: 完全削除（2025年）
  */
 
-// Import consolidated types from types.ts
 import type { HighlightColor, HintPositionType } from "./types.ts";
 
-
-// HighlightColor interface moved to types.ts for consolidation
-// Use: import type { HighlightColor } from "./types.ts";
-
-// v3.0.0で削除された型の記録:
-// - CoreConfig, HintConfig, WordConfig, PerformanceConfig, DebugConfig
-// - CamelCaseConfig, ModernConfig
-// 移行方法: UnifiedConfig (Config型エイリアス) または Partial<Config> を使用してください
-
-/**
- * 統一設定インターフェース (UnifiedConfig)
- * 階層構造を排除し、32個の設定項目をすべて一つの階層で定義します。
- * TDD Red-Green-Refactor方式で実装された型安全な設定システムです。
- *
- * @interface Config
- * @example
- * ```typescript
- * const config: UnifiedConfig = {
- *   enabled: true,
- *   markers: ['A', 'S', 'D', 'F'],
- *   motionCount: 3,
- *   motionTimeout: 2000,
- *   hintPosition: 'start',
- *   useNumbers: true,
- *   highlightSelected: true
- * };
- * ```
- */
-
 export interface Config {
-  // Core settings (6 properties)
-  /** プラグインの有効/無効状態 */
   enabled: boolean;
-  /** ヒント表示に使用するマーカー文字の配列 */
   markers: string[];
-  /** 必要なモーション回数 */
   motionCount: number;
-  /** モーションのタイムアウト時間（ミリ秒） */
   motionTimeout: number;
-  /** 通常モードでのヒント表示位置 */
   hintPosition: "start" | "end" | "overlay";
-
-  // Hint settings (8 properties)
-  /** hjklキーでのトリガーを有効にするか */
   triggerOnHjkl: boolean;
-  /** カウント対象のモーション文字列配列 */
   countedMotions: string[];
-  /** パフォーマンス最適化のための最大ヒント表示数 */
   maxHints: number;
-  /** ヒント表示のデバウンス遅延時間（ミリ秒） */
   debounceDelay: number;
-  /** 数字(0-9)をヒント文字として使用するか */
   useNumbers: boolean;
-  /** 選択中のヒントをハイライト表示するか */
   highlightSelected: boolean;
-  /** 座標系デバッグログの出力有効/無効 */
   debugCoordinates: boolean;
-  /** 1文字ヒント専用のキー配列 */
   singleCharKeys: string[];
-
-  // Extended hint settings (4 properties)
-  /** 2文字以上のヒント専用のキー配列 */
   multiCharKeys: string[];
-  /** 1文字ヒントの最大表示数（オプション） */
   maxSingleCharHints?: number;
-  /** ヒントグループ機能を使用するか */
   useHintGroups: boolean;
-  /** ヒントマーカーのハイライト色設定 */
   highlightHintMarker: string | HighlightColor;
-
-  // Word detection settings (7 properties)
-  /** 選択中ヒントマーカーのハイライト色設定 */
   highlightHintMarkerCurrent: string | HighlightColor;
-  /** キーリピート時のヒント表示を抑制するか */
   suppressOnKeyRepeat: boolean;
-  /** キーリピートと判定する時間の閾値（ミリ秒） */
   keyRepeatThreshold: number;
-  /** 日本語を含む単語検出を行うか */
   useJapanese: boolean;
-  /** 単語検出アルゴリズム */
   wordDetectionStrategy: "regex" | "tinysegmenter" | "hybrid";
-  /** TinySegmenter（日本語形態素解析）を有効にするか */
   enableTinySegmenter: boolean;
-  /** TinySegmenterを使用する最小文字数の閾値 */
   segmenterThreshold: number;
-
-  // Japanese word settings (7 properties)
-  /** 日本語単語として扱う最小文字数 */
   japaneseMinWordLength: number;
-  /** 助詞や接続詞を前の単語と結合するか */
   japaneseMergeParticles: boolean;
-  /** 単語結合時の最大文字数の閾値 */
   japaneseMergeThreshold: number;
-  /** キー別の最小文字数設定（オプション） */
   perKeyMinLength?: Record<string, number>;
-  /** デフォルトの最小単語長 */
   defaultMinWordLength: number;
-  /** キー別のモーション回数設定（オプション） */
   perKeyMotionCount?: Record<string, number>;
-  /** デフォルトのモーション回数 */
   defaultMotionCount: number;
-  /** 内部使用：現在のキーコンテキスト（オプション） */
   currentKeyContext?: string;
-
-  // Motion counter settings (4 properties)
-  /** モーションカウンター機能の有効/無効 */
   motionCounterEnabled: boolean;
-  /** モーションカウンターの閾値 */
   motionCounterThreshold: number;
-  /** モーションカウンターのタイムアウト時間（ミリ秒） */
   motionCounterTimeout: number;
-  /** 閾値到達時にヒント表示するか */
   showHintOnMotionThreshold: boolean;
-
-  // Debug settings (2 properties)
-  /** デバッグモードの有効/無効 */
   debugMode: boolean;
-  /** パフォーマンスログの出力有効/無効 */
   performanceLog: boolean;
-
-  // Debug settings
-  /** デバッグモード - コンソールログ出力の有効化 */
   debug?: boolean;
-
-  // Hint generation settings
-  /** 数字の複数文字ヒントを追加生成するか */
   useNumericMultiCharHints?: boolean;
 }
 
-
-// v3.0.0で削除: HintConfig, WordConfig, PerformanceConfig, DebugConfig
-// 代わりにPartial<Config>を使用してください
-
-/**
- * デフォルト設定定数
- * Configの型安全な初期値を定義します。
- * 既存のgetDefaultConfig()から値を継承し、完全にフラット化された構造で提供します。
- *
- * @constant {Config} DEFAULT_CONFIG
- * @example
- * ```typescript
- * const config = { ...DEFAULT_CONFIG, motionCount: 5 };
- * console.log(config.enabled);     // true
- * console.log(config.motionCount); // 5
- * ```
- */
 export const DEFAULT_CONFIG: Config = {
-  // Core settings
   enabled: true,
   markers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
   motionCount: 3,
   motionTimeout: 2000,
   hintPosition: "start",
-
-  // Hint settings
   triggerOnHjkl: true,
   countedMotions: [],
   maxHints: 336,
@@ -188,22 +60,14 @@ export const DEFAULT_CONFIG: Config = {
   useNumbers: false,
   highlightSelected: false,
   debugCoordinates: false,
-  // process2 sub1: singleCharKeys - 1文字ヒント専用のキー配列
-  // アルファベット、数字に加えて以下の記号を使用可能:
-  // ;  :  [  ]  '  "  ,  .  /  \  -  =  `
-  // 例: singleCharKeys: ["A", "S", "D", ";", ":", "["]
   singleCharKeys: [
     "A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M",
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
   ],
-
-  // Extended hint settings
   multiCharKeys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
-  maxSingleCharHints: 21, // Length of singleCharKeys
+  maxSingleCharHints: 21,
   useHintGroups: true,
   highlightHintMarker: "DiffAdd",
-
-  // Word detection settings
   highlightHintMarkerCurrent: "DiffText",
   suppressOnKeyRepeat: true,
   keyRepeatThreshold: 50,
@@ -211,129 +75,38 @@ export const DEFAULT_CONFIG: Config = {
   wordDetectionStrategy: "hybrid",
   enableTinySegmenter: true,
   segmenterThreshold: 4,
-
-  // Japanese word settings
   japaneseMinWordLength: 2,
   japaneseMergeParticles: true,
   japaneseMergeThreshold: 2,
-  perKeyMinLength: {}, // Default empty record
+  perKeyMinLength: {},
   defaultMinWordLength: 3,
-  perKeyMotionCount: {}, // Default empty record
-  defaultMotionCount: 3, // Default motion count for keys not specified
-
-  // Motion counter settings
+  perKeyMotionCount: {},
+  defaultMotionCount: 3,
   motionCounterEnabled: true,
   motionCounterThreshold: 3,
   motionCounterTimeout: 2000,
   showHintOnMotionThreshold: true,
-
-  // Debug settings
   debugMode: false,
   performanceLog: false,
   debug: false,
-
-  // Hint generation settings
   useNumericMultiCharHints: false,
 };
 
-/**
- * デフォルト設定定数エイリアス
- * DEFAULT_CONFIGと同じ値を参照します。
- */
 export const DEFAULT_UNIFIED_CONFIG: Config = DEFAULT_CONFIG;
 
-// UnifiedConfig interface削除: Process1で型定義の統合実装により削除
-// 代わりにConfigを使用してください
-// config.ts で interface Config として定義されています
-
-/**
- * プラグインの標準的な設定値を返します。既存コードとの互換性を維持しています。
- * 内部的にはgetDefaultUnifiedConfig()を使用し、デフォルト値管理を統一しています。
- * この設定はパフォーマンス、ユーザビリティ、日本語対応を考慮して最適化されています。
- *
- * @returns {Config} プラグインのデフォルト設定
- * @example
- * ```typescript
- * const config = getDefaultConfig();
- * console.log(config.motionCount);     // 3
- * console.log(config.motionTimeout);   // 2000
- * console.log(config.enabled);          // true
- * console.log(config.maxHints);         // 336
- * ```
- */
 export function getDefaultConfig(): Config {
-  // Process1: 直接Configを返す
   return DEFAULT_CONFIG;
 }
 
-/**
- * DEFAULT_UNIFIED_CONSTANTの値を返し、デフォルト値管理を統一
- * TDD Red-Green-Refactor方式で実装された型安全なデフォルト値取得
- *
- * @returns {Config} 完全なConfigデフォルト値
- * @example
- * ```typescript
- * const config = getDefaultUnifiedConfig();
- * console.log(config.motionCount);     // 3
- * console.log(config.hintPosition);    // 'start'
- * console.log(config.useNumbers);      // true
- * console.log(config.enabled);         // true
- * ```
- */
 export function getDefaultUnifiedConfig(): Config {
   return DEFAULT_UNIFIED_CONFIG;
 }
 
-/**
- * Configベースの部分設定を受け取り、デフォルト値で補完した完全なConfigを返す
- * TDD Red-Green-Refactor方式で実装された型安全な最小設定作成
- *
- * @param {Partial<Config>} [partialConfig={}] 部分的な設定値
- * @returns {Config} デフォルト値で補完された完全なConfig
- * @example
- * ```typescript
- * const config = createMinimalConfig({
- *   motionCount: 5,
- *   hintPosition: 'end'
- * });
- * console.log(config.motionCount);     // 5 (指定値)
- * console.log(config.hintPosition);    // 'end' (指定値)
- * console.log(config.useNumbers);      // true (デフォルト値)
- * console.log(config.enabled);         // true (デフォルト値)
- * ```
- */
 export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config {
   const defaults = getDefaultConfig();
   return { ...defaults, ...partialConfig };
 }
 
-/**
- * 設定値のバリデーション関数
- * Config型の設定値検証を行います。
- * 各設定項目の型、範囲、必須条件をチェックし、エラー情報を返します。
- *
- * @param {Partial<Config>} config 検証する設定オブジェクト
- * @returns {{ valid: boolean; errors: string[] }} バリデーション結果
- * @example
- * ```typescript
- * const result = validateConfig({motionCount: 5, motionTimeout: 1000 });
- * if (result.valid) {
- *   console.log('設定は有効です');
- * } else {
- *   console.error('エラー:', result.errors);
- * }
- *
- * const invalidResult = validateConfig({motionCount: -1 });
- * // { valid: false, errors: ['motionCount must be a positive integer'] }
- * ```
- */
-/**
- * ハイライトグループ名の検証関数
- * Vimのハイライトグループ名として有効かチェックします。
- *
- * @param {string} name 検証するハイライトグループ名
- * @returns {boolean} 有効な場合true
- */
 export function isValidHighlightGroup(name: string): boolean {
   // 空文字列は無効
   if (!name || name === '') {
@@ -358,22 +131,6 @@ export function isValidHighlightGroup(name: string): boolean {
   return true;
 }
 
-/**
- * TDD Red-Green-Refactor方式で実装された単一バリデーション関数
- * camelCase形式のエラーメッセージで統一されたバリデーション
- *
- * @param config 検証するConfig（部分設定可）
- * @returns バリデーション結果（valid: boolean, errors: string[]）
- * @example
- * ```typescript
- * const result = validateUnifiedConfig({ motionCount: 3, hintPosition: 'start' });
- * if (result.valid) {
- *   console.log('設定は有効です');
- * } else {
- *   console.error('エラー:', result.errors);
- * }
- * ```
- */
 export function validateUnifiedConfig(
   config: Partial<Config>,
 ): { valid: boolean; errors: string[] } {
@@ -622,16 +379,6 @@ export function validateUnifiedConfig(
   };
 }
 
-/**
- * 既存validateConfig関数（互換性維持）
- * validateUnifiedConfig()にリダイレクトされる統合バリデーション
- *
- * - as any から as Record<string, unknown> に変更
- * - 型ガードを使用してプロパティの型を検証
- *
- * @param config 検証する設定オブジェクト
- * @returns バリデーション結果
- */
 export function validateConfig(
   config: Partial<Config>,
 ): { valid: boolean; errors: string[] } {
@@ -710,35 +457,6 @@ export function validateConfig(
   return { valid: result.valid && errors.length === 0, errors: allErrors };
 }
 
-/**
- * 設定マージ関数
- * 部分的な設定更新をサポートし、バリデーションを実行します。
- * 更新される設定値はバリデーションが実行され、無効な値の場合はエラーがスローされます。
- *
- * @param {Config} baseConfig ベースとなる設定
- * @param {Partial<Config>} updates 更新する設定値
- * @returns {Config} マージされた新しい設定
- * @throws {Error} 設定値のバリデーションに失敗した場合
- * @example
- * ```typescript
- * const base = getDefaultConfig();
- * const updates = {
- *   motionCount: 5,
- *   enabled: false,
- * };
- *
- * const merged = mergeConfig(base, updates);
- * console.log(merged.motionCount); // 5
- * console.log(merged.enabled);      // false
- *
- * // バリデーションエラーの例
- * try {
- *   mergeConfig(base, {motionCount: -1 }); // Error: Invalid config
- * } catch (error) {
- *   console.error(error.message);
- * }
- * ```
- */
 export function mergeConfig(baseConfig: Config, updates: Partial<Config>): Config {
   // バリデーションを実行
   const validation = validateConfig(updates);
@@ -749,65 +467,10 @@ export function mergeConfig(baseConfig: Config, updates: Partial<Config>): Confi
   return { ...baseConfig, ...updates };
 }
 
-/**
- * 設定のディープコピーを作成する関数
- * 元の設定オブジェクトに影響を与えずに完全に独立したコピーを作成します。
- * JSONのシリアライズ/デシリアライズで実装されています。
- *
- * @param {Config} config コピーする設定オブジェクト
- * @returns {Config} ディープコピーされた設定
- * @example
- * ```typescript
- * const original = getDefaultConfig();
- * const copy = cloneConfig(original);
- *
- * copy.motionCount = 10;
- * copy.markers.push('Z');
- *
- * console.log(original.motionCount);  // 3 (元の値が保持される)
- * console.log(copy.motionCount);      // 10
- * console.log(original.markers.length === copy.markers.length - 1); // true
- * ```
- */
 export function cloneConfig(config: Config): Config {
   return JSON.parse(JSON.stringify(config));
 }
 
-/**
- * キー別設定を取得するヘルパー関数
- * 指定されたキーに対応する設定値を、優先度に従って取得します。
- * 優先度: キー別設定 > デフォルト値 > フォールバック値
- * per_key_min_lengthやper_key_motion_countなどのキー固有設定で使用されます。
- *
- * @template T 設定値の型
- * @param {Config} config プラグインの設定オブジェクト
- * @param {string} key 取得対象のキー
- * @param {Record<string, T> | undefined} perKeyRecord キー別設定レコード
- * @param {T | undefined} defaultValue デフォルト値
- * @param {T} fallbackValue フォールバック値
- * @returns {T} 取得された設定値
- * @example
- * ```typescript
- * const config = {
- *   ...getDefaultConfig(),
- *   per_key_min_length: { 'w': 4, 'b': 2 },
- *   default_min_word_length: 3
- * };
- *
- * // キー別設定がある場合
- * const wMinLength = getPerKeyValue(config, 'w', config.perKeyMinLength, config.defaultMinWordLength, 1);
- * console.log(wMinLength); // 4
- *
- * // キー別設定がない場合はデフォルト値
- * const eMinLength = getPerKeyValue(config, 'e', config.perKeyMinLength, config.defaultMinWordLength, 1);
- * console.log(eMinLength); // 3
- *
- * // デフォルト値もない場合はフォールバック値
- * const fallbackConfig = { ...config, default_min_word_length: undefined };
- * const fMinLength = getPerKeyValue(fallbackConfig, 'f', fallbackConfig.perKeyMinLength, fallbackConfig.defaultMinWordLength, 1);
- * console.log(fMinLength); // 1
- * ```
- */
 export function getPerKeyValue<T>(
   config: Config,
   key: string,
@@ -830,84 +493,24 @@ export function getPerKeyValue<T>(
 }
 
 
-/**
- * 非推奨プロパティの警告情報を表すインターフェース
- */
 export interface DeprecationWarning {
-  /** 非推奨のプロパティ名 */
   property: string;
-  /** 推奨される代替プロパティ名 */
   replacement: string;
-  /** 警告メッセージ */
   message: string;
 }
 
-/**
- * 命名規則バリデーション結果インターフェース
- * TypeScript/JavaScriptのモダンな命名規則に従っているかを検証する結果を表現します。
- * コードの一貫性と可読性を向上させるためのバリデーションです。
- *
- * @interface NamingValidation
- * @example
- * ```typescript
- * const result: NamingValidation = {
- *   followsConvention: true,
- *   hasConfigSuffix: true,
- *   hasManagerSuffix: false,
- *   hasBooleanPrefix: false
- * };
- * ```
- */
-/**
- * 命名規則バリデーション結果を表すインターフェース
- * TypeScript/JavaScriptの命名規則に従っているかの検証結果を格納します。
- */
 export interface NamingValidation {
-  /** 命名規則に従っているかの全体的な結果 */
   followsConvention: boolean;
-  /** 'Config'接尾辞を持っているか */
   hasConfigSuffix: boolean;
-  /** 'Manager'接尾辞を持っているか */
   hasManagerSuffix: boolean;
-  /** ブール型の接頭辞(is/has/should)を持っているか */
   hasBooleanPrefix: boolean;
 }
 
 
-// 代わりにcreateMinimalConfig()を使用してください
-/**
- * モダン設定オブジェクトを作成する関数
- * createMinimalConfig()の薄いラッパー関数です。
- *
- * @param {Partial<Config>} [input={}] - 初期設定値（オプション）
- * @returns {Config} 作成された設定オブジェクト
- * @throws {Error} 設定値のバリデーションに失敗した場合
- */
 export function createModernConfig(input: Partial<Config> = {}): Config {
   return createMinimalConfig(input);
 }
 
-/**
- * 命名規則のバリデーション関数
- * 指定された名前がTypeScript/JavaScriptのモダンな命名規則に従っているかを検証します。
- * Config/Manager接尾辞やブール型の接頭辞（is/has/should）をチェックします。
- *
- * @param {string} name 検証する名前
- * @returns {NamingValidation} バリデーション結果
- * @example
- * ```typescript
- * const result1 = validateNamingConvention('UserConfig');
- * console.log(result1.followsConvention); // true
- * console.log(result1.hasConfigSuffix);   // true
- *
- * const result2 = validateNamingConvention('isEnabled');
- * console.log(result2.followsConvention); // true
- * console.log(result2.hasBooleanPrefix);  // true
- *
- * const result3 = validateNamingConvention('user_config'); // snake_case
- * console.log(result3.followsConvention); // false
- * ```
- */
 export function validateNamingConvention(name: string): NamingValidation {
   const hasConfigSuffix = name.endsWith("Config");
   const hasManagerSuffix = name.endsWith("Manager");
@@ -923,99 +526,28 @@ export function validateNamingConvention(name: string): NamingValidation {
   };
 }
 
-/**
- * 非推奨警告を取得する関数
- * v3.0.0では常に空配列を返します。
- *
- * @param {Partial<Config>} config チェックする設定オブジェクト
- * @returns {DeprecationWarning[]} 非推奨警告の配列（常に空配列）
- * @example
- * ```typescript
- * const config = { motionCount: 3, enabled: true };
- * const warnings = getDeprecationWarnings(config);
- * console.log(warnings); // []
- * ```
- */
 export function getDeprecationWarnings(
   config: Partial<Config>,
 ): DeprecationWarning[] {
   return [];
 }
 
-// 直接Config型を使用してください
-
-// ============================================================================
-// VALIDATION FUNCTIONS
-// ============================================================================
-
-/**
- * バリデーションルールのインターフェース
- * validateConfigValueで使用されるルールの型定義
- *
- * @interface ValidationRules
- */
-/**
- * バリデーションルールを定義するインターフェース
- * 設定値の検証に使用される各種ルールを定義します。
- *
- * - enum: any[] から (string | number | boolean)[] に厳密化
- * - custom: (value: any) から (value: unknown) に変更し、型ガードを強制
- */
 export interface ValidationRules {
-  /** 期待される型名（string, number, boolean, array, object） */
   type?: "string" | "number" | "boolean" | "array" | "object";
-  /** 必須フィールドかどうか */
   required?: boolean;
-  /** 数値の最小値 */
   min?: number;
-  /** 数値の最大値 */
   max?: number;
-  /** 文字列/配列の最小長 */
   minLength?: number;
-  /** 文字列/配列の最大長 */
   maxLength?: number;
-  /** 有効な値のリスト（プリミティブ型のみ） */
   enum?: readonly (string | number | boolean)[];
-  /** カスタムバリデーション関数（unknown型で型ガードを強制） */
   custom?: (value: unknown) => boolean;
 }
 
-/**
- * バリデーション結果のインターフェース
- * バリデーション関数の戻り値として使用される
- *
- * @interface ValidationResult
- */
-/**
- * バリデーション結果を表すインターフェース
- * バリデーション関数の戻り値として使用されます。
- */
 export interface ValidationResult {
-  /** バリデーションが成功したかどうか */
   valid: boolean;
-  /** エラーメッセージ（失敗時のみ） */
   error?: string;
 }
 
-/**
- * 設定値の型チェック
- * 指定された値が期待される型と一致するかを検証
- *
- * - value パラメータを any から unknown に変更
- * - 型ガードとして機能し、型の絞り込みを可能にする
- *
- * @param {unknown} value - チェック対象の値（unknown型で型安全性を強制）
- * @param {string} expectedType - 期待される型名（"string", "number", "boolean", "array", "object"）
- * @returns {boolean} 型が一致する場合true、不一致の場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isValidType("hello", "string"); // true
- * isValidType(123, "number"); // true
- * isValidType([1, 2, 3], "array"); // true
- * isValidType(NaN, "number"); // false (NaNは無効な数値として扱われる)
- * ```
- */
 export function isValidType(value: unknown, expectedType: string): boolean {
   switch (expectedType) {
     case "string":
@@ -1033,146 +565,28 @@ export function isValidType(value: unknown, expectedType: string): boolean {
   }
 }
 
-/**
- * 数値の範囲チェック
- * 数値が指定された範囲内にあるかを検証
- *
- * @param {number} value - チェック対象の数値
- * @param {number} [min] - 最小値（省略時は下限なし）
- * @param {number} [max] - 最大値（省略時は上限なし）
- * @returns {boolean} 範囲内にある場合true、範囲外の場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isInRange(5, 1, 10); // true
- * isInRange(-1, 0, 100); // false
- * isInRange(50, undefined, 100); // true（下限なし）
- * isInRange(75, 0, undefined); // true（上限なし）
- * ```
- */
 export function isInRange(value: number, min?: number, max?: number): boolean {
   if (min !== undefined && value < min) return false;
   if (max !== undefined && value > max) return false;
   return true;
 }
 
-/**
- * 文字列の長さチェック
- * 文字列の長さが指定された範囲内にあるかを検証
- *
- * @param {string} value - チェック対象の文字列
- * @param {number} [minLength] - 最小長（省略時は下限なし）
- * @param {number} [maxLength] - 最大長（省略時は上限なし）
- * @returns {boolean} 長さが範囲内にある場合true、範囲外の場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isValidLength("hello", 1, 10); // true
- * isValidLength("", 1, 10); // false（最小長より短い）
- * isValidLength("very long string", undefined, 10); // false（最大長を超える）
- * isValidLength("test", 0, undefined); // true（上限なし）
- * ```
- */
 export function isValidLength(value: string, minLength?: number, maxLength?: number): boolean {
   if (minLength !== undefined && value.length < minLength) return false;
   if (maxLength !== undefined && value.length > maxLength) return false;
   return true;
 }
 
-/**
- * 配列の要素数チェック
- * 配列の要素数が指定された範囲内にあるかを検証
- *
- * - array パラメータを any[] から unknown[] に変更
- * - より厳密な型チェックを実現
- *
- * @param {unknown[]} array - チェック対象の配列
- * @param {number} [minLength] - 最小要素数（省略時は下限なし）
- * @param {number} [maxLength] - 最大要素数（省略時は上限なし）
- * @returns {boolean} 要素数が範囲内にある場合true、範囲外の場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isValidArrayLength([1, 2, 3], 1, 5); // true
- * isValidArrayLength([], 1, 5); // false（最小要素数より少ない）
- * isValidArrayLength([1, 2, 3, 4, 5, 6], 1, 5); // false（最大要素数を超える）
- * isValidArrayLength([1, 2], 0, undefined); // true（上限なし）
- * ```
- */
 export function isValidArrayLength(array: unknown[], minLength?: number, maxLength?: number): boolean {
   if (minLength !== undefined && array.length < minLength) return false;
   if (maxLength !== undefined && array.length > maxLength) return false;
   return true;
 }
 
-/**
- * 列挙値のチェック
- * 値が指定された有効な値のリストに含まれているかを検証
- *
- * - value パラメータを any から unknown に変更
- * - validValues を readonly (string | number | boolean)[] に厳密化
- * - プリミティブ型のみを列挙値として扱う
- *
- * @param {unknown} value - チェック対象の値
- * @param {readonly (string | number | boolean)[]} validValues - 有効な値のリスト（プリミティブ型のみ）
- * @returns {boolean} 有効な値に含まれている場合true、含まれていない場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isValidEnum("red", ["red", "green", "blue"]); // true
- * isValidEnum("yellow", ["red", "green", "blue"]); // false
- * isValidEnum(1, [1, 2, 3]); // true
- * isValidEnum(true, [true, false]); // true
- * ```
- */
 export function isValidEnum(value: unknown, validValues: readonly (string | number | boolean)[]): boolean {
   return validValues.includes(value as string | number | boolean);
 }
 
-/**
- * 設定値の総合バリデーション
- * 複数のルールを適用して設定値を検証し、詳細なエラーメッセージを提供
- *
- * - value パラメータを any から unknown に変更
- * - 型ガードを明示的に使用して型を絞り込む
- *
- * @param {string} key - バリデーション対象のキー名（エラーメッセージに使用）
- * @param {unknown} value - バリデーション対象の値（unknown型で型安全性を強制）
- * @param {Object} rules - バリデーションルール
- * @param {string} [rules.type] - 期待される型（"string", "number", "boolean", "array", "object"）
- * @param {boolean} [rules.required] - 必須かどうか（デフォルト: false）
- * @param {number} [rules.min] - 数値の最小値（type="number"の場合）
- * @param {number} [rules.max] - 数値の最大値（type="number"の場合）
- * @param {number} [rules.minLength] - 文字列/配列の最小長（type="string"または"array"の場合）
- * @param {number} [rules.maxLength] - 文字列/配列の最大長（type="string"または"array"の場合）
- * @param {readonly (string | number | boolean)[]} [rules.enum] - 有効な値のリスト（プリミティブ型のみ）
- * @param {function(unknown): boolean} [rules.custom] - カスタムバリデーション関数（unknown型を受け取る）
- * @returns {{valid: boolean, error?: string}} バリデーション結果とエラーメッセージ
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * const result = validateConfigValue("port", 8080, {
- *   type: "number",
- *   required: true,
- *   min: 1000,
- *   max: 65535
- * });
- * if (!result.valid) {
- *   console.error(result.error);
- * }
- *
- * // カスタムバリデーションの例
- * const emailResult = validateConfigValue("email", "user@example.com", {
- *   type: "string",
- *   required: true,
- *   custom: (value) => {
- *     // unknown型なので型ガードが必要
- *     if (typeof value !== "string") return false;
- *     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
- *   }
- * });
- * ```
- */
 export function validateConfigValue(
   key: string,
   value: unknown,
@@ -1245,34 +659,6 @@ export function validateConfigValue(
   return { valid: true };
 }
 
-/**
- * 複数の設定値を一括でバリデーション
- * オブジェクトの各プロパティに対してルールを適用して、まとめて検証を行います。
- * 個別のエラーメッセージと全体の結果を同時に取得できます。
- *
- * - config パラメータを Record<string, any> から Record<string, unknown> に変更
- * - より型安全なバリデーションを実現
- *
- * @param {Record<string, unknown>} config - バリデーション対象の設定オブジェクト
- * @param {Record<string, ValidationRules>} rulesMap - 各キーに対するバリデーションルールのマップ
- * @returns {ValidationResult & {errors?: Record<string, string>}} 全体のバリデーション結果とエラーの詳細
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * const config: Record<string, unknown> = { port: 8080, host: "localhost", debug: true };
- * const rules = {
- *   port: { type: "number", required: true, min: 1000, max: 65535 },
- *   host: { type: "string", required: true, minLength: 1 },
- *   debug: { type: "boolean" }
- * };
- * const result = validateConfigObject(config, rules);
- *
- * if (!result.valid) {
- *   console.error("バリデーションエラー:", result.error);
- *   console.error("詳細:", result.errors);
- * }
- * ```
- */
 export function validateConfigObject(
   config: Record<string, unknown>,
   rulesMap: Record<string, ValidationRules>
