@@ -153,28 +153,48 @@
 - ✅ any型の削減: ValidationRules, validateConfig, validateConfigValue, validateConfigObject, isValidType, isValidArrayLength, isValidEnum
 - ✅ unknown型の導入により型ガードの使用を強制し、実行時の型安全性を向上
 
-### process3 テストヘルパーの型安全化 (Phase 3)
+### process3 テストヘルパーの型安全化 (Phase 3) ✅ 完了 (2025-10-01)
 @target: tests/helpers/mock.ts
 
-#### sub1 MockDenops クラスの改善
-- [ ] call メソッドをジェネリクスで型安全化
+#### sub1 MockDenops クラスの改善 ✅ 完了
+- [x] call メソッドをジェネリクスで型安全化
   - `call<T = unknown>(method: string, ...args: unknown[]): Promise<T>`
   - 呼び出し側で戻り値の型を指定可能にする
-- [ ] setCallResponse メソッドをジェネリクスで型安全化
+  - ✅ ジェネリクスにより型推論が効くようになった
+- [x] setCallResponse メソッドをジェネリクスで型安全化
   - `setCallResponse<T = unknown>(method: string, response: T): void`
   - レスポンスの型を保持
-- [ ] onCall メソッドをジェネリクスで型安全化
+  - ✅ 型パラメータによりレスポンスの型を保持可能に
+- [x] onCall メソッドをジェネリクスで型安全化
   - `onCall<TArgs extends unknown[] = unknown[], TReturn = unknown>(method: string, handler: (...args: TArgs) => TReturn): void`
   - ハンドラーの引数と戻り値の型を指定可能にする
+  - ✅ 複数の型パラメータで柔軟な型指定が可能に
 
-#### sub2 内部プロパティの型改善
-- [ ] callResponses を `Map<string, unknown>` に変更
-- [ ] callHandlers の型定義を改善
+#### sub2 内部プロパティの型改善 ✅ 完了
+- [x] callResponses を `Map<string, unknown>` に変更
+  - ✅ any型からunknown型に変更し、型安全性を向上
+- [x] callHandlers の型定義を改善
   - ジェネリクスに対応した型定義に変更
+  - ✅ `Map<string, (...args: unknown[]) => unknown>` に変更
 
-#### sub3 その他のモック関数
+#### sub3 その他のモック関数 (スキップ)
 - [ ] createMockDenops 系関数の戻り値の型を明示
+  - 現在、該当する関数が存在しないためスキップ
 - [ ] 各モックの型推論が効くように改善
+  - MockDenopsクラス自体の改善により達成
+
+#### 実装成果
+- ✅ TDD Red-Green-Refactorサイクルで実装完了
+- ✅ tests/mock_process3_test.ts に12個のテストを追加（全て通過）
+- ✅ 既存のテスト（process1, process2）も全て通過
+- ✅ 型チェックエラーなし
+- ✅ any型の削減: callResponses (Map<string, any> → Map<string, unknown>)
+- ✅ ジェネリクスの導入により、呼び出し側で型を指定可能に
+  - `call<T>`: 戻り値の型を指定
+  - `setCallResponse<T>`: レスポンスの型を保持
+  - `onCall<TArgs, TReturn>`: ハンドラーの引数と戻り値の型を指定
+- ✅ デフォルト型パラメータにより後方互換性を保持
+- ✅ 詳細なドキュメントコメントを追加し、使用例を記載
 
 ### process4 core.ts, word.ts, hint.ts の個別対応
 @target: denops/hellshake-yano/core.ts, denops/hellshake-yano/word.ts, denops/hellshake-yano/hint.ts

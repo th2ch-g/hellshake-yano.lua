@@ -158,11 +158,26 @@ export class MockTimer {
 
 /**
  * MockDenops - Denopsインターフェースのモック実装
+ *
+ * ジェネリクスにより型安全な呼び出しが可能になりました。
+ *
+ * @example
+ * ```typescript
+ * const denops = new MockDenops();
+ *
+ * // 戻り値の型を指定
+ * denops.setCallResponse<number>("bufnr", 1);
+ * const bufnr = await denops.call<number>("bufnr", "%"); // number型
+ *
+ * // ハンドラーの引数と戻り値の型を指定
+ * denops.onCall<[string], string>("upper", (s) => s.toUpperCase());
+ * const result = await denops.call<string>("upper", "hello"); // "HELLO"
+ * ```
  */
 export class MockDenops implements Partial<Denops> {
-  private callResponses: Map<string, any> = new Map();
+  private callResponses: Map<string, unknown> = new Map();
   private cmdHandlers: Array<(cmd: string) => void> = [];
-  private callHandlers: Map<string, ((...args: any[]) => any)> = new Map();
+  private callHandlers: Map<string, (...args: unknown[]) => unknown> = new Map();
   private executedCommands: string[] = [];
   private callLog: Array<{ fn: string; args: unknown[] }> = [];
 
@@ -175,68 +190,103 @@ export class MockDenops implements Partial<Denops> {
 
   dispatcher: Record<string, (...args: unknown[]) => unknown> = {};
 
-  setCallResponse(method: string, response: any): void {
+  /**
+   * モックレスポンスを設定
+   * @template T レスポンスの型（デフォルト: unknown）
+   * @param method メソッド名
+   * @param response レスポンスの値
+   */
+  setCallResponse<T = unknown>(method: string, response: T): void {
     this.callResponses.set(method, response);
   }
 
-  onCall(method: string, handler: (...args: any[]) => any): void {
-    this.callHandlers.set(method, handler);
+  /**
+   * カスタムハンドラーを設定
+   * @template TArgs ハンドラーの引数の型（デフォルト: unknown[]）
+   * @template TReturn ハンドラーの戻り値の型（デフォルト: unknown）
+   * @param method メソッド名
+   * @param handler ハンドラー関数
+   */
+  onCall<TArgs extends unknown[] = unknown[], TReturn = unknown>(
+    method: string,
+    handler: (...args: TArgs) => TReturn,
+  ): void {
+    this.callHandlers.set(method, handler as (...args: unknown[]) => unknown);
   }
 
   onCmd(handler: (cmd: string) => void): void {
     this.cmdHandlers.push(handler);
   }
 
-  async call(fn: string, ...args: unknown[]): Promise<unknown> {
+  /**
+   * Vim/Neovim関数を呼び出す
+   * @template T 戻り値の型（デフォルト: unknown）
+   * @param fn 関数名
+   * @param args 引数
+   * @returns 戻り値
+   *
+   * @example
+   * ```typescript
+   * // number型として取得
+   * const bufnr = await denops.call<number>("bufnr", "%");
+   *
+   * // string型として取得
+   * const name = await denops.call<string>("expand", "%:t");
+   *
+   * // 配列型として取得
+   * const lines = await denops.call<string[]>("getline", 1, "$");
+   * ```
+   */
+  async call<T = unknown>(fn: string, ...args: unknown[]): Promise<T> {
     // Record the call
     this.callLog.push({ fn, args });
 
     // カスタムハンドラーがあれば実行
     if (this.callHandlers.has(fn)) {
       const handler = this.callHandlers.get(fn)!;
-      return handler(...args);
+      return handler(...args) as T;
     }
 
     // 事前設定されたレスポンスを返す
     if (this.callResponses.has(fn)) {
       const response = this.callResponses.get(fn);
-      return typeof response === "function" ? response(...args) : response;
+      return (typeof response === "function" ? response(...args) : response) as T;
     }
 
     // デフォルトのレスポンス
     switch (fn) {
       case "bufnr":
-        return 1;
+        return 1 as T;
       case "line":
-        return args[0] === "." ? 1 : 100;
+        return (args[0] === "." ? 1 : 100) as T;
       case "col":
-        return args[0] === "." ? 1 : 80;
+        return (args[0] === "." ? 1 : 80) as T;
       case "getbufvar":
-        return "";
+        return "" as T;
       case "cursor":
         if (this.callHandlers.has("cursor")) {
           const handler = this.callHandlers.get("cursor")!;
-          return handler(args[0], args[1]);
+          return handler(args[0], args[1]) as T;
         }
-        return undefined;
+        return undefined as T;
       case "nvim_create_namespace":
-        return 1;
+        return 1 as T;
       case "nvim_buf_clear_namespace":
-        return true;
+        return true as T;
       case "nvim_buf_set_extmark":
-        return 1;
+        return 1 as T;
       case "getmatches":
-        return [];
+        return [] as T;
       case "matchadd":
-        return 1;
+        return 1 as T;
       case "matchdelete":
-        return true;
+        return true as T;
       case "getchar":
-        return 27; // ESC key by default
+        return 27 as T; // ESC key by default
       case "bufexists":
-        return 1;
+        return 1 as T;
       default:
-        return undefined;
+        return undefined as T;
     }
   }
 
