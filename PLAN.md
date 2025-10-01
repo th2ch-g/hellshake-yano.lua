@@ -88,11 +88,11 @@
 @ref: denops/hellshake-yano/compatibility.ts, denops/hellshake-yano/config.ts
 
 #### sub1 normalizeBackwardCompatibleFlags削除
-- [ ] 87行目のnormalizeBackwardCompatibleFlags呼び出しを削除
-- [ ] 313行目のnormalizeBackwardCompatibleFlags呼び出しを削除
-- [ ] userConfigの直接使用に変更
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] 87行目のnormalizeBackwardCompatibleFlags呼び出しを削除
+- [x] 313行目のnormalizeBackwardCompatibleFlags呼び出しを削除
+- [x] userConfigの直接使用に変更
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 #### sub2 compatibility.tsインポートの削除
 - [ ] 28-32行目のcompatibility.tsからのインポート削除
