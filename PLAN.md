@@ -1,79 +1,3 @@
-# title: examplesディレクトリの整理と削除
-
-## 概要
-- 重複しているexamplesディレクトリを削除し、samples/dictionariesに統一する
-
-### goal
-- ユーザーがサンプルファイルを探す際に、samples/ディレクトリのみを参照すればよい状態にする
-- 古い参照を削除し、メンテナンス性を向上させる
-
-## 必須のルール
-- 必ず `CLAUDE.md` を参照し、ルールを守ること
-
-## 開発のゴール
-- examples/とsamples/dictionariesの重複を解消
-- ドキュメントの参照を最新化
-- プロジェクト構造の簡素化
-
-## 実装仕様
-
-### 調査結果
-
-**examplesディレクトリの内容:**
-- `dictionary.json` - 古い形式の辞書サンプル
-- `dictionary.txt` - テキスト形式のサンプル
-- `dictionary.yaml` - YAML形式のサンプル
-- `highlight_examples.vim` - ハイライト設定例（128行）
-
-**参照状況:**
-- `doc/dictionary.md:231-233`で辞書サンプルファイルが参照されている
-- `highlight_examples.vim`はどこからも参照されていない
-
-**重複状況:**
-- `samples/dictionaries/`に同じ形式のサンプルがあり、より充実している
-- `samples/dictionaries/DICTIONARY_GUIDE.md`も存在
-- dictionary.jsonの内容はsamples版の方が詳細
-
-## 生成AIの学習用コンテキスト
-### ドキュメント
-- `doc/dictionary.md`
-  - examplesディレクトリへの参照を含む
-- `README.md`, `README_ja.md`
-  - 既にsamples/dictionariesを参照するように更新済み
-
-### サンプルファイル
-- `examples/`
-  - 削除対象
-- `samples/dictionaries/`
-  - 統一先
-
-## Process
-### process1 doc/dictionary.mdの参照更新
-@target: doc/dictionary.md
-@ref: samples/dictionaries/
-- [x] 231-233行目のexamples/への参照をsamples/dictionaries/に変更
-- [x] サンプルファイルのパスを正しく更新
-- [x] DICTIONARY_GUIDE.mdへの参照を追加
-
-### process2 highlight_examples.vimの処理
-@target: examples/highlight_examples.vim
-@ref: doc/, samples/
-- [x] highlight_examples.vimの内容を確認
-- [x] 有用な情報をドキュメントに統合するか、samples/配下に移動
-- [x] READMEやdoc/でハイライト設定例が言及されているか確認
-- [x] README.mdとREADME_ja.mdに`samples/highlight_examples.vim`への参照を追加
-
-### process3 examplesディレクトリの削除
-@target: examples/
-- [ ] 上記のprocess1, process2完了後にexamplesディレクトリを削除
-- [ ] git statusで削除が正しく反映されているか確認
-
-### process200 ドキュメンテーション
-- [ ] doc/dictionary.mdの変更を確認
-- [ ] 削除後、ユーザー向けドキュメントで古い参照が残っていないか全体確認
-
----
-
 # title: コードベース肥大化の削減とリファクタリング計画
 
 ## 概要
@@ -321,6 +245,7 @@
 ### process1: 重複関数の特定と統合計画の策定
 @target: denops/hellshake-yano/word.ts, hint.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] word.ts の重複関数リストを作成
 - [ ] hint.ts の重複関数リストを作成
 - [ ] 統合方針を決定（どの関数を残し、どの関数を削除するか）
@@ -329,59 +254,77 @@
 ### process2: word.ts の重複統合実装
 @target: denops/hellshake-yano/word.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] テストの更新
 - [ ] detectWords 系の統合
 - [ ] extractWords 系の統合
-- [ ] テストの更新
-- [ ] 動作確認
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process3: hint.ts の重複統合実装
 @target: denops/hellshake-yano/hint.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
+- [ ] テストの更新
 - [ ] generateHints 系の統合
 - [ ] calculateHintPosition 系の統合
-- [ ] テストの更新
-- [ ] 動作確認
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process4: コメントの最適化
 @target: types.ts, config.ts, word.ts, hint.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] types.ts のコメント削減
 - [ ] config.ts のコメント削減
 - [ ] word.ts のコメント削減
 - [ ] hint.ts のコメント削減
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process5: 型定義の最適化
 @target: denops/hellshake-yano/types.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] 未使用の型定義の特定
 - [ ] 型エイリアスの整理
 - [ ] 型ガード関数の簡略化
 - [ ] ファクトリ関数の削除
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process6: 小関数のインライン化
 @target: denops/hellshake-yano/word.ts, hint.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] word.ts の小関数統合
 - [ ] hint.ts の小関数統合
 - [ ] autoload/hellshake_yano.vim の統合
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process7: 非推奨APIの削除
 @target: denops/hellshake-yano/*.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] @deprecated タグ付き関数のリストアップ
 - [ ] 参照箇所の確認
 - [ ] 削除実装
-- [ ] テストの更新
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process8: バリデーション処理の簡略化
 @target: denops/hellshake-yano/config.ts, validation.ts
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] validateUnifiedConfig の分割
 - [ ] validation.ts への集約
-- [ ] テストの更新
+- [ ] deno checkで型エラーがないことを確認
+- [ ] deno testで既存のテストがすべてパスすることを確認
 
 ### process9: 最終確認とドキュメント更新
 @status: pending
+- [ ] deno testで既存のテストがすべてパスすることを確認
 - [ ] 全テストのパス確認
 - [ ] パフォーマンステスト
 - [ ] ドキュメントの更新
