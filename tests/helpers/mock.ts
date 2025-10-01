@@ -174,12 +174,14 @@ export class MockTimer {
  * const result = await denops.call<string>("upper", "hello"); // "HELLO"
  * ```
  */
-export class MockDenops implements Partial<Denops> {
+export class MockDenops implements Denops {
   private callResponses: Map<string, unknown> = new Map();
   private cmdHandlers: Array<(cmd: string) => void> = [];
   private callHandlers: Map<string, (...args: unknown[]) => unknown> = new Map();
   private executedCommands: string[] = [];
   private callLog: Array<{ fn: string; args: unknown[] }> = [];
+
+  name = "hellshake-yano:test";
 
   meta: { host: "nvim" | "vim"; mode: "test"; platform: "linux"; version: string } = {
     host: "nvim" as const,
@@ -188,7 +190,13 @@ export class MockDenops implements Partial<Denops> {
     version: "0.0.0",
   };
 
+  context: Record<string, unknown> = {};
+
   dispatcher: Record<string, (...args: unknown[]) => unknown> = {};
+
+  redraw(_force?: boolean): Promise<void> {
+    return Promise.resolve();
+  }
 
   /**
    * モックレスポンスを設定

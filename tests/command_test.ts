@@ -12,7 +12,7 @@ class CommandManager {
   private motionCount = 3;
   private motionTimeout = 2000;
   private hintsVisible = false;
-  private debugInfo: Record<string, any> = {};
+  private debugInfo: Record<string, unknown> = {};
 
   // :HellshakeYanoEnable
   enable(): string {

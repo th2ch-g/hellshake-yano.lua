@@ -1,77 +1,28 @@
 import { assertEquals, assertExists } from "@std/assert";
 import type { Denops } from "@denops/std";
+import { MockDenops as BaseMockDenops } from "./helpers/mock.ts";
 
-// モックDenopsクラス
-class MockDenops implements Partial<Denops> {
-  meta = {
-    host: "nvim" as const,
-    mode: "debug" as const,
-    version: "0.7.0",
-    platform: "linux" as const,
-  };
-  name = "test";
-
-  private commands: string[] = [];
-  private calls: Array<{ name: string; args: any[] }> = [];
+// テスト専用のMockDenopsクラス（統一MockDenopsを拡張）
+class MockDenops extends BaseMockDenops {
   private feedKeysBuffer: string[] = [];
 
-  async cmd(command: string): Promise<void> {
-    this.commands.push(command);
-  }
+  constructor() {
+    super();
 
-  async call(fn: string, ...args: any[]): Promise<any> {
-    this.calls.push({ name: fn, args });
+    // デフォルトのレスポンスを設定
+    this.setCallResponse("bufnr", 1);
+    this.setCallResponse("bufexists", 1);
+    this.setCallResponse("getbufvar", "");
+    this.setCallResponse("line", 10);
+    this.setCallResponse("col", 1);
+    this.setCallResponse("getbufline", ["hello world test", "sample text here", "more words here"]);
+    this.setCallResponse("nvim_create_namespace", 1);
 
-    switch (fn) {
-      case "bufnr":
-        return 1;
-      case "bufexists":
-        return 1;
-      case "getbufvar":
-        return "";
-      case "line":
-        return 10;
-      case "col":
-        return 1;
-      case "getbufline":
-        return ["hello world test", "sample text here", "more words here"];
-      case "feedkeys":
-        this.feedKeysBuffer.push(args[0]);
-        return;
-      case "nvim_create_namespace":
-        return 1;
-      case "nvim_buf_set_extmark":
-        return;
-      case "nvim_buf_clear_namespace":
-        return;
-      case "cursor":
-        return;
-      default:
-        return;
-    }
-  }
-
-  async batch(..._calls: unknown[]): Promise<unknown[]> {
-    return [];
-  }
-
-  async eval(_expr: string): Promise<unknown> {
-    return "";
-  }
-
-  interrupt(): void {}
-
-  redraw(_force?: boolean): Promise<void> {
-    return Promise.resolve();
-  }
-
-  // テスト用ヘルパーメソッド
-  getCommands(): string[] {
-    return this.commands;
-  }
-
-  getCalls(): Array<{ name: string; args: any[] }> {
-    return this.calls;
+    // feedkeysの特別な処理
+    this.onCall("feedkeys", (key: string) => {
+      this.feedKeysBuffer.push(key);
+      return undefined;
+    });
   }
 
   getFeedKeysBuffer(): string[] {
@@ -79,12 +30,15 @@ class MockDenops implements Partial<Denops> {
   }
 
   clearBuffer(): void {
-    this.commands = [];
-    this.calls = [];
+    this.clearCallLog();
+    this.clearExecutedCommands();
     this.feedKeysBuffer = [];
   }
 
-  dispatcher = {};
+  // 互換性のためのエイリアスメソッド
+  getCommands(): string[] {
+    return this.getExecutedCommands();
+  }
 }
 
 // 小文字入力のテスト関数（実際のwaitForUserInput関数のロジックを抽出）
@@ -127,7 +81,7 @@ Deno.test("小文字j入力でヒントがキャンセルされカーソルが�
   assertEquals(commands[0], "echo 'Hints cleared'");
 
   // feedkeysで'j'が送信されることを確認
-  const feedKeysCall = calls.find((call) => call.name === "feedkeys");
+  const feedKeysCall = calls.find((call) => call.fn === "feedkeys");
   assertExists(feedKeysCall);
   assertEquals(feedKeysCall.args[0], "j");
   assertEquals(feedKeysCall.args[1], "n");
@@ -148,7 +102,7 @@ Deno.test("小文字k入力でヒントがキャンセルされカーソルが�
 
   assertEquals(commands[0], "echo 'Hints cleared'");
 
-  const feedKeysCall = calls.find((call) => call.name === "feedkeys");
+  const feedKeysCall = calls.find((call) => call.fn === "feedkeys");
   assertExists(feedKeysCall);
   assertEquals(feedKeysCall.args[0], "k");
 

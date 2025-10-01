@@ -417,7 +417,7 @@ Deno.test("Core class detectWordsOptimized should be async and return Promise<Wo
   mockDenops.setCallResponse("col", () => 1);
 
   const bufnr = 1;
-  const result = core.detectWordsOptimized(mockDenops as any, bufnr);
+  const result = core.detectWordsOptimized(mockDenops, bufnr);
   assertExists(result);
   assertEquals(typeof result.then, "function"); // Promise check
 
@@ -436,7 +436,7 @@ Deno.test("Core class detectWordsOptimized should handle invalid buffer number",
   mockDenops.setCallResponse("col", () => 1);
 
   const invalidBufnr = -1;
-  const words = await core.detectWordsOptimized(mockDenops as any, invalidBufnr);
+  const words = await core.detectWordsOptimized(mockDenops, invalidBufnr);
   assertExists(words);
   assertEquals(Array.isArray(words), true);
   // Invalid buffer should return empty array, not throw error
@@ -470,12 +470,12 @@ Deno.test("Core class detectWordsOptimized should respect cache configuration", 
 
   const bufnr = 1;
   // Test with cache enabled (default)
-  const wordsWithCache = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  const wordsWithCache = await core.detectWordsOptimized(mockDenops, bufnr);
   assertExists(wordsWithCache);
   assertEquals(Array.isArray(wordsWithCache), true);
 
   // Results should be consistent when called multiple times with cache
-  const wordsWithCache2 = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  const wordsWithCache2 = await core.detectWordsOptimized(mockDenops, bufnr);
   assertEquals(wordsWithCache.length, wordsWithCache2.length);
 });
 
@@ -498,12 +498,12 @@ Deno.test("Core class detectWordsOptimized should handle config changes", async 
   mockDenops.setCallResponse("col", () => 1);
 
   const bufnr = 1;
-  const wordsWithoutJapanese = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  const wordsWithoutJapanese = await core.detectWordsOptimized(mockDenops, bufnr);
   assertExists(wordsWithoutJapanese);
 
   // Change config to enable Japanese
   core.updateConfig({useJapanese: true });
-  const wordsWithJapanese = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  const wordsWithJapanese = await core.detectWordsOptimized(mockDenops, bufnr);
   assertExists(wordsWithJapanese);
 });
 
@@ -528,7 +528,7 @@ Deno.test("Core class detectWordsOptimized should integrate with existing word d
   const bufnr = 1;
   // Should use the same logic as detectWords but with optimizations
   const standardResult = core.detectWords();
-  const optimizedWords = await core.detectWordsOptimized(mockDenops as any, bufnr);
+  const optimizedWords = await core.detectWordsOptimized(mockDenops, bufnr);
 
   // Both should return arrays of Word objects
   assertEquals(Array.isArray(standardResult.words), true);
@@ -667,7 +667,7 @@ Deno.test("Core class displayHintsOptimized should be async and accept proper pa
   mockDenops.setCallResponse("nvim_set_extmark", () => 1);
   mockDenops.setCallResponse("matchadd", () => 1);
 
-  const result = core.displayHintsOptimized(mockDenops as any, mockHints, mode);
+  const result = core.displayHintsOptimized(mockDenops, mockHints, mode);
   assertExists(result);
   assertEquals(typeof result.then, "function"); // Promise check
 
@@ -693,7 +693,7 @@ Deno.test("Core class displayHintsAsync should handle hints display asynchronous
   mockDenops.setCallResponse("matchadd", () => 1);
 
   const config = { mode: "normal" };
-  const result = core.displayHintsAsync(mockDenops as any, mockHints, config);
+  const result = core.displayHintsAsync(mockDenops, mockHints, config);
   assertExists(result);
   assertEquals(typeof result.then, "function"); // Promise check
 
@@ -720,7 +720,7 @@ Deno.test("Core class displayHintsWithExtmarksBatch should handle extmarks batch
   mockDenops.setCallResponse("nvim_set_extmark", () => 1);
   mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
 
-  const result = core.displayHintsWithExtmarksBatch(mockDenops as any, bufnr, mockHints, mode, signal);
+  const result = core.displayHintsWithExtmarksBatch(mockDenops, bufnr, mockHints, mode, signal);
   assertExists(result);
   assertEquals(typeof result.then, "function"); // Promise check
 
@@ -746,7 +746,7 @@ Deno.test("Core class displayHintsWithMatchAddBatch should handle matchadd batch
   mockDenops.setCallResponse("matchadd", () => 1);
   mockDenops.setCallResponse("hlexists", () => 1);
 
-  const result = core.displayHintsWithMatchAddBatch(mockDenops as any, mockHints, mode, signal);
+  const result = core.displayHintsWithMatchAddBatch(mockDenops, mockHints, mode, signal);
   assertExists(result);
   assertEquals(typeof result.then, "function"); // Promise check
 
@@ -762,10 +762,10 @@ Deno.test("Core class displayHints methods should handle empty hints array", asy
   mockDenops.setCallResponse("bufnr", () => 1);
 
   // All display methods should handle empty arrays gracefully
-  await core.displayHintsOptimized(mockDenops as any, emptyHints, "normal");
-  await core.displayHintsAsync(mockDenops as any, emptyHints, { mode: "normal" });
-  await core.displayHintsWithExtmarksBatch(mockDenops as any, 1, emptyHints, "normal", new AbortController().signal);
-  await core.displayHintsWithMatchAddBatch(mockDenops as any, emptyHints, "normal", new AbortController().signal);
+  await core.displayHintsOptimized(mockDenops, emptyHints, "normal");
+  await core.displayHintsAsync(mockDenops, emptyHints, { mode: "normal" });
+  await core.displayHintsWithExtmarksBatch(mockDenops, 1, emptyHints, "normal", new AbortController().signal);
+  await core.displayHintsWithMatchAddBatch(mockDenops, emptyHints, "normal", new AbortController().signal);
 });
 
 Deno.test("Core class displayHints methods should handle AbortSignal cancellation", async () => {
@@ -784,8 +784,8 @@ Deno.test("Core class displayHints methods should handle AbortSignal cancellatio
   controller.abort(); // Abort immediately
 
   // Methods should handle aborted signals gracefully
-  await core.displayHintsWithExtmarksBatch(mockDenops as any, 1, mockHints, "normal", controller.signal);
-  await core.displayHintsWithMatchAddBatch(mockDenops as any, mockHints, "normal", controller.signal);
+  await core.displayHintsWithExtmarksBatch(mockDenops, 1, mockHints, "normal", controller.signal);
+  await core.displayHintsWithMatchAddBatch(mockDenops, mockHints, "normal", controller.signal);
 });
 
 /**
@@ -820,7 +820,7 @@ Deno.test("Core class showHints should be async and integrate full workflow", as
   mockDenops.setCallResponse("nvim_buf_set_extmark", () => 1);
   mockDenops.setCallResponse("matchadd", () => 1);
 
-  const result = core.showHints(mockDenops as any);
+  const result = core.showHints(mockDenops);
   assertExists(result);
   assertEquals(typeof result.then, "function"); // Promise check
 
@@ -848,9 +848,9 @@ Deno.test("Core class showHintsInternal should handle mode parameter", async () 
   mockDenops.setCallResponse("matchadd", () => 1);
 
   // Test with different modes
-  await core.showHintsInternal(mockDenops as any, "normal");
-  await core.showHintsInternal(mockDenops as any, "visual");
-  await core.showHintsInternal(mockDenops as any); // default mode
+  await core.showHintsInternal(mockDenops, "normal");
+  await core.showHintsInternal(mockDenops, "visual");
+  await core.showHintsInternal(mockDenops); // default mode
 
   // Cleanup
   core.cleanup();
@@ -876,7 +876,7 @@ Deno.test("Core class showHintsWithKey should handle key context", async () => {
   const key = "f";
   const mode = "normal";
 
-  await core.showHintsWithKey(mockDenops as any, key, mode);
+  await core.showHintsWithKey(mockDenops, key, mode);
 
   // Config should be updated with key context
   const config = core.getConfig();
@@ -902,9 +902,9 @@ Deno.test("Core class showHints should handle multiple calls", async () => {
   mockDenops.setCallResponse("matchadd", () => 1);
 
   // Multiple rapid calls (debouncing handled at main.ts level)
-  const promise1 = core.showHints(mockDenops as any);
-  const promise2 = core.showHints(mockDenops as any);
-  const promise3 = core.showHints(mockDenops as any);
+  const promise1 = core.showHints(mockDenops);
+  const promise2 = core.showHints(mockDenops);
+  const promise3 = core.showHints(mockDenops);
 
   await Promise.all([promise1, promise2, promise3]);
 
@@ -918,7 +918,7 @@ Deno.test("Core class showHints should be disabled when config.enabled is false"
   const core = Core.getInstance({ enabled: false });
   const mockDenops = new MockDenops();
 
-  await core.showHints(mockDenops as any);
+  await core.showHints(mockDenops);
 
   // Should not show hints when disabled
   assertEquals(core.isHintsVisible(), false);
@@ -936,7 +936,7 @@ Deno.test("Core class showHints should handle errors gracefully", async () => {
   mockDenops.setCallResponse("bufnr", () => { throw new Error("Buffer error"); });
 
   // Should not throw, but handle errors internally
-  await core.showHints(mockDenops as any);
+  await core.showHints(mockDenops);
   // Should complete without throwing
 
   // Cleanup
@@ -1091,7 +1091,7 @@ Deno.test("Core class waitForUserInput should handle user input for hints", asyn
   mockDenops.setCallResponse("cursor", () => {});
 
   // Execute waitForUserInput
-  await (core as any).waitForUserInput(mockDenops as any);
+  await (core as any).waitForUserInput(mockDenops);
 
   // Verify getchar was called
   assert(getcharCallCount > 0);
@@ -1113,7 +1113,7 @@ Deno.test("Core class waitForUserInput should handle ESC to cancel", async () =>
   mockDenops.setCallResponse("getchar", () => 27);
 
   // Execute waitForUserInput
-  await (core as any).waitForUserInput(mockDenops as any);
+  await (core as any).waitForUserInput(mockDenops);
 
   // Should handle ESC gracefully without error
 
@@ -1137,7 +1137,7 @@ Deno.test("Core class waitForUserInput should handle timeout", async () => {
   });
 
   // Execute waitForUserInput
-  await (core as any).waitForUserInput(mockDenops as any);
+  await (core as any).waitForUserInput(mockDenops);
 
   // Should handle timeout gracefully
 
@@ -1166,7 +1166,7 @@ Deno.test("Core initializeDictionarySystem should initialize dictionary loader",
   const mockDenops = new MockDenops();
 
   // Should be able to initialize dictionary system
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Dictionary system should be initialized
   const hasDictionarySystem = (core as any).hasDictionarySystem();
@@ -1181,10 +1181,10 @@ Deno.test("Core reloadDictionary should reload user dictionary", async () => {
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should be able to reload dictionary
-  await core.reloadDictionary(mockDenops as any);
+  await core.reloadDictionary(mockDenops);
 
   // Should show success message
   const commands = mockDenops.getExecutedCommands();
@@ -1199,10 +1199,10 @@ Deno.test("Core editDictionary should open dictionary file for editing", async (
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should be able to edit dictionary
-  await core.editDictionary(mockDenops as any);
+  await core.editDictionary(mockDenops);
 
   // Should execute edit command
   const commands = mockDenops.getExecutedCommands();
@@ -1217,10 +1217,10 @@ Deno.test("Core editDictionary should create new dictionary file if not exists",
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should be able to edit dictionary and create new file
-  await core.editDictionary(mockDenops as any);
+  await core.editDictionary(mockDenops);
 
   // Should execute edit command and show creation message
   const commands = mockDenops.getExecutedCommands();
@@ -1235,10 +1235,10 @@ Deno.test("Core editDictionary should handle errors gracefully", async () => {
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle error gracefully (simulate file system error by testing with invalid path)
-  await core.editDictionary(mockDenops as any);
+  await core.editDictionary(mockDenops);
 
   // Should complete without throwing (error handling is internal)
   // Cleanup
@@ -1250,10 +1250,10 @@ Deno.test("Core showDictionary should display dictionary contents", async () => 
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should be able to show dictionary
-  await core.showDictionary(mockDenops as any);
+  await core.showDictionary(mockDenops);
 
   // Should create buffer and set content
   const commands = mockDenops.getExecutedCommands();
@@ -1269,10 +1269,10 @@ Deno.test("Core showDictionary should handle empty dictionary", async () => {
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle empty dictionary
-  await core.showDictionary(mockDenops as any);
+  await core.showDictionary(mockDenops);
 
   // Should still create buffer
   const commands = mockDenops.getExecutedCommands();
@@ -1287,10 +1287,10 @@ Deno.test("Core showDictionary should handle errors gracefully", async () => {
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle error gracefully
-  await core.showDictionary(mockDenops as any);
+  await core.showDictionary(mockDenops);
 
   // Should complete without throwing (error handling is internal)
   // Cleanup
@@ -1302,10 +1302,10 @@ Deno.test("Core validateDictionary should validate dictionary format", async () 
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should be able to validate dictionary
-  await core.validateDictionary(mockDenops as any);
+  await core.validateDictionary(mockDenops);
 
   // Should show validation result
   const commands = mockDenops.getExecutedCommands();
@@ -1320,10 +1320,10 @@ Deno.test("Core validateDictionary should handle missing dictionary file", async
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle missing file gracefully
-  await core.validateDictionary(mockDenops as any);
+  await core.validateDictionary(mockDenops);
 
   // Should show result (either valid or not found)
   const commands = mockDenops.getExecutedCommands();
@@ -1342,10 +1342,10 @@ Deno.test("Core validateDictionary should handle errors gracefully", async () =>
   const mockDenops = new MockDenops();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle error gracefully
-  await core.validateDictionary(mockDenops as any);
+  await core.validateDictionary(mockDenops);
 
   // Should complete without throwing (error handling is internal)
   // Cleanup
@@ -1367,10 +1367,10 @@ Deno.test("Core addToDictionary should add word to user dictionary", async () =>
   const core = Core.getInstance();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should be able to add word to dictionary
-  await core.addToDictionary(mockDenops as any, "testword", "test", "noun");
+  await core.addToDictionary(mockDenops, "testword", "test", "noun");
 
   // Should show success message
   const commands = mockDenops.getExecutedCommands();
@@ -1385,10 +1385,10 @@ Deno.test("Core addToDictionary should handle invalid word input", async () => {
   const core = Core.getInstance();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle empty word
-  await core.addToDictionary(mockDenops as any, "", "", "");
+  await core.addToDictionary(mockDenops, "", "", "");
 
   // Should show error message
   const commands = mockDenops.getExecutedCommands();
@@ -1403,12 +1403,12 @@ Deno.test("Core addToDictionary should handle different word types", async () =>
   const core = Core.getInstance();
 
   // Initialize dictionary system first
-  await core.initializeDictionarySystem(mockDenops as any);
+  await core.initializeDictionarySystem(mockDenops);
 
   // Should handle different word types
-  await core.addToDictionary(mockDenops as any, "run", "走る", "verb");
-  await core.addToDictionary(mockDenops as any, "fast", "速い", "adjective");
-  await core.addToDictionary(mockDenops as any, "dog", "犬", "noun");
+  await core.addToDictionary(mockDenops, "run", "走る", "verb");
+  await core.addToDictionary(mockDenops, "fast", "速い", "adjective");
+  await core.addToDictionary(mockDenops, "dog", "犬", "noun");
 
   // Should show success messages for each
   const commands = mockDenops.getExecutedCommands();
@@ -1992,7 +1992,7 @@ Deno.test("Core displayHintsAsync should display hints asynchronously", async ()
   ];
 
   // Should complete without error
-  await core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" });
+  await core.displayHintsAsync(mockDenops, hintMappings, { mode: "normal" });
 
   // Clean up
   core.cleanup();
@@ -2018,7 +2018,7 @@ Deno.test("Core displayHintsAsync should handle abort signal", async () => {
 
   // Start async display then abort
   const abortController = new AbortController();
-  const displayPromise = core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" }, abortController.signal);
+  const displayPromise = core.displayHintsAsync(mockDenops, hintMappings, { mode: "normal" }, abortController.signal);
   abortController.abort();
 
   // Should handle abort gracefully
@@ -2057,7 +2057,7 @@ Deno.test("Core isRenderingHints should return rendering status", async () => {
   ];
 
   // Start async display
-  const displayPromise = core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" });
+  const displayPromise = core.displayHintsAsync(mockDenops, hintMappings, { mode: "normal" });
 
   // Should be rendering during async operation
   // Note: Due to async nature, this may or may not be true depending on timing
@@ -2098,7 +2098,7 @@ Deno.test("Core abortCurrentRendering should abort ongoing rendering", async () 
   }));
 
   // Start async display
-  const displayPromise = core.displayHintsAsync(mockDenops as any, hintMappings, { mode: "normal" });
+  const displayPromise = core.displayHintsAsync(mockDenops, hintMappings, { mode: "normal" });
 
   // Immediately abort
   core.abortCurrentRendering();
@@ -2149,7 +2149,7 @@ Deno.test("Core highlightCandidateHintsAsync should highlight matching hints", a
   ];
 
   // Should highlight hints starting with "A"
-  await core.highlightCandidateHintsAsync(mockDenops as any, hintMappings, "A", { mode: "normal" });
+  await core.highlightCandidateHintsAsync(mockDenops, hintMappings, "A", { mode: "normal" });
 
   // Clean up
   core.cleanup();
@@ -2174,7 +2174,7 @@ Deno.test("Core highlightCandidateHintsAsync should handle empty partial input",
   ];
 
   // Should handle empty input gracefully
-  await core.highlightCandidateHintsAsync(mockDenops as any, hintMappings, "", { mode: "normal" });
+  await core.highlightCandidateHintsAsync(mockDenops, hintMappings, "", { mode: "normal" });
 
   // Clean up
   core.cleanup();
@@ -2242,7 +2242,7 @@ Deno.test("Core showHints should include user input waiting", async () => {
 
   try {
     // This should complete the full workflow including waitForUserInput
-    await core.showHints(mockDenops as any);
+    await core.showHints(mockDenops);
 
     // Hints should have been shown and user input processed
     assertEquals(core.isHintsVisible(), false); // Should be hidden after jump
@@ -2278,7 +2278,7 @@ Deno.test("Core hideHints should clear extmarks in Neovim", async () => {
   assertEquals(core.isHintsVisible(), true);
 
   // hideHints should clear Neovim extmarks and reset state
-  await core.hideHintsOptimized(mockDenops as any);
+  await core.hideHintsOptimized(mockDenops);
 
   assertEquals(core.isHintsVisible(), false);
   assertEquals(core.getCurrentHints().length, 0);
@@ -2315,7 +2315,7 @@ Deno.test("Core hideHints should clear matches in Vim", async () => {
   assertEquals(core.isHintsVisible(), true);
 
   // hideHints should clear Vim matches and reset state
-  await core.hideHintsOptimized(mockDenops as any);
+  await core.hideHintsOptimized(mockDenops);
 
   assertEquals(core.isHintsVisible(), false);
   assertEquals(core.getCurrentHints().length, 0);
@@ -2444,7 +2444,7 @@ Deno.test("showHints should call waitForUserInput after display", async () => {
   };
 
   try {
-    await core.showHints(mockDenops as any);
+    await core.showHints(mockDenops);
 
     // Verify the sequence: display started and completed, then waitForUserInput was called
     assert(displayStarted, "Display should have started");
