@@ -228,8 +228,8 @@ hintPatterns:
 
 ## サンプルファイル
 
-- `examples/dictionary.json` - JSON形式のサンプル
-- `examples/dictionary.yaml` - YAML形式のサンプル
-- `examples/dictionary.txt` - テキスト形式のサンプル
+- `samples/dictionaries/dictionary.json` - JSON形式のサンプル
+- `samples/dictionaries/dictionary.yaml` - YAML形式のサンプル
+- `samples/dictionaries/dictionary.txt` - テキスト形式のサンプル
 
-これらのファイルをコピーして、プロジェクトに合わせてカスタマイズしてください。
+これらのファイルをコピーして、プロジェクトに合わせてカスタマイズしてください。詳細は `samples/dictionaries/DICTIONARY_GUIDE.md` を参照してください。
