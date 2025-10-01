@@ -428,6 +428,121 @@
   - ✅ コードレビューチェックリストを作成
   - ✅ 参考資料セクションを追加（TypeScript公式ドキュメント、プロジェクト内リソース、テストファイル）
 
+#### sub4 core.ts の any 型削減 (追加タスク)
+@target: denops/hellshake-yano/core.ts
+@priority: 高（プロダクションコードの主要ファイル）
+
+##### 現状分析（2025-10-01調査結果）
+- **残存any型**: 61箇所
+- **カテゴリ分類**:
+  1. **関数の戻り値型**: 約15箇所
+     - createCommand(): any
+     - getController(): any
+     - getConfigManager(): any
+     - getDebugController(): any
+     - getExtendedDebugInfo(): any
+     - getDebugInfo(): any
+     - getStatistics(): any
+     - healthCheck(): any
+     - その他ユーティリティ関数
+  2. **関数パラメータ**: 約20箇所
+     - initialize(denops, options?: any)
+     - updateState(updates: any)
+     - config: any パラメータ
+     - analyzeInputCharacter(char, config: any)
+     - createConfigDispatcher(denops: any, config: any)
+     - その他の設定関連パラメータ
+  3. **型アサーション**: 約20箇所
+     - (Core as any).hintsVisible
+     - (Core as any).currentHints
+     - (denops as any).call
+     - (unifiedConfig as any).default_min_length
+     - その他のプライベートプロパティアクセス
+  4. **依存性注入の型定義**: 7箇所
+     - HintOperationsParams.dependencies 内の各メソッド型
+
+##### Phase 1: 関数の戻り値型の厳密化（優先度：高）
+- [ ] createCommand の戻り値型を定義
+  - CommandObject インターフェースを types.ts に追加
+  - execute, canExecute, getDescription メソッドの型を定義
+- [ ] getController, getConfigManager, getDebugController の戻り値型を定義
+  - Controller, ConfigManager, DebugController インターフェースを types.ts に追加
+  - 各クラスの公開APIの型を定義
+- [ ] getDebugInfo, getExtendedDebugInfo の戻り値型を厳密化
+  - DebugInfo インターフェースを拡張（既存の型定義を活用）
+- [ ] getStatistics の戻り値型を定義
+  - PluginStatistics インターフェースを使用（Process4 Sub1で追加済み）
+- [ ] healthCheck の戻り値型を定義
+  - HealthCheckResult インターフェースを使用（Process4 Sub1で追加済み）
+
+##### Phase 2: 関数パラメータの型定義（優先度：高）
+- [ ] initialize の options パラメータを厳密化
+  - InitializeOptions インターフェースを types.ts に追加
+  - 既存の InitializeResult と組み合わせて使用
+- [ ] updateState の updates パラメータを厳密化
+  - Partial<PluginState> に変更（Process4 Sub1で定義済み）
+- [ ] config: any パラメータを Partial<Config> に変更
+  - analyzeInputCharacter(char, config)
+  - createConfigDispatcher(denops, config)
+  - createMultiCharInputManager(config)
+  - updateConfigAdvanced(config, updates)
+  - その他の設定関連関数
+- [ ] denops: any パラメータを Denops に変更
+  - Process100で追加した Denops 型エイリアスを活用
+  - getUserInputWithTimeout(denops, timeout)
+  - createConfigDispatcher(denops, config)
+
+##### Phase 3: 型アサーションの改善（優先度：中）
+- [ ] (Core as any) のプライベートプロパティアクセスを改善
+  - hintsVisible, currentHints をプライベートプロパティとして型定義
+  - アクセサメソッドの型を厳密化
+  - 可能であれば public プロパティとして公開し、型安全にアクセス
+- [ ] (denops as any).call の型アサーションを削除
+  - Denops インターフェースの call メソッドを正しく使用
+  - 型ガードで存在チェックを実施
+- [ ] (unifiedConfig as any) の型アサーションを改善
+  - EnhancedConfig インターフェースを定義（word.ts の EnhancedWordConfig を参考）
+  - default_min_length, min_length, minWordLength プロパティを型定義に追加
+
+##### Phase 4: 依存性注入の型定義（優先度：高）
+- [ ] HintOperationsParams.dependencies の型を厳密化
+  - types.ts の HintOperationsDependencies インターフェースを使用（Process1 Sub3で定義済み）
+  - 各メソッド（detectWordsOptimized, generateHintsOptimized等）の型を適用
+  - any から具体的な型シグネチャに変更
+
+##### Phase 5: その他の型定義（優先度：中）
+- [ ] cacheStats の型を厳密化
+  - words: any, hints: any → CacheStatistics 型を使用
+  - Process4 Sub3で定義した型を活用
+- [ ] findMatchingHints, findExactMatch の戻り値型を定義
+  - HintMapping[] を使用
+  - HintMapping | null を使用
+
+##### 実装方針
+1. **TDD Red-Green-Refactorサイクルに従う**
+   - 各Phaseごとにテストを実行し、既存機能が壊れていないことを確認
+2. **段階的な実装**
+   - Phase 1から順に実装し、各Phase後にテストを実行
+3. **既存の型定義を最大限活用**
+   - Process1-5で定義した型（Partial<Config>, PluginState, HintOperationsDependencies等）を活用
+4. **後方互換性の保持**
+   - 公開APIの変更は慎重に行い、既存のテストが通過することを確認
+5. **型推論の活用**
+   - 可能な限り型推論を活用し、冗長な型アノテーションを避ける
+
+##### 期待される成果
+- **any型削減**: 61箇所 → 0箇所（100%削減）
+- **型安全性の向上**: core.ts の全ての関数とクラスが厳密な型定義を持つ
+- **IDE補完の改善**: 型推論が効き、開発効率が向上
+- **保守性の向上**: 型定義により、リファクタリング時の影響範囲が明確に
+- **テスト品質の向上**: 型安全なモック実装により、テストの信頼性が向上
+
+##### 注意事項
+- core.ts は4700行を超える大規模ファイルのため、慎重に実装する
+- 各Phaseごとに必ずテストを実行し、既存機能が壊れていないことを確認する
+- プライベートプロパティへのアクセス（(Core as any)）は、設計の見直しも検討する
+- 型定義の追加により、types.ts が肥大化する可能性があるため、適切にモジュール分割を検討する
+
 #### 実装成果
 - ✅ TDD Red-Green-Refactorサイクルで実装完了
 - ✅ **型チェック結果**: 全てのTypeScriptファイルでコンパイルエラー0件
@@ -438,22 +553,64 @@
   2. 既存ファイルのドキュメントコメント更新（types.ts, config.ts, mock.ts）
   3. PLAN.md の更新（process50完了マーク）
 - ✅ **品質保証**: 既存の全テスト（623個）が通過し、型安全性が確保されていることを確認
+- 📝 **追加タスク**: core.ts の any 型削減（61箇所）を sub4 として追加
 
-### process100 リファクタリング
+### process100 リファクタリング ✅ 完了 (2025-10-01)
 
-#### sub1 型定義の最適化
-- [ ] 重複する型定義を統合
-- [ ] 型エイリアスの活用で可読性を向上
-- [ ] ジェネリクスの適切な活用
+#### sub1 型定義の最適化 ✅ 完了
+- [x] 重複する型定義を統合
+  - SyntaxContext、LineContextの重複定義を削除（word.ts → types.ts）
+  - 型定義の一元管理を徹底
+- [x] 型エイリアスの活用で可読性を向上
+  - Denops型エイリアス: `import("@denops/std").Denops` → `Denops`
+  - UnknownRecord型エイリアス: `Record<string, unknown>` の簡略化
+  - UnknownFunction型エイリアス: 汎用関数型の定義
+  - types.ts内で4箇所の長い型定義を簡略化
+- [x] ジェネリクスの適切な活用
+  - 既存のジェネリクス使用は適切（Result<T, E>、CacheEntry<T>、ValidationResult<T>等）
+  - デフォルト型パラメータの活用が適切
 
-#### sub2 型推論の改善
-- [ ] 型アノテーションの冗長性を削減
-- [ ] 型推論が効く設計に変更
-- [ ] 関数のシグネチャを最適化
+#### sub2 型推論の改善 ✅ 完了
+- [x] 型アノテーションの冗長性を削減
+  - 4個のファクトリ関数で戻り値型アノテーションを削除
+    - createDefaultWord(): 型推論により自動的にWord型が推論
+    - createDefaultHintMapping(): 型推論により自動的にHintMapping型が推論
+    - createCacheEntry<T>(): 型推論により自動的にCacheEntry<T>型が推論
+    - createValidationResult<T>(): 型推論により自動的にValidationResult<T>型が推論
+- [x] 型推論が効く設計に変更
+  - TypeScriptの型推論機能を最大限活用
+  - 型ガードとの組み合わせで型安全性を維持
+- [x] 関数のシグネチャを最適化
+  - 引数の型定義は保持（型安全性のため）
+  - 戻り値の型定義は型推論に任せる（冗長性削減）
 
-#### sub3 パフォーマンスへの影響確認
-- [ ] 型チェックのオーバーヘッドを測定
-- [ ] 必要に応じて型定義を簡略化
+#### sub3 パフォーマンスへの影響確認 ✅ 完了
+- [x] 型チェックのオーバーヘッドを測定
+  - **最適化前**: 0.030秒（30ms）
+  - **最適化後**: 0.033秒（33ms）
+  - **変化**: +3ms（+10%）、誤差範囲内
+  - **結論**: パフォーマンスへの影響は最小限、実用上問題なし
+- [x] 必要に応じて型定義を簡略化
+  - 重複型定義の削除により、コンパイル対象のコード量が減少（word.ts: 36行削減）
+  - 型エイリアスにより型定義が簡潔に
+  - 過度な最適化は避け、可読性と保守性を優先
+
+#### 実装成果
+- ✅ TDD Red-Green-Refactorサイクルで実装完了
+- ✅ **重複型定義の削除**: 2箇所（SyntaxContext、LineContext）
+- ✅ **型エイリアスの導入**: 3個（Denops、UnknownRecord、UnknownFunction）
+- ✅ **型推論の活用**: 4個のファクトリ関数で戻り値型アノテーション削除
+- ✅ **パフォーマンス**: 型チェック時間の変化は誤差範囲内（+3ms）
+- ✅ **テスト結果**: 全623個のテストが通過（0 failed）
+- ✅ **型チェック**: エラーなし、全ファイルで型チェック成功
+- ✅ **品質向上**:
+  - **可読性**: 大幅に向上（型エイリアスにより長い型定義が簡潔に）
+  - **保守性**: 向上（型定義の一元管理が徹底、型推論により将来の変更が容易に）
+  - **型安全性**: 向上（重複型定義による不整合のリスクが解消）
+- ✅ **ドキュメント更新**: types.tsにProcess100の改善内容を記録
+- ✅ **レポート作成**:
+  - tmp/claude/process100_red_phase_report.md（Red Phase調査レポート）
+  - tmp/claude/process100_performance_report.md（パフォーマンス測定レポート）
 
 ### process200 ドキュメンテーション
 

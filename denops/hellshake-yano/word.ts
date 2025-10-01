@@ -1,44 +1,19 @@
 import type { Denops } from "@denops/std";
-import type { DetectionContext, Word, WordDetectionResult } from "./types.ts";
+import type {
+  DetectionContext,
+  LineContext,
+  SyntaxContext,
+  Word,
+  WordDetectionResult,
+} from "./types.ts";
 import { TinySegmenter as NpmTinySegmenter } from "https://esm.sh/@birchill/tiny-segmenter@1.0.0";
 import { exists } from "https://deno.land/std@0.212.0/fs/exists.ts";
 import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
 import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
 
-/**
- * コンテキスト統合から欠落した型定義 - 構文コンテキスト
- * 現在のカーソル位置の構文的な状況を表現します
- */
-interface SyntaxContext {
-  /** コメント内かどうか */
-  inComment: boolean;
-  /** 文字列内かどうか */
-  inString: boolean;
-  /** 関数内かどうか */
-  inFunction: boolean;
-  /** クラス内かどうか */
-  inClass: boolean;
-  /** プログラミング言語の種類 */
-  language: string;
-}
-
-/**
- * 行コンテキスト情報
- * 現在の行の特性と状況を表現します
- */
-interface LineContext {
-  /** コメント行かどうか */
-  isComment: boolean;
-  /** ドキュメント文字列行かどうか */
-  isDocString: boolean;
-  /** インポート文行かどうか */
-  isImport: boolean;
-  /** インデントレベル */
-  indentLevel: number;
-  /** 行のタイプ（文字列表現） */
-  lineType: string;
-}
+// Process100 Sub1: 重複型定義を削除し、types.tsからインポート
+// SyntaxContextとLineContextはtypes.tsで定義されている
 
 /**
  * 新しい単語検出設定インターフェース
