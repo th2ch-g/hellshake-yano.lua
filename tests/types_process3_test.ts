@@ -52,8 +52,7 @@ Deno.test("types.ts exports should remain consistent", async () => {
     "isHintMapping",
     "isConfig",
     "isHintPosition",
-    "isDetectionStrategy",
-    "isConfigType"
+    "isDetectionStrategy"
   ];
 
   for (const guardName of expectedTypeGuards) {
