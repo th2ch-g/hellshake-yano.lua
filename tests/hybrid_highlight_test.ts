@@ -9,23 +9,19 @@
  * - AbortControllerによるキャンセル機能維持
  */
 
-import { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
+import type { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
 import { assertEquals, assertExists, assert } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { delay } from "https://deno.land/std@0.201.0/async/delay.ts";
 import type { HintMapping, Word } from "../denops/hellshake-yano/types.ts";
 import { getDefaultConfig, type Config } from "../denops/hellshake-yano/config.ts";
+import { MockDenops as BaseMockDenops } from "./helpers/mock.ts";
 
 // Mock Denops interface for testing hybrid highlight functionality
-class MockDenops implements Partial<Denops> {
-  meta: { host: "nvim" | "vim"; mode: "release"; version: string; platform: "mac" };
-  private callHistory: Array<{ method: string; args: any[]; timestamp: number }> = [];
+class MockDenopsWithHistory extends BaseMockDenops {
+  private callHistory: Array<{ method: string; args: unknown[]; timestamp: number }> = [];
   private cmdHistory: Array<{ command: string; timestamp: number }> = [];
 
-  constructor(host: "nvim" | "vim" = "nvim") {
-    this.meta = { host, mode: "release" as const, version: "0.0.0", platform: "mac" as const };
-  }
-
-  async call(method: string, ...args: any[]): Promise<any> {
+  override async call<T = unknown>(method: string, ...args: unknown[]): Promise<T> {
     this.callHistory.push({ method, args, timestamp: Date.now() });
 
     // シミュレーション: extmark操作に遅延を追加
@@ -33,16 +29,15 @@ class MockDenops implements Partial<Denops> {
       await delay(2); // 2ms遅延でレンダリング負荷をシミュレート
     }
 
-    return method === "bufnr" ? 1 : 1;
+    return super.call<T>(method, ...args);
   }
 
-  async cmd(command: string): Promise<void> {
+  override async cmd(command: string): Promise<void> {
     this.cmdHistory.push({ command, timestamp: Date.now() });
-    // redrawコマンドは即座に完了
-    return Promise.resolve();
+    return super.cmd(command);
   }
 
-  getCallHistory(): Array<{ method: string; args: any[]; timestamp: number }> {
+  getCallHistory(): Array<{ method: string; args: unknown[]; timestamp: number }> {
     return [...this.callHistory];
   }
 
@@ -80,7 +75,7 @@ function createTestHints(count: number): HintMapping[] {
 
 // Test suite for highlightCandidateHintsHybrid method (TDD Green Phase)
 Deno.test("highlightCandidateHintsHybrid - TDD Green Phase: Method exists and works correctly", async () => {
-  const mockDenops = new MockDenops();
+  const mockDenops = new MockDenopsWithHistory();
   const testHints = createTestHints(30); // 30個のヒントで同期/非同期の境界をテスト
 
   // Core クラスをインポートして、メソッドが存在することを確認（Green Phase）
@@ -110,7 +105,7 @@ Deno.test("highlightCandidateHintsHybrid - TDD Green Phase: Method exists and wo
 });
 
 Deno.test("highlightCandidateHintsHybrid - First batch synchronous processing requirement", async () => {
-  const mockDenops = new MockDenops();
+  const mockDenops = new MockDenopsWithHistory();
   const testHints = createTestHints(25); // 25個のヒント（15個同期 + 10個非同期）
   const inputChar = "A";
 
@@ -153,7 +148,7 @@ Deno.test("highlightCandidateHintsHybrid - First batch synchronous processing re
 });
 
 Deno.test("highlightCandidateHintsHybrid - AbortController cancellation functionality", async () => {
-  const mockDenops = new MockDenops();
+  const mockDenops = new MockDenopsWithHistory();
   const testHints = createTestHints(50); // 大量のヒントでキャンセル機能をテスト
   const inputChar = "B";
 
@@ -192,7 +187,7 @@ Deno.test("highlightCandidateHintsHybrid - AbortController cancellation function
 });
 
 Deno.test("highlightCandidateHintsHybrid - Async processing of remaining hints", async () => {
-  const mockDenops = new MockDenops();
+  const mockDenops = new MockDenopsWithHistory();
   const testHints = createTestHints(35); // 35個のヒント（20個同期 + 15個非同期）
   const inputChar = "C";
 
@@ -242,7 +237,7 @@ Deno.test("highlightCandidateHintsHybrid - Async processing of remaining hints",
 });
 
 Deno.test("highlightCandidateHintsHybrid - Immediate redraw after sync batch", async () => {
-  const mockDenops = new MockDenops();
+  const mockDenops = new MockDenopsWithHistory();
   const testHints = createTestHints(20);
   const inputChar = "D";
 

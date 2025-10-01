@@ -3,27 +3,18 @@
  * TDD Red-Green-Refactor approach: RED phase - failing tests
  */
 
-import { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
+import type { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
 import { assertEquals, assertExists } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { delay } from "https://deno.land/std@0.201.0/async/delay.ts";
 import type { HintMapping, Word } from "../denops/hellshake-yano/types.ts";
 import { getDefaultConfig, type Config } from "../denops/hellshake-yano/config.ts";
+import { MockDenops as BaseMockDenops } from "./helpers/mock.ts";
 
-// Mock Denops interface for testing
-class MockDenops implements Partial<Denops> {
-  meta: { host: "nvim" | "vim"; mode: "release"; version: string; platform: "mac" };
-  private callHistory: Array<{ method: string; args: any[] }> = [];
+// 遅延をシミュレートする拡張MockDenops
+class MockDenopsWithDelay extends BaseMockDenops {
+  private callHistory: Array<{ method: string; args: unknown[] }> = [];
 
-  constructor(host: "nvim" | "vim" = "nvim") {
-    this.meta = { host, mode: "release" as const, version: "0.0.0", platform: "mac" as const };
-  }
-
-  // カスタムレスポンス定義
-  private responses: Record<string, any> = {
-    "bufnr": 1,
-  };
-
-  async call(method: string, ...args: any[]): Promise<any> {
+  override async call<T = unknown>(method: string, ...args: unknown[]): Promise<T> {
     this.callHistory.push({ method, args });
 
     // 遅延をシミュレート（レンダリングの重い処理をエミュレート）
@@ -31,48 +22,30 @@ class MockDenops implements Partial<Denops> {
       await delay(1); // 1ms遅延
     }
 
-    // getcharのレスポンスを処理
-    if (method === "getchar") {
-      const response = this.responses[method];
-      if (typeof response === "function") {
-        return response();
-      }
-      return response || "";
-    }
-
-    if (method in this.responses) {
-      const response = this.responses[method];
-      return typeof response === "function" ? response() : response;
-    }
-
-    return 1; // デフォルトレスポンス
+    return super.call<T>(method, ...args);
   }
 
-  async cmd(command: string): Promise<void> {
+  override async cmd(command: string): Promise<void> {
     this.callHistory.push({ method: "cmd", args: [command] });
-    // cmdメソッドのモック実装（redrawコマンドを記録）
     if (command === "redraw") {
       this.callHistory.push({ method: "redraw", args: [] });
     }
+    return super.cmd(command);
   }
 
   getCallHistory() {
-    return this.callHistory;
+    return [...this.callHistory];
   }
 
   clearCallHistory() {
     this.callHistory = [];
   }
-
-  setResponse(method: string, response: any) {
-    this.responses[method] = response;
-  }
 }
 
 // テスト用のグローバル変数とヘルパー関数をセットアップ
-let mockDenops: MockDenops;
-let testCurrentHints: any[];
-let testConfig: any;
+let mockDenops: MockDenopsWithDelay;
+let testCurrentHints: HintMapping[];
+let testConfig: Partial<Config>;
 let testExtmarkNamespace: number;
 let testHintsVisible: boolean;
 let globalAbortController: AbortController | undefined;
@@ -80,15 +53,17 @@ let globalAbortController: AbortController | undefined;
 // テスト専用のグローバル変数アクセス
 // NOTE: 実際の実装ではこれらをテスト用に公開する必要があります
 declare global {
-  var currentHints: any[];
-  var config: any;
+  var currentHints: HintMapping[];
+  var config: Partial<Config>;
   var extmarkNamespace: number | undefined;
   var hintsVisible: boolean;
   var fallbackMatchIds: number[];
-  var clearHintDisplay: (denops: any) => Promise<void>;
-  var calculateHintPositionWithCoordinateSystem: (word: any, hintPosition: any, debugCoordinates: any) => any;
-  var processExtmarksBatched: (denops: any, matchingHints: any[], nonMatchingHints: any[], inputPrefix: string, bufnr: number, signal: AbortSignal) => Promise<void>;
-  var processMatchaddBatched: (denops: any, matchingHints: any[], nonMatchingHints: any[], signal: AbortSignal) => Promise<void>;
+  var pendingHighlightTimerId: number | undefined;
+  var gc: (() => void) | undefined;
+  var clearHintDisplay: (denops: Denops) => Promise<void>;
+  var calculateHintPositionWithCoordinateSystem: (word: Word, hintPosition: string, debugCoordinates: boolean) => { line: number; col: number };
+  var processExtmarksBatched: (denops: Denops, matchingHints: HintMapping[], nonMatchingHints: HintMapping[], inputPrefix: string, bufnr: number, signal: AbortSignal) => Promise<void>;
+  var processMatchaddBatched: (denops: Denops, matchingHints: HintMapping[], nonMatchingHints: HintMapping[], signal: AbortSignal) => Promise<void>;
 }
 
 // highlightCandidateHintsAsync関数をインポート
@@ -123,9 +98,9 @@ function cleanupTimers() {
   // 既存のハイライトタイマーをクリア
   try {
     // グローバルのpendingHighlightTimerIdがある場合はクリア
-    if (typeof globalThis !== 'undefined' && (globalThis as any).pendingHighlightTimerId) {
-      clearTimeout((globalThis as any).pendingHighlightTimerId);
-      (globalThis as any).pendingHighlightTimerId = undefined;
+    if (typeof globalThis !== 'undefined' && globalThis.pendingHighlightTimerId !== undefined) {
+      clearTimeout(globalThis.pendingHighlightTimerId);
+      globalThis.pendingHighlightTimerId = undefined;
     }
     // すべてのタイマーIDをクリア（各テストで作成されたタイマー）
     for (let i = 1; i < 10000; i++) {
@@ -148,7 +123,7 @@ function cleanupTimers() {
 function setupTestEnvironment() {
   cleanupTimers(); // まずタイマーをクリーンアップ
 
-  mockDenops = new MockDenops();
+  mockDenops = new MockDenopsWithDelay();
   testCurrentHints = [
     {
       hint: "ab",
@@ -181,23 +156,22 @@ function setupTestEnvironment() {
   globalThis.fallbackMatchIds = [];
 
   // ヘルパー関数のモック
-  globalThis.clearHintDisplay = async (denops: any) => {
+  globalThis.clearHintDisplay = async (denops: Denops) => {
     // モック実装：clearHintDisplay呼び出しを記録
     if (mockDenops && mockDenops.getCallHistory) {
-      mockDenops.getCallHistory().push({ method: "clearHintDisplay", args: [] });
+      (mockDenops.getCallHistory() as Array<{ method: string; args: unknown[] }>).push({ method: "clearHintDisplay", args: [] });
     }
   };
 
-  globalThis.calculateHintPositionWithCoordinateSystem = (word: any, hintPosition: any, debugCoordinates: any) => {
+  globalThis.calculateHintPositionWithCoordinateSystem = (word: Word, hintPosition: string, debugCoordinates: boolean) => {
     return {
-      vim_line: word.line,
-      vim_col: word.col,
-      display_mode: "end"
+      line: word.line,
+      col: word.col
     };
   };
 
   // バッチ処理関数のモック
-  globalThis.processExtmarksBatched = async (denops: any, matchingHints: any[], nonMatchingHints: any[], inputPrefix: string, bufnr: number, signal: AbortSignal) => {
+  globalThis.processExtmarksBatched = async (denops: Denops, matchingHints: HintMapping[], nonMatchingHints: HintMapping[], inputPrefix: string, bufnr: number, signal: AbortSignal) => {
     console.log("processExtmarksBatched called with", matchingHints.length, "matching and", nonMatchingHints.length, "non-matching hints");
     // extmark処理をシミュレート
     for (const hint of [...matchingHints, ...nonMatchingHints]) {
@@ -206,7 +180,7 @@ function setupTestEnvironment() {
     }
   };
 
-  globalThis.processMatchaddBatched = async (denops: any, matchingHints: any[], nonMatchingHints: any[], signal: AbortSignal) => {
+  globalThis.processMatchaddBatched = async (denops: Denops, matchingHints: HintMapping[], nonMatchingHints: HintMapping[], signal: AbortSignal) => {
     console.log("processMatchaddBatched called");
     // matchadd処理をシミュレート
     for (const hint of [...matchingHints, ...nonMatchingHints]) {
@@ -352,7 +326,7 @@ Deno.test("highlightCandidateHintsAsync - Vim互換性テスト", async () => {
   setupTestEnvironment();
 
   // Vimモードでのテスト
-  const vimMockDenops = new MockDenops("vim");
+  const vimMockDenops = new MockDenopsWithDelay();
 
   const mockHints = createMockHints();
   const mockConfig = createMockConfig();
@@ -362,7 +336,7 @@ Deno.test("highlightCandidateHintsAsync - Vim互換性テスト", async () => {
 
   // Vimではmatchaddが使用される
   const matchaddCalls = vimMockDenops.getCallHistory()
-    .filter(call => call.method === "matchadd");
+    .filter((call: { method: string; args: unknown[] }) => call.method === "matchadd");
 
   assertEquals(matchaddCalls.length >= 0, true, "Should use matchadd for Vim");
 });
@@ -371,7 +345,7 @@ Deno.test("highlightCandidateHintsAsync - エラーハンドリングテスト",
   setupTestEnvironment();
 
   // エラーを発生させる設定
-  mockDenops.setResponse("bufnr", -1); // 無効なバッファ
+  mockDenops.setCallResponse("bufnr", -1); // 無効なバッファ
 
   const mockHints = createMockHints();
   const mockConfig = createMockConfig();
@@ -565,7 +539,7 @@ Deno.test("Process10 RED: Fire-and-forget - Promiseを返さないことの確�
   // voidを返すことを確認（Promiseではない）
   assertEquals(result, undefined, "Fire-and-forget関数はvoidを返すべき");
   // resultがundefinedの場合、Promiseではない
-  const isPromise = result != null && typeof result === "object" && (result as any) instanceof Promise;
+  const isPromise = result != null && typeof result === "object";
   assertEquals(isPromise, false, "Promiseを返してはいけない");
 
   // クリーンアップ
@@ -637,8 +611,8 @@ Deno.test("Process10 RED: AbortController - キャンセル時のメモリリー
 
   // GCを促進
   try {
-    if ((globalThis as any).gc) {
-      (globalThis as any).gc();
+    if (globalThis.gc) {
+      globalThis.gc();
     }
   } catch {}
 
@@ -735,7 +709,7 @@ Deno.test("Process10 RED: 2文字目入力 - イベントループがブロッ�
 
   // getcharをシミュレートするモック
   let getcharCalled = false;
-  mockDenops.setResponse("getchar", () => {
+  mockDenops.setCallResponse("getchar", () => {
     getcharCalled = true;
     return "b"; // 2文字目
   });
@@ -765,7 +739,7 @@ Deno.test("Process10 RED: 2文字目入力 - 高速連続入力テスト", async
   let currentInputIndex = 0;
 
   // getcharモック（連続入力をシミュレート）
-  mockDenops.setResponse("getchar", () => {
+  mockDenops.setCallResponse("getchar", () => {
     if (currentInputIndex < inputSequence.length) {
       const char = inputSequence[currentInputIndex++];
       receivedInputs.push(char);

@@ -4,28 +4,19 @@ import {
   resetWordDetectionManager,
 } from "../denops/hellshake-yano/word.ts";
 import { detectWordsWithManager, type EnhancedWordConfig } from "../denops/hellshake-yano/word.ts";
+import { MockDenops } from "./helpers/mock.ts";
 
 // Mock Denops for testing
-const mockDenops = {
-  call: async (func: string, ...args: any[]) => {
-    switch (func) {
-      case "line":
-        if (args[0] === "w0") return 1;
-        if (args[0] === "w$") return 10;
-        if (args[0] === "$") return 10;
-        return 5;
-      case "getbufline":
-        return ["これはテスト行です", "Hello world test", "混在したcontent"];
-      case "bufnr":
-        return 1;
-      case "bufexists":
-        return 1;
-      default:
-        return null;
-    }
-  },
-  meta: { host: "nvim" },
-} as any;
+const mockDenops = new MockDenops();
+mockDenops.onCall("line", (arg: unknown) => {
+  if (arg === "w0") return 1;
+  if (arg === "w$") return 10;
+  if (arg === "$") return 10;
+  return 5;
+});
+mockDenops.setCallResponse("getbufline", ["これはテスト行です", "Hello world test", "混在したcontent"]);
+mockDenops.setCallResponse("bufnr", 1);
+mockDenops.setCallResponse("bufexists", 1);
 
 Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
   await t.step("End-to-end detection with manager", async () => {
@@ -199,15 +190,16 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
       };
 
       // Mock denops to return the test text
-      const scenarioDenops = {
-        ...mockDenops,
-        call: async (func: string, ...args: any[]) => {
-          if (func === "getbufline") {
-            return [scenario.text];
-          }
-          return mockDenops.call(func, ...args);
-        },
-      };
+      const scenarioDenops = new MockDenops();
+      scenarioDenops.setCallResponse("getbufline", [scenario.text]);
+      scenarioDenops.setCallResponse("bufnr", 1);
+      scenarioDenops.setCallResponse("bufexists", 1);
+      scenarioDenops.onCall("line", (arg: unknown) => {
+        if (arg === "w0") return 1;
+        if (arg === "w$") return 10;
+        if (arg === "$") return 10;
+        return 5;
+      });
 
       const result = await detectWordsWithManager(scenarioDenops, config);
 
@@ -223,23 +215,24 @@ Deno.test("Integration Test: Word Detection Abstraction", async (t) => {
 
 Deno.test("Real editing scenarios - per-key min_length integration", async (t) => {
   // Mock Denopsを拡張してキー別設定をサポート
-  const createMockDenopsWithPerKeyConfig = (config: any) => ({
-    ...mockDenops,
-    call: async (func: string, ...args: any[]) => {
-      switch (func) {
-        case "getbufline":
-          return [
-            "function test() { return 'hello world'; }",
-            "const a = 1; const b = 2; const c = a + b;",
-            "for (let i = 0; i < 10; i++) { console.log(i); }",
-          ];
-        case "get_config":
-          return config;
-        default:
-          return mockDenops.call(func, ...args);
-      }
-    },
-  });
+  const createMockDenopsWithPerKeyConfig = (config: EnhancedWordConfig) => {
+    const testDenops = new MockDenops();
+    testDenops.setCallResponse("getbufline", [
+      "function test() { return 'hello world'; }",
+      "const a = 1; const b = 2; const c = a + b;",
+      "for (let i = 0; i < 10; i++) { console.log(i); }",
+    ]);
+    testDenops.setCallResponse("get_config", config);
+    testDenops.setCallResponse("bufnr", 1);
+    testDenops.setCallResponse("bufexists", 1);
+    testDenops.onCall("line", (arg: unknown) => {
+      if (arg === "w0") return 1;
+      if (arg === "w$") return 10;
+      if (arg === "$") return 10;
+      return 5;
+    });
+    return testDenops;
+  };
 
   await t.step("User types 'v' and gets hints with min_length=1", async () => {
     const config = {perKeyMinLength: {
@@ -375,15 +368,16 @@ Deno.test("Threshold switching stress tests", async (t) => {
         currentKeyContext: key,
       };
 
-      const testDenops = {
-        ...mockDenops,
-        call: async (func: string, ...args: any[]) => {
-          if (func === "getbufline") {
-            return [`iteration${i} test content with various word lengths a ab abc abcd abcde`];
-          }
-          return mockDenops.call(func, ...args);
-        },
-      };
+      const testDenops = new MockDenops();
+      testDenops.setCallResponse("getbufline", [`iteration${i} test content with various word lengths a ab abc abcd abcde`]);
+      testDenops.setCallResponse("bufnr", 1);
+      testDenops.setCallResponse("bufexists", 1);
+      testDenops.onCall("line", (arg: unknown) => {
+        if (arg === "w0") return 1;
+        if (arg === "w$") return 10;
+        if (arg === "$") return 10;
+        return 5;
+      });
 
       const result = await detectWordsWithManager(testDenops, testConfig);
       assertEquals(result.success, true, `Iteration ${i} with key '${key}' should succeed`);
@@ -429,15 +423,16 @@ Deno.test("Threshold switching stress tests", async (t) => {
         currentKeyContext: key,
       };
 
-      const testDenops = {
-        ...mockDenops,
-        call: async (func: string, ...args: any[]) => {
-          if (func === "getbufline") {
-            return ["performance test content with multiple words of different lengths"];
-          }
-          return mockDenops.call(func, ...args);
-        },
-      };
+      const testDenops = new MockDenops();
+      testDenops.setCallResponse("getbufline", ["performance test content with multiple words of different lengths"]);
+      testDenops.setCallResponse("bufnr", 1);
+      testDenops.setCallResponse("bufexists", 1);
+      testDenops.onCall("line", (arg: unknown) => {
+        if (arg === "w0") return 1;
+        if (arg === "w$") return 10;
+        if (arg === "$") return 10;
+        return 5;
+      });
 
       await detectWordsWithManager(testDenops, testConfig);
     }
@@ -481,15 +476,16 @@ Deno.test("Threshold switching stress tests", async (t) => {
         currentKeyContext: key,
       };
 
-      const testDenops = {
-        ...mockDenops,
-        call: async (func: string, ...args: any[]) => {
-          if (func === "getbufline") {
-            return ["ui responsiveness test a ab abc abcd"];
-          }
-          return mockDenops.call(func, ...args);
-        },
-      };
+      const testDenops = new MockDenops();
+      testDenops.setCallResponse("getbufline", ["ui responsiveness test a ab abc abcd"]);
+      testDenops.setCallResponse("bufnr", 1);
+      testDenops.setCallResponse("bufexists", 1);
+      testDenops.onCall("line", (arg: unknown) => {
+        if (arg === "w0") return 1;
+        if (arg === "w$") return 10;
+        if (arg === "$") return 10;
+        return 5;
+      });
 
       const start = performance.now();
       const result = await detectWordsWithManager(testDenops, testConfig);
@@ -556,15 +552,16 @@ Deno.test("Visual mode integration tests", async (t) => {
         currentKeyContext: test.mode,
       };
 
-      const testDenops = {
-        ...mockDenops,
-        call: async (func: string, ...args: any[]) => {
-          if (func === "getbufline") {
-            return ["function test() { return a + b; }", "const x = 1, y = 2;"];
-          }
-          return mockDenops.call(func, ...args);
-        },
-      };
+      const testDenops = new MockDenops();
+      testDenops.setCallResponse("getbufline", ["function test() { return a + b; }", "const x = 1, y = 2;"]);
+      testDenops.setCallResponse("bufnr", 1);
+      testDenops.setCallResponse("bufexists", 1);
+      testDenops.onCall("line", (arg: unknown) => {
+        if (arg === "w0") return 1;
+        if (arg === "w$") return 10;
+        if (arg === "$") return 10;
+        return 5;
+      });
 
       // Visual modeのコンテキストを渡す
       const context = { currentKey: test.mode, defaultMinWordLength: 1 };
@@ -597,21 +594,22 @@ Deno.test("Visual mode integration tests", async (t) => {
       currentKeyContext: "V",
     };
 
-    const testDenops = {
-      ...mockDenops,
-      call: async (func: string, ...args: any[]) => {
-        if (func === "getbufline") {
-          return [
-            "if (condition) {",
-            "  doSomething();",
-            "  x = y + z;",
-            "}",
-            "return result;",
-          ];
-        }
-        return mockDenops.call(func, ...args);
-      },
-    };
+    const testDenops = new MockDenops();
+    testDenops.setCallResponse("getbufline", [
+      "if (condition) {",
+      "  doSomething();",
+      "  x = y + z;",
+      "}",
+      "return result;",
+    ]);
+    testDenops.setCallResponse("bufnr", 1);
+    testDenops.setCallResponse("bufexists", 1);
+    testDenops.onCall("line", (arg: unknown) => {
+      if (arg === "w0") return 1;
+      if (arg === "w$") return 10;
+      if (arg === "$") return 10;
+      return 5;
+    });
 
     // Visual line modeのコンテキストを渡す
     const context = { currentKey: "V", defaultMinWordLength: 1 };
@@ -644,20 +642,21 @@ Deno.test("Visual mode integration tests", async (t) => {
       currentKeyContext: "<C-v>",
     };
 
-    const testDenops = {
-      ...mockDenops,
-      call: async (func: string, ...args: any[]) => {
-        if (func === "getbufline") {
-          return [
-            "col1  col2  col3",
-            "val1  val2  val3",
-            "dat1  dat2  dat3",
-            "num1  num2  num3",
-          ];
-        }
-        return mockDenops.call(func, ...args);
-      },
-    };
+    const testDenops = new MockDenops();
+    testDenops.setCallResponse("getbufline", [
+      "col1  col2  col3",
+      "val1  val2  val3",
+      "dat1  dat2  dat3",
+      "num1  num2  num3",
+    ]);
+    testDenops.setCallResponse("bufnr", 1);
+    testDenops.setCallResponse("bufexists", 1);
+    testDenops.onCall("line", (arg: unknown) => {
+      if (arg === "w0") return 1;
+      if (arg === "w$") return 10;
+      if (arg === "$") return 10;
+      return 5;
+    });
 
     const result = await detectWordsWithManager(testDenops, testConfig);
 
@@ -702,15 +701,16 @@ Deno.test("Visual mode integration tests", async (t) => {
         currentKeyContext: "v",
       };
 
-      const testDenops = {
-        ...mockDenops,
-        call: async (func: string, ...args: any[]) => {
-          if (func === "getbufline") {
-            return pattern.content;
-          }
-          return mockDenops.call(func, ...args);
-        },
-      };
+      const testDenops = new MockDenops();
+      testDenops.setCallResponse("getbufline", pattern.content);
+      testDenops.setCallResponse("bufnr", 1);
+      testDenops.setCallResponse("bufexists", 1);
+      testDenops.onCall("line", (arg: unknown) => {
+        if (arg === "w0") return 1;
+        if (arg === "w$") return 10;
+        if (arg === "$") return 10;
+        return 5;
+      });
 
       const start = performance.now();
       const result = await detectWordsWithManager(testDenops, testConfig);
