@@ -150,18 +150,18 @@
 @ref: denops/hellshake-yano/config.ts
 
 #### sub1 互換性テストの削除
-- [ ] tests/config_renaming_test.ts削除
-- [ ] tests/legacy_behavior_test.ts削除
-- [ ] 関連するテストの依存関係を確認
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] tests/config_renaming_test.ts削除
+- [x] tests/legacy_behavior_test.ts削除
+- [x] 関連するテストの依存関係を確認
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 #### sub2 v3.0.0用テストの作成
-- [ ] tests/v3_migration_test.tsの作成
-- [ ] Config型のみ使用していることの確認テスト
-- [ ] camelCaseプロパティのみ受け入れることの確認テスト
-- [ ] `deno check`で型チェック
-- [ ] `deno test -A`でテスト実行
+- [x] tests/v3_migration_test.tsの作成
+- [x] Config型のみ使用していることの確認テスト
+- [x] camelCaseプロパティのみ受け入れることの確認テスト
+- [x] `deno check`で型チェック
+- [x] `deno test -A`でテスト実行
 
 ### process10 ユニットテスト
 @target: tests/
