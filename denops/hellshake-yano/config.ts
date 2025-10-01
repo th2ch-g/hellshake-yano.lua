@@ -632,6 +632,10 @@ export function validateUnifiedConfig(
  * 既存validateConfig関数（互換性維持）
  * validateUnifiedConfig()にリダイレクトされる統合バリデーション
  *
+ * Process2 Sub2: 型安全性の向上
+ * - as any から as Record<string, unknown> に変更
+ * - 型ガードを使用してプロパティの型を検証
+ *
  * @param config 検証する設定オブジェクト
  * @returns バリデーション結果
  */
@@ -641,7 +645,7 @@ export function validateConfig(
   // 入力されたconfigが数値型のhighlightHintMarkerなどを含む場合、
   // 直接バリデーションする必要がある
   const errors: string[] = [];
-  const c = config as any;
+  const c = config as Record<string, unknown>;
 
   // motionCount の型チェック
   if (c.motionCount !== undefined && c.motionCount === null) {
@@ -966,6 +970,10 @@ export function getDeprecationWarnings(
 /**
  * バリデーションルールを定義するインターフェース
  * 設定値の検証に使用される各種ルールを定義します。
+ *
+ * Process2 Sub1: 型安全性の向上
+ * - enum: any[] から (string | number | boolean)[] に厳密化
+ * - custom: (value: any) から (value: unknown) に変更し、型ガードを強制
  */
 export interface ValidationRules {
   /** 期待される型名（string, number, boolean, array, object） */
@@ -980,10 +988,10 @@ export interface ValidationRules {
   minLength?: number;
   /** 文字列/配列の最大長 */
   maxLength?: number;
-  /** 有効な値のリスト */
-  enum?: readonly any[];
-  /** カスタムバリデーション関数 */
-  custom?: (value: any) => boolean;
+  /** 有効な値のリスト（プリミティブ型のみ） */
+  enum?: readonly (string | number | boolean)[];
+  /** カスタムバリデーション関数（unknown型で型ガードを強制） */
+  custom?: (value: unknown) => boolean;
 }
 
 /**
@@ -1007,7 +1015,11 @@ export interface ValidationResult {
  * 設定値の型チェック
  * 指定された値が期待される型と一致するかを検証
  *
- * @param {any} value - チェック対象の値
+ * Process2 Sub5: 型安全性の向上
+ * - value パラメータを any から unknown に変更
+ * - 型ガードとして機能し、型の絞り込みを可能にする
+ *
+ * @param {unknown} value - チェック対象の値（unknown型で型安全性を強制）
  * @param {string} expectedType - 期待される型名（"string", "number", "boolean", "array", "object"）
  * @returns {boolean} 型が一致する場合true、不一致の場合false
  * @throws {never} この関数は例外をスローしません
@@ -1019,7 +1031,7 @@ export interface ValidationResult {
  * isValidType(NaN, "number"); // false (NaNは無効な数値として扱われる)
  * ```
  */
-export function isValidType(value: any, expectedType: string): boolean {
+export function isValidType(value: unknown, expectedType: string): boolean {
   switch (expectedType) {
     case "string":
       return typeof value === "string";
@@ -1086,7 +1098,11 @@ export function isValidLength(value: string, minLength?: number, maxLength?: num
  * 配列の要素数チェック
  * 配列の要素数が指定された範囲内にあるかを検証
  *
- * @param {any[]} array - チェック対象の配列
+ * Process2 Sub5: 型安全性の向上
+ * - array パラメータを any[] から unknown[] に変更
+ * - より厳密な型チェックを実現
+ *
+ * @param {unknown[]} array - チェック対象の配列
  * @param {number} [minLength] - 最小要素数（省略時は下限なし）
  * @param {number} [maxLength] - 最大要素数（省略時は上限なし）
  * @returns {boolean} 要素数が範囲内にある場合true、範囲外の場合false
@@ -1099,7 +1115,7 @@ export function isValidLength(value: string, minLength?: number, maxLength?: num
  * isValidArrayLength([1, 2], 0, undefined); // true（上限なし）
  * ```
  */
-export function isValidArrayLength(array: any[], minLength?: number, maxLength?: number): boolean {
+export function isValidArrayLength(array: unknown[], minLength?: number, maxLength?: number): boolean {
   if (minLength !== undefined && array.length < minLength) return false;
   if (maxLength !== undefined && array.length > maxLength) return false;
   return true;
@@ -1109,8 +1125,13 @@ export function isValidArrayLength(array: any[], minLength?: number, maxLength?:
  * 列挙値のチェック
  * 値が指定された有効な値のリストに含まれているかを検証
  *
- * @param {any} value - チェック対象の値
- * @param {readonly any[]} validValues - 有効な値のリスト
+ * Process2 Sub5: 型安全性の向上
+ * - value パラメータを any から unknown に変更
+ * - validValues を readonly (string | number | boolean)[] に厳密化
+ * - プリミティブ型のみを列挙値として扱う
+ *
+ * @param {unknown} value - チェック対象の値
+ * @param {readonly (string | number | boolean)[]} validValues - 有効な値のリスト（プリミティブ型のみ）
  * @returns {boolean} 有効な値に含まれている場合true、含まれていない場合false
  * @throws {never} この関数は例外をスローしません
  * @example
@@ -1118,19 +1139,23 @@ export function isValidArrayLength(array: any[], minLength?: number, maxLength?:
  * isValidEnum("red", ["red", "green", "blue"]); // true
  * isValidEnum("yellow", ["red", "green", "blue"]); // false
  * isValidEnum(1, [1, 2, 3]); // true
- * isValidEnum(null, ["red", "green", null]); // true（nullも有効な値として扱える）
+ * isValidEnum(true, [true, false]); // true
  * ```
  */
-export function isValidEnum(value: any, validValues: readonly any[]): boolean {
-  return validValues.includes(value);
+export function isValidEnum(value: unknown, validValues: readonly (string | number | boolean)[]): boolean {
+  return validValues.includes(value as string | number | boolean);
 }
 
 /**
  * 設定値の総合バリデーション
  * 複数のルールを適用して設定値を検証し、詳細なエラーメッセージを提供
  *
+ * Process2 Sub3: 型安全性の向上
+ * - value パラメータを any から unknown に変更
+ * - 型ガードを明示的に使用して型を絞り込む
+ *
  * @param {string} key - バリデーション対象のキー名（エラーメッセージに使用）
- * @param {any} value - バリデーション対象の値
+ * @param {unknown} value - バリデーション対象の値（unknown型で型安全性を強制）
  * @param {Object} rules - バリデーションルール
  * @param {string} [rules.type] - 期待される型（"string", "number", "boolean", "array", "object"）
  * @param {boolean} [rules.required] - 必須かどうか（デフォルト: false）
@@ -1138,8 +1163,8 @@ export function isValidEnum(value: any, validValues: readonly any[]): boolean {
  * @param {number} [rules.max] - 数値の最大値（type="number"の場合）
  * @param {number} [rules.minLength] - 文字列/配列の最小長（type="string"または"array"の場合）
  * @param {number} [rules.maxLength] - 文字列/配列の最大長（type="string"または"array"の場合）
- * @param {readonly any[]} [rules.enum] - 有効な値のリスト
- * @param {function(any): boolean} [rules.custom] - カスタムバリデーション関数
+ * @param {readonly (string | number | boolean)[]} [rules.enum] - 有効な値のリスト（プリミティブ型のみ）
+ * @param {function(unknown): boolean} [rules.custom] - カスタムバリデーション関数（unknown型を受け取る）
  * @returns {{valid: boolean, error?: string}} バリデーション結果とエラーメッセージ
  * @throws {never} この関数は例外をスローしません
  * @example
@@ -1158,13 +1183,17 @@ export function isValidEnum(value: any, validValues: readonly any[]): boolean {
  * const emailResult = validateConfigValue("email", "user@example.com", {
  *   type: "string",
  *   required: true,
- *   custom: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+ *   custom: (value) => {
+ *     // unknown型なので型ガードが必要
+ *     if (typeof value !== "string") return false;
+ *     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+ *   }
  * });
  * ```
  */
 export function validateConfigValue(
   key: string,
-  value: any,
+  value: unknown,
   rules: {
     type?: string;
     required?: boolean;
@@ -1172,8 +1201,8 @@ export function validateConfigValue(
     max?: number;
     minLength?: number;
     maxLength?: number;
-    enum?: readonly any[];
-    custom?: (value: any) => boolean;
+    enum?: readonly (string | number | boolean)[];
+    custom?: (value: unknown) => boolean;
   }
 ): { valid: boolean; error?: string } {
   // 必須チェック
@@ -1191,8 +1220,8 @@ export function validateConfigValue(
     return { valid: false, error: `${key} must be of type ${rules.type}` };
   }
 
-  // 数値の範囲チェック
-  if (rules.type === "number") {
+  // 数値の範囲チェック（型ガードで型を絞り込む）
+  if (rules.type === "number" && typeof value === "number") {
     if (!isInRange(value, rules.min, rules.max)) {
       const minStr = rules.min !== undefined ? `min: ${rules.min}` : "";
       const maxStr = rules.max !== undefined ? `max: ${rules.max}` : "";
@@ -1201,8 +1230,8 @@ export function validateConfigValue(
     }
   }
 
-  // 文字列の長さチェック
-  if (rules.type === "string") {
+  // 文字列の長さチェック（型ガードで型を絞り込む）
+  if (rules.type === "string" && typeof value === "string") {
     if (!isValidLength(value, rules.minLength, rules.maxLength)) {
       const minStr = rules.minLength !== undefined ? `min: ${rules.minLength}` : "";
       const maxStr = rules.maxLength !== undefined ? `max: ${rules.maxLength}` : "";
@@ -1211,8 +1240,8 @@ export function validateConfigValue(
     }
   }
 
-  // 配列の要素数チェック
-  if (rules.type === "array") {
+  // 配列の要素数チェック（型ガードで型を絞り込む）
+  if (rules.type === "array" && Array.isArray(value)) {
     if (!isValidArrayLength(value, rules.minLength, rules.maxLength)) {
       const minStr = rules.minLength !== undefined ? `min: ${rules.minLength}` : "";
       const maxStr = rules.maxLength !== undefined ? `max: ${rules.maxLength}` : "";
@@ -1239,13 +1268,17 @@ export function validateConfigValue(
  * オブジェクトの各プロパティに対してルールを適用して、まとめて検証を行います。
  * 個別のエラーメッセージと全体の結果を同時に取得できます。
  *
- * @param {Record<string, any>} config - バリデーション対象の設定オブジェクト
+ * Process2 Sub4: 型安全性の向上
+ * - config パラメータを Record<string, any> から Record<string, unknown> に変更
+ * - より型安全なバリデーションを実現
+ *
+ * @param {Record<string, unknown>} config - バリデーション対象の設定オブジェクト
  * @param {Record<string, ValidationRules>} rulesMap - 各キーに対するバリデーションルールのマップ
  * @returns {ValidationResult & {errors?: Record<string, string>}} 全体のバリデーション結果とエラーの詳細
  * @throws {never} この関数は例外をスローしません
  * @example
  * ```typescript
- * const config = { port: 8080, host: "localhost", debug: true };
+ * const config: Record<string, unknown> = { port: 8080, host: "localhost", debug: true };
  * const rules = {
  *   port: { type: "number", required: true, min: 1000, max: 65535 },
  *   host: { type: "string", required: true, minLength: 1 },
@@ -1260,7 +1293,7 @@ export function validateConfigValue(
  * ```
  */
 export function validateConfigObject(
-  config: Record<string, any>,
+  config: Record<string, unknown>,
   rulesMap: Record<string, ValidationRules>
 ): ValidationResult & { errors?: Record<string, string> } {
   const errors: Record<string, string> = {};

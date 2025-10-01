@@ -162,13 +162,29 @@ export interface PerformanceMetrics {
 }
 
 /**
- * デバッグ情報インターフェース
+ * デバッグ情報インターフェース（Process1 Sub2: any型削除）
  *
  * @description システムの現在状態とパフォーマンス情報を包含
+ *
+ * ### 型安全性の向上（Process1）:
+ * - config プロパティを `Config | any` から `Config` に変更
+ * - `Config | any` は実質的に `any` と同じであるため単純化
+ * - デバッグ情報は完全な設定オブジェクトを持つべき
+ *
+ * @example
+ * ```typescript
+ * const debugInfo: DebugInfo = {
+ *   config: getDefaultConfig(),
+ *   hintsVisible: true,
+ *   currentHints: [],
+ *   metrics: { showHints: [], hideHints: [], wordDetection: [], hintGeneration: [] },
+ *   timestamp: Date.now()
+ * };
+ * ```
  */
 export interface DebugInfo {
-  /** 現在の設定情報のスナップショット */
-  config: Config | any;
+  /** 現在の設定情報のスナップショット（完全なConfigを保持） */
+  config: Config;
   /** ヒントの表示状態フラグ */
   hintsVisible: boolean;
   /** 現在表示中のヒントマッピング配列 */
@@ -180,10 +196,27 @@ export interface DebugInfo {
 }
 
 /**
- * 単語検出コンテキストインターフェース
+ * 単語検出コンテキストインターフェース（Process1 Sub1: any型削除）
  *
  * @description 単語検出処理に渡されるコンテキスト情報
  * キー別の設定やモーション情報を含む
+ *
+ * ### 型安全性の向上（Process1）:
+ * - config プロパティを `any` から `Partial<Config>` に変更
+ * - 部分的な設定オブジェクトを型安全に扱える
+ * - IDE補完とコンパイル時型チェックが効く
+ *
+ * @example
+ * ```typescript
+ * const context: DetectionContext = {
+ *   currentKey: "w",
+ *   minWordLength: 3,
+ *   config: {
+ *     enabled: true,
+ *     wordDetectionStrategy: "hybrid"
+ *   }
+ * };
+ * ```
  */
 export interface DetectionContext {
   /** 現在実行中のモーションキー */
@@ -194,8 +227,8 @@ export interface DetectionContext {
   metadata?: Record<string, unknown>;
   /** バッファ番号（オプショナル） */
   bufnr?: number;
-  /** 設定オブジェクト（オプショナル） */
-  config?: any;
+  /** 設定オブジェクト（部分設定可、オプショナル） */
+  config?: Partial<Config>;
   /** 単語検出戦略 */
   strategy?: string;
 
@@ -1020,10 +1053,25 @@ export type {
 // ===== Core Directory Consolidation Types =====
 
 /**
- * 単語検出設定インターフェース
+ * 単語検出設定インターフェース（Process1 Sub1: any型削除）
  *
  * @description 単語検出処理の設定パラメータを定義
  * core/detection.tsから統合された設定項目
+ *
+ * ### 型安全性の向上（Process1）:
+ * - config プロパティを `any` から `Partial<Config>` に変更
+ *
+ * @example
+ * ```typescript
+ * const wordConfig: WordDetectionConfig = {
+ *   minLength: 3,
+ *   maxWords: 100,
+ *   config: {
+ *     useJapanese: false,
+ *     defaultMinWordLength: 3
+ *   }
+ * };
+ * ```
  */
 export interface WordDetectionConfig {
   /** 最小単語長（オプション） */
@@ -1034,8 +1082,8 @@ export interface WordDetectionConfig {
   pattern?: string;
   /** バッファ番号（オプション） */
   bufnr?: number;
-  /** 設定オブジェクト（任意の型、オプション） */
-  config?: any;
+  /** 設定オブジェクト（部分設定可、オプション） */
+  config?: Partial<Config>;
 }
 
 /**
@@ -1049,8 +1097,8 @@ export interface DetectWordsParams {
   denops: import("@denops/std").Denops;
   /** バッファ番号（オプション） */
   bufnr?: number;
-  /** 設定オブジェクト（任意の型、オプション） */
-  config?: any;
+  /** 設定オブジェクト（部分設定可、オプション） */
+  config?: Partial<Config>;
 }
 
 /**
@@ -1064,8 +1112,8 @@ export interface HintGenerationConfig {
   wordCount: number;
   /** マーカー文字列（オプション） */
   markers?: string;
-  /** 設定オブジェクト（任意の型、オプション） */
-  config?: any;
+  /** 設定オブジェクト（部分設定可、オプション） */
+  config?: Partial<Config>;
   /** 単語配列（オプション） */
   words?: string[];
   /** ヒントキー文字列（オプション） */
@@ -1083,8 +1131,8 @@ export interface GenerateHintsParams {
   wordCount: number;
   /** マーカー（文字列または文字列配列、オプション） */
   markers?: string | string[];
-  /** 設定オブジェクト（任意の型、オプション） */
-  config?: any;
+  /** 設定オブジェクト（部分設定可、オプション） */
+  config?: Partial<Config>;
 }
 
 /**
@@ -1103,7 +1151,47 @@ export interface ShowHintsConfig {
 }
 
 /**
- * ヒント操作設定インターフェース
+ * ヒント操作依存関数インターフェース（Process1 Sub3: DI型の厳密化）
+ *
+ * @description ヒント操作に必要な依存関数群の型定義
+ * 依存性注入(DI)パターンで使用される関数の型シグネチャを定義
+ *
+ * @example
+ * ```typescript
+ * const dependencies: HintOperationsDependencies = {
+ *   detectWordsOptimized: async (denops, bufnr) => [...],
+ *   generateHintsOptimized: (wordCount, config) => [...],
+ *   assignHintsToWords: (words, hints) => [...],
+ *   displayHintsAsync: async (denops, hints, config) => {},
+ *   hideHints: async (denops) => {},
+ *   recordPerformance: (operation, startTime, endTime) => {},
+ *   clearHintCache: () => {}
+ * };
+ * ```
+ */
+export interface HintOperationsDependencies {
+  /** 最適化された単語検出関数 */
+  detectWordsOptimized: (denops: import("@denops/std").Denops, bufnr?: number) => Promise<Word[]>;
+  /** 最適化されたヒント生成関数 */
+  generateHintsOptimized: (wordCount: number, config?: Partial<Config>) => string[];
+  /** ヒント割り当て関数 */
+  assignHintsToWords: (words: Word[], hints: string[]) => HintMapping[];
+  /** 非同期ヒント表示関数 */
+  displayHintsAsync: (
+    denops: import("@denops/std").Denops,
+    hints: HintMapping[],
+    config?: Partial<Config>
+  ) => Promise<void>;
+  /** ヒント非表示関数 */
+  hideHints: (denops: import("@denops/std").Denops) => Promise<void>;
+  /** パフォーマンス記録関数 */
+  recordPerformance: (operation: string, startTime: number, endTime: number) => void;
+  /** ヒントキャッシュクリア関数 */
+  clearHintCache: () => void;
+}
+
+/**
+ * ヒント操作設定インターフェース（Process1 Sub1, Sub4: 型安全性の向上）
  *
  * @description ヒント操作処理の設定とDI（依存性注入）パラメータを定義
  * core/operations.tsから統合された設定項目
@@ -1111,25 +1199,10 @@ export interface ShowHintsConfig {
 export interface HintOperationsConfig {
   /** Denopsインスタンス（必須） */
   denops: import("@denops/std").Denops;
-  /** 設定オブジェクト（任意の型、オプション） */
-  config?: any;
+  /** 設定オブジェクト（部分設定可、オプション） */
+  config?: Partial<Config>;
   /** 依存関数群（DI用、オプション） */
-  dependencies?: {
-    /** 最適化された単語検出関数 */
-    detectWordsOptimized?: any;
-    /** 最適化されたヒント生成関数 */
-    generateHintsOptimized?: any;
-    /** ヒント割り当て関数 */
-    assignHintsToWords?: any;
-    /** 非同期ヒント表示関数 */
-    displayHintsAsync?: any;
-    /** ヒント非表示関数 */
-    hideHints?: any;
-    /** パフォーマンス記録関数 */
-    recordPerformance?: any;
-    /** ヒントキャッシュクリア関数 */
-    clearHintCache?: any;
-  };
+  dependencies?: HintOperationsDependencies;
 }
 
 /**
