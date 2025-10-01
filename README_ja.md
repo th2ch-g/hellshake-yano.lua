@@ -367,6 +367,14 @@ modeでは単語の語尾からヤンクすることが多いため、この機�
 2. `hellshake-yano.dict.json`（プロジェクトルート）
 3. `~/.config/hellshake-yano/dictionary.json`（グローバル）
 
+**初期セットアップ**:
+```bash
+# プロジェクト固有の辞書を使用する場合
+cp samples/dictionaries/dictionary.json .hellshake-yano/dictionary.json
+```
+
+> **注**: `.hellshake-yano/dictionary.json`は`.gitignore`に含まれています。サンプル辞書は`samples/dictionaries/`にあります。
+
 #### 辞書フォーマット
 
 **JSONフォーマット**（推奨）:

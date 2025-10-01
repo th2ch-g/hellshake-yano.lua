@@ -58,3 +58,4 @@ Desktop.ini
 # Project specific
 .denops-test/
 tests/integration_multi_char_test.ts
+.hellshake-yano/dictionary.json

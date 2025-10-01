@@ -1366,6 +1366,16 @@ Deno.test("Core addToDictionary should add word to user dictionary", async () =>
   const mockDenops = new MockDenops();
   const core = Core.getInstance();
 
+  // Setup test dictionary path
+  const testDictPath = "tmp/claude/test-dictionary.json";
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_path", "")', testDictPath);
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_use_builtin_dict", 1)', 1);
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_merge", "merge")', "merge");
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_auto_reload_dict", 0)', 0);
+
+  // Create test directory
+  await Deno.mkdir("tmp/claude", { recursive: true });
+
   // Initialize dictionary system first
   await core.initializeDictionarySystem(mockDenops);
 
@@ -1378,11 +1388,26 @@ Deno.test("Core addToDictionary should add word to user dictionary", async () =>
 
   // Cleanup
   core.cleanup();
+  try {
+    await Deno.remove(testDictPath);
+  } catch (_) {
+    // Ignore if file doesn't exist
+  }
 });
 
 Deno.test("Core addToDictionary should handle invalid word input", async () => {
   const mockDenops = new MockDenops();
   const core = Core.getInstance();
+
+  // Setup test dictionary path
+  const testDictPath = "tmp/claude/test-dictionary-invalid.json";
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_path", "")', testDictPath);
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_use_builtin_dict", 1)', 1);
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_merge", "merge")', "merge");
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_auto_reload_dict", 0)', 0);
+
+  // Create test directory
+  await Deno.mkdir("tmp/claude", { recursive: true });
 
   // Initialize dictionary system first
   await core.initializeDictionarySystem(mockDenops);
@@ -1396,11 +1421,26 @@ Deno.test("Core addToDictionary should handle invalid word input", async () => {
 
   // Cleanup
   core.cleanup();
+  try {
+    await Deno.remove(testDictPath);
+  } catch (_) {
+    // Ignore if file doesn't exist
+  }
 });
 
 Deno.test("Core addToDictionary should handle different word types", async () => {
   const mockDenops = new MockDenops();
   const core = Core.getInstance();
+
+  // Setup test dictionary path
+  const testDictPath = "tmp/claude/test-dictionary-types.json";
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_path", "")', testDictPath);
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_use_builtin_dict", 1)', 1);
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_merge", "merge")', "merge");
+  mockDenops.setEvalResponse('get(g:, "hellshake_yano_auto_reload_dict", 0)', 0);
+
+  // Create test directory
+  await Deno.mkdir("tmp/claude", { recursive: true });
 
   // Initialize dictionary system first
   await core.initializeDictionarySystem(mockDenops);
@@ -1417,6 +1457,11 @@ Deno.test("Core addToDictionary should handle different word types", async () =>
 
   // Cleanup
   core.cleanup();
+  try {
+    await Deno.remove(testDictPath);
+  } catch (_) {
+    // Ignore if file doesn't exist
+  }
 });
 
 /**

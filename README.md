@@ -525,6 +525,14 @@ Create custom dictionaries for your specific needs. The plugin searches for dict
 2. `hellshake-yano.dict.json` (project root)
 3. `~/.config/hellshake-yano/dictionary.json` (global)
 
+**Initial Setup**:
+```bash
+# For project-specific dictionary
+cp samples/dictionaries/dictionary.json .hellshake-yano/dictionary.json
+```
+
+> **Note**: `.hellshake-yano/dictionary.json` is included in `.gitignore`. Sample dictionaries are available in `samples/dictionaries/`.
+
 #### Dictionary Formats
 
 **JSON Format** (recommended):

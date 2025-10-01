@@ -180,6 +180,7 @@ export class MockDenops implements Denops {
   private callHandlers: Map<string, (...args: unknown[]) => unknown> = new Map();
   private executedCommands: string[] = [];
   private callLog: Array<{ fn: string; args: unknown[] }> = [];
+  private evalResponses: Map<string, unknown> = new Map();
 
   name = "hellshake-yano:test";
 
@@ -206,6 +207,16 @@ export class MockDenops implements Denops {
    */
   setCallResponse<T = unknown>(method: string, response: T): void {
     this.callResponses.set(method, response);
+  }
+
+  /**
+   * evalモックレスポンスを設定
+   * @template T レスポンスの型（デフォルト: unknown）
+   * @param expr 評価式
+   * @param response レスポンスの値
+   */
+  setEvalResponse<T = unknown>(expr: string, response: T): void {
+    this.evalResponses.set(expr, response);
   }
 
   /**
@@ -336,6 +347,10 @@ export class MockDenops implements Denops {
   }
 
   async eval(expr: string, _context?: unknown): Promise<unknown> {
+    // 事前設定されたレスポンスを返す
+    if (this.evalResponses.has(expr)) {
+      return this.evalResponses.get(expr);
+    }
     return undefined;
   }
 
