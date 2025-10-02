@@ -26,6 +26,14 @@ export function cleanupPendingTimers(): void {
   }
 }
 
+function getHighlightGroupName(config: Config): string {
+  const configValue = config.highlightHintMarker;
+  if (typeof configValue === "string") {
+    return configValue;
+  }
+  return "HellshakeYanoMarker";
+}
+
 export async function displayHintsOptimized(
   denops: Denops,
   words: Word[],
@@ -184,10 +192,11 @@ async function processExtmarksBatched(
   config: Config,
   extmarkNamespace: number,
 ): Promise<void> {
+  const highlightGroup = getHighlightGroupName(config);
   for (const h of hints) {
     const p = calculateHintPosition(h.word, { hintPosition: "offset" });
     await denops.call("nvim_buf_set_extmark", 0, extmarkNamespace, p.line - 1, p.col - 1, {
-      virt_text: [[h.hint, "HellshakeYanoMarker"]],
+      virt_text: [[h.hint, highlightGroup]],
       virt_text_pos: "overlay",
     });
   }
@@ -199,6 +208,7 @@ async function processMatchaddBatched(
   config: Config,
   fallbackMatchIds: number[],
 ): Promise<void> {
+  const highlightGroup = getHighlightGroupName(config);
   for (const h of hints) {
     const p = calculateHintPosition(h.word, "offset");
     const isSym = !h.hint.match(/^[A-Za-z0-9]+$/);
@@ -206,7 +216,7 @@ async function processMatchaddBatched(
       try {
         if (await denops.call("exists", "*prop_type_add") === 1) {
           try {
-            await denops.call("prop_type_add", "HellshakeYanoSymbol", { highlight: "HellshakeYanoMarker" });
+            await denops.call("prop_type_add", "HellshakeYanoSymbol", { highlight: highlightGroup });
           } catch { /* exists */ }
           await denops.call("prop_add", p.line, p.col, { type: "HellshakeYanoSymbol", length: h.hint.length, text: h.hint });
         } else {
@@ -217,17 +227,17 @@ async function processMatchaddBatched(
               .replace(/\]/g, '\\]').replace(/\^/g, '\\^').replace(/\$/g, '\\$').replace(/\*/g, '\\*');
           }
           const pat = `\\%${p.line}l\\%${p.col}c.`;
-          const mid = await denops.call("matchadd", "HellshakeYanoMarker", pat, 10) as number;
+          const mid = await denops.call("matchadd", highlightGroup, pat, 10) as number;
           fallbackMatchIds.push(mid);
         }
       } catch {
         const pat = `\\%${p.line}l\\%${p.col}c.`;
-        const mid = await denops.call("matchadd", "HellshakeYanoMarker", pat) as number;
+        const mid = await denops.call("matchadd", highlightGroup, pat) as number;
         fallbackMatchIds.push(mid);
       }
     } else {
       const pat = `\\%${p.line}l\\%${p.col}c.\\{${h.hint.length}}`;
-      const mid = await denops.call("matchadd", "HellshakeYanoMarker", pat) as number;
+      const mid = await denops.call("matchadd", highlightGroup, pat) as number;
       fallbackMatchIds.push(mid);
     }
   }

@@ -1007,6 +1007,8 @@ export class Core {
         return;
       }
       const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
+      // 🔒 必須: 候補ハイライト表示（削除禁止）
+      await this.highlightCandidateHintsHybrid(denops, currentHints, inputChar);
 
       if (matchingHints.length === 0) {
         await this.showErrorFeedback(denops, "No matching hint found");
@@ -1188,7 +1190,7 @@ export class Core {
             const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
             const nvimLine = hintLine - 1;
             const nvimCol = hintByteCol - 1;
-            const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+            const highlightGroup = this.getHighlightGroupName(isCandidate);
             const priority = isCandidate ? 1001 : 1000;
             try {
               await denops.call(
@@ -1289,6 +1291,13 @@ export class Core {
     } catch (error) {
     }
   }
+  private getHighlightGroupName(isCandidate: boolean): string {
+    const configValue = isCandidate ? this.config.highlightHintMarkerCurrent : this.config.highlightHintMarker;
+    if (typeof configValue === "string") {
+      return configValue;
+    }
+    return isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+  }
   private async setHintExtmark(
     denops: Denops,
     mapping: HintMapping,
@@ -1301,7 +1310,7 @@ export class Core {
     const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
     const nvimLine = hintLine - 1;
     const nvimCol = hintByteCol - 1;
-    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+    const highlightGroup = this.getHighlightGroupName(isCandidate);
     await denops.call(
       "nvim_buf_set_extmark",
       bufnr,
@@ -1324,7 +1333,7 @@ export class Core {
     signal: AbortSignal
   ): Promise<void> {
     const batchSize = HIGHLIGHT_BATCH_SIZE;
-    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+    const highlightGroup = this.getHighlightGroupName(isCandidate);
     const priority = isCandidate ? 1001 : 1000;
     for (let i = 0; i < hints.length; i += batchSize) {
       if (signal.aborted) return;
