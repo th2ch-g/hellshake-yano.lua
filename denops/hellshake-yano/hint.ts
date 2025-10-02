@@ -8,7 +8,6 @@ import type {
 import { DEFAULT_HINT_MARKERS } from "./types.ts";
 import type { Config } from "./config.ts";
 import { HintGeneratorFactory } from "./hint/hint-generator-strategies.ts";
-import { loadCharacterRanges, loadHintKeys } from "./config/config-loader.ts";
 // Utility functions migrated from hint-utils.ts are now defined in this file
 // Display width calculation functions integrated from utils/display.ts
 import { CacheType, GlobalCache, type CacheStatistics } from "./cache.ts";
