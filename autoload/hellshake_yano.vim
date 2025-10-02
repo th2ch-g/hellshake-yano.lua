@@ -64,68 +64,18 @@ endfunction
 " 設定管理関数群
 " ============================================================================
 
-" キー別のmotion_count設定値を取得（最適化版）
-" 責務: キーに対応するmotion_count設定値を取得（キャッシュ機能付き）
-" @param key キー文字
-" @return motion_count値（優先順: per_key > default > legacy > 3）
-let s:motion_count_cache = {}  " 設定値のキャッシュ
-let s:cache_version = 0  " キャッシュのバージョン
+" Note: s:get_motion_count_for_key は config.vim に移行済み
+" → hellshake_yano#config#get_motion_count_for_key()
 
-function! s:get_motion_count_for_key(key) abort
-  " キャッシュが有効か確認
-  if has_key(s:motion_count_cache, a:key)
-    return s:motion_count_cache[a:key]
-  endif
-
-  let result = 3  " デフォルト値
-
-  " per_key_motion_countに設定があるかチェック
-  if has_key(g:hellshake_yano, 'per_key_motion_count')
-        \ && type(g:hellshake_yano.per_key_motion_count) == v:t_dict
-    let per_key = get(g:hellshake_yano.per_key_motion_count, a:key, 0)
-    if type(per_key) == v:t_number && per_key >= 1
-      let result = per_key
-      let s:motion_count_cache[a:key] = result
-      return result
-    endif
-  endif
-
-  " default_motion_countを使用
-  let default_val = get(g:hellshake_yano, 'default_motion_count', get(g:hellshake_yano, 'motion_count', 3))
-  if type(default_val) == v:t_number && default_val >= 1
-    let result = default_val
-  endif
-
-  " キャッシュに保存
-  let s:motion_count_cache[a:key] = result
-  return result
-endfunction
-
-" モーションカウント設定キャッシュをクリア
-" 責務: 設定変更時にキャッシュを破棄
-function! s:clear_motion_count_cache() abort
-  let s:motion_count_cache = {}
-  let s:cache_version += 1
-endfunction
+" Note: s:clear_motion_count_cache は config.vim に移行済み
+" → hellshake_yano#config#clear_motion_count_cache()
 
 " ============================================================================
 " ヒント表示制御関数群
 " ============================================================================
 
-" キー別ヒント表示の必要性を判定
-" 責務: 現在のカウントと設定値を比較してヒント表示の要否を判定
-" @param bufnr バッファ番号
-" @param key キー文字
-" @return v:true = ヒント表示, v:false = 表示しない
-function! s:should_trigger_hints_for_key(bufnr, key) abort
-  if hellshake_yano#state#is_key_repeating(a:bufnr)
-    return v:false
-  endif
-
-  let key_count = hellshake_yano#count#get_key_count(a:bufnr, a:key)
-  let threshold = s:get_motion_count_for_key(a:key)
-  return key_count >= threshold
-endfunction
+" Note: s:should_trigger_hints_for_key は motion.vim に移行済み
+" 後方互換性のため、この関数は削除せず、motion.vimの内部実装に依存します
 
 " Note: s:process_motion_count_for_key は count.vim に移行済み
 " → hellshake_yano#count#process_motion_count_for_key()
@@ -140,50 +90,15 @@ endfunction
 " - hellshake_yano#timer#stop_and_clear_timer_for_key()
 
 " デバッグ表示を処理
-function! s:handle_debug_display() abort
-  if get(g:hellshake_yano, 'debug_mode', v:false)
-    call hellshake_yano#show_debug()
-  endif
-endfunction
+" Note: s:handle_debug_display は hint.vim に移行済み
+" → hellshake_yano#hint#handle_debug_display()
 
 " hjkl移動時の処理（リファクタリング済み）
+" Note: この関数はmotion.vimに移行しました
+" → hellshake_yano#motion#process()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#motion(key) abort
-  let start_time = s:get_elapsed_time()
-
-  " プラグインが無効な場合は通常の動作
-  if !get(g:hellshake_yano, 'enabled', v:true)
-    return a:key
-  endif
-
-  let bufnr = s:bufnr()
-  call hellshake_yano#state#init_buffer_state(bufnr)
-
-  " キーリピート検出処理
-  let current_time = s:get_elapsed_time()
-  let config = s:get_key_repeat_config()
-
-  if s:handle_key_repeat_detection(bufnr, current_time, config)
-    call s:handle_debug_display()
-    return a:key
-  endif
-
-  " キー別モーションカウントを処理
-  call hellshake_yano#count#process_motion_count_for_key(bufnr, a:key)
-
-  " キー別ヒント表示かタイムアウト設定を判定・実行
-  if s:should_trigger_hints_for_key(bufnr, a:key)
-    call hellshake_yano#count#reset_key_count(bufnr, a:key)
-    call hellshake_yano#show_hints_with_key(a:key)
-    call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
-  else
-    call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
-    call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': hellshake_yano#count#get_key_count(bufnr, a:key) })
-  endif
-
-  call s:handle_debug_display()
-  return a:key
+  return hellshake_yano#motion#process(a:key)
 endfunction
 
 " カウントのリセット（後方互換性のため保持、全キーをリセット）
@@ -195,10 +110,8 @@ function! s:reset_count(bufnr) abort
 endfunction
 
 " 経過時間をミリ秒で取得（高精度）
-function! s:get_elapsed_time() abort
-  let time_str = reltimestr(reltime())
-  return float2nr(str2float(time_str) * 1000.0)
-endfunction
+" Note: s:get_elapsed_time は utils.vim に移行済み
+" → hellshake_yano#utils#get_elapsed_time()
 
 " Note: s:reset_repeat_state は state.vim に移行済み
 " → hellshake_yano#state#reset_repeat_state()
@@ -208,29 +121,14 @@ endfunction
 " → hellshake_yano#timer#stop_and_clear_timer_for_key()
 
 " キーリピート設定を取得
-function! s:get_key_repeat_config() abort
-  return {
-        \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
-        \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
-        \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300)
-        \ }
-endfunction
+" Note: s:get_key_repeat_config は config.vim に移行済み
+" → hellshake_yano#config#get_key_repeat_config()
 
-" denopsの準備状態を確認
-function! s:is_denops_ready() abort
-  return exists('g:hellshake_yano_ready') && g:hellshake_yano_ready
-endfunction
+" Note: s:is_denops_ready は utils.vim に移行済み
+" → hellshake_yano#utils#is_denops_ready()
 
-" denops設定更新を通知（準備状態チェック込み）
-function! s:notify_denops_config() abort
-  if s:is_denops_ready()
-    try
-      call denops#notify('hellshake-yano', 'updateConfig', [g:hellshake_yano])
-    catch
-      call hellshake_yano#show_error('[hellshake-yano] Error: Failed to update denops config: ' . v:exception)
-    endtry
-  endif
-endfunction
+" Note: s:notify_denops_config は config.vim に移行済み
+" → hellshake_yano#config#notify_denops_config()
 
 " ハイライト設定を再適用（公開関数）
 function! hellshake_yano#apply_highlights() abort
@@ -302,54 +200,11 @@ function! s:apply_highlight_setting(hlgroup_name, color_config) abort
   endif
 endfunction
 
-" エラーハンドリング付きでdenops関数を呼び出す
-function! s:call_denops_function(function_name, args, context) abort
-  if !s:is_denops_ready()
-    return v:false
-  endif
+" Note: s:call_denops_function は denops.vim に移行済み
+" → hellshake_yano#denops#call_function()
 
-  try
-    call denops#notify('hellshake-yano', a:function_name, a:args)
-    return v:true
-  catch
-    call hellshake_yano#show_error(printf('[hellshake-yano] Error: %s failed: %s', a:context, v:exception))
-    return v:false
-  endtry
-endfunction
-
-" キーリピート検出処理
-" @param bufnr バッファ番号
-" @param current_time 現在時刻（ミリ秒）
-" @param config キーリピート設定辞書
-" @return v:true = リピート中でヒント表示をスキップ, v:false = 通常処理を継続
-function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
-  " 機能が無効の場合は通常処理
-  if !a:config.enabled
-    call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
-    return v:false
-  endif
-
-  " 前回のキー入力時刻との差を計算
-  let last_key_time = hellshake_yano#state#get_last_key_time(a:bufnr)
-  let time_diff = a:current_time - last_key_time
-
-  " キーリピート判定（初回キー入力は除外、2回目以降で判定）
-  if time_diff < a:config.threshold && last_key_time > 0
-    " リピート状態に設定
-    call hellshake_yano#state#set_key_repeating(a:bufnr, v:true)
-
-    " 既存のリピート終了タイマーをクリアして新しく設定
-    call hellshake_yano#timer#set_repeat_end_timer(a:bufnr, a:config.reset_delay)
-
-    " キー時刻更新してヒント表示をスキップ
-    call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
-    return v:true
-  endif
-
-  " 通常処理: キー時刻を更新
-  call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
-  return v:false
-endfunction
+" Note: s:handle_key_repeat_detection は motion.vim に移行済み
+" 後方互換性のため、この関数は削除せず、motion.vimの内部実装に依存します
 
 "=============================================================================
 " UI関数群
@@ -358,16 +213,23 @@ endfunction
 
 " 全バッファのカウントをリセット
 function! hellshake_yano#reset_count() abort
+  " g:hellshake_yano_internalが初期化されていない場合は何もしない
+  " （Vim起動直後のModeChangedイベントなど、autoload読み込み前の呼び出しに対応）
+  if !exists('g:hellshake_yano_internal') || !has_key(g:hellshake_yano_internal, 'motion_count')
+    return
+  endif
+
   for bufnr in keys(g:hellshake_yano_internal.motion_count)
     call s:reset_count(str2nr(bufnr))
   endfor
 endfunction
 
 " ビジュアルモード用のモーション処理
+" Note: この関数はmotion.vimに移行しました
+" → hellshake_yano#motion#visual()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#visual_motion(key) abort
-  " 通常のモーション処理を実行
-  " ビジュアルモードでは選択範囲を自然に拡張/縮小させるため、gvは不要
-  return hellshake_yano#motion(a:key)
+  return hellshake_yano#motion#visual(a:key)
 endfunction
 
 "=============================================================================
@@ -376,183 +238,96 @@ endfunction
 "=============================================================================
 
 " マッピング対象キーを取得
-function! s:get_motion_keys() abort
-  let keys = []
+" Note: s:get_motion_keys は config.vim に移行済み
+" → hellshake_yano#config#get_motion_keys()
 
-  " counted_motionsから取得
-  if has_key(g:hellshake_yano, 'counted_motions') && !empty(g:hellshake_yano.counted_motions)
-    let keys = copy(g:hellshake_yano.counted_motions)
-  elseif get(g:hellshake_yano, 'trigger_on_hjkl', v:true)
-    let keys = ['h', 'j', 'k', 'l']
-  endif
-
-  " per_key_min_lengthで定義されたキーを自動的に追加
-  if has_key(g:hellshake_yano, 'per_key_min_length') && type(g:hellshake_yano.per_key_min_length) == v:t_dict
-    for key in keys(g:hellshake_yano.per_key_min_length)
-      if index(keys, key) == -1
-        call add(keys, key)
-      endif
-    endfor
-  endif
-
-  " per_key_motion_countで定義されたキーを自動的に追加（process5 sub1）
-  if has_key(g:hellshake_yano, 'per_key_motion_count') && type(g:hellshake_yano.per_key_motion_count) == v:t_dict
-    for key in keys(g:hellshake_yano.per_key_motion_count)
-      if index(keys, key) == -1
-        call add(keys, key)
-      endif
-    endfor
-  endif
-
-  return keys
-endfunction
-
-" モーションキーマッピングを設定
+" Note: モーションキーマッピングを設定 - mapping.vimに移行済み
+" → hellshake_yano#mapping#setup_motion_mappings()
 function! hellshake_yano#setup_motion_mappings() abort
-  let keys = s:get_motion_keys()
-  for key in keys
-    " キーが有効かチェック（1文字の英数字記号のみ）
-    if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') != -1
-      execute 'nnoremap <silent> <expr> ' . key . ' hellshake_yano#motion(' . string(key) . ')'
-      " ビジュアルモード用のマッピングを追加（xnoremapでセレクトモードを除外）
-      execute 'xnoremap <silent> <expr> ' . key . ' hellshake_yano#visual_motion(' . string(key) . ')'
-    else
-      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid key in motion keys: ' . string(key))
-    endif
-  endfor
+  return hellshake_yano#mapping#setup_motion_mappings()
 endfunction
 
-" モーションキーマッピングを解除
-function! s:clear_motion_mappings() abort
-  let keys = s:get_motion_keys()
-  for key in keys
-    execute 'silent! nunmap ' . key
-    " ビジュアルモードのマッピングも解除
-    execute 'silent! xunmap ' . key
-  endfor
-endfunction
+" Note: s:clear_motion_mappings は mapping.vim に移行済み
+" → hellshake_yano#mapping#clear_motion_mappings()
 
 " ヒントをトリガー
-function! s:trigger_hints() abort
-  if s:call_denops_function('showHints', [], 'show hints')
-    call hellshake_yano#state#set_hints_visible(v:true)
-  endif
-endfunction
+" Note: s:trigger_hints は hint.vim に移行済み
+" → hellshake_yano#hint#trigger_hints()
 
-" ヒントを表示
+" Note: ヒントを表示 - hint.vimに移行済み
+" → hellshake_yano#hint#show()
 function! hellshake_yano#show() abort
-  call s:trigger_hints()
+  return hellshake_yano#hint#show()
 endfunction
 
-" ヒントを非表示
+" Note: ヒントを非表示 - hint.vimに移行済み
+" → hellshake_yano#hint#hide()
 function! hellshake_yano#hide() abort
-  if s:call_denops_function('hideHints', [], 'hide hints')
-    call hellshake_yano#state#set_hints_visible(v:false)
-  endif
+  return hellshake_yano#hint#hide()
 endfunction
 
 " プラグインを有効化
+" Note: この関数はplugin.vimに移行しました
+" → hellshake_yano#plugin#enable()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#enable() abort
-  let g:hellshake_yano.enabled = v:true
-
-  " マッピングを再設定
-  call hellshake_yano#setup_motion_mappings()
-
-  echo '[hellshake-yano] Enabled'
+  return hellshake_yano#plugin#enable()
 endfunction
 
 " プラグインを無効化
+" Note: この関数はplugin.vimに移行しました
+" → hellshake_yano#plugin#disable()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#disable() abort
-  let g:hellshake_yano.enabled = v:false
-
-  " マッピングを解除
-  call s:clear_motion_mappings()
-
-  " ヒントを非表示
-  if hellshake_yano#state#is_hints_visible()
-    call hellshake_yano#hide()
-  endif
-
-  " カウントをリセット
-  call hellshake_yano#reset_count()
-
-  echo '[hellshake-yano] Disabled'
+  return hellshake_yano#plugin#disable()
 endfunction
 
 " プラグインの有効/無効を切り替え
+" Note: この関数はplugin.vimに移行しました
+" → hellshake_yano#plugin#toggle()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#toggle() abort
-  if g:hellshake_yano.enabled
-    call hellshake_yano#disable()
-  else
-    call hellshake_yano#enable()
-  endif
+  return hellshake_yano#plugin#toggle()
 endfunction
 
 " 移動カウント数を設定
+" Note: この関数はcommand.vimに移行しました
+" → hellshake_yano#command#set_count()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#set_count(count) abort
-  if a:count > 0
-    let g:hellshake_yano.motion_count = a:count
-    call hellshake_yano#reset_count()
-
-    " denops側に設定を通知
-    call s:notify_denops_config()
-
-    " キャッシュをクリア（process5 sub2）
-    call s:clear_motion_count_cache()
-
-    echo printf('[hellshake-yano] Motion count set to %d', a:count)
-  else
-    call hellshake_yano#show_error('[hellshake-yano] Error: Count must be greater than 0')
-  endif
+  return hellshake_yano#command#set_count(a:count)
 endfunction
 
 " タイムアウト時間を設定
+" Note: この関数はcommand.vimに移行しました
+" → hellshake_yano#command#set_timeout()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#set_timeout(timeout) abort
-  if a:timeout > 0
-    let g:hellshake_yano.motion_timeout = a:timeout
-    call hellshake_yano#reset_count()
-
-    " denops側に設定を通知
-    call s:notify_denops_config()
-
-    echo printf('[hellshake-yano] Timeout set to %dms', a:timeout)
-  else
-    call hellshake_yano#show_error('[hellshake-yano] Error: Timeout must be greater than 0')
-  endif
+  return hellshake_yano#command#set_timeout(a:timeout)
 endfunction
 
 " バッファ進入時の処理
+" Note: この関数はplugin.vimに移行しました
+" → hellshake_yano#plugin#on_buf_enter()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#on_buf_enter() abort
-  let bufnr = s:bufnr()
-  call hellshake_yano#state#init_buffer_state(bufnr)
+  return hellshake_yano#plugin#on_buf_enter()
 endfunction
 
 " バッファ離脱時の処理
+" Note: この関数はplugin.vimに移行しました
+" → hellshake_yano#plugin#on_buf_leave()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#on_buf_leave() abort
-  " ヒントが表示されていれば非表示にする
-  if hellshake_yano#state#is_hints_visible()
-    call hellshake_yano#hide()
-  endif
+  return hellshake_yano#plugin#on_buf_leave()
 endfunction
 
 " ハイライト色を更新
+" Note: この関数はcommand.vimに移行しました
+" → hellshake_yano#command#update_highlight()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#update_highlight(marker_group, current_group) abort
-  " 設定を更新
-  if !empty(a:marker_group)
-    let g:hellshake_yano.highlight_hint_marker = a:marker_group
-  endif
-  if !empty(a:current_group)
-    let g:hellshake_yano.highlight_hint_marker_current = a:current_group
-  endif
-
-  " ハイライトを再適用（plugin/hellshake-yano.vimのs:apply_custom_highlightsを実行）
-  call hellshake_yano#apply_highlights()
-
-  " denops側に設定を通知
-  call s:notify_denops_config()
-
-  echo printf('[hellshake-yano] Highlight updated: marker=%s, current=%s',
-        \ string(a:marker_group), string(a:current_group))
+  return hellshake_yano#command#update_highlight(a:marker_group, a:current_group)
 endfunction
 
 "=============================================================================
@@ -560,270 +335,62 @@ endfunction
 " デバッグ表示、パフォーマンス計測を担当
 "=============================================================================
 
-" デバッグ情報を取得（詳細版）
-function! s:get_debug_info() abort
-  let bufnr = s:bufnr()
-  call hellshake_yano#state#init_buffer_state(bufnr)
+" Note: s:get_debug_info は debug.vim に移行済み
+" → hellshake_yano#debug#get_info()
 
-  let debug_info = {}
-  " 基本設定情報
-  let debug_info.enabled = get(g:hellshake_yano, 'enabled', v:false)
-  let debug_info.debug_mode = get(g:hellshake_yano, 'debug_mode', v:false)
-  let debug_info.performance_log = get(g:hellshake_yano, 'performance_log', v:false)
+" Note: s:build_debug_info は debug.vim に移行済み
+" → hellshake_yano#debug#build_info()
 
-  " 動作設定
-  let debug_info.motion_count = get(g:hellshake_yano, 'motion_count', 0)
-  let debug_info.motion_timeout = get(g:hellshake_yano, 'motion_timeout', 0)
-  let debug_info.counted_motions = s:get_motion_keys()
-
-  " バッファ状態
-  let debug_info.current_buffer = bufnr
-  " キー別カウント情報を含める
-  let debug_info.key_counts = get(g:hellshake_yano_internal.motion_count, bufnr, {})
-  let debug_info.hints_visible = hellshake_yano#state#is_hints_visible()
-  let debug_info.denops_ready = s:is_denops_ready()
-
-  " キーリピート検出状態
-  let debug_info.key_repeat = {
-        \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
-        \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
-        \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300),
-        \ 'is_repeating': hellshake_yano#state#is_key_repeating(bufnr),
-        \ 'last_key_time': hellshake_yano#state#get_last_key_time(bufnr),
-        \ 'current_time': s:get_elapsed_time()
-        \ }
-
-  " 時間計測データ
-  let debug_info.timing = {
-        \ 'last_motion_time': hellshake_yano#state#get_last_motion_time(bufnr),
-        \ 'timer_active': has_key(g:hellshake_yano_internal.timer_id, bufnr),
-        \ 'repeat_timer_active': has_key(g:hellshake_yano_internal.repeat_end_timer, bufnr)
-        \ }
-
-  " ハイライト設定
-  let debug_info.highlight = {
-        \ 'hint_marker': get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'),
-        \ 'hint_marker_current': get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText')
-        \ }
-
-  return debug_info
-endfunction
-
-" デバッグ情報を表示形式に整形
-function! s:build_debug_info(bufnr) abort
-  call hellshake_yano#state#init_buffer_state(a:bufnr)
-  let l:lines = []
-  call add(l:lines, '=== hellshake-yano Debug Info ===')
-  call add(l:lines, 'Enabled: ' . (has_key(g:hellshake_yano, 'enabled') ? g:hellshake_yano.enabled : 'v:false'))
-  call add(l:lines, 'Debug mode: ' . (get(g:hellshake_yano, 'debug_mode', v:false) ? 'ON' : 'OFF'))
-  call add(l:lines, 'Performance log: ' . (get(g:hellshake_yano, 'performance_log', v:false) ? 'ON' : 'OFF'))
-  call add(l:lines, 'Motion count threshold: ' . get(g:hellshake_yano, 'motion_count', 0))
-  call add(l:lines, 'Timeout: ' . get(g:hellshake_yano, 'motion_timeout', 0) . 'ms')
-  call add(l:lines, 'Current buffer: ' . a:bufnr)
-  " キー別カウント情報を表示
-  let key_counts = get(g:hellshake_yano_internal.motion_count, a:bufnr, {})
-  if type(key_counts) == v:t_dict && !empty(key_counts)
-    call add(l:lines, 'Key counts: ' . string(key_counts))
-  else
-    call add(l:lines, 'Key counts: (none)')
-  endif
-  call add(l:lines, 'Hints visible: ' . (hellshake_yano#state#is_hints_visible() ? 'v:true' : 'v:false'))
-  call add(l:lines, 'Denops ready: ' . (s:is_denops_ready() ? 'true' : 'false'))
-  call add(l:lines, 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'))
-  call add(l:lines, 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText'))
-  call add(l:lines, 'Counted motions: ' . string(s:get_motion_keys()))
-  " Key repeat detection debug
-  call add(l:lines, 'Key repeat suppression: ' . (get(g:hellshake_yano, 'suppress_on_key_repeat', v:true) ? 1 : 0))
-  call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'key_repeat_threshold', 50) . 'ms')
-  call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'key_repeat_reset_delay', 300) . 'ms')
-  call add(l:lines, 'Key repeating (current buffer): ' . (hellshake_yano#state#is_key_repeating(a:bufnr) ? 1 : 0))
-
-  " デバッグモード専用情報
-  if get(g:hellshake_yano, 'debug_mode', v:false)
-    call add(l:lines, '--- Debug Mode Details ---')
-    call add(l:lines, 'Last key time: ' . hellshake_yano#state#get_last_key_time(a:bufnr))
-    call add(l:lines, 'Current time: ' . s:get_elapsed_time())
-    call add(l:lines, 'Time since last key: ' . (s:get_elapsed_time() - hellshake_yano#state#get_last_key_time(a:bufnr)) . 'ms')
-    call add(l:lines, 'Motion timer active: ' . (has_key(g:hellshake_yano_internal.timer_id, a:bufnr) ? 'YES' : 'NO'))
-    call add(l:lines, 'Repeat timer active: ' . (has_key(g:hellshake_yano_internal.repeat_end_timer, a:bufnr) ? 'YES' : 'NO'))
-  endif
-
-  return l:lines
-endfunction
-
+" Note: デバッグ情報を取得 - debug.vimに移行済み
+" → hellshake_yano#debug#get_info()
 function! hellshake_yano#get_debug_info() abort
-  return s:build_debug_info(s:bufnr())
+  return hellshake_yano#debug#build_info(hellshake_yano#utils#bufnr())
 endfunction
 
-" デバッグ表示関数（debug_mode がtrueの時のみ動作）
+" Note: デバッグ表示関数 - debug.vimに移行済み
+" → hellshake_yano#debug#show()
 function! hellshake_yano#show_debug() abort
-  if !get(g:hellshake_yano, 'debug_mode', v:false)
-    return
-  endif
-
-  let debug_info = s:get_debug_info()
-
-  " ステータスライン用の簡潔な形式（キー別カウント対応）
-  let key_count_summary = ''
-  if !empty(debug_info.key_counts)
-    let key_count_summary = string(debug_info.key_counts)
-  else
-    let key_count_summary = '(none)'
-  endif
-  let status_msg = printf('[hellshake-yano] KeyCounts:%s Repeat:%s Debug:ON',
-        \ key_count_summary,
-        \ (debug_info.key_repeat.is_repeating ? 'YES' : 'NO'))
-
-  " エコーエリアに表示
-  echohl WarningMsg
-  echo status_msg
-  echohl None
+  return hellshake_yano#debug#show()
 endfunction
 
-" パフォーマンスログ関数（performance_log がtrueの時のみ動作）
-function! s:log_performance(operation, time_ms, ...) abort
-  if !get(g:hellshake_yano, 'performance_log', v:false)
-    return
-  endif
-
-  let bufnr = s:bufnr()
-  let extra_info = a:0 > 0 ? a:1 : {}
-
-  let log_entry = printf('[hellshake-yano:PERF] %s buf:%d time:%dms',
-        \ a:operation, bufnr, a:time_ms)
-
-  " 追加情報があれば付加
-  if !empty(extra_info) && type(extra_info) == v:t_dict
-    let log_entry .= ' ' . string(extra_info)
-  endif
-
-  " ログ出力（echomsg を使用してメッセージ履歴に保存）
-  echomsg log_entry
-endfunction
-
+" Note: s:log_performance は debug.vimに移行済み
+" → hellshake_yano#debug#log_performance()
+" Note: デバッグ表示 - debug.vimに移行済み
+" → hellshake_yano#debug#display()
 function! hellshake_yano#debug() abort
-  let l:info = s:build_debug_info(s:bufnr())
-  for l:line in l:info
-    echo l:line
-  endfor
+  return hellshake_yano#debug#display()
 endfunction
 
 " counted_motions を設定
+" Note: この関数はcommand.vimに移行しました
+" → hellshake_yano#command#set_counted_motions()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#set_counted_motions(keys) abort
-  " 引数の検証
-  if type(a:keys) != v:t_list
-    call hellshake_yano#show_error('[hellshake-yano] Error: counted_motions must be a list')
-    return
-  endif
-
-  " 各キーの検証
-  for key in a:keys
-    if type(key) != v:t_string || len(key) != 1
-      call hellshake_yano#show_error('[hellshake-yano] Error: Each motion key must be a single character string: ' . string(key))
-      return
-    endif
-    if match(key, '^[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|;:,.<>?/~`-]$') == -1
-      call hellshake_yano#show_error('[hellshake-yano] Error: Potentially invalid key: ' . string(key))
-    endif
-  endfor
-
-  " 現在のマッピングを解除
-  if g:hellshake_yano.enabled
-    call s:clear_motion_mappings()
-  endif
-
-  " 設定を更新
-  let g:hellshake_yano.counted_motions = copy(a:keys)
-
-  " 新しいマッピングを設定
-  if g:hellshake_yano.enabled
-    call hellshake_yano#setup_motion_mappings()
-  endif
-
-  " denops側に設定を通知
-  call s:notify_denops_config()
-
-  echo printf('[hellshake-yano] Counted motions set to: %s', string(a:keys))
+  return hellshake_yano#command#set_counted_motions(a:keys)
 endfunction
 
-" ハイライトグループ名の検証関数（公開関数）
+" ハイライトグループ名の検証関数
+" Note: この関数はvalidation.vimに移行しました
+" → hellshake_yano#validation#highlight_group_name()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#validate_highlight_group_name(name) abort
-  " plugin/hellshake-yano.vimの関数を直接呼び出せないので、ここで再実装
-  " 空チェック
-  if empty(a:name)
-    throw '[hellshake-yano] Error: Highlight group name cannot be empty'
-  endif
-
-  " 文字列型チェック
-  if type(a:name) != v:t_string
-    throw '[hellshake-yano] Error: Highlight group name must be a string'
-  endif
-
-  " 長さチェック（100文字以下）
-  if len(a:name) > 100
-    throw '[hellshake-yano] Error: Highlight group name must be 100 characters or less'
-  endif
-
-  " 先頭文字チェック（英字またはアンダースコア）
-  if a:name !~# '^[a-zA-Z_]'
-    throw '[hellshake-yano] Error: Highlight group name must start with a letter or underscore'
-  endif
-
-  " 使用可能文字チェック（英数字とアンダースコアのみ）
-  if a:name !~# '^[a-zA-Z0-9_]\+$'
-    throw '[hellshake-yano] Error: Highlight group name must contain only alphanumeric characters and underscores'
-  endif
-
-  return v:true
+  return hellshake_yano#validation#highlight_group_name(a:name)
 endfunction
 
-" 色値の検証関数（公開関数）
+" 色値の検証関数
+" Note: この関数はvalidation.vimに移行しました
+" → hellshake_yano#validation#color_value()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#validate_color_value(color) abort
-  " 空またはundefinedの場合は有効（オプション値）
-  if empty(a:color)
-    return v:true
-  endif
-
-  " 文字列型チェック
-  if type(a:color) != v:t_string
-    throw '[hellshake-yano] Error: Color value must be a string'
-  endif
-
-  " 16進数色の場合
-  if a:color =~# '^#'
-    " 16進数形式チェック（#fff または #ffffff）
-    if a:color !~# '^#\([0-9a-fA-F]\{3\}\|[0-9a-fA-F]\{6\}\)$'
-      throw '[hellshake-yano] Error: Invalid hex color format. Use #fff or #ffffff'
-    endif
-    return v:true
-  endif
-
-  " 標準色名チェック
-  let valid_colors = [
-        \ 'Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta',
-        \ 'White', 'Black', 'Gray', 'NONE', 'None',
-        \ 'DarkRed', 'DarkGreen', 'DarkBlue', 'DarkYellow', 'DarkCyan', 'DarkMagenta',
-        \ 'LightRed', 'LightGreen', 'LightBlue', 'LightYellow', 'LightCyan', 'LightMagenta',
-        \ 'DarkGray', 'LightGray', 'Brown', 'Orange'
-        \ ]
-
-  " 大文字小文字を無視して正規化した色名でチェック
-  let normalized_color = hellshake_yano#normalize_color_name(a:color)
-  if index(valid_colors, normalized_color) == -1
-    throw '[hellshake-yano] Error: Invalid color name: ' . a:color
-  endif
-
-  return v:true
+  return hellshake_yano#validation#color_value(a:color)
 endfunction
 
-" 色名を正規化する関数（公開関数）
+" 色名を正規化する関数
+" Note: この関数はvalidation.vimに移行しました
+" → hellshake_yano#validation#normalize_color_name()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#normalize_color_name(color) abort
-  if empty(a:color) || a:color =~# '^#'
-    return a:color
-  endif
-
-  " 最初の文字を大文字、残りを小文字にする
-  return substitute(a:color, '^\(.\)\(.*\)', '\u\1\L\2', '')
+  return hellshake_yano#validation#normalize_color_name(a:color)
 endfunction
 
 "=============================================================================
@@ -831,90 +398,30 @@ endfunction
 " キー情報をDenopsに伝達する関数群
 "=============================================================================
 
-" キー情報付きヒント表示関数（Process4 sub1）
-" @param key - 押下されたキー文字
+" Note: キー情報付きヒント表示 - hint.vimに移行済み
+" → hellshake_yano#hint#show_hints_with_key()
 function! hellshake_yano#show_hints_with_key(key) abort
-  try
-    if !s:is_denops_ready()
-      return
-    endif
-
-    " 現在のモードを検出
-    let current_mode = hellshake_yano#detect_current_mode()
-    " Denops側のshowHintsWithKeyメソッドを呼び出し（モード情報付き）
-    call denops#notify('hellshake-yano', 'showHintsWithKey', [a:key, current_mode])
-  catch
-    call hellshake_yano#show_error('show_hints_with_key', v:exception)
-  endtry
+  return hellshake_yano#hint#show_hints_with_key(a:key)
 endfunction
 
-" 現在のモードを検出する関数（process2 追加）
+" Note: 現在のモードを検出 - hint.vimに移行済み
+" → hellshake_yano#hint#detect_current_mode()
 function! hellshake_yano#detect_current_mode() abort
-  let vim_mode = mode()
-  return hellshake_yano#detect_current_mode_from_string(vim_mode)
+  return hellshake_yano#hint#detect_current_mode()
 endfunction
 
-" mode()文字列からモード種別を判定する関数（process2 追加）
+" Note: mode()文字列からモード種別を判定 - hint.vimに移行済み
+" → hellshake_yano#hint#detect_current_mode_from_string()
 function! hellshake_yano#detect_current_mode_from_string(mode_string) abort
-  " Visual modes: v (character-wise), V (line-wise), ^V (block-wise)
-  if a:mode_string =~# '^[vV\<C-V>]'
-    return 'visual'
-  endif
-  " Insert modes
-  if a:mode_string =~# '^[iI]'
-    return 'insert'
-  endif
-  " Command-line modes
-  if a:mode_string =~# '^[c:]'
-    return 'command'
-  endif
-  " Replace modes
-  if a:mode_string =~# '^[rR]'
-    return 'replace'
-  endif
-  " Default: normal mode
-  return 'normal'
+  return hellshake_yano#hint#detect_current_mode_from_string(a:mode_string)
 endfunction
 
 " hellshake_yano#motion関数を更新してキー情報を伝達（Process4 sub1拡張）
+" Note: この関数はmotion.vimに移行しました
+" → hellshake_yano#motion#with_key_context()
+" 後方互換性のためのラッパー関数
 function! hellshake_yano#motion_with_key_context(key) abort
-  let start_time = s:get_elapsed_time()
-
-  " プラグインが無効な場合は通常の動作
-  if !get(g:hellshake_yano, 'enabled', v:true)
-    return a:key
-  endif
-
-  let bufnr = s:bufnr()
-  call hellshake_yano#state#init_buffer_state(bufnr)
-
-  " キーリピート検出処理
-  let current_time = s:get_elapsed_time()
-  let config = s:get_key_repeat_config()
-
-  if s:handle_key_repeat_detection(bufnr, current_time, config)
-    call s:handle_debug_display()
-    return a:key
-  endif
-
-  " キー別モーションカウントを処理
-  call hellshake_yano#count#process_motion_count_for_key(bufnr, a:key)
-
-  " キー別ヒント表示かタイムアウト設定を判定・実行
-  if s:should_trigger_hints_for_key(bufnr, a:key)
-    call hellshake_yano#count#reset_key_count(bufnr, a:key)
-    " キー情報付きでヒント表示を呼び出し
-    call hellshake_yano#show_hints_with_key(a:key)
-    call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
-  else
-    call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
-    call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': hellshake_yano#count#get_key_count(bufnr, a:key) })
-  endif
-
-  call s:handle_debug_display()
-  return a:key
+  return hellshake_yano#motion#with_key_context(a:key)
 endfunction
 
 "=============================================================================
@@ -928,7 +435,7 @@ endfunction
 
 " テスト用: キー別motion_count設定値を取得
 function! hellshake_yano#debug_get_motion_count_for_key(key) abort
-  return s:get_motion_count_for_key(a:key)
+  return hellshake_yano#config#get_motion_count_for_key(a:key)
 endfunction
 
 " テスト用: ヒント表示判定を取得

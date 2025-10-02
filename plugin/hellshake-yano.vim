@@ -22,6 +22,21 @@ if !exists('g:hellshake_yano')
   let g:hellshake_yano = {}
 endif
 
+" グローバル内部状態変数の早期初期化
+" Note: autoloadファイルは遅延読み込みのため、ModeChangedイベントなどで
+"       早期にアクセスされる場合に備えて、plugin読み込み時に初期化する
+if !exists('g:hellshake_yano_internal')
+  let g:hellshake_yano_internal = {
+        \ 'motion_count': {},
+        \ 'last_motion_time': {},
+        \ 'timer_id': {},
+        \ 'hints_visible': v:false,
+        \ 'last_key_time': {},
+        \ 'is_key_repeating': {},
+        \ 'repeat_end_timer': {}
+        \ }
+endif
+
 " ユーザー設定が未定義の場合は空の辞書で初期化
 "
 " 設定管理の責任分担:
