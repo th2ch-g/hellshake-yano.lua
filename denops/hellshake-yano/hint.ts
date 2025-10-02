@@ -10,6 +10,13 @@ import type { Config } from "./config.ts";
 // Display width calculation functions integrated from utils/display.ts
 import { CacheType, GlobalCache, type CacheStatistics } from "./cache.ts";
 import { Core } from "./core.ts";
+import {
+  isAlphanumeric,
+  isValidSymbol,
+  isWhitespace,
+  isControlCharacter,
+  isDigit,
+} from "./validation-utils.ts";
 
 /**
  * 型の再エクスポート
@@ -55,8 +62,8 @@ initializeASCIICache();
 
 /**
  * ラテン文字の数学記号かどうかを判定する
- * @param codePoint - 判定対象のコードポイント
- * @returns ラテン文字の数学記号の場合true
+ * @param codePoint
+ * @returns 
  */
 function isLatinMathSymbol(codePoint: number): boolean {
   return (codePoint >= 0x00B0 && codePoint <= 0x00B1) || (codePoint >= 0x00B7 && codePoint <= 0x00B7) ||
@@ -68,8 +75,8 @@ function isLatinMathSymbol(codePoint: number): boolean {
 
 /**
  * コードポイントがCJK文字範囲内かどうかを判定する
- * @param codePoint - 判定対象のコードポイント
- * @returns CJK文字範囲内の場合true
+ * @param codePoint
+ * @returns 
  */
 function isInCJKRange(codePoint: number): boolean {
   for (const [start, end] of CJK_RANGES) {
@@ -80,8 +87,8 @@ function isInCJKRange(codePoint: number): boolean {
 
 /**
  * コードポイントが絵文字範囲内かどうかを判定する
- * @param codePoint - 判定対象のコードポイント
- * @returns 絵文字範囲内の場合true
+ * @param codePoint
+ * @returns 
  */
 function isInEmojiRange(codePoint: number): boolean {
   for (const [start, end] of EMOJI_RANGES) {
@@ -92,8 +99,8 @@ function isInEmojiRange(codePoint: number): boolean {
 
 /**
  * コードポイントが拡張全角文字範囲内かどうかを判定する
- * @param codePoint - 判定対象のコードポイント
- * @returns 拡張全角文字範囲内の場合true
+ * @param codePoint
+ * @returns 
  */
 function isInExtendedWideRange(codePoint: number): boolean {
   return isLatinMathSymbol(codePoint) || (codePoint >= 0x2460 && codePoint <= 0x24FF) ||
@@ -107,9 +114,9 @@ function isInExtendedWideRange(codePoint: number): boolean {
 
 /**
  * 文字の表示幅を計算する
- * @param codePoint - 文字のコードポイント
- * @param tabWidth - タブ文字の表示幅
- * @returns 文字の表示幅
+ * @param codePoint
+ * @param tabWidth
+ * @returns 
  */
 function calculateCharWidth(codePoint: number, tabWidth: number): number {
   if (codePoint === 0x09) return tabWidth;
@@ -124,9 +131,9 @@ function calculateCharWidth(codePoint: number, tabWidth: number): number {
 
 /**
  * 文字の表示幅を取得する（キャッシュ機能付き）
- * @param char - 表示幅を取得したい文字
- * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
- * @returns 文字の表示幅
+ * @param char
+ * @param tabWidth
+ * @returns 
  */
 export function getCharDisplayWidth(char: string, tabWidth = 8): number {
   if (!char || char.length === 0) return 0;
@@ -145,7 +152,7 @@ export function getCharDisplayWidth(char: string, tabWidth = 8): number {
 
 /**
  * テキストが絵文字シーケンスかどうかを判定する
- * @returns 絵文字シーケンスの場合true
+ * @returns 
  */
 function isEmojiSequence(text: string): boolean {
   return /[\u{1F1E6}-\u{1F1FF}]{2}/u.test(text) || /[\u{1F600}-\u{1F64F}]/u.test(text) ||
@@ -155,9 +162,9 @@ function isEmojiSequence(text: string): boolean {
 
 /**
  * テキストの表示幅を計算する（フォールバック版）
- * @param text - 表示幅を計算するテキスト
- * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
- * @returns テキストの表示幅
+ * @param text
+ * @param tabWidth
+ * @returns 
  */
 function getDisplayWidthFallback(text: string, tabWidth = 8): number {
   let totalWidth = 0;
@@ -176,9 +183,9 @@ function getDisplayWidthFallback(text: string, tabWidth = 8): number {
 
 /**
  * テキストの表示幅を計算する（グラフェムクラスター対応）
- * @param text - 表示幅を計算するテキスト
- * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
- * @returns テキストの表示幅
+ * @param text
+ * @param tabWidth
+ * @returns 
  */
 export function getDisplayWidth(text: string, tabWidth = 8): number {
   if (text == null || text.length === 0) return 0;
@@ -233,10 +240,10 @@ import { getByteLength } from "./word.ts";
 
 /**
  * 文字インデックスを表示column位置に変換（0ベース→1ベース、tab対応）
- * @param line - 対象行のテキスト
- * @param charIndex - 文字インデックス（0ベース）
- * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
- * @returns 表示column位置（1ベース）
+ * @param line
+ * @param charIndex
+ * @param tabWidth
+ * @returns 
  */
 export function convertToDisplayColumn(line: string, charIndex: number, tabWidth = 8): number {
   if (charIndex <= 0) {
@@ -250,9 +257,9 @@ export function convertToDisplayColumn(line: string, charIndex: number, tabWidth
 
 /**
  * 単語の表示終了column位置を取得（tab・マルチバイト対応）
- * @param word - 対象の単語
- * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
- * @returns 単語の表示終了column位置
+ * @param word
+ * @param tabWidth
+ * @returns 
  */
 export function getWordDisplayEndCol(word: Word, tabWidth = 8): number {
   const textWidth = getDisplayWidth(word.text, tabWidth);
@@ -262,10 +269,10 @@ export function getWordDisplayEndCol(word: Word, tabWidth = 8): number {
 /** 2つの単語が表示幅で隣接しているかチェック（gap <= 0で隣接判定） */
 /**
  * 2つの単語が表示幅で隣接しているかチェック（gap <= 0で隣接判定）
- * @param word1 - 第一の単語
- * @param word2 - 第二の単語
- * @param tabWidth - タブ文字の表示幅（デフォルト: 8）
- * @returns 単語が隣接している場合true
+ * @param word1
+ * @param word2
+ * @param tabWidth
+ * @returns 
  */
 export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolean {
   // Must be on the same line
@@ -292,13 +299,10 @@ export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolea
   return distance <= 0;
 }
 
-
 /**
  * モードに応じた割り当てキャッシュを取得
- * @param mode - 現在のエディタモード（"normal", "visual", その他）
- * @returns LRUCache<string, Word[]> 指定されたモードのキャッシュ
- * @since 1.0.0
- * @internal
+ * @param mode
+ * @returns 
  */
 function getAssignmentCacheForMode(mode: string) {
   if (mode === "visual") {
@@ -312,12 +316,10 @@ function getAssignmentCacheForMode(mode: string) {
 
 /**
  * 割り当てキャッシュキーを作成
- * @param words - キー生成元の単語配列
- * @param cursorLine - 現在のカーソル行位置
- * @param cursorCol - 現在のカーソル列位置
- * @returns string 割り当てcache用に生成されたキー
- * @since 1.0.0
- * @internal
+ * @param words
+ * @param cursorLine
+ * @param cursorCol
+ * @returns 
  */
 function createAssignmentCacheKey(
   words: Word[],
@@ -335,10 +337,8 @@ function createAssignmentCacheKey(
 
 /**
  * 文字列をハッシュ化
- * @param value - ハッシュ化する文字列
- * @returns string base36形式のハッシュ値
- * @since 1.0.0
- * @internal
+ * @param value
+ * @returns 
  */
 function hashString(value: string): string {
   let hash = 0;
@@ -352,12 +352,10 @@ function hashString(value: string): string {
 
 /**
  * 遅延評価でヒントマッピングを作成
- * @param word - ヒント割り当て対象の単語
- * @param hint - 割り当てるヒント文字列
- * @param effectiveHintPosition - 有効なヒント位置（"start", "end", "overlay", "both"）
- * @returns HintMapping | HintMapping[] 単一マッピングまたは"both"モード用の配列
- * @since 1.0.0
- * @internal
+ * @param word
+ * @param hint
+ * @param effectiveHintPosition
+ * @returns 
  */
 function createLazyHintMapping(
   word: Word,
@@ -378,12 +376,10 @@ function createLazyHintMapping(
 
 /**
  * 単一ヒントマッピングを作成
- * @param word - ヒント割り当て対象の単語
- * @param hint - 割り当てるヒント文字列
- * @param effectiveHintPosition - ヒント位置（"start", "end", "overlay"）
- * @returns HintMapping 遅延評価による位置プロパティを持つヒントマッピング
- * @since 1.0.0
- * @internal
+ * @param word
+ * @param hint
+ * @param effectiveHintPosition
+ * @returns 
  */
 function createSingleHintMapping(
   word: Word,
@@ -441,10 +437,8 @@ function createSingleHintMapping(
 
 /**
  * 割り当てキャッシュに保存
- * @param cacheKey - cacheエントリのキー
- * @param sortedWords - cacheする並び替え済み単語配列
- * @since 1.0.0
- * @internal
+ * @param cacheKey
+ * @param sortedWords
  */
 function storeAssignmentCache(
   cache: ReturnType<typeof globalCache.getCache>,
@@ -460,7 +454,6 @@ function storeAssignmentCache(
 
 /**
  * ヒント生成のオプション
- * @since 1.0.0
  */
 export interface GenerateHintsOptions {
   /** ヒント文字として使用するマーカー配列 */
@@ -487,9 +480,7 @@ export interface GenerateHintsOptions {
  * 指定数のヒントを生成する（統合版）
  */
 export function generateHints(wordCount: number, options?: GenerateHintsOptions): string[];
-/**
- * @deprecated 旧シグネチャとの互換性のため残されています。新しいコードでは options オブジェクトを使用してください。
- */
+
 export function generateHints(wordCount: number, markers?: string[], maxHints?: number): string[];
 export function generateHints(
   wordCount: number,
@@ -712,11 +703,9 @@ function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): 
 
 /**
  * カーソル位置からの距離で単語を最適化してソート
- * @param words - ソートする単語の配列
- * @param cursorCol - カーソルの現在列番号（1ベース）
- * @returns Word[] - 距離順にソートされた単語配列（カーソルに最も近い単語が先頭）
- * @complexity O(n log n) - n は単語数
- * @since 1.0.0
+ * @param words
+ * @param cursorCol
+ * @returns 
  */
 function sortWordsByDistanceOptimized(
   words: Word[],
@@ -755,11 +744,9 @@ function sortWordsByDistanceOptimized(
 
 /**
  * 大量の単語をバッチ処理でソート
- * @param words - ソートする単語の配列（1000個以上推奨）
- * @param cursorCol - カーソルの現在列番号（1ベース）
- * @returns Word[] - カーソル位置からの距離順にソートされた単語配列
- * @complexity O(n log n) - nは単語数、メモリ使用量はO(バッチサイズ)に最適化
- * @since 1.0.0
+ * @param words
+ * @param cursorCol
+ * @returns 
  */
 function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number): Word[] {
   const batchSize = BATCH_BATCH_SIZE;
@@ -778,11 +765,9 @@ function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number
 
 /**
  * ソート済みバッチをマージ（k-wayマージアルゴリズム）
- * @param batches - ソート済み単語バッチの配列（各バッチは距離順にソート済み）
- * @param cursorCol - カーソルの現在列番号（1ベース、距離計算用）
- * @returns Word[] - マージされたソート済み単語配列（カーソルからの距離順）
- * @complexity O(n log k) - nは総要素数、kはバッチ数
- * @since 1.0.0
+ * @param batches
+ * @param cursorCol
+ * @returns 
  */
 function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: number): Word[] {
   if (batches.length === 0) return [];
@@ -843,8 +828,7 @@ export function getHintCacheStats(): { hintCacheSize: number; assignmentCacheSiz
 
 /**
  * GlobalCacheを使用したhintシステムの詳細統計情報を取得
- * @returns GlobalCacheからの詳細な統計情報とパフォーマンス指標
- * @since 1.0.0
+ * @returns 
  */
 /**
  * ヒント関連のキャッシュ統計を集約した型
@@ -891,7 +875,6 @@ export function getGlobalCacheStats(): HintCacheStatistics {
 
 /**
  * ヒント位置計算のオプション
- * @since 1.0.0
  */
 export interface CalculateHintPositionOptions {
   /** ヒント位置設定（"start", "end", "overlay", "both"） */
@@ -1033,16 +1016,13 @@ export function calculateHintPosition(
   };
 }
 
-
 // HintKeyConfig interface moved to types.ts for consolidation
 // Use: import type { HintKeyConfig } from "./types.ts";
 
 /**
  * キーグループを使用したヒント生成（高度な振り分けロジック付き）- 内部実装
- * @param wordCount - 必要なヒント数
- * @returns string[] - 生成されたヒント文字列の配列（1文字 → 2文字 → 数字 → 3文字の順）
- * @complexity O(n) - n は要求されたヒント数
- * @since 1.0.0
+ * @param wordCount
+ * @returns 
  */
 function generateHintsWithGroupsImpl(
   wordCount: number,
@@ -1122,11 +1102,9 @@ function generateSingleCharHints(keys: string[], count: number): string[] {
 
 /**
  * 指定されたキーから複数文字ヒントを生成（多段階フォールバック付き）
- * @param keys - 使用可能なキーの配列（数字のみまたはアルファベット/記号）
- * @param count - 生成するヒント数（最大値は数字モード:100、通常モード:keys² + keys³）
- * @returns string[] - 生成された複数文字ヒントの配列
- * @complexity 数字モード:O(min(count,100)) / 通常モード:O(min(count,k²+k³))
- * @since 1.0.0
+ * @param keys
+ * @param count
+ * @returns 
  */
 
 /**
@@ -1142,15 +1120,8 @@ export function isNumericOnlyKeys(keys: string[]): boolean {
 
 /**
  * 数字2文字ヒントを優先順位順に生成する - 内部実装
- *
- * @description
- * 01-09, 10-99, 00の順序で数字2文字ヒントを生成します。
- *
- * @param count - 生成するヒント数（最大100）
- * @returns string[] 生成された数字ヒント配列
- *
- * @since 1.0.0
- * @internal
+ * @param count
+ * @returns 
  */
 function generateNumericHintsImpl(count: number): string[] {
   const hints: string[] = [];
@@ -1245,62 +1216,18 @@ export function generateMultiCharHintsFromKeys(
   return hints;
 }
 
+// isAlphanumeric, isValidSymbol, isWhitespace, isControlCharacter, isDigit は
+// validation-utils.ts からインポートされています
+
 /**
- * 有効な記号のリスト定数
+ * 有効な記号のリスト定数（validateCharacterValidity関数で使用）
  */
 const VALID_SYMBOLS = [";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"];
-const VALID_SYMBOL_SET = new Set<string>(VALID_SYMBOLS);
-
-/**
- * 文字が英数字かどうかを判定
- * @param char - 判定する文字（1文字）
- * @returns 英数字の場合true
- */
-function isAlphanumeric(char: string): boolean {
-  return /^[a-zA-Z0-9]$/.test(char);
-}
-
-/**
- * 文字がホワイトスペースかどうかを判定
- * @param char - 判定する文字（1文字）
- * @returns ホワイトスペースの場合true
- */
-function isWhitespace(char: string): boolean {
-  return /\s/.test(char);
-}
-
-/**
- * 文字が制御文字かどうかを判定
- * @param char - 判定する文字（1文字）
- * @returns 制御文字の場合true
- */
-function isControlCharacter(char: string): boolean {
-  const code = char.charCodeAt(0);
-  return (code >= 0x00 && code <= 0x1F) || (code >= 0x7F && code <= 0x9F);
-}
-
-/**
- * 文字が有効な記号かどうかを判定
- * @param char - 判定する文字（1文字）
- * @returns 有効な記号の場合true
- */
-function isValidSymbol(char: string): boolean {
-  return VALID_SYMBOL_SET.has(char);
-}
-
-/**
- * 文字が数字かどうかを判定
- * @param char - 判定する文字（1文字）
- * @returns 数字の場合true
- */
-function isDigit(char: string): boolean {
-  return /^\d$/.test(char);
-}
 
 /**
  * singleCharKeysの文字の妥当性を検証
- * @param keys - 検証する文字配列
- * @returns エラーメッセージの配列
+ * @param keys
+ * @returns 
  */
 function validateCharacterValidity(keys: string[]): string[] {
   const errors: string[] = [];
@@ -1343,7 +1270,7 @@ function validateCharacterValidity(keys: string[]): string[] {
 
 /**
  * 数字専用モードの整合性を検証
- * @returns エラーメッセージの配列
+ * @returns 
  */
 function validateNumericOnlyMode(config: HintKeyConfig): string[] {
   const errors: string[] = [];
@@ -1437,18 +1364,13 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
 
 /**
  * 隣接単語検出結果のキャッシュ - オーバーラップ検出の最適化用
- * @since 1.0.0
- * @internal
  */
 let adjacencyCache = GlobalCache.getInstance().getCache<string, { word: Word; adjacentWords: Word[] }[]>(CacheType.ADJACENCY);
 
 /**
  * 隣接する単語を検出する
- *
- * @param words - 検出対象の単語配列
- * @returns {{ word: Word; adjacentWords: Word[] }[]} 各単語とその隣接単語の配列
- * @complexity O(n²) - nは単語数
- * @since 1.0.0
+ * @param words
+ * @returns 
  */
 export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords: Word[] }[] {
   if (words.length === 0) {
@@ -1494,10 +1416,8 @@ export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords:
 
 /**
  * 単語がマークダウン記号かどうかを判定する
- *
- * @param word - 判定対象の単語
- * @returns boolean 記号の場合true
- * @since 1.0.0
+ * @param word
+ * @returns 
  */
 export function isSymbolWord(word: Word): boolean {
   if (!word.text || word.text.trim().length === 0) {
@@ -1512,14 +1432,12 @@ export function isSymbolWord(word: Word): boolean {
 
 /**
  * オーバーラップによりヒントをスキップするかどうかを判定する
- *
- * @param word - 判定対象の単語
- * @param adjacentWords - 隣接している単語の配列
- * @param priorityRules - 優先度ルール（記号 < 単語）
- * @param priorityRules.symbolsPriority - 記号単語の優先度値（低い = 低優先度）
- * @param priorityRules.wordsPriority - テキスト単語の優先度値（高い = 高優先度）
- * @returns boolean スキップする場合true
- * @since 1.0.0
+ * @param word
+ * @param adjacentWords
+ * @param priorityRules
+ * @param priorityRules
+ * @param priorityRules
+ * @returns 
  */
 export function shouldSkipHintForOverlap(
   word: Word,
@@ -1562,14 +1480,11 @@ export function shouldSkipHintForOverlap(
 
 /**
  * ヒントが利用可能なスペースに表示可能かチェック
- *
- * @param word - ヒント表示をチェックする単語
- * @param adjacentWords - 競合を引き起こす可能性のある隣接単語の配列
- * @param minHintWidth - ヒント表示に必要な最小幅（デフォルト: 2）
- * @param tabWidth - 表示計算用のタブ幅（デフォルト: 8）
- * @returns boolean ヒントが表示可能な場合true、そうでなければfalse
- * @complexity O(n) - nは隣接単語数
- * @since 1.0.0
+ * @param word
+ * @param adjacentWords
+ * @param minHintWidth
+ * @param tabWidth
+ * @returns 
  */
 export function canDisplayHint(
   word: Word,
@@ -1620,12 +1535,9 @@ export function canDisplayHint(
 
 /**
  * 定義済みルールに基づいてヒントを優先順位付け
- *
- * @param words - 隣接単語情報を含む単語の配列
- * @param tabWidth - 表示計算用のタブ幅（デフォルト: 8）
- * @returns Word[] 優先度ルールに基づいてヒントを表示すべき単語の配列
- * @complexity 競合検出にO(n²)、ソートにO(n log n)
- * @since 1.0.0
+ * @param words
+ * @param tabWidth
+ * @returns 
  */
 export function prioritizeHints(
   words: { word: Word; adjacentWords: Word[] }[],
@@ -1655,12 +1567,9 @@ export function prioritizeHints(
 
 /**
  * 単一行の単語を優先順位付け
- *
- * @param lineWords - 単一行の単語情報の配列
- * @param tabWidth - 表示計算用のタブ幅
- * @returns Word[] 行の優先順位付けされた単語の配列
- * @since 1.0.0
- * @internal
+ * @param lineWords
+ * @param tabWidth
+ * @returns 
  */
 function prioritizeWordsOnLine(
   lineWords: { word: Word; adjacentWords: Word[] }[],
@@ -1704,13 +1613,10 @@ function prioritizeWordsOnLine(
 
 /**
  * 指定された単語と競合する単語を検出
- *
- * @param wordInfo - 隣接単語を含む単語情報
- * @param allWords - 同じ行のすべての単語
- * @param tabWidth - 表示計算用のタブ幅
- * @returns Word[] 競合する単語の配列
- * @since 1.0.0
- * @internal
+ * @param wordInfo
+ * @param allWords
+ * @param tabWidth
+ * @returns 
  */
 function findConflictingWords(
   wordInfo: { word: Word; adjacentWords: Word[] },
@@ -1736,11 +1642,8 @@ function findConflictingWords(
 
 /**
  * 優先順位ルールを使用して複数単語間の競合を解決
- *
- * @param conflictingWords - 競合する単語情報の配列
- * @returns Word ヒントを表示すべき勝者単語
- * @since 1.0.0
- * @internal
+ * @param conflictingWords
+ * @returns 
  */
 function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }[]): Word {
   if (conflictingWords.length === 1) {
@@ -1762,11 +1665,8 @@ function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }
 
 /**
  * 同じタイプの単語間の競合を解決
- *
- * @param words - 同じタイプの単語情報の配列
- * @returns Word 長さと位置ルールに基づく勝者単語
- * @since 1.0.0
- * @internal
+ * @param words
+ * @returns 
  */
 function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[]): Word {
   if (words.length === 1) {
@@ -1790,11 +1690,9 @@ function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[])
 
 /**
  * 単語の表示開始column位置を取得
- *
- * @param word - 位置情報を含む単語オブジェクト
- * @param word.col - 開始column位置（1ベース）
- * @returns 表示開始column位置（1ベース座標系）
- * @since 1.0.0
+ * @param word
+ * @param word
+ * @returns 
  */
 export function getWordDisplayStartCol(word: Word, tabWidth = 8): number {
   return word.col;
@@ -1802,13 +1700,11 @@ export function getWordDisplayStartCol(word: Word, tabWidth = 8): number {
 
 /**
  * 位置が単語の表示範囲内にあるかをチェック
- *
- * @param position - チェックするcolumn位置（1ベース座標系）
- * @param word - チェック対象の単語オブジェクト
- * @param word.col - 単語の開始column位置（1ベース）
- * @param word.text - 単語のテキスト内容
- * @returns 位置が単語の表示範囲内（境界含む）にある場合はtrue、そうでなければfalse
- * @since 1.0.0
+ * @param position
+ * @param word
+ * @param word
+ * @param word
+ * @returns 
  */
 export function isPositionWithinWord(position: number, word: Word, tabWidth = 8): boolean {
   const startCol = getWordDisplayStartCol(word, tabWidth);
@@ -1818,10 +1714,9 @@ export function isPositionWithinWord(position: number, word: Word, tabWidth = 8)
 
 /**
  * 表示位置での2つの単語間のギャップを計算
- *
- * @param word1 - 最初の単語オブジェクト
- * @param word2 - 2番目の単語オブジェクト
- * @returns 単語間の表示位置でのギャップ
+ * @param word1
+ * @param word2
+ * @returns 
  */
 export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number {
   if (word1.line !== word2.line) {
@@ -1854,7 +1749,7 @@ export class HintManager {
   private currentKeyContext?: string;
 
   /**
-   * HintManagerのコンストラクタ
+ * HintManagerのコンストラクタ
    */
   constructor(config: Config) {
     this.config = config;
@@ -1862,9 +1757,8 @@ export class HintManager {
   }
 
   /**
-   * キー押下時の処理
-   *
-   * @param key - 押下されたキー文字
+ * キー押下時の処理
+ * @param key
    */
   onKeyPress(key: string): void {
     const hasKeyChanged = this.currentKeyContext !== key;
@@ -1879,17 +1773,16 @@ export class HintManager {
   }
 
   /**
-   * キー別最小文字数の取得
-   *
-   * @param key - 最小文字数を取得したいキー
-   * @returns キーに対応する最小文字数（設定に基づく）
+ * キー別最小文字数の取得
+ * @param key
+ * @returns 
    */
   getMinLengthForKey(key: string): number {
     return Core.getMinLengthForKey(this.config, key);
   }
 
   /**
-   * 現在のヒントを即座にクリア
+ * 現在のヒントを即座にクリア
    */
   clearCurrentHints(): void {
     // 即座のヒントクリア機能の基本実装
@@ -1906,16 +1799,16 @@ export class HintManager {
   }
 
   /**
-   * 現在のキーコンテキストを取得
-   * @returns 現在設定されているキーコンテキスト
+ * 現在のキーコンテキストを取得
+ * @returns 
    */
   getCurrentKeyContext(): string | undefined {
     return this.currentKeyContext;
   }
 
   /**
-   * 設定オブジェクトへの読み取り専用アクセス
-   * @returns 現在の設定オブジェクト（読み取り専用）
+ * 設定オブジェクトへの読み取り専用アクセス
+ * @returns 
    */
   getConfig(): Readonly<Config> {
     return this.config;

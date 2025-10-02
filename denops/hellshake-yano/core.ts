@@ -45,18 +45,17 @@ import { DictionaryLoader, VimConfigBridge, type UserDictionary } from "./word.t
 // commands.ts は統合されたため削除（機能はcore.ts内部で実装済み）
 // lifecycle.ts は統合されたため削除（機能はcore.ts内部で実装済み）
 import { validateConfig } from "./config.ts";
+import {
+  validateHighlightGroupName,
+  isValidColorName,
+  isValidHexColor,
+  validateHighlightColor as validateHighlightColorBase,
+} from "./validation-utils.ts";
 // motion.ts は統合されたため削除（MotionManagerはcore.ts内部で実装済み）
 
 // === Constants ===
 /**
  * ハイライト処理のバッチサイズ
- *
- * 非同期ハイライト処理において、一度に処理するextmarkの数を定義します。
- * この値により以下のバランスを調整できます：
- * - 小さい値: より細かい非同期制御、応答性向上
- * - 大きい値: バッチ効率向上、オーバーヘッド削減
- *
- * 15という値は、一般的なユースケースでの性能バランスを考慮した値です。
  */
 export const HIGHLIGHT_BATCH_SIZE = 15;
 export const HYBRID_SYNC_BATCH_SIZE = 15;
@@ -64,7 +63,6 @@ export const HYBRID_SYNC_BATCH_SIZE = 15;
 // 内部実装: 統合されたクラス群
 /**
  * モーション操作をカウントして闾値に達した時にイベントを発生させるクラス
- * motion.tsから統合
  */
 class MotionCounter {
   /** 現在のモーションカウント */
@@ -79,10 +77,10 @@ class MotionCounter {
   private onThresholdReached?: () => void;
 
   /**
-   * MotionCounterのコンストラクタ
-   * @param threshold - モーション回数の闾値（デフォルト: 3）
-   * @param timeoutMs - タイムアウト時間（ミリ秒、デフォルト: 2000）
-   * @param onThresholdReached - 闾値に達した時に実行されるコールバック関数
+ * MotionCounterのコンストラクタ
+ * @param threshold
+ * @param timeoutMs
+ * @param onThresholdReached
    */
   constructor(
     threshold: number = 3,
@@ -95,8 +93,8 @@ class MotionCounter {
   }
 
   /**
-   * モーションカウントをインクリメントする
-   * @returns 闾値に達した場合はtrue、そうでなければfalse
+ * モーションカウントをインクリメントする
+ * @returns 
    */
   increment(): boolean {
     const now = Date.now();
@@ -117,15 +115,15 @@ class MotionCounter {
   }
 
   /**
-   * 現在のモーションカウントを取得する
-   * @returns 現在のカウント数
+ * 現在のモーションカウントを取得する
+ * @returns 
    */
   getCount(): number {
     return this.count;
   }
 
   /**
-   * モーションカウントをリセットする
+ * モーションカウントをリセットする
    */
   reset(): void {
     this.count = 0;
@@ -135,18 +133,17 @@ class MotionCounter {
 
 /**
  * バッファ別のモーションカウンターを管理するクラス
- * motion.tsから統合
  */
 class MotionManager {
   /** バッファ番号をキーとしたMotionCounterのマップ */
   private counters: Map<number, MotionCounter> = new Map();
 
   /**
-   * 指定されたバッファのMotionCounterを取得する（なければ新規作成）
-   * @param bufnr - バッファ番号
-   * @param threshold - 闾値（オプション）
-   * @param timeout - タイムアウト時間（オプション）
-   * @returns MotionCounterインスタンス
+ * 指定されたバッファのMotionCounterを取得する（なければ新規作成）
+ * @param bufnr
+ * @param threshold
+ * @param timeout
+ * @returns 
    */
   getCounter(bufnr: number, threshold?: number, timeout?: number): MotionCounter {
     if (!this.counters.has(bufnr)) {
@@ -156,8 +153,8 @@ class MotionManager {
   }
 
   /**
-   * 指定されたバッファのMotionCounterをリセットする
-   * @param bufnr - バッファ番号
+ * 指定されたバッファのMotionCounterをリセットする
+ * @param bufnr
    */
   resetCounter(bufnr: number): void {
     const counter = this.counters.get(bufnr);
@@ -167,7 +164,7 @@ class MotionManager {
   }
 
   /**
-   * すべてのMotionCounterをクリアする
+ * すべてのMotionCounterをクリアする
    */
   clearAll(): void {
     this.counters.clear();
@@ -176,27 +173,26 @@ class MotionManager {
 
 /**
  * コマンドとコントローラーを作成するファクトリークラス
- * commands.tsから統合
  */
 class CommandFactory {
   /**
-   * CommandFactoryのコンストラクタ
-   * @param config - プラグインの設定
+ * CommandFactoryのコンストラクタ
+ * @param config
    */
   constructor(private config: Config) {}
 
   /**
-   * コマンドオブジェクトを作成する（必要最小限の実装）
-   * @param command - コマンド文字列
-   * @returns コマンドと設定を含むオブジェクト
+ * コマンドオブジェクトを作成する（必要最小限の実装）
+ * @param command
+ * @returns 
    */
   createCommand(command: string): CommandObject {
     return { command, config: this.config };
   }
 
   /**
-   * テスト互換性のためのコントローラーを取得する
-   * @returns enable/disable/toggleメソッドを持つコントローラー
+ * テスト互換性のためのコントローラーを取得する
+ * @returns 
    */
   getController(): Controller {
     const core = Core.getInstance(this.config);
@@ -208,8 +204,8 @@ class CommandFactory {
   }
 
   /**
-   * 設定管理オブジェクトを取得する
-   * @returns 設定の取得、更新、個別設定メソッドを持つオブジェクト
+ * 設定管理オブジェクトを取得する
+ * @returns 
    */
   getConfigManager(): ConfigManager {
     return {
@@ -227,8 +223,8 @@ class CommandFactory {
   }
 
   /**
-   * デバッグ用コントローラーを取得する
-   * @returns 統計情報取得、キャッシュクリア、デバッグモード切り替えメソッドを持つオブジェクト
+ * デバッグ用コントローラーを取得する
+ * @returns 
    */
   getDebugController(): DebugController {
     return {
@@ -266,7 +262,6 @@ interface PluginState {
 
 /**
  * プラグインの状態を管理するグローバルオブジェクト
- * lifecycle.tsから統合した簡易プラグイン状態管理
  */
 let pluginState: PluginState = {
   status: "uninitialized",
@@ -288,19 +283,17 @@ let pluginState: PluginState = {
 
 /**
  * 初期化オプションのインターフェース
- * @deprecated この型定義はtypes.tsに移動しました。import { InitializeOptions } from "./types.ts" を使用してください。
  */
 
 /**
  * 初期化結果のインターフェース
- * @deprecated この型定義はtypes.tsに移動しました。import { InitializeResult } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグインを初期化する
- * @param denops - Denopsインスタンス
- * @param options - 初期化オプション（キャッシュサイズなど）
- * @returns extmarkNamespaceとcachesを含むPromise
+ * @param denops
+ * @param options
+ * @returns 
  */
 function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<InitializeResult> {
   pluginState.status = "initialized";
@@ -324,8 +317,8 @@ function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<
 
 /**
  * プラグインをクリーンアップする
- * @param denops - Denopsインスタンス
- * @returns クリーンアップ完了を示すPromise
+ * @param denops
+ * @returns 
  */
 function cleanupPlugin(denops: Denops): Promise<void> {
   pluginState.status = "cleaned";
@@ -339,13 +332,12 @@ function cleanupPlugin(denops: Denops): Promise<void> {
 
 /**
  * ヘルスチェック結果のインターフェース
- * @deprecated この型定義はtypes.tsに移動しました。import { HealthCheckResult } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグインのヘルスチェックを実行する
- * @param denops - Denopsインスタンス
- * @returns ヘルスチェック結果を含むPromise
+ * @param denops
+ * @returns 
  */
 function healthCheck(denops: Denops): Promise<HealthCheckResult> {
   return Promise.resolve({
@@ -357,17 +349,15 @@ function healthCheck(denops: Denops): Promise<HealthCheckResult> {
 
 /**
  * パフォーマンス統計項目のインターフェース
- * @deprecated この型定義はtypes.tsに移動しました。import { PerformanceStats } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグイン統計情報のインターフェース
- * @deprecated この型定義はtypes.tsに移動しました。import { PluginStatistics } from "./types.ts" を使用してください。
  */
 
 /**
  * プラグインの統計情報を取得する
- * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
+ * @returns 
  */
 function getPluginStatistics(): PluginStatistics {
   // Calculate statistics from performance metrics
@@ -404,7 +394,7 @@ function getPluginStatistics(): PluginStatistics {
 
 /**
  * プラグインの状態を更新する
- * @param updates - 更新する状態のプロパティ
+ * @param updates
  */
 function updatePluginState(updates: Partial<PluginState>): void {
   Object.assign(pluginState, updates);
@@ -412,7 +402,7 @@ function updatePluginState(updates: Partial<PluginState>): void {
 
 /**
  * 現在のプラグイン状態を取得する
- * @returns プラグインの状態オブジェクト
+ * @returns 
  */
 function getPluginState(): PluginState {
   return pluginState;
@@ -420,8 +410,7 @@ function getPluginState(): PluginState {
 
 /**
  * プラグインを有効化する
- * commands.tsから統合した簡易関数
- * @param config - プラグイン設定
+ * @param config
  */
 function enable(config: Config): void {
   config.enabled = true;
@@ -429,7 +418,7 @@ function enable(config: Config): void {
 
 /**
  * プラグインを無効化する
- * @param config - プラグイン設定
+ * @param config
  */
 function disable(config: Config): void {
   config.enabled = false;
@@ -437,8 +426,8 @@ function disable(config: Config): void {
 
 /**
  * プラグインの有効/無効を切り替える
- * @param config - プラグイン設定
- * @returns 切り替え後の有効状態
+ * @param config
+ * @returns 
  */
 function toggle(config: Config): boolean {
   config.enabled = !config.enabled;
@@ -447,8 +436,8 @@ function toggle(config: Config): boolean {
 
 /**
  * モーションカウントを設定する
- * @param config - プラグイン設定
- * @param count - 設定するカウント数
+ * @param config
+ * @param count
  */
 function setCount(config: Config, count: number): void {
   config.motionCount = count;
@@ -456,8 +445,8 @@ function setCount(config: Config, count: number): void {
 
 /**
  * モーションタイムアウトを設定する
- * @param config - プラグイン設定
- * @param timeout - 設定するタイムアウト値（ミリ秒）
+ * @param config
+ * @param timeout
  */
 function setTimeoutCommand(config: Config, timeout: number): void {
   config.motionTimeout = timeout;
@@ -465,8 +454,6 @@ function setTimeoutCommand(config: Config, timeout: number): void {
 
 /**
  * Hellshake-Yano プラグインの中核クラス
- * すべての主要機能を統合管理し、外部から使いやすいAPIを提供する
- * シングルトンパターンで実装され、TDD方法論に従って開発
  */
 export class Core {
   /** シングルトンインスタンス */
@@ -502,8 +489,8 @@ export class Core {
   private motionManager: MotionManager = new MotionManager();
 
   /**
-   * Coreクラスのプライベートコンストラクタ（シングルトン用）
-   * @param config - 初期設定（省略時はデフォルト設定を使用）
+ * Coreクラスのプライベートコンストラクタ（シングルトン用）
+ * @param config
    */
   private constructor(config?: Partial<Config>) {
     // Configのデフォルト設定を使用
@@ -511,9 +498,9 @@ export class Core {
   }
 
   /**
-   * シングルトンインスタンスを取得する
-   * @param config - 初期設定（初回のみ有効）
-   * @returns Coreクラスのシングルトンインスタンス
+ * シングルトンインスタンスを取得する
+ * @param config
+ * @returns 
    */
   public static getInstance(config?: Partial<Config>): Core {
     if (!Core.instance) {
@@ -523,25 +510,23 @@ export class Core {
   }
 
   /**
-   * テスト用リセットメソッド
-   * テスト間でのインスタンス分離を実現する
+ * テスト用リセットメソッド
    */
   public static resetForTesting(): void {
     Core.instance = null;
   }
 
   /**
-   * インスタンスリセット（テスト用）
-   * lifecycle統合用
+ * インスタンスリセット（テスト用）
    */
   reset(): void {
     Core.instance = null;
   }
 
   /**
-   * プラグインを初期化する
-   * @param denops - Denopsインスタンス
-   * @param options - 初期化オプション
+ * プラグインを初期化する
+ * @param denops
+ * @param options
    * @throws {Error} 初期化に失敗した場合
    */
   async initialize(denops: Denops, options?: InitializeOptions): Promise<void> {
@@ -553,8 +538,8 @@ export class Core {
   }
 
   /**
-   * プラグインをクリーンアップする
-   * @param denops - Denopsインスタンス（オプション）
+ * プラグインをクリーンアップする
+ * @param denops
    */
   async cleanup(denops?: Denops): Promise<void> {
     try {
@@ -576,7 +561,6 @@ export class Core {
       this._pendingHighlightTimer = null;
     }
 
-
       // 必要に応じて他のクリーンアップ処理をここに追加
     } catch {
       // クリーンアップエラーは無視（process1_sub2）
@@ -584,9 +568,9 @@ export class Core {
   }
 
   /**
-   * プラグインのヘルスチェックを実行する
-   * @param denops - Denopsインスタンス
-   * @returns ヘルスチェック結果を含むPromise
+ * プラグインのヘルスチェックを実行する
+ * @param denops
+ * @returns 
    */
   async getHealthStatus(denops: Denops): Promise<{
     healthy: boolean;
@@ -606,8 +590,8 @@ export class Core {
   }
 
   /**
-   * プラグインの統計情報を取得する
-   * @returns キャッシュ統計、パフォーマンス統計、現在の状態を含むオブジェクト
+ * プラグインの統計情報を取得する
+ * @returns 
    */
   getStatistics(): {
     cacheStats: { words: CacheStatistics; hints: CacheStatistics };
@@ -640,8 +624,8 @@ export class Core {
   }
 
   /**
-   * プラグインの状態を更新する
-   * @param updates - 更新する状態のプロパティ
+ * プラグインの状態を更新する
+ * @param updates
    */
   updateState(updates: Partial<PluginState>): void {
     try {
@@ -652,9 +636,9 @@ export class Core {
   }
 
   /**
-   * パフォーマンスメトリクスを記録する
-   * @param operation - 操作名
-   * @param duration - 実行時間（ミリ秒）
+ * パフォーマンスメトリクスを記録する
+ * @param operation
+ * @param duration
    */
   recordPerformanceMetric(operation: string, duration: number): void {
     try {
@@ -668,16 +652,16 @@ export class Core {
   }
 
   /**
-   * 現在の設定を取得する
-   * @returns 現在のConfig設定のコピー
+ * 現在の設定を取得する
+ * @returns 
    */
   getConfig(): Config {
     return { ...this.config };
   }
 
   /**
-   * 設定を更新する
-   * @param newConfig - 新しい設定（部分更新可能）
+ * 設定を更新する
+ * @param newConfig
    * @throws {Error} 不正な設定値の場合
    */
   updateConfig(newConfig: Partial<Config>): void {
@@ -692,25 +676,25 @@ export class Core {
   }
 
   /**
-   * プラグインの有効状態を取得する
-   * @returns 有効な場合true、無効な場合false
+ * プラグインの有効状態を取得する
+ * @returns 
    */
   isEnabled(): boolean {
     return this.config.enabled;
   }
 
   /**
-   * ヒント表示中かどうかを確認する
-   * @returns ヒント表示中の場合true、そうでなければfalse
+ * ヒント表示中かどうかを確認する
+ * @returns 
    */
   isHintsVisible(): boolean {
     return this.isActive && this.currentHints.length > 0;
   }
 
   /**
-   * 単語検出を実行する
-   * @param context - 検出コンテキスト（オプション）
-   * @returns 検出結果
+ * 単語検出を実行する
+ * @param context
+ * @returns 
    */
   detectWords(context?: DetectionContext): WordDetectionResult {
     // TDD Green Phase: 最小限の実装
@@ -727,9 +711,9 @@ export class Core {
   }
 
   /**
-   * ヒント生成を実行する
-   * @param words - 対象となる単語配列
-   * @returns ヒントマッピング配列
+ * ヒント生成を実行する
+ * @param words
+ * @returns 
    */
   generateHints(words: Word[]): HintMapping[] {
     // TDD Green Phase: 最小限の実装
@@ -737,8 +721,8 @@ export class Core {
   }
 
   /**
-   * ヒント表示を実行する（Legacy用）
-   * @param hints - 表示するヒントマッピング配列
+ * ヒント表示を実行する（Legacy用）
+ * @param hints
    */
   showHintsLegacy(hints: HintMapping[]): void {
     if (!this.isEnabled()) {
@@ -751,8 +735,7 @@ export class Core {
   }
 
   /**
-   * ヒント非表示を実行する（状態管理のみ）
-   * Note: 実際のVim/Neovim表示クリアはhideHintsOptimized等を使用
+ * ヒント非表示を実行する（状態管理のみ）
    */
   hideHints(): void {
     this.currentHints = [];
@@ -760,10 +743,9 @@ export class Core {
   }
 
   /**
-   * Vim/Neovimの実際のヒント表示を最適化してクリアする
-   * ExtmarksとMatchesの両方をクリアしてヒントを非表示にする
-   * @param denops - Denopsインスタンス
-   * @returns 非同期で完了するPromise
+ * Vim/Neovimの実際のヒント表示を最適化してクリアする
+ * @param denops
+ * @returns 
    */
   async hideHintsOptimized(denops: Denops): Promise<void> {
     try {
@@ -1455,7 +1437,7 @@ export class Core {
 
   /*   * Phase 8: ユーティリティ機能 - ユーザー入力を待機   * ヒント表示後にユーザーの文字入力を待ち、対応するヒントの位置へジャンプする。
   /**
-   * main.tsのwaitForUserInput関数から移行した実装。   * @param denops Denopsインスタンス
+ * main.tsのwaitForUserInput関数から移行した実装。   * @param denops Denopsインスタンス
    */
   /*   * ヒントターゲットへのジャンプ処理を実行（REFACTOR: 重複コードの共通化）
    *   * @param target - ジャンプ対象のヒントマッピング
@@ -2161,9 +2143,9 @@ export class Core {
   }
 
   /**
-   * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植
-   * @param colorName 検証する色名
-   * @returns 有効な場合はtrue、無効な場合はfalse
+ * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植
+ * @param colorName
+ * @returns 
    */
   public static isValidColorName(colorName: string): boolean {
     if (!colorName || typeof colorName !== "string") {
@@ -2205,8 +2187,8 @@ export class Core {
   }
 
   /**
-   * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
-   * @returns 有効な場合はtrue、無効な場合はfalse
+ * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
+ * @returns 
    */
   public static isValidHexColor(hexColor: string): boolean {
     if (!hexColor || typeof hexColor !== "string") {
@@ -2231,8 +2213,8 @@ export class Core {
   }
 
   /**
-   * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
-   * @returns 正規化された色値
+ * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
+ * @returns 
    */
   public static normalizeColorName(color: string): string {
     if (!color || typeof color !== "string") {
@@ -2249,8 +2231,8 @@ export class Core {
   }
 
   /**
-   * main.ts の validateHighlightColor 関数の実装をCore.validateHighlightColor静的メソッドとして移植   * @param colorConfig 検証するハイライト色設定
-   * @returns 検証結果
+ * main.ts の validateHighlightColor 関数の実装をCore.validateHighlightColor静的メソッドとして移植   * @param colorConfig 検証するハイライト色設定
+ * @returns 
    */
   public static validateHighlightColor(
     colorConfig: string | HighlightColor,
@@ -2339,9 +2321,9 @@ export class Core {
   }
 
   /**
-   * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
-   * @param colorConfig 色設定
-   * @returns 生成されたハイライトコマンド
+ * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
+ * @param colorConfig
+ * @returns 
    */
   public static generateHighlightCommand(
     hlGroupName: string,
@@ -2384,8 +2366,8 @@ export class Core {
   }
 
   /**
-   * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
-   * @returns 検証結果
+ * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
+ * @returns 
    */
   public static validateHighlightConfig(
     config: {
@@ -2415,9 +2397,9 @@ export class Core {
   }
 
   /**
-   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
-   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
-   * @returns そのキーに対する最小文字数値（デフォルト: 3）
+ * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
+ * @param key
+ * @returns 
    */
   public static getMinLengthForKey(config: Config | Config, key: string): number {
     // 既にConfig形式であることを前提
@@ -2458,9 +2440,9 @@ export class Core {
   }
 
   /**
-   * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
-   * @param config プラグインの設定オブジェクト（Config または Config）
-   * @returns そのキーに対するmotion_count値（デフォルト: 3）
+ * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+ * @param config
+ * @returns 
    */
   public static getMotionCountForKey(key: string, config: Config | Config): number {
     // 既にConfig形式であることを前提
@@ -2495,10 +2477,7 @@ export class Core {
 
   /*   * sub2-3-2: isRenderingHints - ヒントの描画処理中かどうかを取得   * 非同期描画の状態を外部から確認するためのステータス関数
   /**
-   * main.ts の isRenderingHints 関数をCoreクラスに移植   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse   * const core = Core.getInstance();
-   * if (!core.isRenderingHints()) {
-   *   await core.displayHintsAsync(denops, hints, config);
-   * }
+ * main.ts の isRenderingHints 関数をCoreクラスに移植   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse   * const core = Core.getInstance();
    */
   isRenderingHints(): boolean {
     return this._isRenderingHints;
@@ -2506,8 +2485,7 @@ export class Core {
 
   /*   * sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断   * 進行中の非同期描画処理を安全に中断します
   /**
-   * main.ts の abortCurrentRendering 関数をCoreクラスに移植   * const core = Core.getInstance();
-   * core.abortCurrentRendering();
+ * main.ts の abortCurrentRendering 関数をCoreクラスに移植   * const core = Core.getInstance();
    */
   abortCurrentRendering(): void {
     if (this._renderingAbortController) {
@@ -2518,11 +2496,11 @@ export class Core {
   }
 
   /**
-   * 候補ヒントを同期的にハイライト表示（即座に反映）
-   * @param denops - Denops インスタンス
-   * @param hintMappings - ヒントマッピングの配列
-   * @param partialInput - 部分的な入力文字列
-   * @param config - 設定オプション
+ * 候補ヒントを同期的にハイライト表示（即座に反映）
+ * @param denops
+ * @param hintMappings
+ * @param partialInput
+ * @param config
    */
   async highlightCandidateHintsSync(
     denops: Denops,
@@ -2592,27 +2570,12 @@ export class Core {
   }
 
   /**
-   * 候補ヒントを非同期でハイライト表示する（Fire-and-forget方式）
-   *
-   * このメソッドは以下の特徴を持ちます：
-   * - Fire-and-forget: Promiseを返さず、awaitを使わない
-   * - AbortController: 古いハイライト処理をキャンセル
-   * - バッチ処理: HIGHLIGHT_BATCH_SIZEずつ効率的に処理
-   * - 非ブロッキング: メインスレッドをブロックしない
-   *
-   * @param denops - Denopsインスタンス（Vim/Neovimとの通信用）
-   * @param hintMappings - ハイライト対象のヒントマッピング配列
-   * @param partialInput - 部分入力文字列（候補判定に使用）
-   * @param config - ハイライト設定オプション
-   * @param config.mode - 操作モード（normal/visual/operator）
-   *
-   * @example
-   * ```typescript
-   * // 使用例：2文字目入力待機中にハイライトを非同期実行
-   * core.highlightCandidateHintsAsync(denops, hints, "a", { mode: "normal" });
-   * // 即座に次の処理（getchar()など）に進める
-   * const secondChar = await denops.call("getchar");
-   * ```
+ * 候補ヒントを非同期でハイライト表示する（Fire-and-forget方式）
+ * @param denops
+ * @param hintMappings
+ * @param partialInput
+ * @param config
+ * @param config
    */
   highlightCandidateHintsAsync(
     denops: Denops,
@@ -2730,24 +2693,12 @@ export class Core {
   }
 
   /**
-   * 候補ヒントのハイブリッドハイライト表示（TDD実装）
-   *
-   * Process4実装：1文字目入力時の即時ハイライト表示
-   *
-   * ハイブリッド戦略：
-   * - Phase 1: 最初の15個のヒントを同期的に処理し、即座にredrawで視覚的フィードバック
-   * - Phase 2: 残りのヒントをfire-and-forget非同期処理で応答性を維持
-   *
-   * パフォーマンス特性：
-   * - 同期バッチ: HYBRID_SYNC_BATCH_SIZE（15個）で即座に表示
-   * - 非同期処理: queueMicrotaskでメインスレッドをブロックしない
-   * - AbortController: 古い処理のキャンセル機能
-   *
-   * @param denops - Denopsインスタンス
-   * @param hintMappings - ヒントマッピング配列
-   * @param partialInput - 部分入力文字列（候補フィルタリング用）
-   * @param config - 設定オプション（mode: "normal" | "visual" | "operator"）
-   * @returns Promise<void> - 同期バッチ完了時点で解決
+ * 候補ヒントのハイブリッドハイライト表示（TDD実装）
+ * @param denops
+ * @param hintMappings
+ * @param partialInput
+ * @param config
+ * @returns 
    */
   async highlightCandidateHintsHybrid(
     denops: Denops,
@@ -2866,14 +2817,12 @@ export class Core {
   }
 
   /**
-   * 単一ヒントのextmarkを設定する共通メソッド（リファクタリング）
-   *
-   * @param denops - Denopsインスタンス
-   * @param mapping - ヒントマッピング
-   * @param bufnr - バッファ番号
-   * @param extmarkNamespace - extmarkの名前空間ID
-   * @param isCandidate - 候補ヒントかどうか
-   * @private
+ * 単一ヒントのextmarkを設定する共通メソッド（リファクタリング）
+ * @param denops
+ * @param mapping
+ * @param bufnr
+ * @param extmarkNamespace
+ * @param isCandidate
    */
   private async setHintExtmark(
     denops: Denops,
@@ -2905,18 +2854,13 @@ export class Core {
   }
 
   /**
-   * バッチ処理でextmarkを設定する
-   *
-   * ヒントをHIGHLIGHT_BATCH_SIZEずつ処理し、各バッチ間で
-   * メインスレッドに制御を返すことで非ブロッキング処理を実現します。
-   *
-   * @param denops - Denopsインスタンス（Vim/Neovimとの通信用）
-   * @param hints - 処理対象のヒント配列
-   * @param isCandidate - 候補ヒントかどうか（ハイライトグループと優先度決定に使用）
-   * @param bufnr - 対象バッファ番号
-   * @param extmarkNamespace - extmarkの名前空間ID
-   * @param signal - 処理中断用のAbortSignal
-   * @private
+ * バッチ処理でextmarkを設定する
+ * @param denops
+ * @param hints
+ * @param isCandidate
+ * @param bufnr
+ * @param extmarkNamespace
+ * @param signal
    */
   private async processBatchedExtmarks(
     denops: Denops,
@@ -3875,136 +3819,33 @@ export class Core {
  * fg（前景色）とbg（背景色）を個別に指定するための型定義 * @interface HighlightColor - Already defined in types.ts, importing from there
  */
 
-/* * ハイライトグループ名の検証
- * Vimのハイライトグループ名の命名規則に従って検証を行う * @param {string} groupName - 検証するハイライトグループ名
- * @returns {boolean} 有効な場合true、無効な場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * validateHighlightGroupName("MyGroup"); // true
- * validateHighlightGroupName("_underscore"); // true
- * validateHighlightGroupName("123invalid"); // false（数字で始まる）
- * validateHighlightGroupName(""); // false（空文字列）
- * validateHighlightGroupName("Group-Name"); // false（ハイフンは無効）
- * ```
- */
-export function validateHighlightGroupName(groupName: string): boolean {
-  // 空文字列チェック
-  if (!groupName || groupName.length === 0) {
-    return false;
-  }
+// validateHighlightGroupName は validation-utils.ts から re-export
+// 後方互換性のために export
+export { validateHighlightGroupName };
 
-  // 長さチェック（100文字以下）
-  if (groupName.length > 100) {
-    return false;
-  }
+// isValidColorName は validation-utils.ts から re-export
+// 後方互換性のために export
+export { isValidColorName };
 
-  // 英字またはアンダースコアで始まる
-  if (!/^[a-zA-Z_]/.test(groupName)) {
-    return false;
-  }
+// isValidHexColor は validation-utils.ts から re-export
+// 後方互換性のために export
+export { isValidHexColor };
 
-  // 英数字とアンダースコアのみ使用可能
-  if (!/^[a-zA-Z0-9_]+$/.test(groupName)) {
-    return false;
-  }
-
-  return true;
-}
-
-/* * 色名の検証
- * Vimで使用可能な標準色名かどうかを検証 * @param {string} colorName - 検証する色名
- * @returns {boolean} 有効な色名の場合true、無効な場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isValidColorName("red"); // true
- * isValidColorName("Red"); // true（大文字小文字不区別）
- * isValidColorName("darkblue"); // true
- * isValidColorName("invalidcolor"); // false
- * isValidColorName(""); // false（空文字列）
- * ```
- */
-export function isValidColorName(colorName: string): boolean {
-  if (!colorName || typeof colorName !== "string") {
-    return false;
-  }
-
-  // 標準的なVim色名（大文字小文字不区別）
-  const validColorNames = [
-    "black", "darkblue", "darkgreen", "darkcyan", "darkred", "darkmagenta",
-    "brown", "darkyellow", "lightgray", "lightgrey", "darkgray", "darkgrey",
-    "blue", "lightblue", "green", "lightgreen", "cyan", "lightcyan", "red",
-    "lightred", "magenta", "lightmagenta", "yellow", "lightyellow", "white",
-    "orange", "gray", "grey", "seagreen", "none"
-  ];
-
-  return validColorNames.includes(colorName.toLowerCase());
-}
-
-/* * 16進数色表記の検証
- * 16進数カラーコード（#RRGGBB または #RGB 形式）の検証を行う * @param {string} hexColor - 検証する16進数色（例: "#ff0000", "#fff"）
- * @returns {boolean} 有効な16進数色の場合true、無効な場合false
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * isValidHexColor("#ff0000"); // true（6桁形式）
- * isValidHexColor("#fff"); // true（3桁形式）
- * isValidHexColor("#FF0000"); // true（大文字も有効）
- * isValidHexColor("ff0000"); // false（#が必要）
- * isValidHexColor("#gg0000"); // false（無効な文字）
- * isValidHexColor("#ff00"); // false（4桁は無効）
- * ```
- */
-export function isValidHexColor(hexColor: string): boolean {
-  if (!hexColor || typeof hexColor !== "string") {
-    return false;
-  }
-
-  // #で始まること
-  if (!hexColor.startsWith("#")) {
-    return false;
-  }
-
-  // #を除いた部分
-  const hex = hexColor.slice(1);
-
-  // 3桁または6桁の16進数のみ許可
-  if (hex.length !== 3 && hex.length !== 6) {
-    return false;
-  }
-
-  // 16進数文字のみ
-  return /^[0-9a-fA-F]+$/.test(hex);
-}
-
-/* * ハイライト色設定の総合検証
- * 文字列（ハイライトグループ名）またはオブジェクト（色設定）の検証を行う * @param {string | HighlightColor} colorConfig - 検証するハイライト色設定
- * @returns {{valid: boolean, errors: string[]}} 検証結果とエラーメッセージのリスト
- * @throws {never} この関数は例外をスローしません
- * @example
- * ```typescript
- * // ハイライトグループ名での設定
- * validateHighlightColor("Error"); // { valid: true, errors: [] }
- * validateHighlightColor("123invalid"); // { valid: false, errors: [...] } * // 色設定オブジェクトでの設定
- * validateHighlightColor({ fg: "red", bg: "white" }); // { valid: true, errors: [] }
- * validateHighlightColor({ fg: "#ff0000" }); // { valid: true, errors: [] }
- * validateHighlightColor({ fg: "invalidcolor" }); // { valid: false, errors: [...] }
- * validateHighlightColor({}); // { valid: false, errors: ["At least one of fg or bg must be specified"] }
- * ```
+/**
+ * ハイライト色設定の総合検証（拡張版）
+ * string | HighlightColor の両方をサポート
+ * validation-utils.tsの関数をラップして、stringのケースにも対応
  */
 export function validateHighlightColor(
   colorConfig: string | HighlightColor,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // null と undefined のチェック
   if (colorConfig === null) {
     errors.push("highlight_hint_marker must be a string");
     return { valid: false, errors };
   }
 
-  // 数値や配列などの無効な型チェック
   if (typeof colorConfig === "number") {
     errors.push("highlight_hint_marker must be a string");
     return { valid: false, errors };
@@ -4015,17 +3856,14 @@ export function validateHighlightColor(
     return { valid: false, errors };
   }
 
-  // 文字列の場合（従来のハイライトグループ名）
+  // 文字列の場合（ハイライトグループ名）
   if (typeof colorConfig === "string") {
-    // 空文字列チェック
     if (colorConfig === "") {
       errors.push("highlight_hint_marker must be a non-empty string");
       return { valid: false, errors };
     }
 
-    // ハイライトグループ名のバリデーション
     if (!validateHighlightGroupName(colorConfig)) {
-      // より詳細なエラーメッセージを提供
       if (!/^[a-zA-Z_]/.test(colorConfig)) {
         errors.push("highlight_hint_marker must start with a letter or underscore");
       } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
@@ -4041,38 +3879,9 @@ export function validateHighlightColor(
     return { valid: errors.length === 0, errors };
   }
 
-  // オブジェクトの場合（fg/bg個別指定）
+  // オブジェクトの場合（validation-utils.tsの関数を使用）
   if (typeof colorConfig === "object" && colorConfig !== null) {
-    const { fg, bg } = colorConfig;
-
-    // fgの検証
-    if (fg !== undefined) {
-      if (typeof fg !== "string") {
-        errors.push("fg must be a string");
-      } else if (fg === "") {
-        errors.push("fg cannot be empty string");
-      } else if (!isValidColorName(fg) && !isValidHexColor(fg)) {
-        errors.push(`Invalid fg color: ${fg}`);
-      }
-    }
-
-    // bgの検証
-    if (bg !== undefined) {
-      if (typeof bg !== "string") {
-        errors.push("bg must be a string");
-      } else if (bg === "") {
-        errors.push("bg cannot be empty string");
-      } else if (!isValidColorName(bg) && !isValidHexColor(bg)) {
-        errors.push(`Invalid bg color: ${bg}`);
-      }
-    }
-
-    // fgもbgも指定されていない場合
-    if (fg === undefined && bg === undefined) {
-      errors.push("At least one of fg or bg must be specified");
-    }
-
-    return { valid: errors.length === 0, errors };
+    return validateHighlightColorBase(colorConfig);
   }
 
   errors.push("Color configuration must be a string or object");
@@ -4081,7 +3890,6 @@ export function validateHighlightColor(
 
 /**
  * HellshakeYanoプラグインのユーザー向けインターフェースクラス
- * シンプルなAPIでCoreクラスの機能にアクセスできる
  */
 export class HellshakeYanoCore {
   /** プラグインの設定 */
@@ -4090,8 +3898,8 @@ export class HellshakeYanoCore {
   private commandFactory: CommandFactory;
 
   /**
-   * HellshakeYanoCoreのインスタンスを作成する
-   * @param initialConfig - 初期設定（省略時はデフォルト設定を使用）
+ * HellshakeYanoCoreのインスタンスを作成する
+ * @param initialConfig
    */
   constructor(initialConfig: Config = getDefaultConfig()) {
     this.config = initialConfig;
@@ -4099,46 +3907,46 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * プラグインを有効化する
+ * プラグインを有効化する
    */
   enable(): void {
     enable(this.config);
   }
 
   /**
-   * プラグインを無効化する
+ * プラグインを無効化する
    */
   disable(): void {
     disable(this.config);
   }
 
   /**
-   * プラグインの有効/無効を切り替える
-   * @returns 切り替え後の有効状態（true: 有効, false: 無効）
+ * プラグインの有効/無効を切り替える
+ * @returns 
    */
   toggle(): boolean {
     return toggle(this.config);
   }
 
   /**
-   * プラグインの現在の有効状態を取得する
-   * @returns プラグインが有効かどうか（true: 有効, false: 無効）
+ * プラグインの現在の有効状態を取得する
+ * @returns 
    */
   isEnabled(): boolean {
     return this.config.enabled;
   }
 
   /**
-   * 現在の設定を取得する
-   * @returns 現在の設定のコピー（元の設定オブジェクトは変更されない）
+ * 現在の設定を取得する
+ * @returns 
    */
   getConfig(): Config {
     return { ...this.config };
   }
 
   /**
-   * 設定を更新する
-   * @param updates - 更新する設定項目（部分的な更新が可能）
+ * 設定を更新する
+ * @param updates
    * @throws {Error} 無効な設定が指定された場合
    */
   updateConfig(updates: Partial<Config>): void {
@@ -4151,7 +3959,7 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * 設定をデフォルト値にリセットする
+ * 設定をデフォルト値にリセットする
    */
   resetConfig(): void {
     this.config = getDefaultConfig();
@@ -4159,26 +3967,26 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * ヒント表示の文字数を設定する
-   * @param count - 表示する文字数
+ * ヒント表示の文字数を設定する
+ * @param count
    */
   setCount(count: number): void {
     setCount(this.config, count);
   }
 
   /**
-   * タイムアウト時間を設定する
-   * @param timeout - タイムアウト時間（ミリ秒）
+ * タイムアウト時間を設定する
+ * @param timeout
    */
   setTimeout(timeout: number): void {
     setTimeoutCommand(this.config, timeout);
   }
 
   /**
-   * プラグインを初期化する
-   * @param denops - Denopsインスタンス
-   * @param options - 初期化オプション（省略可能、デフォルト: {}）
-   * @returns 初期化完了のPromise
+ * プラグインを初期化する
+ * @param denops
+ * @param options
+ * @returns 
    * @throws {Error} 初期化処理でエラーが発生した場合
    */
   async initialize(denops: Denops, options: any = {}): Promise<void> {
@@ -4186,9 +3994,9 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * プラグインをクリーンアップする
-   * @param denops - Denopsインスタンス
-   * @returns クリーンアップ完了のPromise
+ * プラグインをクリーンアップする
+ * @param denops
+ * @returns 
    * @throws {Error} クリーンアップ処理でエラーが発生した場合
    */
   async cleanup(denops: Denops): Promise<void> {
@@ -4196,8 +4004,8 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * デバッグ情報を取得する
-   * @returns 現在の設定、プラグイン状態、キャッシュ統計を含むデバッグ情報オブジェクト
+ * デバッグ情報を取得する
+ * @returns 
    */
   getDebugInfo(): any {
     const state = getPluginState();
@@ -4216,17 +4024,17 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * プラグインの統計情報を取得する
-   * @returns プラグインの統計情報オブジェクト
+ * プラグインの統計情報を取得する
+ * @returns 
    */
   getStatistics(): any {
     return getPluginStatistics();
   }
 
   /**
-   * プラグインのヘルスチェックを実行する
-   * @param denops - Denopsインスタンス
-   * @returns ヘルスチェック結果のPromise
+ * プラグインのヘルスチェックを実行する
+ * @param denops
+ * @returns 
    * @throws {Error} ヘルスチェック実行中にエラーが発生した場合
    */
   async healthCheck(denops: Denops): Promise<any> {
@@ -4234,8 +4042,7 @@ export class HellshakeYanoCore {
   }
 
   /**
-   * キャッシュをクリアする
-   * 単語キャッシュとヒントキャッシュの両方をクリアする
+ * キャッシュをクリアする
    */
   clearCache(): void {
     const state = getPluginState();
@@ -4248,10 +4055,10 @@ export class HellshakeYanoCore {
   // ========================================
 
   /**
-   * モーションカウンターをインクリメントする
-   * @param denops - Denopsインスタンス（互換性のため保持）
-   * @param bufnr - バッファ番号
-   * @returns カウンター状態
+ * モーションカウンターをインクリメントする
+ * @param denops
+ * @param bufnr
+ * @returns 
    */
   async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
     const core = Core.getInstance();

@@ -3,6 +3,12 @@
  */
 import type { Config, HighlightColor } from "./types.ts";
 import { validateConfig as validateConfigFromConfig } from "./config.ts";
+import {
+  validateHighlightGroupName,
+  isValidColorName,
+  isValidHexColor,
+  validateHighlightColor,
+} from "./validation-utils.ts";
 
 /**
  * プラグイン設定を検証する
@@ -95,48 +101,8 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
   return { valid: result.valid, errors: result.errors };
 }
 
-/**
- * ハイライトグループ名の妥当性を検証する
- * @param groupName - ハイライトグループ名
- * @returns 有効な場合 true
- */
-export function validateHighlightGroupName(groupName: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(groupName);
-}
-
-/**
- * 標準的な色名の妥当性を検証する
- * @param colorName - 色名
- * @returns 有効な色名の場合 true
- */
-export function isValidColorName(colorName: string): boolean {
-  if (typeof colorName !== "string") return false;
-  const standardColors = [
-    "black",
-    "red",
-    "green",
-    "yellow",
-    "blue",
-    "magenta",
-    "cyan",
-    "white",
-    "gray",
-    "grey",
-    "none",
-  ];
-  return standardColors.includes(colorName.toLowerCase());
-}
-
-/**
- * 16進数色コードの妥当性を検証する
- * @param hexColor - 16進数色コード
- * @returns 有効な16進数色コードの場合 true（3桁・6桁をサポート）
- */
-export function isValidHexColor(hexColor: string): boolean {
-  if (typeof hexColor !== "string") return false;
-  // Support both 3-digit and 6-digit hex colors
-  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hexColor);
-}
+// validateHighlightGroupName, isValidColorName, isValidHexColor, validateHighlightColor は
+// validation-utils.ts から re-export されています
 
 /**
  * 色名を正規化する（Vim の標準形式に合わせる）
@@ -150,58 +116,13 @@ export function normalizeColorName(color: string): string {
   return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
 }
 
-/**
- * ハイライト色設定の妥当性を検証する
- * @param color - ハイライト色設定オブジェクト
- * @returns 検証結果（有効性とエラーメッセージ）
- */
-export function validateHighlightColor(
-  color: HighlightColor,
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // Handle null/undefined input
-  if (!color || typeof color !== "object") {
-    errors.push("Invalid highlight color object");
-    return { valid: false, errors };
-  }
-
-  // Empty object is invalid
-  if (Object.keys(color).length === 0 && !("fg" in color) && !("bg" in color)) {
-    errors.push("Highlight color must have fg or bg property");
-    return { valid: false, errors };
-  }
-
-  if (color.fg !== undefined && color.fg !== null) {
-    // Type check: only string is allowed
-    if (typeof color.fg !== "string") {
-      errors.push("fg must be a string");
-    } else {
-      const fg = color.fg;
-      if (fg === "") {
-        errors.push("fg cannot be empty string");
-      } else if (!isValidColorName(fg) && !isValidHexColor(fg) && fg.toLowerCase() !== "none") {
-        errors.push(`Invalid fg color: ${fg}`);
-      }
-    }
-  }
-
-  if (color.bg !== undefined && color.bg !== null) {
-    // Type check: only string is allowed
-    if (typeof color.bg !== "string") {
-      errors.push("bg must be a string");
-    } else {
-      const bg = color.bg;
-      if (bg === "") {
-        errors.push("bg cannot be empty string");
-      } else if (!isValidColorName(bg) && !isValidHexColor(bg) && bg.toLowerCase() !== "none") {
-        errors.push(`Invalid bg color: ${bg}`);
-      }
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
-}
+// Re-export for backward compatibility
+export {
+  validateHighlightGroupName,
+  isValidColorName,
+  isValidHexColor,
+  validateHighlightColor,
+};
 
 /**
  * ハイライトコマンドを生成する

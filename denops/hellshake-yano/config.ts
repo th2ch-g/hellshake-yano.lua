@@ -433,7 +433,6 @@ export function getPerKeyValue<T>(
   return fallbackValue;
 }
 
-
 export interface DeprecationWarning {
   property: string;
   replacement: string;
@@ -446,7 +445,6 @@ export interface NamingValidation {
   hasManagerSuffix: boolean;
   hasBooleanPrefix: boolean;
 }
-
 
 export function createModernConfig(input: Partial<Config> = {}): Config {
   return createMinimalConfig(input);

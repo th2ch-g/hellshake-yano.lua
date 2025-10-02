@@ -1,29 +1,9 @@
 /**
  * グローバルキャッシュシステム
- * 複数のキャッシュ実装を1つに統合し、型安全なアクセスを提供します。
- *
- * TDD (Test-Driven Development) により開発され、Red-Green-Refactor サイクルに従って
- * 実装されています。
- *
- * ## 特徴
- * - シングルトンパターンによる統一管理
- * - 16種類のキャッシュタイプをサポート
- * - 型安全なジェネリックインターフェース
- * - LRUアルゴリズムによる効率的なメモリ管理
- * - 統計情報とパフォーマンス監視機能
- *
- * @example
- * ```typescript
- * const cache = GlobalCache.getInstance();
- * const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
- * wordsCache.set("buffer1", ["word1", "word2"]);
- * const words = wordsCache.get("buffer1");
- * ```
  */
 
 /**
  * キャッシュの統計情報インターフェース
- * キャッシュのパフォーマンスと使用状況を追跡するための統計データ
  */
 export interface CacheStatistics {
   /** ヒット数 - キーが見つかった回数 */
@@ -40,16 +20,6 @@ export interface CacheStatistics {
 
 /**
  * LRU (Least Recently Used) キャッシュの実装
- * 最も最近使用されていないエントリから削除される方式のキャッシュ
- *
- * @template K キーの型
- * @template V 値の型
- * @example
- * ```typescript
- * const cache = new LRUCache<string, number>(100);
- * cache.set('key1', 42);
- * const value = cache.get('key1'); // 42
- * ```
  */
 export class LRUCache<K, V> {
   private cache = new Map<K, V>();
@@ -58,8 +28,8 @@ export class LRUCache<K, V> {
   private misses = 0;
 
   /**
-   * LRUキャッシュインスタンスを作成
-   * @param maxSize キャッシュの最大サイズ（正の整数である必要がある）
+ * LRUキャッシュインスタンスを作成
+ * @param maxSize
    * @throws {Error} maxSizeが0以下の場合
    */
   constructor(maxSize: number) {
@@ -70,9 +40,9 @@ export class LRUCache<K, V> {
   }
 
   /**
-   * キャッシュから値を取得し、LRUの順序を更新
-   * @param key 取得するキー
-   * @returns キーに対応する値、存在しない場合はundefined
+ * キャッシュから値を取得し、LRUの順序を更新
+ * @param key
+ * @returns 
    */
   get(key: K): V | undefined {
     const value = this.cache.get(key);
@@ -88,9 +58,9 @@ export class LRUCache<K, V> {
   }
 
   /**
-   * キャッシュに値を設定し、必要に応じて古いエントリを削除
-   * @param key 設定するキー
-   * @param value 設定する値
+ * キャッシュに値を設定し、必要に応じて古いエントリを削除
+ * @param key
+ * @param value
    */
   set(key: K, value: V): void {
     // 既存のキーの場合は削除してから再追加（LRU順序を更新）
@@ -108,25 +78,25 @@ export class LRUCache<K, V> {
   }
 
   /**
-   * 指定されたキーのエントリをキャッシュから削除
-   * @param key 削除するキー
-   * @returns 削除に成功した場合true、キーが存在しなかった場合false
+ * 指定されたキーのエントリをキャッシュから削除
+ * @param key
+ * @returns 
    */
   delete(key: K): boolean {
     return this.cache.delete(key);
   }
 
   /**
-   * 指定されたキーがキャッシュに存在するかチェック
-   * @param key チェックするキー
-   * @returns キーが存在する場合true
+ * 指定されたキーがキャッシュに存在するかチェック
+ * @param key
+ * @returns 
    */
   has(key: K): boolean {
     return this.cache.has(key);
   }
 
   /**
-   * キャッシュを完全にクリアし、統計情報もリセット
+ * キャッシュを完全にクリアし、統計情報もリセット
    */
   clear(): void {
     this.cache.clear();
@@ -135,24 +105,24 @@ export class LRUCache<K, V> {
   }
 
   /**
-   * 現在キャッシュに格納されているエントリ数を取得
-   * @returns 現在のエントリ数
+ * 現在キャッシュに格納されているエントリ数を取得
+ * @returns 
    */
   size(): number {
     return this.cache.size;
   }
 
   /**
-   * キャッシュの最大容量を取得
-   * @returns 最大エントリ数
+ * キャッシュの最大容量を取得
+ * @returns 
    */
   get capacity(): number {
     return this.maxSize;
   }
 
   /**
-   * キャッシュのパフォーマンス統計情報を取得
-   * @returns ヒット数、ミス数、ヒット率などの統計データ
+ * キャッシュのパフォーマンス統計情報を取得
+ * @returns 
    */
   getStats(): CacheStatistics {
     const total = this.hits + this.misses;
@@ -166,47 +136,47 @@ export class LRUCache<K, V> {
   }
 
   /**
-   * キャッシュされている全てのキーのイテレータを取得
-   * @returns キーのイテレータ
+ * キャッシュされている全てのキーのイテレータを取得
+ * @returns 
    */
   keys(): IterableIterator<K> {
     return this.cache.keys();
   }
 
   /**
-   * キャッシュされている全ての値のイテレータを取得
-   * @returns 値のイテレータ
+ * キャッシュされている全ての値のイテレータを取得
+ * @returns 
    */
   values(): IterableIterator<V> {
     return this.cache.values();
   }
 
   /**
-   * キャッシュされている全てのエントリ（キーと値のペア）のイテレータを取得
-   * @returns [キー, 値]ペアのイテレータ
+ * キャッシュされている全てのエントリ（キーと値のペア）のイテレータを取得
+ * @returns 
    */
   entries(): IterableIterator<[K, V]> {
     return this.cache.entries();
   }
 
   /**
-   * キャッシュの各エントリに対して関数を実行
-   * @param callbackfn 各エントリに対して実行する関数
+ * キャッシュの各エントリに対して関数を実行
+ * @param callbackfn
    */
   forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: unknown): void {
     this.cache.forEach(callbackfn, thisArg);
   }
 
   /**
-   * 統計情報を取得（getStatsのエイリアス）
-   * @returns キャッシュ統計情報
+ * 統計情報を取得（getStatsのエイリアス）
+ * @returns 
    */
   getStatistics(): CacheStatistics {
     return this.getStats();
   }
 
   /**
-   * ヒット・ミス統計をリセット（キャッシュ内容は保持）
+ * ヒット・ミス統計をリセット（キャッシュ内容は保持）
    */
   resetStatistics(): void {
     this.hits = 0;
@@ -216,9 +186,6 @@ export class LRUCache<K, V> {
 
 /**
  * キャッシュタイプの列挙型
- * 16種類のキャッシュタイプを定義し、それぞれの用途を明確に区別します。
- *
- * @enum {string}
  */
 export enum CacheType {
   /** 単語検出結果のキャッシュ */
@@ -257,7 +224,6 @@ export enum CacheType {
 
 /**
  * キャッシュ設定インターフェース
- * 各キャッシュタイプの設定を定義
  */
 interface CacheConfig {
   /** キャッシュの最大サイズ */
@@ -268,28 +234,6 @@ interface CacheConfig {
 
 /**
  * グローバルキャッシュクラス（シングルトンパターン）
- *
- * 各CacheTypeに対応するLRUCacheインスタンスをグローバルに管理し、
- * 型安全で効率的なキャッシュシステムを提供します。
- *
- * ## 設計原則
- * - シングルトンパターンでアプリケーション全体で一意のインスタンス
- * - 各キャッシュタイプごとに最適化されたサイズ設定
- * - 型安全なジェネリックアクセス
- * - 統計情報による監視とデバッグ支援
- *
- * @example
- * ```typescript
- * const cache = GlobalCache.getInstance();
- *
- * // 型安全な操作
- * const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
- * wordsCache.set("file1", ["hello", "world"]);
- *
- * // 統計情報の取得
- * const stats = cache.getAllStats();
- * // ヒット率は stats.WORDS.hitRate で取得可能
- * ```
  */
 export class GlobalCache {
   private static instance: GlobalCache;
@@ -298,8 +242,7 @@ export class GlobalCache {
   private readonly cacheConfigs: Record<CacheType, CacheConfig>;
 
   /**
-   * プライベートコンストラクタ（シングルトンパターン）
-   * 各キャッシュの設定を初期化します。
+ * プライベートコンストラクタ（シングルトンパターン）
    */
   private constructor() {
     this.caches = new Map();
@@ -338,8 +281,8 @@ export class GlobalCache {
   }
 
   /**
-   * シングルトンインスタンスを取得
-   * @returns GlobalCacheのインスタンス
+ * シングルトンインスタンスを取得
+ * @returns 
    */
   public static getInstance(): GlobalCache {
     if (!GlobalCache.instance) {
@@ -349,10 +292,7 @@ export class GlobalCache {
   }
 
   /**
-   * 各キャッシュタイプに対応するLRUCacheインスタンスを初期化します。
-   * 設定に基づいて各キャッシュに適切なサイズを割り当てます。
-   *
-   * @private
+ * 各キャッシュタイプに対応するLRUCacheインスタンスを初期化します。
    */
   private initializeCaches(): void {
     Object.entries(this.cacheConfigs).forEach(([cacheType, config]) => {
@@ -361,23 +301,10 @@ export class GlobalCache {
   }
 
   /**
-   * 指定されたキャッシュタイプのキャッシュインスタンスを取得します。
-   *
-   * 型安全なジェネリックインターフェースを提供し、キャッシュの型を
-   * コンパイル時にチェックできます。
-   *
-   * @template K キーの型
-   * @template V 値の型
-   * @param type 取得するキャッシュのタイプ
-   * @returns 指定されたタイプのLRUCacheインスタンス
+ * 指定されたキャッシュタイプのキャッシュインスタンスを取得します。
+ * @param type
+ * @returns 
    * @throws {Error} 指定されたタイプのキャッシュが存在しない場合
-   *
-   * @example
-   * ```typescript
-   * const cache = GlobalCache.getInstance();
-   * const wordsCache = cache.getCache<string, string[]>(CacheType.WORDS);
-   * wordsCache.set("file1", ["word1", "word2"]);
-   * ```
    */
   public getCache<K, V>(type: CacheType): LRUCache<K, V> {
     const cache = this.caches.get(type);
@@ -391,20 +318,8 @@ export class GlobalCache {
   }
 
   /**
-   * 全キャッシュの統計情報を取得します。
-   *
-   * パフォーマンス監視とデバッグに使用でき、各キャッシュの
-   * ヒット率、サイズ、使用状況を把握できます。
-   *
-   * @returns キャッシュタイプをキーとした統計情報オブジェクト
-   *
-   * @example
-   * ```typescript
-   * const cache = GlobalCache.getInstance();
-   * const stats = cache.getAllStats();
-   * // ヒット率やキャッシュ数は stats オブジェクトから取得可能
-   * // 例: stats.WORDS.hitRate, Object.keys(stats).length
-   * ```
+ * 全キャッシュの統計情報を取得します。
+ * @returns 
    */
   public getAllStats(): Record<string, CacheStatistics> {
     const stats: Record<string, CacheStatistics> = {};
@@ -417,16 +332,7 @@ export class GlobalCache {
   }
 
   /**
-   * 全キャッシュをクリアします。
-   *
-   * すべてのキャッシュのエントリと統計情報をリセットし、
-   * メモリ使用量を初期状態に戻します。
-   *
-   * @example
-   * ```typescript
-   * const cache = GlobalCache.getInstance();
-   * cache.clearAll(); // 全キャッシュをリセット
-   * ```
+ * 全キャッシュをクリアします。
    */
   public clearAll(): void {
     for (const cache of this.caches.values()) {
@@ -435,18 +341,8 @@ export class GlobalCache {
   }
 
   /**
-   * 特定タイプのキャッシュをクリアします。
-   *
-   * 指定されたキャッシュタイプのみをクリアし、他のキャッシュは
-   * そのまま保持されます。
-   *
-   * @param type クリアするキャッシュのタイプ
-   *
-   * @example
-   * ```typescript
-   * const cache = GlobalCache.getInstance();
-   * cache.clearByType(CacheType.TEMP); // 一時キャッシュのみクリア
-   * ```
+ * 特定タイプのキャッシュをクリアします。
+ * @param type
    */
   public clearByType(type: CacheType): void {
     const cache = this.caches.get(type);
@@ -456,21 +352,17 @@ export class GlobalCache {
   }
 
   /**
-   * キャッシュ設定情報を取得します。
-   *
-   * 各キャッシュタイプの設定（サイズ、説明）を取得できます。
-   *
-   * @returns キャッシュタイプをキーとした設定情報オブジェクト
+ * キャッシュ設定情報を取得します。
+ * @returns 
    */
   public getCacheConfigs(): Readonly<Record<CacheType, CacheConfig>> {
     return this.cacheConfigs;
   }
 
   /**
-   * 特定キャッシュタイプの設定情報を取得します。
-   *
-   * @param type 設定を取得するキャッシュタイプ
-   * @returns 指定されたタイプの設定情報
+ * 特定キャッシュタイプの設定情報を取得します。
+ * @param type
+ * @returns 
    * @throws {Error} 指定されたタイプの設定が存在しない場合
    */
   public getCacheConfig(type: CacheType): Readonly<CacheConfig> {

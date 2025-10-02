@@ -16,8 +16,6 @@ import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
 
 /**
  * 新しい単語検出設定インターフェース
- *
- * @since 2.0.0
  */
 export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   /** 単語検出ストラテジー */
@@ -28,9 +26,7 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   defaultMinWordLength?: number;
   /** 現在のキーコンテキスト（内部用） */
   currentKeyContext?: string;
-  /**
-   * @deprecated strategy を使用してください
-   */
+  
   wordDetectionStrategy?: "regex" | "tinysegmenter" | "hybrid";
 }
 
@@ -59,7 +55,7 @@ export interface WordDetector {
   /** サポートする言語リスト（例: ['ja', 'en', 'any']） */
   readonly supportedLanguages: string[];
   /**
-   * テキストから単語を検出します
+ * テキストから単語を検出します
    */
   detectWords(
     text: string,
@@ -68,13 +64,13 @@ export interface WordDetector {
     denops?: Denops,
   ): Promise<Word[]>;
   /**
-   * 指定されたテキストを処理できるかどうかを判定します
-   * @returns 処理可能な場合はtrue
+ * 指定されたテキストを処理できるかどうかを判定します
+ * @returns 
    */
   canHandle(text: string): boolean;
   /**
-   * この検出器が利用可能かどうかを確認します
-   * @returns 利用可能な場合はtrue
+ * この検出器が利用可能かどうかを確認します
+ * @returns 
    */
   isAvailable(): Promise<boolean>;
 }
@@ -136,7 +132,7 @@ export interface WordDetectionConfig {
 
 /**
  * ConfigかConfigかを判定するヘルパー関数
- * @returns [unifiedConfig, legacyConfig] のタプル
+ * @returns 
  */
 function resolveConfigType(
   config?: Config | Config,
@@ -181,7 +177,7 @@ export class KeyBasedWordCache {
   private wordsCache: ReturnType<GlobalCache["getCache"]>;
 
   /**
-   * KeyBasedWordCacheのコンストラクタ
+ * KeyBasedWordCacheのコンストラクタ
    */
   constructor() {
     try {
@@ -197,7 +193,7 @@ export class KeyBasedWordCache {
   }
 
   /**
-   * キーに基づいて単語リストをキャッシュに保存
+ * キーに基づいて単語リストをキャッシュに保存
    */
   set(key: string, words: Word[]): void {
     // GlobalCache のWORDSキャッシュに保存（浅いコピーで参照汚染防止）
@@ -205,8 +201,8 @@ export class KeyBasedWordCache {
   }
 
   /**
-   * キーに基づいてキャッシュから単語リストを取得
-   * @returns キャッシュされた単語リスト、または undefined
+ * キーに基づいてキャッシュから単語リストを取得
+ * @returns 
    */
   get(key: string): Word[] | undefined {
     const cached = this.wordsCache.get(key) as Word[] | undefined;
@@ -218,7 +214,7 @@ export class KeyBasedWordCache {
   }
 
   /**
-   * 特定のキーのキャッシュをクリア
+ * 特定のキーのキャッシュをクリア
    */
   clear(key?: string): void {
     if (key) {
@@ -229,9 +225,8 @@ export class KeyBasedWordCache {
   }
 
   /**
-   * キャッシュ統計情報を取得（GlobalCache統合版）
-   *
-   * @returns 統計情報オブジェクト
+ * キャッシュ統計情報を取得（GlobalCache統合版）
+ * @returns 
    */
   getStats(): KeyBasedWordCacheStats {
     try {
@@ -290,7 +285,7 @@ export class RegexWordDetector implements WordDetector {
   private unifiedConfig?: Config; // Configへの移行対応
 
   /**
-   * RegexWordDetectorのコンストラクタ
+ * RegexWordDetectorのコンストラクタ
    */
   constructor(config: WordDetectionConfig = {}, globalConfig?: Config | Config) {
     this.config = this.mergeWithDefaults(config);
@@ -298,7 +293,7 @@ export class RegexWordDetector implements WordDetector {
   }
 
   /**
-   * 統一的なmin_length取得
+ * 統一的なmin_length取得
    */
   private getEffectiveMinLength(context?: DetectionContext, key?: string): number {
     // 1. Context優先
@@ -319,7 +314,7 @@ export class RegexWordDetector implements WordDetector {
   }
 
   /**
-   * テキストから単語を検出します
+ * テキストから単語を検出します
    */
   async detectWords(
     text: string,
@@ -344,24 +339,24 @@ export class RegexWordDetector implements WordDetector {
   }
 
   /**
-   * 指定されたテキストを処理できるかどうかを判定します
-   * @returns 常にtrue（正規表現ディテクターはあらゆるテキストを処理可能）
+ * 指定されたテキストを処理できるかどうかを判定します
+ * @returns 
    */
   canHandle(text: string): boolean {
     return true; // Regex detector can handle any text
   }
 
   /**
-   * この検出器が利用可能かどうかを確認します
-   * @returns 常にtrue（この検出器は常に利用可能）
+ * この検出器が利用可能かどうかを確認します
+ * @returns 
    */
   async isAvailable(): Promise<boolean> {
     return true; // Always available
   }
 
   /**
-   * 設定をデフォルト値とマージします
-   * @returns デフォルト値とマージされた設定
+ * 設定をデフォルト値とマージします
+ * @returns 
    */
   private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
     return {
@@ -378,9 +373,8 @@ export class RegexWordDetector implements WordDetector {
   }
 
   /**
-   * 正規表現ベースの単語抽出（リファクタリング後）
-   *
-   * @returns 検出された単語の配列
+ * 正規表現ベースの単語抽出（リファクタリング後）
+ * @returns 
    */
   private async extractWordsImproved(
     lineText: string,
@@ -396,8 +390,8 @@ export class RegexWordDetector implements WordDetector {
   }
 
   /**
-   * 検出された単語にフィルターを適用します
-   * @returns フィルターされた単語リスト
+ * 検出された単語にフィルターを適用します
+ * @returns 
    */
   private applyFilters(words: Word[], context?: DetectionContext): Word[] {
     let filtered = words;
@@ -427,9 +421,6 @@ export class RegexWordDetector implements WordDetector {
 
 /**
  * TinySegmenter-based Word Detector
- *
- * @description
- * @since 2.0.0
  */
 export class TinySegmenterWordDetector implements WordDetector {
   readonly name = "TinySegmenterWordDetector";
@@ -440,9 +431,7 @@ export class TinySegmenterWordDetector implements WordDetector {
   private readonly japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
 
   /**
-   * 日本語助詞リスト（フィルタリングおよび統合対象）
-   * @description
-   * 一般的な日本語助詞のセット。単独では意味を持たないため、
+ * 日本語助詞リスト（フィルタリングおよび統合対象）
    */
   private readonly particles = new Set([
     // 格助詞
@@ -462,14 +451,8 @@ export class TinySegmenterWordDetector implements WordDetector {
   ]);
 
   /**
-   * TinySegmenterを使用して日本語テキストから単語を検出
-   *
-   * @description
-   * 日本語テキストをTinySegmenterで形態素解析し、単語単位で分割します。
-   *
-   * @returns Promise<Word[]> 検出された単語の配列
-   *
-   * @since 2.0.0
+ * TinySegmenterを使用して日本語テキストから単語を検出
+ * @returns 
    */
   async detectWords(
     text: string,
@@ -574,15 +557,9 @@ export class TinySegmenterWordDetector implements WordDetector {
   }
 
   /**
-   * セグメント後処理：名詞+助詞の統合
-   *
-   * @description
-   * TinySegmenterで分割されたセグメントを後処理し、
-   *
-   * @param segments - 後処理前のセグメント配列
-   * @returns 後処理されたセグメント配列
-   *
-   * @since 2.0.0
+ * セグメント後処理：名詞+助詞の統合
+ * @param segments
+ * @returns 
    */
   private postProcessSegments(segments: string[]): string[] {
     const processed: string[] = [];
@@ -620,14 +597,8 @@ export class TinySegmenterWordDetector implements WordDetector {
   }
 
   /**
-   * 指定されたテキストを処理可能かどうかを判定
-   *
-   * @description
-   * テキストに日本語文字（ひらがな、カタカナ、漢字）が含まれているかを
-   *
-   * @returns 日本語を含む場合はtrue、そうでなければfalse
-   *
-   * @since 2.0.0
+ * 指定されたテキストを処理可能かどうかを判定
+ * @returns 
    */
   canHandle(text: string): boolean {
     // 日本語文字（ひらがな、カタカナ、漢字）が含まれているかチェック
@@ -635,14 +606,8 @@ export class TinySegmenterWordDetector implements WordDetector {
   }
 
   /**
-   * この検出器が利用可能かどうかを確認
-   *
-   * @description
-   * TinySegmenterWordDetectorの利用可能性を確認します。
-   *
-   * @returns Promise<boolean> 常にtrue（TinySegmenterは常に利用可能）
-   *
-   * @since 2.0.0
+ * この検出器が利用可能かどうかを確認
+ * @returns 
    */
   async isAvailable(): Promise<boolean> {
     return true;
@@ -651,11 +616,6 @@ export class TinySegmenterWordDetector implements WordDetector {
 
 /**
  * HybridWordDetector - 統合型単語検出器
- *
- * @description
- * RegexWordDetectorとTinySegmenterWordDetectorを組み合わせた統合型の単語検出器です。
- *
- * @since 2.1.0
  */
 export class HybridWordDetector implements WordDetector {
   readonly name = "HybridWordDetector";
@@ -666,7 +626,7 @@ export class HybridWordDetector implements WordDetector {
   private tinySegmenterDetector: TinySegmenterWordDetector;
 
   /**
-   * HybridWordDetectorのコンストラクタ
+ * HybridWordDetectorのコンストラクタ
    */
   constructor(config?: WordDetectionConfig) {
     this.regexDetector = new RegexWordDetector(config);
@@ -674,12 +634,8 @@ export class HybridWordDetector implements WordDetector {
   }
 
   /**
-   * 統合型単語検出を実行
-   *
-   * @description
-   * RegexWordDetectorとTinySegmenterWordDetectorの両方を使用して
-   *
-   * @returns Promise<Word[]> 検出された単語の配列（エラー時は空配列）
+ * 統合型単語検出を実行
+ * @returns 
    */
   async detectWords(
     text: string,
@@ -732,24 +688,16 @@ export class HybridWordDetector implements WordDetector {
   }
 
   /**
-   * 指定されたテキストを処理可能かどうかを判定
-   *
-   * @description
-   * HybridWordDetectorはすべてのテキストタイプを処理できるため、
-   *
-   * @returns 常にtrue
+ * 指定されたテキストを処理可能かどうかを判定
+ * @returns 
    */
   canHandle(text: string): boolean {
     return true; // すべてのテキストを処理可能
   }
 
   /**
-   * この検出器が利用可能かどうかを確認
-   *
-   * @description
-   * 内部で使用するRegexWordDetectorとTinySegmenterWordDetectorが
-   *
-   * @returns Promise<boolean> 利用可能な場合はtrue
+ * この検出器が利用可能かどうかを確認
+ * @returns 
    */
   async isAvailable(): Promise<boolean> {
     try {
@@ -764,14 +712,10 @@ export class HybridWordDetector implements WordDetector {
   }
 
   /**
-   * 複数のDetectorの結果をマージして重複を除去
-   *
-   * @description
-   * 同じ位置にある単語の重複を除去し、より長い単語を優先します。
-   *
-   * @param regexWords - RegexWordDetectorの結果
-   * @param tinySegmenterWords - TinySegmenterWordDetectorの結果
-   * @returns 重複除去後の単語配列
+ * 複数のDetectorの結果をマージして重複を除去
+ * @param regexWords
+ * @param tinySegmenterWords
+ * @returns 
    */
   private mergeAndDeduplicateWords(regexWords: Word[], tinySegmenterWords: Word[]): Word[] {
     const positionMap = new Map<string, Word>();
@@ -803,15 +747,11 @@ export class HybridWordDetector implements WordDetector {
   }
 
   /**
-   * 単語の置換判定を行う
-   *
-   * @description
-   * 既存の単語と新しい単語のどちらを優先するかを判定します。
-   *
-   * @param existingWord - 既存の単語
-   * @param newWord - 新しい単語
-   * @param tinySegmenterWordSet - TinySegmenterの結果のSet
-   * @returns 新しい単語を使用する場合はtrue
+ * 単語の置換判定を行う
+ * @param existingWord
+ * @param newWord
+ * @param tinySegmenterWordSet
+ * @returns 
    */
   private shouldReplaceWord(
     existingWord: Word,
@@ -841,13 +781,9 @@ export class HybridWordDetector implements WordDetector {
   }
 
   /**
-   * 単語配列を位置順でソート
-   *
-   * @description
-   * 単語を行番号、列番号の順でソートします。
-   *
-   * @param words - ソート対象の単語配列
-   * @returns ソート済みの単語配列
+ * 単語配列を位置順でソート
+ * @param words
+ * @returns 
    */
   private sortWordsByPosition(words: Word[]): Word[] {
     return words.sort((a, b) => {
@@ -1007,8 +943,7 @@ function deriveContextFromConfig(config: EnhancedWordConfig): DetectionContext |
 
 /**
  * 設定に基づいて単語検出を行う中級レベルの関数。日本語サポートと改善版検出を含む
- * @returns Promise<Word[]> - 検出された単語の配列
- * @since 1.0.0
+ * @returns 
  */
 export async function detectWordsWithConfig(
   denops: Denops,
@@ -1158,10 +1093,8 @@ function splitJapaneseTextImproved(
 
 /**
  * 文字が全角（2列幅）かどうかを判定する
- *
- * @param char - 判定する文字
- * @returns 全角文字の場合はtrue
- * @since 2.1.0
+ * @param char
+ * @returns 
  */
 function isWideCharacter(char: string): boolean {
   const code = char.charCodeAt(0);
@@ -1205,11 +1138,9 @@ function isWideCharacter(char: string): boolean {
 
 /**
  * タブ文字と全角文字を考慮して文字インデックスから表示列位置を計算する
- *
- * @param charIndex - 文字インデックス（0ベース）
- * @param tabWidth - タブ幅（デフォルト: 8）
- * @returns 表示列位置（0ベース）
- * @since 2.1.0
+ * @param charIndex
+ * @param tabWidth
+ * @returns 
  */
 function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number {
   let displayCol = 0;
@@ -1227,8 +1158,6 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
   }
   return displayCol;
 }
-
-
 
 /**
  * 特定範囲の単語を検出（パフォーマンステスト用）
@@ -1278,7 +1207,7 @@ export function clearWordDetectionCache(): void {
  */
 /**
  * 単語検出キャッシュの統計情報を取得します
- * @returns キャッシュの統計情報オブジェクト
+ * @returns 
  */
 export function getWordDetectionCacheStats(): {
   /** キャッシュサイズ */
@@ -1377,12 +1306,8 @@ export async function detectWordsWithEnhancedConfig(
   }
 }
 
-
-
 /**
  * 単語抽出オプションインターフェース
- *
- * @since 2.1.0
  */
 export interface ExtractWordsOptions {
   // Core settings
@@ -1405,14 +1330,10 @@ export interface ExtractWordsOptions {
   legacyMode?: boolean;
 }
 
-
 /**
  * 統合された単語抽出関数
- *
- * @param lineText - 解析する行のテキスト
- * @returns Word[] - 抽出された単語の配列
- *
- * @since 2.1.0
+ * @param lineText
+ * @returns 
  */
 export function extractWords(
   lineText: string,
@@ -1605,7 +1526,6 @@ export function extractWords(
   return words;
 }
 
-
 /**
  * 統合設定を正規化する内部関数
  */
@@ -1694,9 +1614,6 @@ function normalizeConfig(config: ExtractWordsOptions): NormalizedConfig {
 
 /**
  * UTF-8文字とバイトインデックス変換のエンコーディングユーティリティ
- *
- * @module encoding utilities (integrated into word.ts)
- * @version 1.0.0
  */
 
 /**
@@ -1711,9 +1628,8 @@ const byteLengthCache = GlobalCache.getInstance().getCache<string, number>(Cache
 
 /**
  * 統一されたバイト長計算関数（キャッシュ付き、ASCII最適化）
- *
- * @param text バイト長を計算する文字列
- * @returns UTF-8エンコーディングでのバイト数
+ * @param text
+ * @returns 
  */
 export function getByteLength(text: string): number {
   if (text.length === 0) {
@@ -1746,8 +1662,7 @@ export function getByteLength(text: string): number {
 
 /**
  * バイト長キャッシュをクリア
- *
- * @returns なし
+ * @returns 
  */
 export function clearByteLengthCache(): void {
   byteLengthCache.clear();
@@ -1755,10 +1670,9 @@ export function clearByteLengthCache(): void {
 
 /**
  * 文字インデックスをUTF-8バイトインデックスに変換
- *
- * @param text UTF-8エンコードされたテキスト
- * @param charIndex 文字位置（0ベースインデックス）
- * @returns UTF-8バイト位置（0ベースインデックス）
+ * @param text
+ * @param charIndex
+ * @returns 
  */
 export function charIndexToByteIndex(text: string, charIndex: number): number {
   // 範囲外チェックと空文字列チェック
@@ -1775,10 +1689,9 @@ export function charIndexToByteIndex(text: string, charIndex: number): number {
 
 /**
  * UTF-8バイトインデックスを文字インデックスに変換
- *
- * @param text UTF-8エンコードされたテキスト
- * @param byteIndex バイト位置（0ベースインデックス）
- * @returns 対応する文字位置（0ベースインデックス）
+ * @param text
+ * @param byteIndex
+ * @returns 
  */
 export function byteIndexToCharIndex(text: string, byteIndex: number): number {
   // 範囲外チェック
@@ -1819,11 +1732,9 @@ export function byteIndexToCharIndex(text: string, byteIndex: number): number {
   return text.length;
 }
 
-
 /**
  * テキストにマルチバイト文字（日本語など）が含まれているかチェック
- *
- * @param text チェックするテキスト
+ * @param text
  */
 export function hasMultibyteCharacters(text: string): boolean {
   return new TextEncoder().encode(text).length > text.length;
@@ -1831,9 +1742,8 @@ export function hasMultibyteCharacters(text: string): boolean {
 
 /**
  * デバッグ用の詳細エンコーディング情報を取得
- *
- * @param text 分析するテキスト
- * @returns エンコーディングの詳細情報オブジェクト
+ * @param text
+ * @returns 
  */
 export function getEncodingInfo(text: string): {
   charLength: number;
@@ -1869,7 +1779,6 @@ export function getEncodingInfo(text: string): {
     charToByteMap,
   };
 }
-
 
 /**
  * 文字種判定ユーティリティ
@@ -1916,9 +1825,8 @@ export interface AdjacentAnalysis {
 
 /**
  * 単一文字の種類を判定する（キャッシュ付き）
- *
- * @param char - 判定対象の文字（単一文字）
- * @returns 文字種別
+ * @param char
+ * @returns 
  */
 export function getCharType(char: string): CharType {
   if (!char || char.length === 0) {
@@ -1985,9 +1893,8 @@ export function getCharType(char: string): CharType {
 
 /**
  * 文字列を文字種別に解析する
- *
- * @param text - 解析対象の文字列
- * @returns 文字種別解析結果の配列。各要素は連続する同じ文字種の範囲を表す
+ * @param text
+ * @returns 
  */
 export function analyzeString(text: string): AdjacentAnalysis[] {
   if (!text || text.length === 0) {
@@ -2021,9 +1928,8 @@ export function analyzeString(text: string): AdjacentAnalysis[] {
 
 /**
  * 文字種境界とCamelCase境界を検出する
- *
- * @param text - 境界検出対象の文字列
- * @returns ソートされた境界位置の配列（0ベースインデックス）
+ * @param text
+ * @returns 
  */
 export function findBoundaries(text: string): number[] {
   if (!text || text.length === 0) {
@@ -2082,10 +1988,9 @@ const verbEndingSet = new Set(['する', 'され', 'でき', 'れる', 'られ']
 
 /**
  * 文字種に基づく結合判定（最適化版）
- *
- * @param prevSegment - 前のセグメント文字列
- * @param currentSegment - 現在のセグメント文字列
- * @returns 結合すべき場合はtrue、そうでなければfalse
+ * @param prevSegment
+ * @param currentSegment
+ * @returns 
  */
 export function shouldMerge(
   prevSegment: string,
@@ -2127,20 +2032,14 @@ export function shouldMerge(
 
 /**
  * キャッシュクリア（テスト時やメモリ使用量が気になる場合に使用）
- *
- * @returns なし（void）
+ * @returns 
  */
 export function clearCharTypeCache(): void {
   charTypeCache.clear();
 }
 
-
 // ========== Integrated from segmenter.ts ==========
 
-/**
- *
- * @deprecated process4 sub8-2: このファイルは削除予定です
- */
 /**
  * セグメンテーション結果インターフェース
  */
@@ -2165,7 +2064,7 @@ export class TinySegmenter {
   private enabled: boolean;
 
   /**
-   * TinySegmenterのコンストラクタ
+ * TinySegmenterのコンストラクタ
    */
   constructor() {
     this.segmenter = new NpmTinySegmenter();
@@ -2174,7 +2073,7 @@ export class TinySegmenter {
   }
 
   /**
-   * TinySegmenterのシングルトンインスタンスを取得
+ * TinySegmenterのシングルトンインスタンスを取得
    */
   static getInstance(): TinySegmenter {
     if (!TinySegmenter.instance) {
@@ -2184,7 +2083,7 @@ export class TinySegmenter {
   }
 
   /**
-   * セグメント後処理：連続する数字と単位を結合
+ * セグメント後処理：連続する数字と単位を結合
    */
   private postProcessSegments(segments: string[]): string[] {
     const processed: string[] = [];
@@ -2269,7 +2168,7 @@ export class TinySegmenter {
   }
 
   /**
-   * 日本語テキストを単語/トークンに分割
+ * 日本語テキストを単語/トークンに分割
    */
   async segment(text: string, options?: { mergeParticles?: boolean }): Promise<SegmentationResult> {
     if (!this.enabled) {
@@ -2330,7 +2229,7 @@ export class TinySegmenter {
   }
 
   /**
-   * 単純な正規表現パターンを使用したフォールバックセグメンテーション
+ * 単純な正規表現パターンを使用したフォールバックセグメンテーション
    */
   private async fallbackSegmentation(text: string): Promise<string[]> {
     const segments: string[] = [];
@@ -2361,7 +2260,7 @@ export class TinySegmenter {
   }
 
   /**
-   * 文字の種別を判定
+ * 文字の種別を判定
    */
   private getCharacterType(char: string): string {
     if (/[\u4E00-\u9FAF]/.test(char)) return "kanji";
@@ -2374,21 +2273,21 @@ export class TinySegmenter {
   }
 
   /**
-   * テキストに日本語文字が含まれているかチェック
+ * テキストに日本語文字が含まれているかチェック
    */
   hasJapanese(text: string): boolean {
     return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
   }
 
   /**
-   * テキストのセグメンテーションが有益かどうかをチェック
+ * テキストのセグメンテーションが有益かどうかをチェック
    */
   shouldSegment(text: string, threshold: number = 4): boolean {
     return this.hasJapanese(text) && text.length >= threshold;
   }
 
   /**
-   * セグメンテーションキャッシュをクリア
+ * セグメンテーションキャッシュをクリア
    */
   clearCache(): void {
     const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
@@ -2396,7 +2295,7 @@ export class TinySegmenter {
   }
 
   /**
-   * キャッシュ統計情報を取得
+ * キャッシュ統計情報を取得
    */
   getCacheStats(): { size: number; maxSize: number; hitRate: number } {
     const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
@@ -2411,21 +2310,21 @@ export class TinySegmenter {
   }
 
   /**
-   * セグメンターの有効/無効を設定
+ * セグメンターの有効/無効を設定
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
 
   /**
-   * セグメンターが有効かどうかをチェック
+ * セグメンターが有効かどうかをチェック
    */
   isEnabled(): boolean {
     return this.enabled;
   }
 
   /**
-   * サンプルテキストでセグメンターをテスト
+ * サンプルテキストでセグメンターをテスト
    */
   async test(): Promise<{ success: boolean; results: SegmentationResult[] }> {
     const testCases = [
@@ -2459,11 +2358,9 @@ export class TinySegmenter {
 export const tinysegmenter = TinySegmenter.getInstance();
 export type { SegmentationResult };
 
-
 // ========== Integrated from word/context.ts ==========
 
 /**
- * @fileoverview コンテキスト認識による分割調整機能 with GlobalCache統合
  * ファイルタイプと構文コンテキストに基づいて適切な分割ルールを適用
  */
 /** 言語別パターン定義 */
@@ -2512,7 +2409,7 @@ export class ContextDetector {
   private readonly globalCache: GlobalCache;
 
   /**
-   * ContextDetectorのコンストラクタ
+ * ContextDetectorのコンストラクタ
    */
   constructor() {
     this.defaultRules = {
@@ -2527,8 +2424,8 @@ export class ContextDetector {
   }
 
   /**
-   * ファイルタイプの取得
-   * @returns ファイルタイプ文字列
+ * ファイルタイプの取得
+ * @returns 
    */
   async detectFileType(denops: Denops): Promise<string> {
     try {
@@ -2540,11 +2437,10 @@ export class ContextDetector {
   }
 
   /**
-   * 構文コンテキストの検出（GlobalCache統合）
-   *
-   * @param text 対象テキスト
-   * @param fileType ファイルタイプ
-   * @returns 構文コンテキスト（キャッシュからの取得も含む）
+ * 構文コンテキストの検出（GlobalCache統合）
+ * @param text
+ * @param fileType
+ * @returns 
    */
   detectSyntaxContext(
     text: string,
@@ -2579,9 +2475,9 @@ export class ContextDetector {
   }
 
   /**
-   * 行コンテキストの検出
-   * @param fileType ファイルタイプ
-   * @returns 行コンテキスト
+ * 行コンテキストの検出
+ * @param fileType
+ * @returns 
    */
   detectLineContext(
     line: string,
@@ -2600,8 +2496,8 @@ export class ContextDetector {
   }
 
   /**
-   * コンテキストに基づく分割ルールの取得
-   * @returns 分割ルール
+ * コンテキストに基づく分割ルールの取得
+ * @returns 
    */
   getSplittingRules(context: DetectionContext): SplittingRules {
     const fileType = context.fileType || 'text';
@@ -2619,9 +2515,9 @@ export class ContextDetector {
   }
 
   /**
-   * ファイルタイプから言語名へのマッピング
-   * @param fileType Vimファイルタイプ
-   * @returns 標準化された言語名
+ * ファイルタイプから言語名へのマッピング
+ * @param fileType
+ * @returns 
    */
   private mapFileTypeToLanguage(fileType: string): string {
     const languageMap: Record<string, string> = {
@@ -2643,10 +2539,9 @@ export class ContextDetector {
   }
 
   /**
-   * 言語別パターンの取得（GlobalCache統合）
-   *
-   * @param language 言語名 (例: 'typescript', 'python', 'markdown')
-   * @returns 言語パターン（コメント、文字列、関数などのパターンを含む）
+ * 言語別パターンの取得（GlobalCache統合）
+ * @param language
+ * @returns 
    */
   private getLanguagePatterns(language: string): LanguageRule {
     const languageRulesCache = this.globalCache.getCache<string, LanguageRule>(CacheType.LANGUAGE_RULES);
@@ -2661,9 +2556,9 @@ export class ContextDetector {
   }
 
   /**
-   * 言語別パターンの生成
-   * @param language 言語名
-   * @returns 言語パターン
+ * 言語別パターンの生成
+ * @param language
+ * @returns 
    */
   private createLanguagePatterns(language: string): LanguageRule {
     switch (language) {
@@ -2791,10 +2686,10 @@ export class ContextDetector {
   }
 
   /**
-   * コメント内判定
-   * @param text テキスト
-   * @param patterns コメントパターン
-   * @returns コメント内かどうか
+ * コメント内判定
+ * @param text
+ * @param patterns
+ * @returns 
    */
   private isInComment(text: string, patterns: RegExp[]): boolean {
     // コメント内というのは、テキスト全体がコメントかを判定
@@ -2814,10 +2709,10 @@ export class ContextDetector {
   }
 
   /**
-   * 文字列内判定
-   * @param text テキスト
-   * @param patterns 文字列パターン
-   * @returns 文字列内かどうか
+ * 文字列内判定
+ * @param text
+ * @param patterns
+ * @returns 
    */
   private isInString(text: string, patterns: RegExp[]): boolean {
     // 実際にテキストが文字列リテラル内にあるかをより精密に判定
@@ -2830,29 +2725,29 @@ export class ContextDetector {
   }
 
   /**
-   * 関数内判定
-   * @param text テキスト
-   * @param patterns 関数パターン
-   * @returns 関数内かどうか
+ * 関数内判定
+ * @param text
+ * @param patterns
+ * @returns 
    */
   private isInFunction(text: string, patterns: RegExp[]): boolean {
     return patterns.some(pattern => pattern.test(text));
   }
 
   /**
-   * クラス内判定
-   * @param text テキスト
-   * @param patterns クラスパターン
-   * @returns クラス内かどうか
+ * クラス内判定
+ * @param text
+ * @param patterns
+ * @returns 
    */
   private isInClass(text: string, patterns: RegExp[]): boolean {
     return patterns.some(pattern => pattern.test(text));
   }
 
   /**
-   * コメント行判定
-   * @param fileType ファイルタイプ
-   * @returns コメント行かどうか
+ * コメント行判定
+ * @param fileType
+ * @returns 
    */
   private isCommentLine(line: string, fileType: string): boolean {
     const trimmed = line.trim();
@@ -2876,9 +2771,9 @@ export class ContextDetector {
   }
 
   /**
-   * ドキュメント文字列判定
-   * @param fileType ファイルタイプ
-   * @returns ドキュメント文字列かどうか
+ * ドキュメント文字列判定
+ * @param fileType
+ * @returns 
    */
   private isDocStringLine(line: string, fileType: string): boolean {
     const trimmed = line.trim();
@@ -2890,15 +2785,13 @@ export class ContextDetector {
       case 'typescript':
       case 'javascript':
         return trimmed.startsWith('/**');
-      default:
-        return false;
     }
   }
 
   /**
    * import行判定
-   * @param fileType ファイルタイプ
-   * @returns import行かどうか
+   * @param fileType
+   * @returns
    */
   private isImportLine(line: string, fileType: string): boolean {
     const trimmed = line.trim();
@@ -2918,9 +2811,9 @@ export class ContextDetector {
   }
 
   /**
-   * 行タイプの検出
-   * @param fileType ファイルタイプ
-   * @returns 行タイプ
+ * 行タイプの検出
+ * @param fileType
+ * @returns 
    */
   private detectLineType(line: string, fileType: string): string {
     if (this.isCommentLine(line, fileType)) return 'comment';
@@ -2935,9 +2828,9 @@ export class ContextDetector {
   }
 
   /**
-   * 言語別分割ルールの取得
-   * @param fileType ファイルタイプ
-   * @returns 分割ルール
+ * 言語別分割ルールの取得
+ * @param fileType
+ * @returns 
    */
   private getLanguageRules(fileType: string): SplittingRules {
     const language = this.mapFileTypeToLanguage(fileType);
@@ -2971,7 +2864,7 @@ export class ContextDetector {
   }
 
   /**
-   * キャッシュクリア（メモリ最適化用）
+ * キャッシュクリア（メモリ最適化用）
    */
   clearCache(): void {
     this.globalCache.clearByType(CacheType.SYNTAX_CONTEXT);
@@ -2979,9 +2872,8 @@ export class ContextDetector {
   }
 
   /**
-   * キャッシュ統計の取得（デバッグ用）
-   *
-   * @returns キャッシュ統計情報（従来のインターフェースと互換）
+ * キャッシュ統計の取得（デバッグ用）
+ * @returns 
    */
   getCacheStats(): { contextCacheSize: number; languageRuleCacheSize: number } {
     const syntaxContextStats = this.globalCache.getCache(CacheType.SYNTAX_CONTEXT).getStats();
@@ -2994,9 +2886,9 @@ export class ContextDetector {
   }
 
   /**
-   * 文脈に基づく単語の重要度判定（将来拡張用）
-   * @param word 対象単語
-   * @returns 重要度スコア (0-100)
+ * 文脈に基づく単語の重要度判定（将来拡張用）
+ * @param word
+ * @returns 
    */
   calculateWordImportance(word: string, context: DetectionContext): number {
     let score = 50; // ベーススコア
@@ -3345,7 +3237,7 @@ export class WordDictionaryImpl implements WordDictionary {
   }
 
   /**
-   * 複数の辞書をマージする静的メソッド
+ * 複数の辞書をマージする静的メソッド
    */
   static merge(dict1: WordDictionaryImpl, dict2: WordDictionaryImpl): WordDictionaryImpl {
     const merged = new WordDictionaryImpl();
@@ -3464,7 +3356,6 @@ export function applyDictionaryCorrection(
   return dict.applyMergeRules(segments);
 }
 
-
 // ========== Integrated from word/dictionary-loader.ts ==========
 
 /**
@@ -3533,7 +3424,7 @@ export class DictionaryLoader {
   constructor(private config: DictionaryLoaderConfig = {}) {}
 
   /**
-   * ユーザー定義辞書を読み込む
+ * ユーザー定義辞書を読み込む
    */
   async loadUserDictionary(config?: DictionaryLoaderConfig): Promise<UserDictionary> {
     const resolvedConfig = { ...this.config, ...config };
@@ -3564,7 +3455,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * 辞書コンテンツをパース
+ * 辞書コンテンツをパース
    */
   private async parseDictionaryContent(content: string, filepath: string): Promise<UserDictionary> {
     const ext = this.getFileExtension(filepath);
@@ -3588,7 +3479,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * JSON形式の辞書をパース
+ * JSON形式の辞書をパース
    */
   private parseJsonDictionary(content: string): UserDictionary {
     const data = JSON.parse(content);
@@ -3596,10 +3487,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * YAML形式の辞書をパース
-   *
-   * @description
-   * parseYamlの戻り値をunknown型として扱い、型安全にUserDictionaryに変換する
+ * YAML形式の辞書をパース
    */
   private parseYamlDictionary(content: string): UserDictionary {
     const data = parseYaml(content) as unknown;
@@ -3607,7 +3495,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * テキスト形式の辞書をパース
+ * テキスト形式の辞書をパース
    */
   private parseTextDictionary(content: string): UserDictionary {
     const lines = content.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
@@ -3642,13 +3530,9 @@ export class DictionaryLoader {
   }
 
   /**
-   * データオブジェクトをUserDictionaryに変換
-   *
-   * @description
-   * unknown型のデータを型ガードを使って検証し、UserDictionary型に安全に変換する
-   *
-   * @param data - パース後の辞書データ（unknown型）
-   * @returns 検証済みのUserDictionary
+ * データオブジェクトをUserDictionaryに変換
+ * @param data
+ * @returns 
    */
   private convertToUserDictionary(data: unknown): UserDictionary {
     const dictionary = this.createEmptyDictionary();
@@ -3704,7 +3588,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * 空の辞書を作成
+ * 空の辞書を作成
    */
   private createEmptyDictionary(): UserDictionary {
     return {
@@ -3718,7 +3602,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * パスを解決
+ * パスを解決
    */
   private resolvePath(path: string): string {
     if (path.startsWith('~')) {
@@ -3729,7 +3613,7 @@ export class DictionaryLoader {
   }
 
   /**
-   * ファイル拡張子を取得
+ * ファイル拡張子を取得
    */
   private getFileExtension(filepath: string): string {
     return filepath.toLowerCase().split('.').pop() || '';
@@ -3741,7 +3625,7 @@ export class DictionaryLoader {
  */
 export class DictionaryMerger {
   /**
-   * 辞書をマージ
+ * 辞書をマージ
    */
   merge(
     base: WordDictionaryImpl,
@@ -3762,7 +3646,7 @@ export class DictionaryMerger {
   }
 
   /**
-   * 上書き戦略でマージ
+ * 上書き戦略でマージ
    */
   private mergeWithOverride(target: WordDictionaryImpl, base: WordDictionaryImpl, user: UserDictionary): void {
     // ユーザー定義を優先
@@ -3785,7 +3669,7 @@ export class DictionaryMerger {
   }
 
   /**
-   * マージ戦略でマージ
+ * マージ戦略でマージ
    */
   private mergeWithMerge(target: WordDictionaryImpl, base: WordDictionaryImpl, user: UserDictionary): void {
     // ベースをコピー
@@ -3817,7 +3701,7 @@ export class DictionaryMerger {
  */
 export class VimConfigBridge {
   /**
-   * Vim設定を取得
+ * Vim設定を取得
    */
   async getConfig(denops: Denops): Promise<DictionaryLoaderConfig> {
     try {
@@ -3836,7 +3720,7 @@ export class VimConfigBridge {
   }
 
   /**
-   * エラーを通知
+ * エラーを通知
    */
   async notifyError(denops: Denops, error: string): Promise<void> {
     try {
@@ -3847,7 +3731,7 @@ export class VimConfigBridge {
   }
 
   /**
-   * 辞書を再読み込み
+ * 辞書を再読み込み
    */
   async reloadDictionary(denops: Denops): Promise<void> {
     try {
@@ -3883,7 +3767,7 @@ export class DictionaryManager {
   private bridge: VimConfigBridge;
 
   /**
-   * DictionaryManagerのコンストラクタ
+ * DictionaryManagerのコンストラクタ
    */
   constructor() {
     this.loader = new DictionaryLoader();
@@ -3892,7 +3776,7 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書を再読み込みします
+ * 辞書を再読み込みします
    */
   async reloadDictionary(denops: Denops): Promise<void> {
     try {
@@ -3906,7 +3790,7 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書ファイルを編集します
+ * 辞書ファイルを編集します
    */
   async editDictionary(denops: Denops): Promise<void> {
     try {
@@ -3920,7 +3804,7 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書の内容を表示します
+ * 辞書の内容を表示します
    */
   async showDictionary(denops: Denops): Promise<void> {
     try {
@@ -3945,7 +3829,7 @@ export class DictionaryManager {
   }
 
   /**
-   * 辞書を検証
+ * 辞書を検証
    */
   async validateDictionary(denops: Denops): Promise<void> {
     try {
@@ -3992,14 +3876,11 @@ interface WordWithPriority extends Word {
  */
 export class HintPatternProcessor {
   /**
-   * ヒントパターンを適用
-   *
-   * @description
-   *
-   * @param words - 単語配列
-   * @param text - 検索対象テキスト
-   * @param patterns - ヒントパターン配列
-   * @returns 優先度付き単語配列
+ * ヒントパターンを適用
+ * @param words
+ * @param text
+ * @param patterns
+ * @returns 
    */
   applyHintPatterns(words: Word[], text: string, patterns: HintPattern[]): WordWithPriority[] {
     if (!patterns || patterns.length === 0) {
@@ -4031,7 +3912,7 @@ export class HintPatternProcessor {
   }
 
   /**
-   * ヒントターゲットを抽出
+ * ヒントターゲットを抽出
    */
   private extractHintTarget(
     match: RegExpExecArray,
@@ -4060,13 +3941,10 @@ export class HintPatternProcessor {
   }
 
   /**
-   * 指定位置の単語を検索
-   *
-   * @description
-   *
-   * @param words - 単語配列
-   * @param position - 検索位置
-   * @returns 見つかった単語、または null
+ * 指定位置の単語を検索
+ * @param words
+ * @param position
+ * @returns 
    */
   private findWordAtPosition(words: WordWithPriority[], position: number): WordWithPriority | null {
     return words.find(word =>
@@ -4077,12 +3955,9 @@ export class HintPatternProcessor {
   }
 
   /**
-   * ヒント優先度で並び替え
-   *
-   * @description
-   *
-   * @param words - 単語配列
-   * @returns 優先度順にソートされた単語配列
+ * ヒント優先度で並び替え
+ * @param words
+ * @returns 
    */
   private sortByHintPriority(words: WordWithPriority[]): WordWithPriority[] {
     return words.sort((a, b) => {
@@ -4180,7 +4055,7 @@ export class WordDetectionManager {
   private unifiedConfig?: Config; // Configへの移行対応
 
   /**
-   * WordDetectionManagerのコンストラクタ
+ * WordDetectionManagerのコンストラクタ
    */
   constructor(config: WordDetectionManagerConfig = {}, globalConfig?: Config | Config) {
     this.config = this.mergeWithDefaults(config);
@@ -4189,7 +4064,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * デフォルトディテクターでマネージャーを初期化
+ * デフォルトディテクターでマネージャーを初期化
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -4213,15 +4088,14 @@ export class WordDetectionManager {
   }
 
   /**
-   * 単語ディテクターを登録
+ * 単語ディテクターを登録
    */
   registerDetector(detector: WordDetector): void {
     this.detectors.set(detector.name, detector);
   }
 
-
   /**
-   * メイン単語検出メソッド
+ * メイン単語検出メソッド
    */
   async detectWords(
     text: string,
@@ -4330,7 +4204,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * Denopsバッファから単語を検出（便利メソッド）
+ * Denopsバッファから単語を検出（便利メソッド）
    */
   async detectWordsFromBuffer(
     denops: Denops,
@@ -4362,7 +4236,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * 指定されたテキストに最適なディテクターを選択
+ * 指定されたテキストに最適なディテクターを選択
    */
   private async selectDetector(text: string): Promise<WordDetector | null> {
     const availableDetectors = Array.from(this.detectors.values())
@@ -4415,7 +4289,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * フォールバックディテクターを取得
+ * フォールバックディテクターを取得
    */
   private getFallbackDetector(): WordDetector | null {
     if (this.config.fallbackToRegex) {
@@ -4430,7 +4304,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * タイムアウト保護付き単語検出
+ * タイムアウト保護付き単語検出
    */
   private async detectWithTimeout(
     detector: WordDetector,
@@ -4461,7 +4335,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * キャッシュキーを生成
+ * キャッシュキーを生成
    */
   private generateCacheKey(
     text: string,
@@ -4565,7 +4439,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * 統計情報を初期化
+ * 統計情報を初期化
    */
   private initializeStats(): DetectionStats {
     return {
@@ -4584,14 +4458,14 @@ export class WordDetectionManager {
   }
 
   /**
-   * 統計情報を取得
+ * 統計情報を取得
    */
   getStats(): DetectionStats {
     return { ...this.stats };
   }
 
   /**
-   * キャッシュ統計情報を取得
+ * キャッシュ統計情報を取得
    */
   getCacheStats(): { size: number; maxSize: number; hitRate: number } {
     const total = this.stats.cache_hits + this.stats.cache_misses;
@@ -4603,21 +4477,21 @@ export class WordDetectionManager {
   }
 
   /**
-   * キャッシュをクリア
+ * キャッシュをクリア
    */
   clearCache(): void {
     this.cache.clear();
   }
 
   /**
-   * 統計情報をリセット
+ * 統計情報をリセット
    */
   resetStats(): void {
     this.stats = this.initializeStats();
   }
 
   /**
-   * 設定を更新
+ * 設定を更新
    */
   updateConfig(newConfig: Partial<WordDetectionManagerConfig>): void {
     this.config = { ...this.config, ...newConfig };
@@ -4640,8 +4514,8 @@ export class WordDetectionManager {
   }
 
   /**
-   * 設定変更が検出結果に影響するかチェック
-   * @returns 影響する場合はtrue
+ * 設定変更が検出結果に影響するかチェック
+ * @returns 
    */
   private affectsDetection(newConfig: Partial<WordDetectionManagerConfig>): boolean {
     const affectingKeys = [
@@ -4658,8 +4532,8 @@ export class WordDetectionManager {
   }
 
   /**
-   * ディテクターの再初期化が必要かチェック
-   * @returns 再初期化が必要な場合はtrue
+ * ディテクターの再初期化が必要かチェック
+ * @returns 
    */
   private shouldReinitializeDetectors(newConfig: Partial<WordDetectionManagerConfig>): boolean {
     const reinitKeys = [
@@ -4673,7 +4547,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * ディテクターを再初期化
+ * ディテクターを再初期化
    */
   private reinitializeDetectors(): void {
     try {
@@ -4694,7 +4568,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * 利用可能なディテクター一覧を取得
+ * 利用可能なディテクター一覧を取得
    */
   getAvailableDetectors(): Array<{ name: string; priority: number; languages: string[] }> {
     return Array.from(this.detectors.values()).map((d) => ({
@@ -4705,21 +4579,21 @@ export class WordDetectionManager {
   }
 
   /**
-   * セッションコンテキストを設定
+ * セッションコンテキストを設定
    */
   setSessionContext(context: DetectionContext | null): void {
     this.sessionContext = context;
   }
 
   /**
-   * セッションコンテキストを取得
+ * セッションコンテキストを取得
    */
   getSessionContext(): DetectionContext | null {
     return this.sessionContext;
   }
 
   /**
-   * コンテキストに基づいて適切なディテクターを取得
+ * コンテキストに基づいて適切なディテクターを取得
    */
   async getDetectorForContext(context?: DetectionContext, text?: string): Promise<WordDetector | null> {
     try {
@@ -4785,7 +4659,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * すべてのディテクターをテスト
+ * すべてのディテクターをテスト
    */
   async testDetectors(): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
@@ -4802,7 +4676,7 @@ export class WordDetectionManager {
   }
 
   /**
-   * デフォルト設定とマージ
+ * デフォルト設定とマージ
    */
   private mergeWithDefaults(
     config: WordDetectionManagerConfig,
