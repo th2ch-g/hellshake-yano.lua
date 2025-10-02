@@ -189,7 +189,9 @@ endfunction
 " カウントのリセット（後方互換性のため保持、全キーをリセット）
 function! s:reset_count(bufnr) abort
   call hellshake_yano#count#reset_all_counts(a:bufnr)
-  call hellshake_yano#timer#stop_and_clear_timer(g:hellshake_yano_internal.timer_id, a:bufnr)
+  if has_key(g:hellshake_yano_internal, 'timer_id')
+    call hellshake_yano#timer#stop_and_clear_timer(g:hellshake_yano_internal.timer_id, a:bufnr)
+  endif
 endfunction
 
 " 経過時間をミリ秒で取得（高精度）
@@ -356,7 +358,7 @@ endfunction
 
 " 全バッファのカウントをリセット
 function! hellshake_yano#reset_count() abort
-  for bufnr in keys(s:motion_count)
+  for bufnr in keys(g:hellshake_yano_internal.motion_count)
     call s:reset_count(str2nr(bufnr))
   endfor
 endfunction
