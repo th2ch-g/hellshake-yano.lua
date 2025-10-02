@@ -111,22 +111,34 @@
 @target: denops/hellshake-yano/word/
 - [ ] word-char-utils.ts作成（文字種判定、400行）
 - [ ] word-segmenter.ts作成（TinySegmenter、600行）
+- [ ] deno checkで型安全性向上（型エラーなし）
+- [ ] deno testでテスト（循環依存エラー解消）
 - [ ] word-detector-strategies.ts作成（Detector戦略、500行）
 - [ ] word-cache.ts移動（キャッシュ処理、200行）
+- [ ] deno checkで型安全性向上（型エラーなし）
+- [ ] deno testでテスト（循環依存エラー解消）
 - [ ] 重複コード削除により約1,900行削減
 
 #### sub2: core.ts分割（4,699行 → 2,000行）
 @target: denops/hellshake-yano/core/
 - [ ] core-dictionary.ts作成（辞書機能、300行）
 - [ ] core-motion.ts作成（モーション処理、250行）
+- [ ] deno checkで型安全性向上（型エラーなし）
+- [ ] deno testでテスト（循環依存エラー解消）
 - [ ] core-validation.ts移動（バリデーション、400行）
+- [ ] deno checkで型安全性向上（型エラーなし）
+- [ ] deno testでテスト（循環依存エラー解消）
 - [ ] 重複削除により約1,700行削減
 
 #### sub3: hint.ts最適化（1,926行 → 500行）
 @target: denops/hellshake-yano/hint/
 - [ ] hint-display.ts作成（表示幅計算、200行）
 - [ ] hint-generator-strategies.ts作成（生成戦略、300行）
+- [ ] deno checkで型安全性向上（型エラーなし）
+- [ ] deno testでテスト（循環依存エラー解消）
 - [ ] hint-overlap.ts作成（オーバーラップ検出、400行）
+- [ ] deno checkで型安全性向上（型エラーなし）
+- [ ] deno testでテスト（循環依存エラー解消）
 - [ ] Strategy パターン適用により約700行削減
 
 ### process3: アーキテクチャ改善
