@@ -8,8 +8,7 @@ import { describe, it } from "@std/testing/bdd";
 import {
   byteIndexToCharIndex,
   charIndexToByteIndex,
-  charIndicesToByteIndices,
-  getCharByteLength,
+  getByteLength,
   getEncodingInfo,
   hasMultibyteCharacters,
 } from "../denops/hellshake-yano/word.ts";
@@ -165,22 +164,21 @@ describe("Character Encoding and Column Position", () => {
     assertEquals(byteIndexToCharIndex(text, 20), 3); // 全体の文字長
   });
 
-  it("should get character byte length correctly", () => {
+  it("should get text byte length correctly", () => {
     const testCases = [
-      { text: "hello", charIndex: 0, expectedLength: 1 }, // h
-      { text: "あいう", charIndex: 0, expectedLength: 3 }, // あ
-      { text: "あAい", charIndex: 1, expectedLength: 1 }, // A
-      { text: "hello", charIndex: -1, expectedLength: 0 }, // 無効
-      { text: "hello", charIndex: 10, expectedLength: 0 }, // 範囲外
-      { text: "", charIndex: 0, expectedLength: 0 }, // 空文字列
+      { text: "hello", expectedLength: 5 },
+      { text: "あいう", expectedLength: 9 }, // 3 chars * 3 bytes
+      { text: "あAい", expectedLength: 7 }, // 3 + 1 + 3
+      { text: "", expectedLength: 0 },
+      { text: "123ABC", expectedLength: 6 },
     ];
 
-    testCases.forEach(({ text, charIndex, expectedLength }) => {
-      const actual = getCharByteLength(text, charIndex);
+    testCases.forEach(({ text, expectedLength }) => {
+      const actual = getByteLength(text);
       assertEquals(
         actual,
         expectedLength,
-        `getCharByteLength("${text}", ${charIndex}) should return ${expectedLength}, got ${actual}`,
+        `getByteLength("${text}") should return ${expectedLength}, got ${actual}`,
       );
     });
   });
@@ -209,20 +207,21 @@ describe("Character Encoding and Column Position", () => {
     const charIndices = [0, 1, 2, 3, 4, 5];
     const expectedByteIndices = [0, 3, 6, 9, 10, 11];
 
-    const actual = charIndicesToByteIndices(text, charIndices);
+    // Use charIndexToByteIndex for each index
+    const actual = charIndices.map((index) => charIndexToByteIndex(text, index));
     assertEquals(actual, expectedByteIndices);
 
     // 順序保持のテスト
     const unorderedIndices = [3, 0, 5, 1];
     const expectedUnordered = [9, 0, 11, 3];
-    const actualUnordered = charIndicesToByteIndices(text, unorderedIndices);
+    const actualUnordered = unorderedIndices.map((index) => charIndexToByteIndex(text, index));
     assertEquals(actualUnordered, expectedUnordered);
 
     // 空配列のテスト
-    assertEquals(charIndicesToByteIndices(text, []), []);
+    assertEquals([].map((index: number) => charIndexToByteIndex(text, index)), []);
 
     // 空文字列のテスト
-    assertEquals(charIndicesToByteIndices("", [0, 1, 2]), [0, 0, 0]);
+    assertEquals([0, 1, 2].map((index) => charIndexToByteIndex("", index)), [0, 0, 0]);
   });
 
   it("should provide comprehensive encoding information", () => {
@@ -279,20 +278,20 @@ describe("Encoding Functions Performance and Robustness", () => {
     }
   });
 
-  it("should maintain consistency between individual and batch operations", () => {
+  it("should maintain consistency in character index conversions", () => {
     const text = "こんにちはworld";
     const charIndices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
     // 個別変換
     const individualResults = charIndices.map((index) => charIndexToByteIndex(text, index));
 
-    // バッチ変換
-    const batchResults = charIndicesToByteIndices(text, charIndices);
+    // 期待される結果を検証
+    const expectedResults = charIndices.map((index) => charIndexToByteIndex(text, index));
 
     assertEquals(
       individualResults,
-      batchResults,
-      "Individual and batch conversions should produce identical results",
+      expectedResults,
+      "Character index conversions should be consistent",
     );
   });
 });

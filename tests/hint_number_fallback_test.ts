@@ -9,7 +9,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
   assignHintsToWords,
-  generateHintsWithGroups,
+  generateHints,
   type HintKeyConfig,
 } from "../denops/hellshake-yano/hint.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
@@ -38,7 +38,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         maxSingleCharHints: 11,
       };
 
-      const hints = generateHintsWithGroups(50, config);
+      const hints = generateHints(50, { groups: true, ...config });
 
       // 最初の11個は singleCharKeys
       const singleCharHints = hints.slice(0, 11);
@@ -81,7 +81,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       };
 
       // 3 + 4 = 7個のアルファベットヒントのみ（数字フォールバックなし）
-      const hints = generateHintsWithGroups(20, config);
+      const hints = generateHints(20, { groups: true, ...config });
 
       // 最初の3個は singleCharKeys
       assertEquals(hints.slice(0, 3), ["A", "S", "D"]);
@@ -121,7 +121,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       };
 
       // 11 + 225 = 236個のヒントのみ生成（数字フォールバックなし）
-      const hints = generateHintsWithGroups(336, config);
+      const hints = generateHints(336, { groups: true, ...config });
 
       assertEquals(hints.length, 236);
 
@@ -158,7 +158,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         maxSingleCharHints: 3,
       };
 
-      const hints = generateHintsWithGroups(words.length, config);
+      const hints = generateHints(words.length, { groups: true, ...config });
       const assignments = assignHintsToWords(
         words,
         hints,
@@ -234,7 +234,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
         maxSingleCharHints: 11,
       };
 
-      const hints = generateHintsWithGroups(words.length, config);
+      const hints = generateHints(words.length, { groups: true, ...config });
       const assignments = assignHintsToWords(words, hints, 50, 50); // カーソル位置
 
       // 遠距離の単語が数字ヒントを持つことを確認
@@ -255,7 +255,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
   describe("Edge cases", () => {
     it("should handle empty config gracefully", () => {
       const config: HintKeyConfig = {};
-      const hints = generateHintsWithGroups(10, config);
+      const hints = generateHints(10, { groups: true, ...config });
 
       assertEquals(hints.length, 10);
       // デフォルトのマーカーが使用されるべき
@@ -269,7 +269,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       };
 
       // 1 + 4 = 5個のみ対応可能（数字フォールバックなし）
-      const hints = generateHintsWithGroups(105, config);
+      const hints = generateHints(105, { groups: true, ...config });
 
       assertEquals(hints.length, 5);
       assertEquals(hints[0], "A"); // 1文字
@@ -285,7 +285,7 @@ describe("Hint Generation with Number Fallback (Approach A)", () => {
       };
 
       // 1 + 1 = 2個のみ対応可能（数字フォールバックなし、３文字ヒントなし）
-      const hints = generateHintsWithGroups(103, config);
+      const hints = generateHints(103, { groups: true, ...config });
 
       assertEquals(hints.length, 2);
       assertEquals(hints[0], "A"); // 1文字

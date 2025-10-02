@@ -1,14 +1,14 @@
 /**
  * TDDテスト: 数字フォールバック削除の検証
  *
- * このテストは、generateHintsWithGroups関数が
+ * このテストは、generateHints関数が
  * singleCharKeysとmultiCharKeysの組み合わせのみを生成し、
  * 数字フォールバック（00, 01, 02...）を生成しないことを検証します。
  */
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { generateHintsWithGroups, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
+import { generateHints, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
 
 describe("Hint Generation Without Number Fallback", () => {
   describe("Strict single/multi char keys separation", () => {
@@ -18,13 +18,13 @@ describe("Hint Generation Without Number Fallback", () => {
       };
 
       // 最大: 5個（single） + 9個（multi） = 14個
-      const hints = generateHintsWithGroups(20, config);
+      const hints = generateHints(20, { groups: true, ...config });
 
       // 14個までしか生成されない（数字フォールバックなし）
       assertEquals(hints.length, 14);
 
       // 数字ヒントが含まれていないことを確認
-      const numberHints = hints.filter(h => /^\d{2}$/.test(h));
+      const numberHints = hints.filter((h: string) => /^\d{2}$/.test(h));
       assertEquals(numberHints.length, 0, "No number hints should be generated");
 
       // 生成されたヒントの内容を確認
@@ -33,7 +33,7 @@ describe("Hint Generation Without Number Fallback", () => {
 
       // 2文字ヒント（B, C, Eの組み合わせ）
       const multiCharHints = hints.slice(5);
-      multiCharHints.forEach(hint => {
+      multiCharHints.forEach((hint: string) => {
         assertEquals(hint.length, 2, "Multi-char hints should be 2 characters");
         const [first, second] = hint.split("");
         assertExists(["B", "C", "E"].includes(first), "First char should be from multiCharKeys");
@@ -48,13 +48,13 @@ describe("Hint Generation Without Number Fallback", () => {
       };
 
       // 最大: 17 + 225 = 242個
-      const hints250 = generateHintsWithGroups(250, config);
+      const hints250 = generateHints(250, { groups: true, ...config });
 
       // 242個で停止（数字フォールバックなし）
       assertEquals(hints250.length, 242);
 
       // 数字の2文字ヒント（00, 01等）が含まれていないことを確認
-      const numberHints = hints250.filter(h => /^\d{2}$/.test(h));
+      const numberHints = hints250.filter((h: string) => /^\d{2}$/.test(h));
       assertEquals(numberHints.length, 0, "No '00', '01' style number hints");
 
       // 最後のヒントがZZであることを確認（multiCharKeysの最後の組み合わせ）
@@ -67,7 +67,7 @@ describe("Hint Generation Without Number Fallback", () => {
       };
 
       // 3個のヒントのみ要求
-      const hints = generateHintsWithGroups(3, config);
+      const hints = generateHints(3, { groups: true, ...config });
 
       assertEquals(hints.length, 3);
       assertEquals(hints, ["A", "S", "D"]);
@@ -79,7 +79,7 @@ describe("Hint Generation Without Number Fallback", () => {
       };
 
       // 5個要求（2個のsingle + 3個のmulti）
-      const hints = generateHintsWithGroups(5, config);
+      const hints = generateHints(5, { groups: true, ...config });
 
       assertEquals(hints.length, 5);
       assertEquals(hints[0], "A");
@@ -95,7 +95,7 @@ describe("Hint Generation Without Number Fallback", () => {
         maxSingleCharHints: 2, // 1文字ヒントを2個に制限
       };
 
-      const hints = generateHintsWithGroups(5, config);
+      const hints = generateHints(5, { groups: true, ...config });
 
       assertEquals(hints.length, 5);
       // 最初の2個のみ1文字ヒント
@@ -113,12 +113,12 @@ describe("Hint Generation Without Number Fallback", () => {
       };
 
       // 10個要求しても、5個（1+4）しか生成されない
-      const hints = generateHintsWithGroups(10, config);
+      const hints = generateHints(10, { groups: true, ...config });
 
       assertEquals(hints.length, 5);
 
       // 3文字のヒントが存在しないことを確認
-      const threeCharHints = hints.filter(h => h.length === 3);
+      const threeCharHints = hints.filter((h: string) => h.length === 3);
       assertEquals(threeCharHints.length, 0, "No 3-character hints should be generated");
     });
 
@@ -127,7 +127,7 @@ describe("Hint Generation Without Number Fallback", () => {
         multiCharKeys: [], // 空
       };
 
-      const hints = generateHintsWithGroups(5, config);
+      const hints = generateHints(5, { groups: true, ...config });
 
       // singleCharKeysの3個のみ生成
       assertEquals(hints.length, 3);
@@ -139,7 +139,7 @@ describe("Hint Generation Without Number Fallback", () => {
         multiCharKeys: ["B", "C"],
       };
 
-      const hints = generateHintsWithGroups(3, config);
+      const hints = generateHints(3, { groups: true, ...config });
 
       // multiCharKeysから2文字ヒントのみ生成
       assertEquals(hints.length, 3);
@@ -153,7 +153,7 @@ describe("Hint Generation Without Number Fallback", () => {
         multiCharKeys: ["B"],
       };
 
-      const hints = generateHintsWithGroups(0, config);
+      const hints = generateHints(0, { groups: true, ...config });
       assertEquals(hints.length, 0);
     });
 
@@ -162,7 +162,7 @@ describe("Hint Generation Without Number Fallback", () => {
         multiCharKeys: ["B"],
       };
 
-      const hints = generateHintsWithGroups(-1, config);
+      const hints = generateHints(-1, { groups: true, ...config });
       assertEquals(hints.length, 0);
     });
 
@@ -172,7 +172,7 @@ describe("Hint Generation Without Number Fallback", () => {
         markers: ["X", "Y", "Z"],
       };
 
-      const hints = generateHintsWithGroups(3, config);
+      const hints = generateHints(3, { groups: true, ...config });
 
       // markersにフォールバック（従来の動作）
       assertEquals(hints.length, 3);

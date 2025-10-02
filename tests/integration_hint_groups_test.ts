@@ -10,7 +10,7 @@ import { MockDenops } from "./helpers/mock.ts";
 // generateHintsOptimized を直接テストできるようにエクスポートを追加する必要があるため、
 // ここではヒント生成機能をシミュレート
 import {
-  generateHintsWithGroups,
+  generateHints,
   type HintKeyConfig,
   validateHintKeyConfig,
 } from "../denops/hellshake-yano/hint.ts";
@@ -25,7 +25,7 @@ describe("Integration: Hint Groups Feature", () => {
       };
 
       // 15個の単語に対してヒントを生成
-      const hints = generateHintsWithGroups(15, config);
+      const hints = generateHints(15, { groups: true, ...config });
 
       // 最初の10個は singleCharKeys から
       assertEquals(hints.slice(0, 10), ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";"]);
@@ -54,7 +54,7 @@ describe("Integration: Hint Groups Feature", () => {
     it("should fall back to default when no groups specified", () => {
       const config: HintKeyConfig = {};
 
-      const hints = generateHintsWithGroups(5, config);
+      const hints = generateHints(5, { groups: true, ...config });
 
       // デフォルトのA-Zを使用
       assertEquals(hints, ["A", "B", "C", "D", "E"]);
@@ -69,7 +69,7 @@ describe("Integration: Hint Groups Feature", () => {
         maxSingleCharHints: 8,
       };
 
-      const hints = generateHintsWithGroups(20, config);
+      const hints = generateHints(20, { groups: true, ...config });
 
       // ホームロウキーが優先的に使われる
       assertEquals(hints.slice(0, 8), ["A", "S", "D", "F", "J", "K", "L", ";"]);
@@ -86,7 +86,7 @@ describe("Integration: Hint Groups Feature", () => {
         maxSingleCharHints: 2,
       };
 
-      const hints = generateHintsWithGroups(10, config);
+      const hints = generateHints(10, { groups: true, ...config });
 
       // 最初の2個のみ1文字
       assertEquals(hints[0], "F");
@@ -107,7 +107,7 @@ describe("Integration: Hint Groups Feature", () => {
       };
 
       const startTime = Date.now();
-      const hints = generateHintsWithGroups(100, config);
+      const hints = generateHints(100, { groups: true, ...config });
       const elapsedTime = Date.now() - startTime;
 
       // 9 + 25 = 34個のヒントのみ生成可能（数字フォールバックなし）
@@ -129,7 +129,7 @@ describe("Integration: Hint Groups Feature", () => {
         multiCharKeys: ["B", "C"],
       };
 
-      const hints = generateHintsWithGroups(10, config);
+      const hints = generateHints(10, { groups: true, ...config });
 
       assertEquals(hints[0], "A");
       assertEquals(hints[1], "BB");
@@ -152,7 +152,7 @@ describe("Integration: Hint Groups Feature", () => {
         markers: ["X", "Y", "Z"], // 従来のmarkers設定
       };
 
-      const hints = generateHintsWithGroups(5, config);
+      const hints = generateHints(5, { groups: true, ...config });
 
       // markersが singleCharKeys として使われる
       assertEquals(hints[0], "X");
@@ -167,7 +167,7 @@ describe("Integration: Hint Groups Feature", () => {
         markers: ["X", "Y", "Z"], // これは無視される
       };
 
-      const hints = generateHintsWithGroups(4, config);
+      const hints = generateHints(4, { groups: true, ...config });
 
       // singleCharKeys が優先される
       assertEquals(hints[0], "A");

@@ -8,7 +8,7 @@ import { describe, it } from "@std/testing/bdd";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 import {
   type EnhancedWordConfig,
-  extractWordsFromLineWithEnhancedConfig,
+  extractWords,
 } from "../denops/hellshake-yano/word.ts";
 import {
   assignHintsToWords,
@@ -23,7 +23,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const config: EnhancedWordConfig = {useJapanese: false };
 
       // Phase 1: 英数字のみ抽出
-      const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
       assertEquals(words.length, 2);
       assertEquals(words[0].text, "test");
       assertEquals(words[1].text, "example");
@@ -49,7 +49,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const lineText = "関数function変数variable定数constant";
       const config: EnhancedWordConfig = {useJapanese: false };
 
-      const words = extractWordsFromLineWithEnhancedConfig(lineText, 2, config);
+      const words = extractWords(lineText, 2, config);
       assertEquals(words.length, 3);
       assertEquals(words[0].text, "function");
       assertEquals(words[1].text, "variable");
@@ -74,17 +74,16 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const lineText = "コードcode実装implement";
       const config: EnhancedWordConfig = {useJapanese: true };
 
-      const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
-      // 日本語文字が個別に分割され、英単語も抽出される
-      assert(words.length > 1); // 複数の単語として抽出
+      const words = extractWords(lineText, 1, config);
+      // 混在テキストは全体が1つの単語として抽出される
+      assert(words.length === 1);
+
+      // 全体が1つの単語として抽出される
+      assertEquals(words[0].text, "コードcode実装implement");
 
       // 日本語文字が含まれることを確認
       const japaneseChars = words.filter((w) => /[\u30A0-\u30FF\u4E00-\u9FAF]/.test(w.text));
       assert(japaneseChars.length > 0);
-
-      // 英単語も含まれることを確認
-      const englishWords = words.filter((w) => w.text === "code" || w.text === "implement");
-      assertEquals(englishWords.length, 2);
 
       // ヒント位置計算
       words.forEach((word, index) => {
@@ -107,7 +106,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
       const allWords: Word[] = [];
       lines.forEach((lineText, index) => {
-        const lineWords = extractWordsFromLineWithEnhancedConfig(lineText, index + 1, config);
+        const lineWords = extractWords(lineText, index + 1, config);
         allWords.push(...lineWords);
       });
 
@@ -150,7 +149,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const startTime = Date.now();
 
       // Phase 1: 単語抽出
-      const words = extractWordsFromLineWithEnhancedConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       // Phase 2: ヒント生成と位置計算
       const hints = generateHints(words.length, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
@@ -186,21 +185,22 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
       // 設定1: 日本語除外
       const config1: EnhancedWordConfig = {useJapanese: false };
-      const words1 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config1);
+      const words1 = extractWords(lineText, 1, config1);
       assertEquals(words1.length, 3);
       assertEquals(words1.map((w) => w.text), ["config", "change", "apply"]);
 
-      // 設定2: 日本語包含（個別分割）
+      // 設定2: 日本語包含（混在テキストは全体が1つの単語として抽出される）
       const config2: EnhancedWordConfig = {useJapanese: true };
-      const words2 = extractWordsFromLineWithEnhancedConfig(lineText, 1, config2);
-      // 日本語文字が個別に分割され、英単語も抽出される
-      assert(words2.length > 3);
+      const words2 = extractWords(lineText, 1, config2);
+      // 混在テキストは全体が1つの単語として抽出される
+      assert(words2.length === 1);
 
-      // 日本語文字と英単語の両方が含まれることを確認
+      // 全体が1つの単語として抽出される
+      assertEquals(words2[0].text, "設定config変更change適用apply");
+
+      // 日本語文字が含まれることを確認
       const hasJapanese = words2.some((w) => /[\u4E00-\u9FAF]/.test(w.text));
-      const hasEnglish = words2.some((w) => /^[a-zA-Z]+$/.test(w.text));
       assert(hasJapanese);
-      assert(hasEnglish);
 
       // 両方の設定でヒント位置計算が正常に動作すること
       [words1, words2].forEach((words) => {
@@ -245,7 +245,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
       const config: EnhancedWordConfig = {useJapanese: false };
 
       edgeCases.forEach((lineText, index) => {
-        const words = extractWordsFromLineWithEnhancedConfig(lineText, index + 1, config);
+        const words = extractWords(lineText, index + 1, config);
 
         // エラーが発生しないこと
         assertExists(words);

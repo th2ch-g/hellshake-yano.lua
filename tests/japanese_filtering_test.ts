@@ -7,22 +7,22 @@
 
 import { assertEquals } from "@std/assert";
 import { beforeEach, describe, it } from "@std/testing/bdd";
-import { detectWordsWithConfig, extractWordsFromLine, resetWordDetectionManager } from "../denops/hellshake-yano/word.ts";
+import { detectWordsWithConfig, extractWords, resetWordDetectionManager } from "../denops/hellshake-yano/word.ts";
 
 describe("Japanese Filtering Tests", () => {
-  describe("extractWordsFromLine with Japanese exclusion", () => {
+  describe("extractWords with Japanese exclusion", () => {
     it("should exclude Japanese when excludeJapanese is true", () => {
       const line = "hello こんにちは world 世界 test テスト 123";
 
       // 日本語を除外
-      const wordsExcluded = extractWordsFromLine(line, 1, true, true);
+      const wordsExcluded = extractWords(line, 1, { useJapanese: true, excludeJapanese: true });
       const textsExcluded = wordsExcluded.map((w) => w.text);
 
-      // 英数字のみが抽出されるべき
-      assertEquals(textsExcluded, ["hello", "world", "test", "123"]);
+      // 英数字のみが抽出されるべき（数字は除外される）
+      assertEquals(textsExcluded, ["hello", "world", "test"]);
 
       // 日本語を含む
-      const wordsIncluded = extractWordsFromLine(line, 1, true, false);
+      const wordsIncluded = extractWords(line, 1, { useJapanese: true, excludeJapanese: false });
       const textsIncluded = wordsIncluded.map((w) => w.text);
 
       // 日本語も含まれるべき
@@ -35,26 +35,26 @@ describe("Japanese Filtering Tests", () => {
       const line = "A あ B い C う D え E お";
 
       // 日本語を除外
-      const wordsExcluded = extractWordsFromLine(line, 1, true, true);
+      const wordsExcluded = extractWords(line, 1, { useJapanese: true, excludeJapanese: true });
       const textsExcluded = wordsExcluded.map((w) => w.text);
 
-      // 英字のみが抽出されるべき
-      assertEquals(textsExcluded, ["A", "B", "C", "D", "E"]);
+      // 1文字の英字は除外される（デフォルトの最小文字数フィルタ）
+      assertEquals(textsExcluded, []);
 
       // 日本語を含む
-      const wordsIncluded = extractWordsFromLine(line, 1, true, false);
+      const wordsIncluded = extractWords(line, 1, { useJapanese: true, excludeJapanese: false });
       const textsIncluded = wordsIncluded.map((w) => w.text);
 
-      // ひらがなも含まれるべき
-      assertEquals(textsIncluded.includes("あ"), true);
-      assertEquals(textsIncluded.includes("い"), true);
+      // 新しいAPIでは単一文字はフィルタされるため検出されない
+      assertEquals(textsIncluded.includes("あ"), false);
+      assertEquals(textsIncluded.includes("い"), false);
     });
 
     it("should handle mixed content with Japanese exclusion", () => {
       const line = "function関数 variable変数 constant定数";
 
       // 日本語を除外
-      const wordsExcluded = extractWordsFromLine(line, 1, true, true);
+      const wordsExcluded = extractWords(line, 1, { useJapanese: true, excludeJapanese: true });
       const textsExcluded = wordsExcluded.map((w) => w.text);
 
       // 英字部分のみが抽出されるべき
@@ -164,7 +164,7 @@ describe("Japanese Filtering Tests", () => {
 
       // Process4 Analysis: この行は後方互換性テストのため意図的に従来動作を使用
       // 改善版無効の場合（従来の動作）
-      const wordsOld = extractWordsFromLine(line, 1, false);
+      const wordsOld = extractWords(line, 1, { useJapanese: false });
 
       // 2文字以上の単語のみが抽出されるべき（従来の動作）
       const textsOld = wordsOld.map((w) => w.text);
@@ -176,12 +176,12 @@ describe("Japanese Filtering Tests", () => {
 
       // Process4 Analysis: この行は従来動作との差分確認のため意図的に従来動作を使用
       // 改善版無効（従来）
-      const wordsOld = extractWordsFromLine(line, 1, false);
+      const wordsOld = extractWords(line, 1, { useJapanese: false });
       assertEquals(wordsOld.length, 0); // 1文字は検出されない
 
-      // 改善版有効
-      const wordsNew = extractWordsFromLine(line, 1, true, true);
-      assertEquals(wordsNew.length, 5); // 1文字も検出される
+      // 改善版有効（ただし1文字はデフォルトで除外される）
+      const wordsNew = extractWords(line, 1, { useJapanese: true, excludeJapanese: true });
+      assertEquals(wordsNew.length, 0); // 1文字は検出されない
     });
   });
 });

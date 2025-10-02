@@ -14,7 +14,7 @@ import {
   getWordDisplayEndCol,
   areWordsAdjacent,
   getWordDisplayStartCol,
-  calculateHintDisplayPosition,
+  calculateHintPosition,
   isPositionWithinWord,
   calculateWordGap,
 } from "../denops/hellshake-yano/hint.ts";
@@ -127,19 +127,19 @@ Deno.test("areWordsAdjacent function", async (t) => {
   });
 });
 
-Deno.test("calculateHintDisplayPosition function", async (t) => {
+Deno.test("calculateHintPosition function", async (t) => {
   const word: Word = { text: "hello", line: 1, col: 5 };
 
   await t.step("should return start position correctly", () => {
-    assertEquals(calculateHintDisplayPosition(word, "start"), 5);
+    assertEquals(calculateHintPosition(word, "start").col, 5);
   });
 
   await t.step("should return end position correctly", () => {
-    assertEquals(calculateHintDisplayPosition(word, "end"), 9); // 5+5-1=9
+    assertEquals(calculateHintPosition(word, "end").col, 9); // 5+5-1=9
   });
 
   await t.step("should return overlay position correctly", () => {
-    assertEquals(calculateHintDisplayPosition(word, "overlay"), 5);
+    assertEquals(calculateHintPosition(word, "overlay").col, 5);
   });
 });
 

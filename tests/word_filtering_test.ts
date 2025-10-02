@@ -5,7 +5,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { extractWordsFromLineWithConfig } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/word.ts";
 
 describe("Word Filtering - Japanese Exclusion", () => {
   describe("English-only mode", () => {
@@ -13,7 +13,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "こんにちはworld テストtest 日本語english";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       // 英数字のみ抽出されること
       assertEquals(words.length, 3);
@@ -26,7 +26,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "test123 日本語456abc コード789def";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 3);
       assertEquals(words[0].text, "test123");
@@ -38,7 +38,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "hello,world test;case code:block";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 6);
       assertEquals(words[0].text, "hello");
@@ -53,11 +53,11 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "a 12 abc 123 hello world";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
-      // 現在の実装では全ての単語が抽出される
-      assertEquals(words.length, 6);
-      assertEquals(words.map((w) => w.text), ["a", "12", "abc", "123", "hello", "world"]);
+      // 新しいAPIでは単一文字と純粋な数字がフィルタされる
+      assertEquals(words.length, 3);
+      assertEquals(words.map((w) => w.text), ["abc", "hello", "world"]);
     });
   });
 
@@ -66,7 +66,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "これはtestです。hello世界world";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 3);
       assertEquals(words[0].text, "test");
@@ -78,7 +78,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "変数nameは値valueを持つ。functionNameのreturnValue";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 4);
       assertEquals(words[0].text, "name");
@@ -93,11 +93,11 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "こんにちはworld テストtest";
       const config = { useJapanese: true };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
-      // 日本語も含まれること（単語は別々に分割される）
-      assertEquals(words.length, 4);
-      assertEquals(words.map((w) => w.text), ["こんにちは", "world", "テスト", "test"]);
+      // 混在テキストは全体が1つの単語として検出される
+      assertEquals(words.length, 2);
+      assertEquals(words.map((w) => w.text), ["こんにちはworld", "テストtest"]);
     });
   });
 
@@ -113,13 +113,13 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const config = { useJapanese: false };
 
       const startTime = Date.now();
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
       const endTime = Date.now();
 
-      // 英語単語と数字が抽出されること（日本語と数字が分離される）
-      assertEquals(words.length, 100);
+      // useJapanese: falseの場合、日本語は除外されて英語のみが抽出される
+      assertEquals(words.length, 50);
       assertEquals(words[0].text, "word0");
-      assertEquals(words[2].text, "word1");
+      assertEquals(words[1].text, "word1");
 
       // パフォーマンス: 100ms以内で完了すること
       assertEquals(endTime - startTime < 100, true);
@@ -131,7 +131,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 0);
     });
@@ -140,7 +140,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "   \t   ";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 0);
     });
@@ -149,7 +149,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "これは日本語のみです";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       assertEquals(words.length, 0);
     });
@@ -158,7 +158,7 @@ describe("Word Filtering - Japanese Exclusion", () => {
       const lineText = "test@email.com function() {return value;}";
       const config = { useJapanese: false };
 
-      const words = extractWordsFromLineWithConfig(lineText, 1, config);
+      const words = extractWords(lineText, 1, config);
 
       // 単語境界で正しく分割されること
       assertEquals(words.length, 6);

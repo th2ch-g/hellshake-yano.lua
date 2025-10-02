@@ -1,10 +1,10 @@
 import { assertEquals } from "@std/assert";
-import { extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/word.ts";
 
 Deno.test("全角文字を含む行の正確な位置計算", () => {
   // 実際の問題のテキスト
   const lineText = "\t\t・案件番号の表示と検索実装をとりあえずやるところまで or 計画を詰める";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, { useJapanese: true });
 
   // 詳細なログ出力
   console.log("=== All Words ===");
@@ -37,7 +37,7 @@ Deno.test("全角文字を含む行の正確な位置計算", () => {
 Deno.test("全角半角混在テキストの位置計算", () => {
   // 全角と半角が混在するシンプルなケース
   const lineText = "あいうabc";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, { useJapanese: true });
 
   console.log("\n=== Mixed Width Test ===");
   words.forEach((w) => {
@@ -54,7 +54,7 @@ Deno.test("全角半角混在テキストの位置計算", () => {
 
 Deno.test("タブと全角文字の組み合わせ", () => {
   const lineText = "\t案件\t番号";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, { useJapanese: true });
 
   console.log("\n=== Tab + Wide Char Test ===");
   words.forEach((w) => {
@@ -78,7 +78,7 @@ Deno.test("タブと全角文字の組み合わせ", () => {
 
 Deno.test("中点（・）の幅確認", () => {
   const lineText = "・test";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, { useJapanese: true });
 
   const dot = words.find((w) => w.text === "・");
   const test = words.find((w) => w.text === "test");

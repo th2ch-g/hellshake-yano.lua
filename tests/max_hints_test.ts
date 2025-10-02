@@ -6,7 +6,7 @@
 
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { generateHintsWithGroups, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
+import { generateHints, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
 
 describe("Max Hints and Capacity Calculation", () => {
   describe("Hint capacity with custom keys", () => {
@@ -24,7 +24,7 @@ describe("Max Hints and Capacity Calculation", () => {
       const expectedCapacity = singleCharCount + multiCharCount; // 110
 
       // 実際に生成してテスト
-      const hints = generateHintsWithGroups(expectedCapacity, config);
+      const hints = generateHints(expectedCapacity, { groups: true, ...config });
       assertEquals(hints.length, expectedCapacity);
 
       // 最初の10個は1文字ヒント
@@ -56,7 +56,7 @@ describe("Max Hints and Capacity Calculation", () => {
       // Vim設定で検出される単語数（実際の例）
       const wordCount = 42; // let, g, hellshake, yano, use, japanese, false, hint, position, start, など
 
-      const hints = generateHintsWithGroups(wordCount, config);
+      const hints = generateHints(wordCount, { groups: true, ...config });
       assertEquals(hints.length, wordCount);
 
       // すべての単語にヒントが割り当てられることを確認
@@ -90,7 +90,7 @@ describe("Max Hints and Capacity Calculation", () => {
 
       // 最大容量: 11 + (15×15) = 236 (数字フォールバックなし)
       const maxCapacity = 236;
-      const hints = generateHintsWithGroups(maxCapacity, config);
+      const hints = generateHints(maxCapacity, { groups: true, ...config });
 
       assertEquals(hints.length, maxCapacity);
 
@@ -122,7 +122,7 @@ describe("Max Hints and Capacity Calculation", () => {
 
       // 容量は210だが、50個のみ要求
       const requestedCount = 50;
-      const hints = generateHintsWithGroups(requestedCount, config);
+      const hints = generateHints(requestedCount, { groups: true, ...config });
 
       assertEquals(hints.length, requestedCount);
 
@@ -145,7 +145,7 @@ describe("Max Hints and Capacity Calculation", () => {
 
       // 容量を超える数を要求
       const requestedCount = 110;
-      const hints = generateHintsWithGroups(requestedCount, config);
+      const hints = generateHints(requestedCount, { groups: true, ...config });
 
       // 5個のみ生成可能（数字フォールバックなし、３文字ヒントなし）
       assertEquals(hints.length, 5);

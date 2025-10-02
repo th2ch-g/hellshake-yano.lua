@@ -4,7 +4,7 @@
  */
 import type { Denops } from "@denops/std";
 import type { Config, HintMapping, Word } from "./types.ts";
-import { assignHintsToWords, calculateHintPosition, calculateHintPositionWithCoordinateSystem } from "./hint.ts";
+import { assignHintsToWords, calculateHintPosition } from "./hint.ts";
 import { generateHintsFromConfig, recordPerformance } from "./performance.ts";
 
 /** ハイライト処理のバッチサイズ */
@@ -364,7 +364,7 @@ async function processExtmarksBatched(
   extmarkNamespace: number,
 ): Promise<void> {
   for (const hint of hints) {
-    const position = calculateHintPositionWithCoordinateSystem(hint.word, "offset");
+    const position = calculateHintPosition(hint.word, { hintPosition: "offset" });
     // 記号を含むヒントのデバッグ
     if (config.debug && [';', ':', '[', ']', "'", '"', ',', '.', '/', '\\', '-', '=', '`', '@'].includes(hint.hint)) {
       console.log(`[extmark] Displaying symbol hint: "${hint.hint}" at line ${position.line}, col ${position.col}`);

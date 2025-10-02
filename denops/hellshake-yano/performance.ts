@@ -5,7 +5,7 @@ import type { Denops } from "@denops/std";
 import type { Config, DebugInfo, HintMapping, PerformanceMetrics, Word } from "./types.ts";
 import { LRUCache } from "./cache.ts";
 import { detectWordsWithManager } from "./word.ts";
-import { generateHints, generateHintsWithGroups } from "./hint.ts";
+import { generateHints } from "./hint.ts";
 
 /** 単語キャッシュ（最大100エントリ） */
 const wordsCache = new LRUCache<string, Word[]>(100);
@@ -89,13 +89,13 @@ export function generateHintsFromConfig(wordCount: number, config: Config): stri
   };
 
   // キャッシュキーを生成
-  const cacheKey = `generateHintsWithGroups:${wordCount}:${JSON.stringify(hintConfig)}`;
+  const cacheKey = `generateHints:${wordCount}:${JSON.stringify(hintConfig)}`;
   const cached = hintsCache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const hints = generateHintsWithGroups(wordCount, hintConfig);
+  const hints = generateHints(wordCount, { groups: true, ...hintConfig });
   hintsCache.set(cacheKey, hints);
   return hints;
 }

@@ -38,7 +38,6 @@ import {
 import {
   assignHintsToWords,
   generateHints,
-  generateHintsWithGroups,
   validateHintKeyConfig
 } from "./hint.ts";
 // Dictionary system imports
@@ -1007,7 +1006,14 @@ export class Core {
         return generateHints(wordCount, markers);
       }
 
-      return generateHintsWithGroups(wordCount, hintConfig);
+      return generateHints(wordCount, {
+        groups: true,
+        singleCharKeys: hintConfig.singleCharKeys,
+        multiCharKeys: hintConfig.multiCharKeys,
+        maxSingleCharHints: hintConfig.maxSingleCharHints,
+        useNumericMultiCharHints: hintConfig.useNumericMultiCharHints,
+        markers: hintConfig.markers
+      });
     }
 
     // 従来のヒント生成処理
@@ -1351,7 +1357,14 @@ export class Core {
           useNumericMultiCharHints: unifiedConfig.useNumericMultiCharHints,
           markers: unifiedConfig.markers // フォールバック用
         };
-        hints = generateHintsWithGroups(words.length, hintConfig);
+        hints = generateHints(words.length, {
+          groups: true,
+          singleCharKeys: hintConfig.singleCharKeys,
+          multiCharKeys: hintConfig.multiCharKeys,
+          maxSingleCharHints: hintConfig.maxSingleCharHints,
+          useNumericMultiCharHints: hintConfig.useNumericMultiCharHints,
+          markers: hintConfig.markers
+        });
       } else {
         // フォールバック: 従来のmarkers方式
         const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];

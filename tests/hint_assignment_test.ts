@@ -6,7 +6,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
-  generateHintsWithGroups,
+  generateHints,
   type HintKeyConfig,
   validateHintKeyConfig,
 } from "../denops/hellshake-yano/hint.ts";
@@ -19,7 +19,7 @@ describe("Hint Assignment with Character Groups", () => {
         maxSingleCharHints: 9,
       };
 
-      const hints = generateHintsWithGroups(12, config);
+      const hints = generateHints(12, { groups: true, ...config });
 
       // 最初の9個は singleCharKeys から
       assertEquals(hints.slice(0, 9), ["A", "S", "D", "F", "G", "H", "J", "K", "L"]);
@@ -36,7 +36,7 @@ describe("Hint Assignment with Character Groups", () => {
         maxSingleCharHints: 5, // 9個使えるが5個に制限
       };
 
-      const hints = generateHintsWithGroups(8, config);
+      const hints = generateHints(8, { groups: true, ...config });
 
       // 最初の5個のみ singleCharKeys から
       assertEquals(hints.slice(0, 5), ["A", "S", "D", "F", "G"]);
@@ -54,7 +54,7 @@ describe("Hint Assignment with Character Groups", () => {
         multiCharKeys: ["Q", "W", "E"],
       };
 
-      const hints = generateHintsWithGroups(7, config);
+      const hints = generateHints(7, { groups: true, ...config });
 
       // 最初の2個は singleCharKeys
       assertEquals(hints.slice(0, 2), ["A", "S"]);
@@ -76,7 +76,7 @@ describe("Hint Assignment with Character Groups", () => {
         multiCharKeys: ["Q", "W"], // 2文字で最大4通り
       };
 
-      const hints = generateHintsWithGroups(7, config);
+      const hints = generateHints(7, { groups: true, ...config });
 
       // 1個目は A
       assertEquals(hints[0], "A");
@@ -135,7 +135,7 @@ describe("Hint Assignment with Character Groups", () => {
     it("should work with default when no groups specified", () => {
       const config: HintKeyConfig = {};
 
-      const hints = generateHintsWithGroups(5, config);
+      const hints = generateHints(5, { groups: true, ...config });
 
       // デフォルトのA-Zを使用
       assertEquals(hints, ["A", "B", "C", "D", "E"]);
@@ -145,7 +145,7 @@ describe("Hint Assignment with Character Groups", () => {
       const config: HintKeyConfig = {singleCharKeys: ["A", "S", "D"],
       };
 
-      const hints = generateHintsWithGroups(6, config);
+      const hints = generateHints(6, { groups: true, ...config });
 
       // singleCharKeysのみが定義されている場合、multiCharKeysは生成されない
       // 代わりにデフォルトのマーカーが使用される

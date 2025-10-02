@@ -1,10 +1,10 @@
 import { assertEquals } from "@std/assert";
-import { extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/word.ts";
 
 Deno.test("タブ文字を含む行の単語位置計算", () => {
   // タブ文字を含む実際のテキスト
   const lineText = "\t\t・案件番号の表示と検索実装をとりあえずやるところまで or 計画を詰める";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, { useJapanese: true });
 
   // 単語が検出されることを確認
   const foundWords = words.map((w) => ({ text: w.text, col: w.col }));
@@ -30,7 +30,7 @@ Deno.test("タブ文字を含む行の単語位置計算", () => {
 
 Deno.test("単一タブ文字の処理", () => {
   const lineText = "\thello\tworld";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, {});
 
   const hello = words.find((w) => w.text === "hello");
   const world = words.find((w) => w.text === "world");
@@ -48,7 +48,7 @@ Deno.test("単一タブ文字の処理", () => {
 
 Deno.test("タブなしテキストの後方互換性", () => {
   const lineText = "hello world";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, {});
 
   const hello = words.find((w) => w.text === "hello");
   const world = words.find((w) => w.text === "world");
@@ -64,7 +64,7 @@ Deno.test("タブなしテキストの後方互換性", () => {
 
 Deno.test("混在パターン: タブ、スペース、日本語", () => {
   const lineText = "\t  こんにちは\tworld";
-  const words = extractWordsFromLine(lineText, 1, true, false);
+  const words = extractWords(lineText, 1, { useJapanese: true });
 
   const japanese = words.find((w) => w.text.includes("こんにちは"));
   const world = words.find((w) => w.text === "world");

@@ -66,14 +66,14 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] 複数文字ヒントが正しく生成される",
   async fn() {
-    const { generateHintsWithGroups } = await import("../denops/hellshake-yano/hint.ts");
+    const { generateHints } = await import("../denops/hellshake-yano/hint.ts");
 
     // 多くの単語でフォールバック機能をテスト
     const wordCount = 30; // 単文字（26）+ 2文字（4） = 30
     const config = {singleCharKeys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
       multiCharKeys: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
     };
-    const hints = generateHintsWithGroups(wordCount, config);
+    const hints = generateHints(wordCount, { groups: true, ...config });
 
     assertEquals(hints.length, wordCount);
 

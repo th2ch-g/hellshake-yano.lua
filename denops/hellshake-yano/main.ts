@@ -2,8 +2,7 @@
  * @fileoverview Hellshake-Yano.vim メインエントリーポイント
  */
 import type { Denops } from "@denops/std";
-import { generateHintsWithGroups } from "./hint.ts";
-import { assignHintsToWords } from "./hint.ts";
+import { generateHints, assignHintsToWords } from "./hint.ts";
 import { Core } from "./core.ts";
 import type { DebugInfo, HintMapping, Word } from "./types.ts";
 import { Config, DEFAULT_CONFIG } from "./config.ts";
@@ -105,7 +104,7 @@ export async function main(denops: Denops): Promise<void> {
         multiCharKeys: config.multiCharKeys,
         maxSingleCharHints: config.maxSingleCharHints,
       };
-      const testHints = generateHintsWithGroups(15, testHintConfig);
+      const testHints = generateHints(15, testHintConfig);
       console.log("  Test hint generation (first 15):", testHints);
       const symbolHints = testHints.filter((h) => !h.match(/^[A-Za-z0-9]+$/));
       if (symbolHints.length > 0) {
@@ -217,7 +216,7 @@ export async function main(denops: Denops): Promise<void> {
             // フォールバック用にmarkersも設定
             markers: config.markers || ["a", "s", "d", "f"],
           };
-          return generateHintsWithGroups(count, hintConfig);
+          return generateHints(count, hintConfig);
         } finally {
           recordPerformance("hintGeneration", performance.now() - startTime);
         }

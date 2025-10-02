@@ -292,29 +292,6 @@ export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolea
   return distance <= 0;
 }
 
-/**
- * @deprecated calculateHintPosition(word, { hintPosition: position, tabWidth }).col を使用してください
- *
- *
- *
- */
-export function calculateHintDisplayPosition(
-  word: Word,
-  position: "start" | "end" | "overlay",
-  tabWidth = 8,
-): number {
-  // 内部で使用されている可能性があるため、実装は残す
-  switch (position) {
-    case "start":
-      return word.col;
-    case "end":
-      return getWordDisplayEndCol(word, tabWidth);
-    case "overlay":
-      return word.col;
-    default:
-      return word.col;
-  }
-}
 
 /**
  * モードに応じた割り当てキャッシュを取得
@@ -1034,7 +1011,7 @@ export function calculateHintPosition(
         break;
       case "end":
         // 表示幅を使用してend位置を計算
-        col = calculateHintDisplayPosition(word, "end", tabWidth);
+        col = getWordDisplayEndCol(word, tabWidth);
         if (!options.displayMode) display_mode = "after";
         break;
       case "overlay":
@@ -1056,20 +1033,6 @@ export function calculateHintPosition(
   };
 }
 
-/**
- * @deprecated calculateHintPosition(word, { coordinateSystem: 'nvim', hintPosition, enableDebug }) を使用してください
- */
-export function calculateHintPositionWithCoordinateSystem(
-  word: Word,
-  hintPosition: string,
-  enableDebug: boolean = false,
-): HintPositionWithCoordinateSystem {
-  return calculateHintPosition(word, {
-    hintPosition,
-    coordinateSystem: 'nvim', // 座標系変換を有効にする
-    enableDebug,
-  }) as HintPositionWithCoordinateSystem;
-}
 
 // HintKeyConfig interface moved to types.ts for consolidation
 // Use: import type { HintKeyConfig } from "./types.ts";
@@ -1961,21 +1924,3 @@ export class HintManager {
 
 // ===== 互換性のための非推奨エイリアス =====
 
-/**
- * @deprecated generateHints() を options.groups: true で使用してください。
- *
- */
-export function generateHintsWithGroups(
-  wordCount: number,
-  config: HintKeyConfig,
-): string[] {
-  return generateHintsWithGroupsImpl(wordCount, config);
-}
-
-/**
- * @deprecated generateHints() を options.numeric: true で使用してください。
- *
- */
-export function generateNumericHints(count: number): string[] {
-  return generateNumericHintsImpl(count);
-}

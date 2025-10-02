@@ -6,7 +6,7 @@
 
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { extractWordsFromLine } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/word.ts";
 import { calculateHintPosition } from "../denops/hellshake-yano/hint.ts";
 
 describe("Hint Position Fix - Process単語の表示位置", () => {
@@ -15,7 +15,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
       const text = "- **最終更新**: 2025-09-13 (Process8, Process9, Process10)";
 
       // 改善版の単語検出を使用
-      const words = extractWordsFromLine(text, 1, true, true);
+      const words = extractWords(text, 1, { useJapanese: true, excludeJapanese: true });
 
       // Process8を探す
       const process8 = words.find((w) => w.text === "Process8");
@@ -34,7 +34,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
     it("複数のProcess単語で正しい位置にヒントが表示される", () => {
       const text = "Process50-sub1, sub2, sub3, Process8実装完了";
-      const words = extractWordsFromLine(text, 1, true, true);
+      const words = extractWords(text, 1, { useJapanese: true, excludeJapanese: true });
 
       // すべてのProcess単語を確認
       const processWords = words.filter((w) => w.text.startsWith("Process"));
@@ -50,7 +50,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
     it("インデントされたProcess単語でも正しい位置に表示される", () => {
       const text = "    Process8: 実装完了";
-      const words = extractWordsFromLine(text, 1, true, true);
+      const words = extractWords(text, 1, { useJapanese: true, excludeJapanese: true });
 
       const process8 = words.find((w) => w.text === "Process8");
       if (process8) {
@@ -66,7 +66,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
   describe("単語検出の確認", () => {
     it("Process8が正しく1つの単語として検出される", () => {
       const text = "Process8";
-      const words = extractWordsFromLine(text, 1, true, true);
+      const words = extractWords(text, 1, { useJapanese: true, excludeJapanese: true });
 
       assertEquals(words.length, 1);
       assertEquals(words[0].text, "Process8");
@@ -75,7 +75,7 @@ describe("Hint Position Fix - Process単語の表示位置", () => {
 
     it("Process50-sub1がkebab-caseとして分割される", () => {
       const text = "Process50-sub1";
-      const words = extractWordsFromLine(text, 1, true, true);
+      const words = extractWords(text, 1, { useJapanese: true, excludeJapanese: true });
 
       // kebab-case分割により複数の単語として検出される
       const wordTexts = words.map((w) => w.text);

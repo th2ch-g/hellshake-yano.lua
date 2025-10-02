@@ -394,7 +394,7 @@ export class RegexWordDetector implements WordDetector {
     // contextのuseJapaneseを優先し、未定義の場合はthis.config.useJapaneseを使用
     const useJapanese = context?.config?.useJapanese ?? this.config.useJapanese;
     const excludeJapanese = !useJapanese;
-    return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
+    return extractWords(lineText, lineNumber, { useImprovedDetection: true, excludeJapanese });
   }
 
   /**
@@ -883,14 +883,6 @@ export class HybridWordDetector implements WordDetector {
 }
 
 /**
- * @deprecated テスト用途にはextractWordsを直接使用してください
- */
-export function detectWords(
-  text: string,
-  startLine: number,
-  excludeJapanese: boolean,
-): Promise<Word[]>;
-/**
  * 単語検出のメイン関数（Denops版）
  */
 export function detectWords(denops: Denops, config?: Partial<Config>): Promise<Word[]>;
@@ -898,30 +890,9 @@ export function detectWords(denops: Denops, config?: Partial<Config>): Promise<W
  * 単語検出のメイン関数（実装）
  */
 export async function detectWords(
-  arg1: Denops | string,
-  arg2?: Partial<Config> | number,
-  arg3?: boolean,
+  denops: Denops,
+  config?: Partial<Config>,
 ): Promise<Word[]> {
-  // Overload: string-based API for tests (deprecated)
-  if (typeof arg1 === "string") {
-    const text = arg1 as string;
-    const startLine = (arg2 as number ?? 1);
-    const excludeJapanese = (arg3 ?? false) as boolean;
-
-    const words: Word[] = [];
-    const lines = text.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      const lineText = lines[i];
-      const lineNumber = startLine + i;
-      const lineWords = extractWordsFromLineLegacy(lineText, lineNumber, excludeJapanese);
-      words.push(...lineWords);
-    }
-    return words;
-  }
-
-  // Denopsインスタンスが渡された場合
-  const denops = arg1 as Denops;
-  const config = (typeof arg2 === "object" ? arg2 : undefined) as Partial<Config> | undefined;
 
   // 画面範囲を元の実装と同じ方法で取得（環境差異対策）
   const bottomLine = await denops.call("line", "w$") as number;
@@ -1104,7 +1075,7 @@ async function detectWordsStandard(
   // 各行から単語を検出
   for (let line = topLine; line <= bottomLine; line++) {
     const lineText = await denops.call("getline", line) as string;
-    const lineWords = extractWordsFromLineLegacy(lineText, line, false);
+    const lineWords = extractWords(lineText, line, { legacyMode: true });
     words.push(...lineWords);
   }
 
@@ -1133,7 +1104,7 @@ async function detectWordsOptimizedForLargeFiles(
       // 各行から単語を抽出
       lines.forEach((lineText, index) => {
         const actualLine = startLine + index;
-        const lineWords = extractWordsFromLineLegacy(lineText, actualLine, false);
+        const lineWords = extractWords(lineText, actualLine, { legacyMode: true });
         words.push(...lineWords);
       });
 
@@ -1280,21 +1251,249 @@ function getDisplayColumn(text: string, charIndex: number, tabWidth = 8): number
   return displayCol;
 }
 
+
+
 /**
- * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {useImprovedDetection, excludeJapanese})
+ * 特定範囲の単語を検出（パフォーマンステスト用）
  */
-export function extractWordsFromLine(
+export async function detectWordsInRange(
+  denops: Denops,
+  startLine: number,
+  endLine: number,
+  maxWords?: number,
+): Promise<Word[]> {
+  try {
+    const words: Word[] = [];
+    const effectiveMaxWords = maxWords || MAX_WORDS_PER_FILE;
+
+    // 範囲の検証
+    const actualEndLine = Math.min(endLine, await denops.call("line", "$") as number);
+    const actualStartLine = Math.max(1, startLine);
+
+    for (let line = actualStartLine; line <= actualEndLine; line++) {
+      if (words.length >= effectiveMaxWords) {
+        break;
+      }
+
+      const lineText = await denops.call("getline", line) as string;
+      const lineWords = extractWords(lineText, line, { legacyMode: true });
+
+      // 単語数制限を適用
+      const remainingSlots = effectiveMaxWords - words.length;
+      words.push(...lineWords.slice(0, remainingSlots));
+    }
+
+    return words;
+  } catch (error) {
+    return [];
+  }
+}
+
+/**
+ * 単語検出キャッシュをクリア
+ */
+export function clearWordDetectionCache(): void {
+  wordDetectionCache.clear();
+}
+
+/**
+ * キャッシュの統計情報を取得
+ */
+/**
+ * 単語検出キャッシュの統計情報を取得します
+ * @returns キャッシュの統計情報オブジェクト
+ */
+export function getWordDetectionCacheStats(): {
+  /** キャッシュサイズ */
+  cacheSize: number;
+  /** キャッシュキーのリスト */
+  cacheKeys: string[];
+  /** 最大キャッシュサイズ */
+  maxCacheSize: number;
+  /** 大きなファイルの闾値 */
+  largeFileThreshold: number;
+  /** ファイルあたりの最大単語数 */
+  maxWordsPerFile: number;
+} {
+  return {
+    cacheSize: wordDetectionCache.size(),
+    cacheKeys: Array.from(wordDetectionCache.keys()),
+    maxCacheSize: GlobalCache.getInstance().getCacheConfig(CacheType.WORD_DETECTION).size,
+    largeFileThreshold: LARGE_FILE_THRESHOLD,
+    maxWordsPerFile: MAX_WORDS_PER_FILE,
+  };
+}
+
+/**
+ * Phase 1 TDD Green Phase: WordConfig to EnhancedWordConfig Adapter Functions
+ */
+
+/**
+ * ConfigをEnhancedWordConfigに変換する
+ */
+export function convertWordConfigToEnhanced(config: Config): EnhancedWordConfig {
+  // Configを受け入れ、EnhancedWordConfigに変換
+  const useJapanese = 'useJapanese' in config ? config.useJapanese : false;
+
+  return {useJapanese: useJapanese ?? false,
+    strategy: "regex", // デフォルト戦略
+    enableTinySegmenter: useJapanese === true,
+  };
+}
+
+/**
+ * Configの部分的なオブジェクトを作成するヘルパー関数
+ */
+export function createPartialConfig(options: { useJapanese?: boolean }): Config {
+  // Configの最小必須プロパティのデフォルト値
+  return {
+    enabled: true,
+    markers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+    motionCount: 3,
+    motionTimeout: 1000,
+    hintPosition: "start",
+    triggerOnHjkl: true,
+    countedMotions: ['h', 'j', 'k', 'l'],
+    maxHints: 50,
+    debounceDelay: 100,
+    useNumbers: false,
+    highlightSelected: true,
+    debugCoordinates: false,
+    singleCharKeys: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+    multiCharKeys: ['a', 'b', 'c', 'd', 'e', 'f'],
+    useHintGroups: false,
+    highlightHintMarker: "HellshakeYanoMarker",
+    highlightHintMarkerCurrent: "HellshakeYanoMarkerCurrent",
+    suppressOnKeyRepeat: false,
+    keyRepeatThreshold: 50,
+    useJapanese: options.useJapanese ?? false,
+    wordDetectionStrategy: "regex",
+    enableTinySegmenter: false,
+    segmenterThreshold: 2,
+    japaneseMinWordLength: 1,
+    japaneseMergeParticles: false,
+    japaneseMergeThreshold: 10,
+    defaultMinWordLength: 2,
+    defaultMotionCount: 3,
+    debugMode: false,
+    performanceLog: false,
+  } as Config;
+}
+
+/**
+ * EnhancedWordConfigを使用してDenopsから単語を検出する（アダプター版）
+ */
+export async function detectWordsWithEnhancedConfig(
+  denops: Denops,
+  config: EnhancedWordConfig = {},
+): Promise<Word[]> {
+  // 新しいマネージャーベースの検出を試行し、失敗した場合はフォールバック
+  try {
+    const result = await detectWordsWithManager(denops, config);
+    return result.words;
+  } catch (error) {
+    // フォールバックとしてレガシー版を使用
+    const legacyConfig = createPartialConfig({
+      useJapanese: config.useJapanese,
+    });
+    return await detectWordsWithConfig(denops, legacyConfig);
+  }
+}
+
+
+
+/**
+ * 単語抽出オプションインターフェース
+ *
+ * @since 2.1.0
+ */
+export interface ExtractWordsOptions {
+  // Core settings
+  useImprovedDetection?: boolean;
+  excludeJapanese?: boolean;
+
+  // WordConfig
+  useJapanese?: boolean;
+
+  // Enhanced config
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
+  perKeyMinLength?: Record<string, number>;
+  defaultMinWordLength?: number;
+  currentKeyContext?: string;
+  minWordLength?: number;
+  maxWordLength?: number;
+  enableTinySegmenter?: boolean;
+
+  // Mode selection
+  legacyMode?: boolean;
+}
+
+
+/**
+ * 統合された単語抽出関数
+ *
+ * @param lineText - 解析する行のテキスト
+ * @returns Word[] - 抽出された単語の配列
+ *
+ * @since 2.1.0
+ */
+export function extractWords(
   lineText: string,
   lineNumber: number,
-  useImprovedDetection = false,
-  excludeJapanese = false,
+  options: ExtractWordsOptions = {},
 ): Word[] {
-  // 既存テストとの互換性を保つためデフォルトはレガシー版を使用
-  if (!useImprovedDetection) {
-    return extractWordsFromLineLegacy(lineText, lineNumber, false);
-  }
   const words: Word[] = [];
 
+  // Configuration normalization
+  const normalizedConfig = normalizeConfig(options);
+  const excludeJapanese = normalizedConfig.excludeJapanese;
+
+  // Legacy mode implementation (inline extractWordsFromLineLegacy logic)
+  if (normalizedConfig.legacyMode || !normalizedConfig.useImprovedDetection) {
+    // 空行や短すぎる行はスキップ
+    if (!lineText || lineText.trim().length < 2) {
+      return words;
+    }
+
+    // 最適化された正規表現（ユニコード対応）- excludeJapanese設定に基づいて選択
+    const wordRegex = excludeJapanese
+      ? /[a-zA-Z0-9_]+/g // 日本語を除外（英数字とアンダースコアのみ）
+      : /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g; // 日本語を含む
+    let match: RegExpExecArray | null;
+
+    // パフォーマンスを向上させるためにマッチをバッチ処理
+    const matches: { text: string; index: number }[] = [];
+    while ((match = wordRegex.exec(lineText)) !== null) {
+      // 短すぎる単語や数字のみの単語はスキップ
+      if (match[0].length >= 2 && !/^\d+$/.test(match[0])) {
+        matches.push({ text: match[0], index: match.index });
+      }
+
+      // パフォーマンス保護：1行あたり100個まで
+      if (matches.length >= 100) {
+        break;
+      }
+    }
+
+    // マッチした単語をWordオブジェクトに変換
+    for (const match of matches) {
+      // Calculate byte position for UTF-8 compatibility
+      const byteIndex = charIndexToByteIndex(lineText, match.index);
+      // Calculate display column considering tab characters
+      const displayCol = getDisplayColumn(lineText, match.index);
+
+      words.push({
+        text: match.text,
+        line: lineNumber,
+        col: displayCol + 1, // Vimの列番号は1から始まる（タブ展開後の表示位置）
+        byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
+      });
+    }
+
+    return words;
+  }
+
+  // Improved detection mode implementation (inline extractWordsFromLine logic)
   // 空行はスキップ（最小文字数制限を1に変更）
   if (!lineText || lineText.trim().length < 1) {
     return words;
@@ -1429,330 +1628,6 @@ export function extractWordsFromLine(
   return words;
 }
 
-/**
- * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {useJapanese: config.useJapanese})
- */
-export function extractWordsFromLineWithConfig(
-  lineText: string,
-  lineNumber: number,
-  config: Partial<Config> = {},
-): Word[] {
-  // createMinimalConfigで完全なConfigを生成
-  const fullConfig = { ...getDefaultConfig(), ...config };
-  const excludeJapanese = fullConfig.useJapanese !== true;
-  return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
-}
-
-/**
- * 特定範囲の単語を検出（パフォーマンステスト用）
- */
-export async function detectWordsInRange(
-  denops: Denops,
-  startLine: number,
-  endLine: number,
-  maxWords?: number,
-): Promise<Word[]> {
-  try {
-    const words: Word[] = [];
-    const effectiveMaxWords = maxWords || MAX_WORDS_PER_FILE;
-
-    // 範囲の検証
-    const actualEndLine = Math.min(endLine, await denops.call("line", "$") as number);
-    const actualStartLine = Math.max(1, startLine);
-
-    for (let line = actualStartLine; line <= actualEndLine; line++) {
-      if (words.length >= effectiveMaxWords) {
-        break;
-      }
-
-      const lineText = await denops.call("getline", line) as string;
-      const lineWords = extractWordsFromLineLegacy(lineText, line, false);
-
-      // 単語数制限を適用
-      const remainingSlots = effectiveMaxWords - words.length;
-      words.push(...lineWords.slice(0, remainingSlots));
-    }
-
-    return words;
-  } catch (error) {
-    return [];
-  }
-}
-
-/**
- * 単語検出キャッシュをクリア
- */
-export function clearWordDetectionCache(): void {
-  wordDetectionCache.clear();
-}
-
-/**
- * キャッシュの統計情報を取得
- */
-/**
- * 単語検出キャッシュの統計情報を取得します
- * @returns キャッシュの統計情報オブジェクト
- */
-export function getWordDetectionCacheStats(): {
-  /** キャッシュサイズ */
-  cacheSize: number;
-  /** キャッシュキーのリスト */
-  cacheKeys: string[];
-  /** 最大キャッシュサイズ */
-  maxCacheSize: number;
-  /** 大きなファイルの闾値 */
-  largeFileThreshold: number;
-  /** ファイルあたりの最大単語数 */
-  maxWordsPerFile: number;
-} {
-  return {
-    cacheSize: wordDetectionCache.size(),
-    cacheKeys: Array.from(wordDetectionCache.keys()),
-    maxCacheSize: GlobalCache.getInstance().getCacheConfig(CacheType.WORD_DETECTION).size,
-    largeFileThreshold: LARGE_FILE_THRESHOLD,
-    maxWordsPerFile: MAX_WORDS_PER_FILE,
-  };
-}
-
-/**
- * Phase 1 TDD Green Phase: WordConfig to EnhancedWordConfig Adapter Functions
- */
-
-/**
- * ConfigをEnhancedWordConfigに変換する
- */
-export function convertWordConfigToEnhanced(config: Config): EnhancedWordConfig {
-  // Configを受け入れ、EnhancedWordConfigに変換
-  const useJapanese = 'useJapanese' in config ? config.useJapanese : false;
-
-  return {useJapanese: useJapanese ?? false,
-    strategy: "regex", // デフォルト戦略
-    enableTinySegmenter: useJapanese === true,
-  };
-}
-
-/**
- * Configの部分的なオブジェクトを作成するヘルパー関数
- */
-export function createPartialConfig(options: { useJapanese?: boolean }): Config {
-  // Configの最小必須プロパティのデフォルト値
-  return {
-    enabled: true,
-    markers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
-    motionCount: 3,
-    motionTimeout: 1000,
-    hintPosition: "start",
-    triggerOnHjkl: true,
-    countedMotions: ['h', 'j', 'k', 'l'],
-    maxHints: 50,
-    debounceDelay: 100,
-    useNumbers: false,
-    highlightSelected: true,
-    debugCoordinates: false,
-    singleCharKeys: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
-    multiCharKeys: ['a', 'b', 'c', 'd', 'e', 'f'],
-    useHintGroups: false,
-    highlightHintMarker: "HellshakeYanoMarker",
-    highlightHintMarkerCurrent: "HellshakeYanoMarkerCurrent",
-    suppressOnKeyRepeat: false,
-    keyRepeatThreshold: 50,
-    useJapanese: options.useJapanese ?? false,
-    wordDetectionStrategy: "regex",
-    enableTinySegmenter: false,
-    segmenterThreshold: 2,
-    japaneseMinWordLength: 1,
-    japaneseMergeParticles: false,
-    japaneseMergeThreshold: 10,
-    defaultMinWordLength: 2,
-    defaultMotionCount: 3,
-    debugMode: false,
-    performanceLog: false,
-  } as Config;
-}
-
-/**
- * EnhancedWordConfigを使用してDenopsから単語を検出する（アダプター版）
- */
-export async function detectWordsWithEnhancedConfig(
-  denops: Denops,
-  config: EnhancedWordConfig = {},
-): Promise<Word[]> {
-  // 新しいマネージャーベースの検出を試行し、失敗した場合はフォールバック
-  try {
-    const result = await detectWordsWithManager(denops, config);
-    return result.words;
-  } catch (error) {
-    // フォールバックとしてレガシー版を使用
-    const legacyConfig = createPartialConfig({
-      useJapanese: config.useJapanese,
-    });
-    return await detectWordsWithConfig(denops, legacyConfig);
-  }
-}
-
-/**
- * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {strategy: config.strategy, minWordLength: config.minWordLength})
- */
-export function extractWordsFromLineWithEnhancedConfig(
-  lineText: string,
-  lineNumber: number,
-  config: EnhancedWordConfig = {},
-): Word[] {
-  const excludeJapanese = config.useJapanese !== true;
-  return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
-}
-
-/**
- *
- *
- *
- *
- *
- *
- * @deprecated extractWordsを使用してください。例: extractWords(lineText, lineNumber, {legacyMode: true, excludeJapanese})
- */
-export function extractWordsFromLineLegacy(
-  lineText: string,
-  lineNumber: number,
-  excludeJapanese = false,
-): Word[] {
-  const words: Word[] = [];
-
-  // 空行や短すぎる行はスキップ
-  if (!lineText || lineText.trim().length < 2) {
-    return words;
-  }
-
-  // 最適化された正規表現（ユニコード対応）- excludeJapanese設定に基づいて選択
-  const wordRegex = excludeJapanese
-    ? /[a-zA-Z0-9_]+/g // 日本語を除外（英数字とアンダースコアのみ）
-    : /[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBF]+/g; // 日本語を含む
-  let match: RegExpExecArray | null;
-
-  // パフォーマンスを向上させるためにマッチをバッチ処理
-  const matches: { text: string; index: number }[] = [];
-  while ((match = wordRegex.exec(lineText)) !== null) {
-    // 短すぎる単語や数字のみの単語はスキップ
-    if (match[0].length >= 2 && !/^\d+$/.test(match[0])) {
-      matches.push({ text: match[0], index: match.index });
-    }
-
-    // パフォーマンス保護：1行あたり100個まで
-    if (matches.length >= 100) {
-      break;
-    }
-  }
-
-  // マッチした単語をWordオブジェクトに変換
-  for (const match of matches) {
-    // Calculate byte position for UTF-8 compatibility
-    const byteIndex = charIndexToByteIndex(lineText, match.index);
-    // Calculate display column considering tab characters
-    const displayCol = getDisplayColumn(lineText, match.index);
-
-    words.push({
-      text: match.text,
-      line: lineNumber,
-      col: displayCol + 1, // Vimの列番号は1から始まる（タブ展開後の表示位置）
-      byteCol: byteIndex + 1, // Vimのバイト列番号は1から始まる
-    });
-  }
-
-  return words;
-}
-
-/**
- * 単語抽出オプションインターフェース
- *
- * @since 2.1.0
- */
-export interface ExtractWordsOptions {
-  // Core settings
-  useImprovedDetection?: boolean;
-  excludeJapanese?: boolean;
-
-  // WordConfig
-  useJapanese?: boolean;
-
-  // Enhanced config
-  strategy?: "regex" | "tinysegmenter" | "hybrid";
-  perKeyMinLength?: Record<string, number>;
-  defaultMinWordLength?: number;
-  currentKeyContext?: string;
-  minWordLength?: number;
-  maxWordLength?: number;
-  enableTinySegmenter?: boolean;
-
-  // Mode selection
-  legacyMode?: boolean;
-}
-
-/**
- * @deprecated UnifiedWordExtractionConfigはExtractWordsOptionsに名前変更されました
- */
-export type UnifiedWordExtractionConfig = ExtractWordsOptions;
-
-/**
- * 統合された単語抽出関数
- *
- * @param lineText - 解析する行のテキスト
- * @returns Word[] - 抽出された単語の配列
- *
- * @since 2.1.0
- */
-export function extractWords(
-  lineText: string,
-  lineNumber: number,
-  options: ExtractWordsOptions = {},
-): Word[] {
-  // Configuration normalization
-  const normalizedConfig = normalizeConfig(options);
-
-  // Route to appropriate implementation based on config
-  if (normalizedConfig.legacyMode) {
-    return extractWordsFromLineLegacy(lineText, lineNumber, normalizedConfig.excludeJapanese);
-  }
-
-  if (normalizedConfig.hasEnhancedFeatures) {
-    // Use extractWordsFromLine directly (avoiding deprecated function)
-    const excludeJapanese = normalizedConfig.useJapanese !== true;
-    return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
-  }
-
-  if (normalizedConfig.useWordConfig) {
-    // Use extractWordsFromLine directly (avoiding deprecated function)
-    const excludeJapanese = normalizedConfig.useJapanese !== true;
-    return extractWordsFromLine(lineText, lineNumber, true, excludeJapanese);
-  }
-
-  // Check if we should use improved detection via extractWordsFromLine
-  if (
-    normalizedConfig.useImprovedDetection ||
-    options.useImprovedDetection !== undefined ||
-    options.excludeJapanese !== undefined
-  ) {
-    return extractWordsFromLine(
-      lineText,
-      lineNumber,
-      normalizedConfig.useImprovedDetection,
-      normalizedConfig.excludeJapanese,
-    );
-  }
-
-  // Default to legacy behavior
-  return extractWordsFromLineLegacy(lineText, lineNumber, normalizedConfig.excludeJapanese);
-}
-
-/**
- * @deprecated extractWordsUnifiedはextractWordsに名前変更されました。extractWordsを使用してください。
- */
-export function extractWordsUnified(
-  lineText: string,
-  lineNumber: number,
-  config: ExtractWordsOptions = {},
-): Word[] {
-  return extractWords(lineText, lineNumber, config);
-}
 
 /**
  * 統合設定を正規化する内部関数
@@ -1967,20 +1842,6 @@ export function byteIndexToCharIndex(text: string, byteIndex: number): number {
   return text.length;
 }
 
-/**
- *
- *
- *
- * @deprecated getByteLength(text[charIndex])を使用してください
- */
-export function getCharByteLength(text: string, charIndex: number): number {
-  // 範囲外チェックと空文字列チェック
-  if (text.length === 0) return 0;
-  if (charIndex < 0 || charIndex >= text.length) return 0;
-
-  const char = text[charIndex];
-  return new TextEncoder().encode(char).length;
-}
 
 /**
  * テキストにマルチバイト文字（日本語など）が含まれているかチェック
@@ -2032,64 +1893,6 @@ export function getEncodingInfo(text: string): {
   };
 }
 
-/**
- *
- *
- *
- *
- *
- * @deprecated charIndices.map(i => charIndexToByteIndex(text, i))を使用してください
- *
- *
- */
-export function charIndicesToByteIndices(text: string, charIndices: number[]): number[] {
-  // 空の入力チェック
-  if (charIndices.length === 0) return [];
-  if (text.length === 0) return charIndices.map(() => 0);
-
-  const encoder = new TextEncoder();
-  const result: number[] = [];
-  const fullTextByteLength = encoder.encode(text).length;
-
-  // インデックスをソートして効率的に処理
-  const sortedIndices = charIndices
-    .map((index, originalIndex) => ({ index: Math.max(0, index), originalIndex }))
-    .sort((a, b) => a.index - b.index);
-
-  let currentCharIndex = 0;
-  let currentByteIndex = 0;
-  let processedCount = 0;
-
-  for (let i = 0; i < text.length && processedCount < sortedIndices.length; i++) {
-    const char = text[i];
-    const charByteLength = encoder.encode(char).length;
-
-    // この文字位置がターゲットインデックスのいずれかと一致するかチェック
-    while (
-      processedCount < sortedIndices.length &&
-      sortedIndices[processedCount].index === currentCharIndex
-    ) {
-      result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
-      processedCount++;
-    }
-
-    currentCharIndex++;
-    currentByteIndex += charByteLength;
-  }
-
-  // 文字列長以上のインデックスを処理
-  while (processedCount < sortedIndices.length) {
-    const targetIndex = charIndices[sortedIndices[processedCount].originalIndex];
-    if (targetIndex >= text.length) {
-      result[sortedIndices[processedCount].originalIndex] = fullTextByteLength;
-    } else {
-      result[sortedIndices[processedCount].originalIndex] = currentByteIndex;
-    }
-    processedCount++;
-  }
-
-  return result;
-}
 
 /**
  * 文字種判定ユーティリティ
