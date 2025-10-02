@@ -11,6 +11,8 @@ import { exists } from "https://deno.land/std@0.212.0/fs/exists.ts";
 import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
 import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
+import type { WordDetectionConfig as ImportedWordDetectionConfig, WordDetector as ImportedWordDetector } from "./word/word-detector-strategies.ts";
+import { RegexWordDetector as ImportedRegexWordDetector, TinySegmenterWordDetector as ImportedTinySegmenterWordDetector, HybridWordDetector as ImportedHybridWordDetector } from "./word/word-detector-strategies.ts";
 
 // SyntaxContextとLineContextはtypes.tsで定義されている
 
@@ -26,8 +28,17 @@ export interface EnhancedWordConfig extends WordDetectionManagerConfig {
   defaultMinWordLength?: number;
   /** 現在のキーコンテキスト（内部用） */
   currentKeyContext?: string;
-  
+
   wordDetectionStrategy?: "regex" | "tinysegmenter" | "hybrid";
+
+  /** 日本語処理を有効にするかどうか */
+  useJapanese?: boolean;
+  /** 最小単語長 */
+  minWordLength?: number;
+  /** 最大単語長 */
+  maxWordLength?: number;
+  /** TinySegmenterを有効にするかどうか */
+  enableTinySegmenter?: boolean;
 }
 
 import { CacheType, GlobalCache } from "./cache.ts";
@@ -42,758 +53,62 @@ const wordDetectionCache = GlobalCache.getInstance().getCache<string, Word[]>(
   CacheType.WORD_DETECTION,
 );
 
+
+// ==================== Re-exports from submodules ====================
+
+// word-char-utils.ts からのre-export
+export {
+  CharType,
+  type AdjacentAnalysis,
+  getCharType,
+  analyzeString,
+  findBoundaries,
+  shouldMerge,
+  clearCharTypeCache,
+  isHiragana,
+  isKatakana,
+  isKanji,
+  isAlphanumeric,
+  isSymbol,
+  isSpace,
+  containsJapanese,
+  isAllJapanese,
+} from "./word/word-char-utils.ts";
+
+// word-segmenter.ts からのre-export
+export {
+  TinySegmenter,
+  tinysegmenter,
+  type SegmentationResult,
+} from "./word/word-segmenter.ts";
+
+// word-detector-strategies.ts からのre-export
+export {
+  type WordDetector,
+  type WordDetectionConfig,
+  RegexWordDetector,
+  TinySegmenterWordDetector,
+  HybridWordDetector,
+} from "./word/word-detector-strategies.ts";
+
+// word-cache.ts からのre-export
+export {
+  type KeyBasedWordCacheStats,
+  KeyBasedWordCache,
+  globalWordCache,
+} from "./word/word-cache.ts";
+
 // ==================== Word Detector Interfaces and Types ====================
 
 /**
  * 単語検出器の基底インターフェース
  */
-export interface WordDetector {
-  /** 検出器の名前 */
-  readonly name: string;
-  /** 優先度（値が高いほど優先される） */
-  readonly priority: number;
-  /** サポートする言語リスト（例: ['ja', 'en', 'any']） */
-  readonly supportedLanguages: string[];
-  /**
- * テキストから単語を検出します
-   */
-  detectWords(
-    text: string,
-    startLine: number,
-    context?: DetectionContext,
-    denops?: Denops,
-  ): Promise<Word[]>;
-  /**
- * 指定されたテキストを処理できるかどうかを判定します
- * @returns 
-   */
-  canHandle(text: string): boolean;
-  /**
- * この検出器が利用可能かどうかを確認します
- * @returns 
-   */
-  isAvailable(): Promise<boolean>;
-}
-
-/**
- * 単語検出設定インターフェース
- */
-export interface WordDetectionConfig {
-  /** 使用する検出戦略（regex、tinysegmenter、またはhybrid） */
-  strategy?: "regex" | "tinysegmenter" | "hybrid";
-  /** 日本語処理を有効にするかどうか */
-  useJapanese?: boolean;
-  /** 実装では無視されるフラグ */
-  useImprovedDetection?: boolean;
-
-  /** TinySegmenterを有効にするかどうか */
-  enableTinySegmenter?: boolean;
-  /** セグメンテーションのための最小文字数 */
-  segmenterThreshold?: number;
-  /** セグメンターのキャッシュサイズ */
-  segmenterCacheSize?: number;
-
-  /** フォールバック処理を有効にするかどうか */
-  /** フォールバック処理を有効にするかどうか */
-  enableFallback?: boolean;
-  /** 正規表現にフォールバックするかどうか */
-  fallbackToRegex?: boolean;
-  /** 最大リトライ回数 */
-  maxRetries?: number;
-
-  /** キャッシュを有効にするかどうか */
-  cacheEnabled?: boolean;
-  /** キャッシュの最大サイズ */
-  cacheMaxSize?: number;
-  /** バッチ処理のサイズ */
-  batchSize?: number;
-
-  /** デフォルトの最小単語長（Configから） */
-  defaultMinWordLength?: number;
-  /** 現在のキー（グローバル設定用） */
-  currentKey?: string;
-
-  /** 最小単語長 */
-  minWordLength?: number;
-  /** 最大単語長 */
-  maxWordLength?: number;
-  /** 数字を除外するかどうか */
-  exclude_numbers?: boolean;
-  /** 単一文字を除外するかどうか */
-  exclude_single_chars?: boolean;
-
-  /** 日本語の助詞をマージするかどうか */
-  japanese_merge_particles?: boolean;
-  /** 日本語マージの闾値 */
-  japanese_merge_threshold?: number;
-  /** 日本語の最小単語長 */
-  japanese_min_word_length?: number;
-}
-
-/**
- * ConfigかConfigかを判定するヘルパー関数
- * @returns 
- */
-function resolveConfigType(
-  config?: Config | Config,
-): [Config | undefined, Config | undefined] {
-  if (config && "useJapanese" in config) {
-    return [config as Config, undefined];
-  }
-  return [undefined, config as unknown as Config];
-}
-
-// ==================== Word Cache Classes ====================
-
-/**
- * KeyBasedWordCacheの統計情報インターフェース
- */
-export interface KeyBasedWordCacheStats {
-  /** 現在のキャッシュサイズ（レガシー互換） */
-  size: number;
-  /** キー一覧（レガシー互換、GlobalCacheでは空配列） */
-  keys: string[];
-  /** キャッシュヒット数 */
-  hits: number;
-  /** キャッシュミス数 */
-  misses: number;
-  /** ヒット率（0.0-1.0） */
-  hitRate: number;
-  /** 最大キャッシュサイズ */
-  maxSize: number;
-  /** 使用しているキャッシュタイプ */
-  cacheType: CacheType;
-  /** キャッシュの説明 */
-  description: string;
-  /** GlobalCache統合済みフラグ */
-  unified: boolean;
-}
-
-/**
- * キーベースの単語キャッシュクラス
- */
-export class KeyBasedWordCache {
-  private globalCache: GlobalCache;
-  private wordsCache: ReturnType<GlobalCache["getCache"]>;
-
-  /**
- * KeyBasedWordCacheのコンストラクタ
-   */
-  constructor() {
-    try {
-      this.globalCache = GlobalCache.getInstance();
-      this.wordsCache = this.globalCache.getCache<string, Word[]>(CacheType.WORDS);
-    } catch (error) {
-      throw new Error(
-        `KeyBasedWordCache initialization failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
-  }
-
-  /**
- * キーに基づいて単語リストをキャッシュに保存
-   */
-  set(key: string, words: Word[]): void {
-    // GlobalCache のWORDSキャッシュに保存（浅いコピーで参照汚染防止）
-    this.wordsCache.set(key, [...words]);
-  }
-
-  /**
- * キーに基づいてキャッシュから単語リストを取得
- * @returns 
-   */
-  get(key: string): Word[] | undefined {
-    const cached = this.wordsCache.get(key) as Word[] | undefined;
-    if (cached && Array.isArray(cached)) {
-      // キャッシュヒット: 新しい配列として返す（参照汚染防止）
-      return [...cached];
-    }
-    return undefined;
-  }
-
-  /**
- * 特定のキーのキャッシュをクリア
-   */
-  clear(key?: string): void {
-    if (key) {
-      this.wordsCache.delete(key);
-    } else {
-      this.globalCache.clearByType(CacheType.WORDS);
-    }
-  }
-
-  /**
- * キャッシュ統計情報を取得（GlobalCache統合版）
- * @returns 
-   */
-  getStats(): KeyBasedWordCacheStats {
-    try {
-      const unifiedStats = this.globalCache.getAllStats();
-      const wordStats = unifiedStats.WORDS;
-      if (!wordStats) {
-        throw new Error("WORDS cache statistics not found");
-      }
-      const config = this.globalCache.getCacheConfig(CacheType.WORDS);
-      return {
-        // レガシー互換フィールド
-        size: wordStats.size,
-        keys: [], // GlobalCacheではキー一覧の取得は提供していないため空配列
-        // GlobalCache統計情報
-        hits: wordStats.hits,
-        misses: wordStats.misses,
-        hitRate: wordStats.hitRate,
-        maxSize: wordStats.maxSize,
-        // メタデータ
-        cacheType: CacheType.WORDS,
-        description: config.description,
-        unified: true, // GlobalCache統合済みであることを示すフラグ
-      };
-    } catch {
-      // フォールバック統計情報
-      return {
-        size: 0,
-        keys: [],
-        hits: 0,
-        misses: 0,
-        hitRate: 0,
-        maxSize: 1000, // デフォルトサイズ
-        cacheType: CacheType.WORDS,
-        description: "単語検出結果のキャッシュ（統計取得エラー）",
-        unified: true, // 統合されているが統計取得に失敗
-      };
-    }
-  }
-}
-
-// グローバルキャッシュインスタンス
-export const globalWordCache = new KeyBasedWordCache();
 
 // ==================== Word Detector Classes ====================
 
 /**
  * Regex-based Word Detector
  */
-export class RegexWordDetector implements WordDetector {
-  readonly name = "RegexWordDetector";
-  readonly priority = 1;
-  readonly supportedLanguages = ["en", "ja", "any"];
-
-  private config: WordDetectionConfig;
-  private globalConfig?: Config; // 統一的なmin_length処理のためのグローバル設定
-  private unifiedConfig?: Config; // Configへの移行対応
-
-  /**
- * RegexWordDetectorのコンストラクタ
-   */
-  constructor(config: WordDetectionConfig = {}, globalConfig?: Config | Config) {
-    this.config = this.mergeWithDefaults(config);
-    [this.unifiedConfig, this.globalConfig] = resolveConfigType(globalConfig);
-  }
-
-  /**
- * 統一的なmin_length取得
-   */
-  private getEffectiveMinLength(context?: DetectionContext, key?: string): number {
-    // 1. Context優先
-    if (context?.minWordLength !== undefined) {
-      return context.minWordLength;
-    }
-
-    // 2. Config/グローバル設定のper_key_min_length
-    if (this.unifiedConfig && key) {
-      return this.unifiedConfig.perKeyMinLength?.[key] || this.unifiedConfig.defaultMinWordLength;
-    }
-    if (this.globalConfig && key) {
-      return Core.getMinLengthForKey(this.globalConfig, key);
-    }
-
-    // 3. ローカル設定のmin_word_length
-    return this.config.minWordLength || 1;
-  }
-
-  /**
- * テキストから単語を検出します
-   */
-  async detectWords(
-    text: string,
-    startLine: number,
-    context?: DetectionContext,
-    denops?: Denops,
-  ): Promise<Word[]> {
-    const words: Word[] = [];
-    const lines = text.split("\n");
-
-    for (let i = 0; i < lines.length; i++) {
-      const lineText = lines[i];
-      const lineNumber = startLine + i;
-
-      // 常に改善版検出を使用（統合済み）
-      const lineWords = await this.extractWordsImproved(lineText, lineNumber, context);
-
-      words.push(...lineWords);
-    }
-
-    return this.applyFilters(words, context);
-  }
-
-  /**
- * 指定されたテキストを処理できるかどうかを判定します
- * @returns 
-   */
-  canHandle(text: string): boolean {
-    return true; // Regex detector can handle any text
-  }
-
-  /**
- * この検出器が利用可能かどうかを確認します
- * @returns 
-   */
-  async isAvailable(): Promise<boolean> {
-    return true; // Always available
-  }
-
-  /**
- * 設定をデフォルト値とマージします
- * @returns 
-   */
-  private mergeWithDefaults(config: WordDetectionConfig): WordDetectionConfig {
-    return {
-      strategy: "regex",
-      useJapanese: true, // デフォルトで日本語を含める（既存の動作を維持）
-      minWordLength: 1,
-      maxWordLength: 50,
-      exclude_numbers: false,
-      exclude_single_chars: false,
-      cacheEnabled: true,
-      batchSize: 50,
-      ...config,
-    };
-  }
-
-  /**
- * 正規表現ベースの単語抽出（リファクタリング後）
- * @returns 
-   */
-  private async extractWordsImproved(
-    lineText: string,
-    lineNumber: number,
-    context?: DetectionContext,
-  ): Promise<Word[]> {
-    // RegexWordDetectorは正規表現ベースの処理のみを行う
-    // 日本語処理はTinySegmenterWordDetectorに委譲される
-    // contextのuseJapaneseを優先し、未定義の場合はthis.config.useJapaneseを使用
-    const useJapanese = context?.config?.useJapanese ?? this.config.useJapanese;
-    const excludeJapanese = !useJapanese;
-    return extractWords(lineText, lineNumber, { useImprovedDetection: true, excludeJapanese });
-  }
-
-  /**
- * 検出された単語にフィルターを適用します
- * @returns 
-   */
-  private applyFilters(words: Word[], context?: DetectionContext): Word[] {
-    let filtered = words;
-
-    const minLength = this.getEffectiveMinLength(context, context?.currentKey);
-    // Apply minimum length filter regardless of value (including 1)
-    if (minLength >= 1) {
-      filtered = filtered.filter((word) => word.text.length >= minLength);
-    }
-
-    if (this.config.maxWordLength) {
-      filtered = filtered.filter((word) => word.text.length <= this.config.maxWordLength!);
-    }
-
-    if (this.config.exclude_numbers) {
-      filtered = filtered.filter((word) => !/^\d+$/.test(word.text));
-    }
-
-    // Skip single char exclusion if minLength is 1
-    if (this.config.exclude_single_chars && minLength > 1) {
-      filtered = filtered.filter((word) => word.text.length > 1);
-    }
-
-    return filtered;
-  }
-}
-
-/**
- * TinySegmenter-based Word Detector
- */
-export class TinySegmenterWordDetector implements WordDetector {
-  readonly name = "TinySegmenterWordDetector";
-  readonly priority = 10; // RegexWordDetectorより高い優先度
-  readonly supportedLanguages = ["ja"];
-
-  /** 日本語文字判定用の正規表現（パフォーマンス最適化のためキャッシュ） */
-  private readonly japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
-
-  /**
- * 日本語助詞リスト（フィルタリングおよび統合対象）
-   */
-  private readonly particles = new Set([
-    // 格助詞
-    "の", "が", "を", "に", "へ", "と", "から", "まで", "より",
-    // 副助詞
-    "は", "も", "こそ", "さえ", "でも", "しか", "まで", "だけ", "ばかり",
-    "ほど", "くらい", "など", "なり", "やら", "か", "のみ",
-    // 接続助詞
-    "ば", "と", "ても", "でも", "のに", "ので", "から", "けど", "けれど",
-    "けれども", "が", "し", "て", "で", "ながら", "つつ", "たり",
-    // 終助詞
-    "な", "よ", "ね", "か", "ぞ", "ぜ", "さ", "わ", "の",
-    // 補助動詞・助動詞的な要素
-    "です", "ます", "だ", "である",
-    // 並列助詞
-    "や", "とか", "だの",
-  ]);
-
-  /**
- * TinySegmenterを使用して日本語テキストから単語を検出
- * @returns 
-   */
-  async detectWords(
-    text: string,
-    startLine: number,
-    context?: DetectionContext,
-    denops?: Denops,
-  ): Promise<Word[]> {
-    // Check if this detector can handle the text
-    if (!this.canHandle(text)) {
-      return [];
-    }
-
-    const words: Word[] = [];
-    const lines = text.split("\n");
-
-    // japaneseMinWordLengthを優先的に使用（PLAN.md process50 sub1: 対策1）
-    const japaneseMinWordLength = context?.config?.japaneseMinWordLength;
-    const minWordLength = japaneseMinWordLength ?? context?.minWordLength ?? 1;
-
-    // 助詞統合が有効かどうか（PLAN.md process50 sub1: 対策3）
-    const mergeParticles = context?.config?.japaneseMergeParticles ?? true;
-
-    for (let i = 0; i < lines.length; i++) {
-      const lineText = lines[i];
-      const lineNumber = startLine + i;
-
-      if (lineText.trim().length === 0) {
-        continue; // 空行をスキップ
-      }
-
-      try {
-        // TinySegmenterで分割 (常に生の分割結果を取得)
-        const segmentResult = await tinysegmenter.segment(lineText, { mergeParticles: false });
-
-        if (segmentResult.success && segmentResult.segments) {
-          // 形態素統合処理を適用（必要に応じて）
-          let segments = segmentResult.segments;
-          if (mergeParticles) {
-            segments = this.postProcessSegments(segments);
-          }
-
-          let currentIndex = 0;
-
-          for (const segment of segments) {
-            // 空のセグメントをスキップ
-            if (segment.trim().length === 0) {
-              currentIndex += segment.length;
-              continue;
-            }
-
-            // 助詞フィルタ（PLAN.md process50 sub1: 対策2）
-            // 助詞を統合する場合のみフィルタリング（統合しない場合は個別に検出）
-            if (mergeParticles && this.particles.has(segment)) {
-              currentIndex += segment.length;
-              continue;
-            }
-
-            // 最小文字数フィルタ
-            if (segment.length < minWordLength) {
-              currentIndex += segment.length;
-              continue;
-            }
-
-            // セグメントの位置を計算
-            const index = lineText.indexOf(segment, currentIndex);
-            if (index !== -1) {
-              // 位置情報を計算
-              const col = index + 1; // 1ベース
-              let byteCol: number;
-
-              try {
-                byteCol = charIndexToByteIndex(lineText, index) + 1; // 1ベース
-              } catch (byteError) {
-                // バイト計算エラーの場合は文字位置を代用
-                byteCol = col;
-              }
-
-              words.push({
-                text: segment,
-                line: lineNumber,
-                col: col,
-                byteCol: byteCol,
-              });
-
-              currentIndex = index + segment.length;
-            } else {
-              // セグメントが見つからない場合（理論的には発生しないはず）
-              // 安全のため文字数分進める
-              currentIndex += segment.length;
-            }
-          }
-        } else if (!segmentResult.success) {
-          // セグメンテーション失敗の場合は次の行へ
-        }
-      } catch {
-        // 予期しないエラーが発生した場合
-        continue; // エラーが発生した行はスキップして処理を続行
-      }
-    }
-
-    return words;
-  }
-
-  /**
- * セグメント後処理：名詞+助詞の統合
- * @param segments
- * @returns 
-   */
-  private postProcessSegments(segments: string[]): string[] {
-    const processed: string[] = [];
-    let i = 0;
-
-    while (i < segments.length) {
-      const current = segments[i];
-
-      // 空のセグメントをスキップ
-      if (!current || current.trim().length === 0) {
-        i++;
-        continue;
-      }
-
-      // 現在のセグメント + 後続の助詞を結合（PLAN.md process50 sub1: 対策3）
-      let merged = current;
-      let j = i + 1;
-
-      // 後続の助詞を連続して結合
-      while (j < segments.length) {
-        const next = segments[j];
-        if (next && this.particles.has(next)) {
-          merged += next;
-          j++;
-        } else {
-          break;
-        }
-      }
-
-      processed.push(merged);
-      i = j;
-    }
-
-    return processed;
-  }
-
-  /**
- * 指定されたテキストを処理可能かどうかを判定
- * @returns 
-   */
-  canHandle(text: string): boolean {
-    // 日本語文字（ひらがな、カタカナ、漢字）が含まれているかチェック
-    return this.japaneseRegex.test(text);
-  }
-
-  /**
- * この検出器が利用可能かどうかを確認
- * @returns 
-   */
-  async isAvailable(): Promise<boolean> {
-    return true;
-  }
-}
-
-/**
- * HybridWordDetector - 統合型単語検出器
- */
-export class HybridWordDetector implements WordDetector {
-  readonly name = "HybridWordDetector";
-  readonly priority = 15; // 最も高い優先度
-  readonly supportedLanguages = ["ja", "en", "any"];
-
-  private regexDetector: RegexWordDetector;
-  private tinySegmenterDetector: TinySegmenterWordDetector;
-
-  /**
- * HybridWordDetectorのコンストラクタ
-   */
-  constructor(config?: WordDetectionConfig) {
-    this.regexDetector = new RegexWordDetector(config);
-    this.tinySegmenterDetector = new TinySegmenterWordDetector();
-  }
-
-  /**
- * 統合型単語検出を実行
- * @returns 
-   */
-  async detectWords(
-    text: string,
-    startLine: number,
-    context?: DetectionContext,
-    denops?: Denops,
-  ): Promise<Word[]> {
-    // 入力検証: 空文字列やスペースのみの場合は早期リターン
-    if (!text || text.trim().length === 0) {
-      return [];
-    }
-
-    // パフォーマンス最適化: 非常に短いテキストの場合
-    if (text.length < 2) {
-      return [];
-    }
-
-    try {
-      // useJapaneseがfalseの場合はRegexWordDetectorのみを使用
-      // undefinedの場合はデフォルトで日本語を含める（既存の動作を維持）
-      const useJapanese = context?.config?.useJapanese ?? true;
-
-      if (!useJapanese) {
-        // 日本語を除外する場合はRegexWordDetectorのみ使用
-        return await this.regexDetector.detectWords(text, startLine, context, denops);
-      }
-
-      // 両方のDetectorを並行実行（レスポンス時間の最適化）
-      const [regexWordsResult, tinySegmenterWordsResult] = await Promise.allSettled([
-        this.regexDetector.detectWords(text, startLine, context, denops),
-        this.tinySegmenterDetector.detectWords(text, startLine, context, denops),
-      ]);
-
-      // 成功した結果のみを取得（部分的なエラーに対する堅牢性）
-      const regexWords = regexWordsResult.status === "fulfilled" ? regexWordsResult.value : [];
-      const tinySegmenterWords = tinySegmenterWordsResult.status === "fulfilled"
-        ? tinySegmenterWordsResult.value : [];
-
-      // 部分的なエラーは無視（process1_sub2）
-
-      // 結果をマージして重複を除去
-      const mergedWords = this.mergeAndDeduplicateWords(regexWords, tinySegmenterWords);
-
-      // 位置順でソート
-      return this.sortWordsByPosition(mergedWords);
-    } catch {
-      // 予期しないエラーは無視して空配列を返す（process1_sub2）
-      return [];
-    }
-  }
-
-  /**
- * 指定されたテキストを処理可能かどうかを判定
- * @returns 
-   */
-  canHandle(text: string): boolean {
-    return true; // すべてのテキストを処理可能
-  }
-
-  /**
- * この検出器が利用可能かどうかを確認
- * @returns 
-   */
-  async isAvailable(): Promise<boolean> {
-    try {
-      const [regexAvailable, tinySegmenterAvailable] = await Promise.all([
-        this.regexDetector.isAvailable?.() ?? true,
-        this.tinySegmenterDetector.isAvailable(),
-      ]);
-      return regexAvailable && tinySegmenterAvailable;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
- * 複数のDetectorの結果をマージして重複を除去
- * @param regexWords
- * @param tinySegmenterWords
- * @returns 
-   */
-  private mergeAndDeduplicateWords(regexWords: Word[], tinySegmenterWords: Word[]): Word[] {
-    const positionMap = new Map<string, Word>();
-
-    // TinySegmenterWordDetectorの結果をSetで高速検索
-    const tinySegmenterWordSet = new Set(tinySegmenterWords);
-
-    // すべての単語を位置キーでマップに登録（パフォーマンス向上のため）
-    const allWords = [...regexWords, ...tinySegmenterWords];
-
-    for (const word of allWords) {
-      // より正確な位置キーを生成
-      const positionKey = `${word.line}-${word.col}`;
-      const existing = positionMap.get(positionKey);
-
-      if (!existing) {
-        // 新しい位置の単語
-        positionMap.set(positionKey, word);
-      } else {
-        // 重複処理のロジック
-        const shouldReplaceExisting = this.shouldReplaceWord(existing, word, tinySegmenterWordSet);
-        if (shouldReplaceExisting) {
-          positionMap.set(positionKey, word);
-        }
-      }
-    }
-
-    return Array.from(positionMap.values());
-  }
-
-  /**
- * 単語の置換判定を行う
- * @param existingWord
- * @param newWord
- * @param tinySegmenterWordSet
- * @returns 
-   */
-  private shouldReplaceWord(
-    existingWord: Word,
-    newWord: Word,
-    tinySegmenterWordSet: Set<Word>
-  ): boolean {
-    // より長い単語を優先
-    if (newWord.text.length > existingWord.text.length) {
-      return true;
-    }
-
-    if (newWord.text.length < existingWord.text.length) {
-      return false;
-    }
-
-    // 長さが同じ場合はTinySegmenterの結果を優先
-    const isNewWordFromTinySegmenter = tinySegmenterWordSet.has(newWord);
-    const isExistingWordFromTinySegmenter = tinySegmenterWordSet.has(existingWord);
-
-    // 新しい単語がTinySegmenterで既存がそうでない場合
-    if (isNewWordFromTinySegmenter && !isExistingWordFromTinySegmenter) {
-      return true;
-    }
-
-    // その他の場合は既存を保持
-    return false;
-  }
-
-  /**
- * 単語配列を位置順でソート
- * @param words
- * @returns 
-   */
-  private sortWordsByPosition(words: Word[]): Word[] {
-    return words.sort((a, b) => {
-      if (a.line !== b.line) {
-        return a.line - b.line;
-      }
-      return a.col - b.col;
-    });
-  }
-}
 
 /**
  * 単語検出のメイン関数（Denops版）
@@ -1787,256 +1102,6 @@ export function getEncodingInfo(text: string): {
 /**
  * 文字種別を表すenum
  */
-export enum CharType {
-  /** ひらがな文字 (U+3040-U+309F) */
-  Hiragana = "hiragana",
-  /** カタカナ文字 (U+30A0-U+30FF) */
-  Katakana = "katakana",
-  /** 漢字 (CJK統合漢字：U+4E00-U+9FFF) */
-  Kanji = "kanji",
-  /** 英数字 (ASCII 0-9, A-Z, a-z) */
-  Alphanumeric = "alphanumeric",
-  /** 記号類 (各種記号文字) */
-  Symbol = "symbol",
-  /** 空白文字 (半角・全角スペース、タブ等) */
-  Space = "space",
-  /** その他の文字 */
-  Other = "other"
-}
-
-/**
- * パフォーマンス最適化: 文字種判定キャッシュ
- */
-const charTypeCache = GlobalCache.getInstance().getCache<string, CharType>(CacheType.CHAR_TYPE);
-
-/**
- * 隣接文字解析結果を表すインターフェース
- */
-export interface AdjacentAnalysis {
-  /** この範囲の文字種 */
-  type: CharType;
-  /** 範囲の開始位置（0ベース） */
-  start: number;
-  /** 範囲の終了位置（exclusive、0ベース） */
-  end: number;
-  /** 範囲内の実際のテキスト */
-  text: string;
-}
-
-/**
- * 単一文字の種類を判定する（キャッシュ付き）
- * @param char
- * @returns 
- */
-export function getCharType(char: string): CharType {
-  if (!char || char.length === 0) {
-    return CharType.Other;
-  }
-
-  // キャッシュから取得を試行
-  const cached = charTypeCache.get(char);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  // 統一キャッシュシステムが自動的にLRUアルゴリズムでサイズ制限を管理
-
-  const code = char.codePointAt(0);
-  if (code === undefined) {
-    charTypeCache.set(char, CharType.Other);
-    return CharType.Other;
-  }
-
-  let result: CharType;
-
-  // Unicode範囲による文字種判定
-  // スペース文字（半角・全角スペース、タブ、改行文字）
-  if (char === ' ' || char === '　' || char === '\t' || char === '\n' || char === '\r') {
-    result = CharType.Space;
-  }
-  // ひらがな文字（あいうえお等、U+3040-U+309F）
-  else if (code >= 0x3040 && code <= 0x309F) {
-    result = CharType.Hiragana;
-  }
-  // カタカナ文字（アイウエオ等、U+30A0-U+30FF）
-  else if (code >= 0x30A0 && code <= 0x30FF) {
-    result = CharType.Katakana;
-  }
-  // CJK統合漢字（日中韓の漢字、U+4E00-U+9FFF）
-  else if (code >= 0x4E00 && code <= 0x9FFF) {
-    result = CharType.Kanji;
-  }
-  // ASCII英数字（半角の0-9、A-Z、a-z）
-  else if ((code >= 0x0030 && code <= 0x0039) || // 数字0-9
-      (code >= 0x0041 && code <= 0x005A) || // 大文字A-Z
-      (code >= 0x0061 && code <= 0x007A)) { // 小文字a-z
-    result = CharType.Alphanumeric;
-  }
-  // 記号文字（句読点、算術記号、CJK記号、全角記号等）
-  else if ((code >= 0x0020 && code <= 0x002F) || // ASCII記号 !"#$%&'()*+,-./
-      (code >= 0x003A && code <= 0x0040) || // ASCII記号 :;<=>?@
-      (code >= 0x005B && code <= 0x0060) || // ASCII記号 [\]^_`
-      (code >= 0x007B && code <= 0x007E) || // ASCII記号 {|}~
-      (code >= 0x3000 && code <= 0x303F) || // CJK記号及び句読点
-      (code >= 0xFF00 && code <= 0xFFEF)) { // 全角英数字・記号
-    result = CharType.Symbol;
-  }
-  // 上記以外の文字（特殊文字、絵文字等）
-  else {
-    result = CharType.Other;
-  }
-
-  // キャッシュに保存
-  charTypeCache.set(char, result);
-  return result;
-}
-
-/**
- * 文字列を文字種別に解析する
- * @param text
- * @returns 
- */
-export function analyzeString(text: string): AdjacentAnalysis[] {
-  if (!text || text.length === 0) {
-    return [];
-  }
-
-  const result: AdjacentAnalysis[] = [];
-  let currentType = getCharType(text[0]);
-  let start = 0;
-
-  for (let i = 1; i <= text.length; i++) {
-    const charType = i < text.length ? getCharType(text[i]) : null;
-
-    if (charType !== currentType || i === text.length) {
-      result.push({
-        type: currentType,
-        start: start,
-        end: i,
-        text: text.slice(start, i)
-      });
-
-      if (charType !== null) {
-        currentType = charType;
-        start = i;
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
- * 文字種境界とCamelCase境界を検出する
- * @param text
- * @returns 
- */
-export function findBoundaries(text: string): number[] {
-  if (!text || text.length === 0) {
-    return [0];
-  }
-
-  const boundaries = new Set<number>();
-  boundaries.add(0); // 開始位置
-
-  for (let i = 1; i < text.length; i++) {
-    const prevChar = text[i - 1];
-    const currentChar = text[i];
-    const prevType = getCharType(prevChar);
-    const currentType = getCharType(currentChar);
-
-    // 文字種境界
-    if (prevType !== currentType) {
-      boundaries.add(i);
-    }
-
-    // CamelCase境界（小文字→大文字）
-    if (prevType === CharType.Alphanumeric &&
-        currentType === CharType.Alphanumeric &&
-        prevChar >= 'a' && prevChar <= 'z' &&
-        currentChar >= 'A' && currentChar <= 'Z') {
-      boundaries.add(i);
-    }
-
-    // 記号境界（記号の前後で区切る）
-    if (currentType === CharType.Symbol && prevType !== CharType.Symbol) {
-      boundaries.add(i);
-    }
-    if (prevType === CharType.Symbol && currentType !== CharType.Symbol) {
-      boundaries.add(i);
-    }
-  }
-
-  boundaries.add(text.length); // 終了位置
-  return Array.from(boundaries).sort((a, b) => a - b);
-}
-
-/**
- * パフォーマンス最適化: 日本語助詞の高速検索セット
- */
-const particleSet = new Set(['の', 'が', 'を', 'に', 'で', 'と', 'は', 'も', 'から', 'まで', 'より']);
-
-/**
- * パフォーマンス最適化: 接続詞の高速検索セット
- */
-const connectorSet = new Set(['そして', 'また', 'しかし', 'だから', 'それで', 'ところで']);
-
-/**
- * パフォーマンス最適化: 動詞語尾の高速検索セット
- */
-const verbEndingSet = new Set(['する', 'され', 'でき', 'れる', 'られ']);
-
-/**
- * 文字種に基づく結合判定（最適化版）
- * @param prevSegment
- * @param currentSegment
- * @returns 
- */
-export function shouldMerge(
-  prevSegment: string,
-  currentSegment: string,
-  nextSegment?: string
-): boolean {
-  // 日本語の助詞（は、が、を等）は前の単語と結合する
-  if (particleSet.has(currentSegment)) {
-    return true;
-  }
-
-  // 接続詞（そして、また等）は前の文と結合する
-  if (connectorSet.has(currentSegment)) {
-    return true;
-  }
-
-  // 文字種を取得して動詞活用と複合語を判定
-  const prevType = prevSegment.length > 0 ? getCharType(prevSegment[prevSegment.length - 1]) : null;
-  const currentType = currentSegment.length > 0 ? getCharType(currentSegment[0]) : null;
-
-  // 動詞活用パターン（漢字の語幹＋ひらがなの活用語尾）
-  if (prevType === CharType.Kanji && currentType === CharType.Hiragana) {
-    // 「勉強する」「作成される」等の動詞活用を検出
-    for (const ending of verbEndingSet) {
-      if (currentSegment.startsWith(ending)) {
-        return true;
-      }
-    }
-  }
-
-  // 複合語パターン（カタカナ同士の連結）
-  // 例：「コンピュータ + システム」→「コンピュータシステム」
-  if (prevType === CharType.Katakana && currentType === CharType.Katakana) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * キャッシュクリア（テスト時やメモリ使用量が気になる場合に使用）
- * @returns 
- */
-export function clearCharTypeCache(): void {
-  charTypeCache.clear();
-}
 
 // ========== Integrated from segmenter.ts ==========
 
@@ -2057,306 +1122,6 @@ interface SegmentationResult {
 /**
  * TinySegmenter wrapper with error handling and caching
  */
-export class TinySegmenter {
-  private static instance: TinySegmenter;
-  private segmenter: NpmTinySegmenter;
-  private globalCache: GlobalCache;
-  private enabled: boolean;
-
-  /**
- * TinySegmenterのコンストラクタ
-   */
-  constructor() {
-    this.segmenter = new NpmTinySegmenter();
-    this.globalCache = GlobalCache.getInstance();
-    this.enabled = true;
-  }
-
-  /**
- * TinySegmenterのシングルトンインスタンスを取得
-   */
-  static getInstance(): TinySegmenter {
-    if (!TinySegmenter.instance) {
-      TinySegmenter.instance = new TinySegmenter();
-    }
-    return TinySegmenter.instance;
-  }
-
-  /**
- * セグメント後処理：連続する数字と単位を結合
-   */
-  private postProcessSegments(segments: string[]): string[] {
-    const processed: string[] = [];
-    let i = 0;
-
-    // 助詞セット（統合対象）
-    const particles = new Set([
-      "の", "は", "が", "を", "に", "へ", "と", "や", "で", "も",
-      "か", "な", "よ", "ね", "ぞ", "さ", "わ", "ば", "から", "まで",
-      "です", "ます", "だ", "である",
-    ]);
-
-    while (i < segments.length) {
-      const current = segments[i];
-
-      // 連続する数字をまとめる
-      if (current && /^\d+$/.test(current)) {
-        let number = current;
-        let j = i + 1;
-
-        // 後続の数字を結合
-        while (j < segments.length && /^\d+$/.test(segments[j])) {
-          number += segments[j];
-          j++;
-        }
-
-        // 単位があれば結合
-        if (j < segments.length) {
-          const unit = segments[j];
-          if (unit === "%" || unit === "％" || /^(年|月|日|時|分|秒)$/.test(unit)) {
-            number += unit;
-            j++;
-          }
-        }
-
-        processed.push(number);
-        i = j;
-        continue;
-      }
-
-      // 括弧内の内容を一つのセグメントにする
-      if (current === "（" || current === "(") {
-        let j = i + 1;
-        let content = current;
-        while (j < segments.length && segments[j] !== "）" && segments[j] !== ")") {
-          content += segments[j];
-          j++;
-        }
-        if (j < segments.length) {
-          content += segments[j];
-          processed.push(content);
-          i = j + 1;
-          continue;
-        }
-      }
-
-      // 名詞+助詞、動詞+助詞の統合
-      if (current && current.trim().length > 0) {
-        let merged = current;
-        let j = i + 1;
-
-        // 後続の助詞を結合
-        while (j < segments.length) {
-          const next = segments[j];
-          if (next && particles.has(next)) {
-            merged += next;
-            j++;
-          } else {
-            break;
-          }
-        }
-
-        processed.push(merged);
-        i = j;
-        continue;
-      }
-
-      i++;
-    }
-
-    return processed;
-  }
-
-  /**
- * 日本語テキストを単語/トークンに分割
-   */
-  async segment(text: string, options?: { mergeParticles?: boolean }): Promise<SegmentationResult> {
-    if (!this.enabled) {
-      return {
-        segments: await this.fallbackSegmentation(text),
-        success: false,
-        error: "TinySegmenter disabled",
-        source: "fallback",
-      };
-    }
-
-    if (!text || text.trim().length === 0) {
-      return {
-        segments: [],
-        success: true,
-        source: "tinysegmenter",
-      };
-    }
-
-    // Include mergeParticles setting in cache key
-    const mergeParticles = options?.mergeParticles ?? true;
-    const cacheKey = `${text}:${mergeParticles}`;
-
-    // Check GlobalCache first
-    const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
-    if (cache.has(cacheKey)) {
-      return {
-        segments: cache.get(cacheKey)!,
-        success: true,
-        source: "tinysegmenter",
-      };
-    }
-
-    try {
-      // npm版TinySegmenterを使用
-      const rawSegments = this.segmenter.segment(text);
-
-      // 後処理を適用 (mergeParticlesオプションに基づく)
-      const segments = mergeParticles ? this.postProcessSegments(rawSegments) : rawSegments;
-
-      // Cache the result in GlobalCache (LRU handles size limit automatically)
-      cache.set(cacheKey, segments);
-
-      return {
-        segments,
-        success: true,
-        source: "tinysegmenter",
-      };
-    } catch (error) {
-
-      return {
-        segments: await this.fallbackSegmentation(text),
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        source: "fallback",
-      };
-    }
-  }
-
-  /**
- * 単純な正規表現パターンを使用したフォールバックセグメンテーション
-   */
-  private async fallbackSegmentation(text: string): Promise<string[]> {
-    const segments: string[] = [];
-
-    // Simple character-based segmentation for Japanese
-    const chars = Array.from(text);
-    let currentSegment = "";
-    let lastType = "";
-
-    for (const char of chars) {
-      const charType = this.getCharacterType(char);
-
-      if (charType !== lastType && currentSegment.length > 0) {
-        segments.push(currentSegment);
-        currentSegment = char;
-      } else {
-        currentSegment += char;
-      }
-
-      lastType = charType;
-    }
-
-    if (currentSegment.length > 0) {
-      segments.push(currentSegment);
-    }
-
-    return segments.filter((s) => s.trim().length > 0);
-  }
-
-  /**
- * 文字の種別を判定
-   */
-  private getCharacterType(char: string): string {
-    if (/[\u4E00-\u9FAF]/.test(char)) return "kanji";
-    if (/[\u3040-\u309F]/.test(char)) return "hiragana";
-    if (/[\u30A0-\u30FF]/.test(char)) return "katakana";
-    if (/[a-zA-Z]/.test(char)) return "latin";
-    if (/[0-9]/.test(char)) return "digit";
-    if (/\s/.test(char)) return "space";
-    return "other";
-  }
-
-  /**
- * テキストに日本語文字が含まれているかチェック
-   */
-  hasJapanese(text: string): boolean {
-    return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
-  }
-
-  /**
- * テキストのセグメンテーションが有益かどうかをチェック
-   */
-  shouldSegment(text: string, threshold: number = 4): boolean {
-    return this.hasJapanese(text) && text.length >= threshold;
-  }
-
-  /**
- * セグメンテーションキャッシュをクリア
-   */
-  clearCache(): void {
-    const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
-    cache.clear();
-  }
-
-  /**
- * キャッシュ統計情報を取得
-   */
-  getCacheStats(): { size: number; maxSize: number; hitRate: number } {
-    const cache = this.globalCache.getCache<string, string[]>(CacheType.ANALYSIS);
-    const stats = cache.getStats();
-    const config = this.globalCache.getCacheConfig(CacheType.ANALYSIS);
-
-    return {
-      size: stats.size,
-      maxSize: config.size,
-      hitRate: stats.hitRate,
-    };
-  }
-
-  /**
- * セグメンターの有効/無効を設定
-   */
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
-  }
-
-  /**
- * セグメンターが有効かどうかをチェック
-   */
-  isEnabled(): boolean {
-    return this.enabled;
-  }
-
-  /**
- * サンプルテキストでセグメンターをテスト
-   */
-  async test(): Promise<{ success: boolean; results: SegmentationResult[] }> {
-    const testCases = [
-      "これはテストです",
-      "私の名前は田中です",
-      "今日は良い天気ですね",
-      "Hello World", // Mixed content
-      "プログラミング言語",
-      "", // Empty string
-    ];
-
-    const results: SegmentationResult[] = [];
-    let successCount = 0;
-
-    for (const testCase of testCases) {
-      const result = await this.segment(testCase);
-      results.push(result);
-      if (result.success) successCount++;
-    }
-
-    return {
-      success: successCount === testCases.length,
-      results,
-    };
-  }
-}
-
-/**
- * エクスポートされたシングルトンインスタンスと型定義
- */
-export const tinysegmenter = TinySegmenter.getInstance();
-export type { SegmentationResult };
 
 // ========== Integrated from word/context.ts ==========
 
@@ -3978,12 +2743,20 @@ export class HintPatternProcessor {
 
 // Removed imports from detector.ts - integrated in this file
 
-// resolveConfigType function already defined above
+// resolveConfigType function
+function resolveConfigType(
+  config?: Config | Config,
+): [Config | undefined, Config | undefined] {
+  if (config && "useJapanese" in config) {
+    return [config as Config, undefined];
+  }
+  return [undefined, config as unknown as Config];
+}
 
 /**
  * 単語検出マネージャー設定インターフェース
  */
-export interface WordDetectionManagerConfig extends WordDetectionConfig {
+export interface WordDetectionManagerConfig extends ImportedWordDetectionConfig {
   /** デフォルトの単語検出ストラテジー */
   defaultStrategy?: "regex" | "tinysegmenter" | "hybrid";
   /** 言語の自動検出を有効にするか */
@@ -4047,7 +2820,7 @@ interface DetectionStats {
  * メイン単語検出マネージャー
  */
 export class WordDetectionManager {
-  private detectors: Map<string, WordDetector> = new Map();
+  private detectors: Map<string, ImportedWordDetector> = new Map();
   private config: Required<WordDetectionManagerConfig>;
   private cache: Map<string, CacheEntry> = new Map();
   private stats: DetectionStats;
@@ -4073,9 +2846,9 @@ export class WordDetectionManager {
 
     // Register default detectors with globalConfig (Config takes precedence)
     const configToUse = this.unifiedConfig || this.globalConfig;
-    const regexDetector = new RegexWordDetector(this.config, configToUse);
-    const segmenterDetector = new TinySegmenterWordDetector();
-    const hybridDetector = new HybridWordDetector(this.config);
+    const regexDetector = new ImportedRegexWordDetector(this.config, configToUse);
+    const segmenterDetector = new ImportedTinySegmenterWordDetector();
+    const hybridDetector = new ImportedHybridWordDetector(this.config);
 
     this.registerDetector(regexDetector);
     this.registerDetector(segmenterDetector);
@@ -4092,7 +2865,7 @@ export class WordDetectionManager {
   /**
  * 単語ディテクターを登録
    */
-  registerDetector(detector: WordDetector): void {
+  registerDetector(detector: ImportedWordDetector): void {
     this.detectors.set(detector.name, detector);
   }
 
@@ -4240,7 +3013,7 @@ export class WordDetectionManager {
   /**
  * 指定されたテキストに最適なディテクターを選択
    */
-  private async selectDetector(text: string): Promise<WordDetector | null> {
+  private async selectDetector(text: string): Promise<ImportedWordDetector | null> {
     const availableDetectors = Array.from(this.detectors.values())
       .filter((d) => d.canHandle(text))
       .sort((a, b) => b.priority - a.priority);
@@ -4293,7 +3066,7 @@ export class WordDetectionManager {
   /**
  * フォールバックディテクターを取得
    */
-  private getFallbackDetector(): WordDetector | null {
+  private getFallbackDetector(): ImportedWordDetector | null {
     if (this.config.fallbackToRegex) {
       return this.detectors.get("RegexWordDetector") || null;
     }
@@ -4309,7 +3082,7 @@ export class WordDetectionManager {
  * タイムアウト保護付き単語検出
    */
   private async detectWithTimeout(
-    detector: WordDetector,
+    detector: ImportedWordDetector,
     text: string,
     startLine: number,
     context?: DetectionContext,
@@ -4325,11 +3098,11 @@ export class WordDetectionManager {
       }, this.config.timeoutMs);
 
       detector.detectWords(text, startLine, context, denops)
-        .then((result) => {
+        .then((result: Word[]) => {
           clearTimeout(timeoutId);
           resolve(result);
         })
-        .catch((error) => {
+        .catch((error: Error) => {
           clearTimeout(timeoutId);
           reject(error);
         });
@@ -4557,10 +3330,10 @@ export class WordDetectionManager {
       this.detectors.clear();
 
       // 新しい設定でディテクターを再作成
-      const regexDetector = new RegexWordDetector(this.config);
+      const regexDetector = new ImportedRegexWordDetector(this.config);
       // Using RegexWordDetector as fallback until proper implementations are added
-      const segmenterDetector = new RegexWordDetector(this.config);
-      const hybridDetector = new RegexWordDetector(this.config);
+      const segmenterDetector = new ImportedRegexWordDetector(this.config);
+      const hybridDetector = new ImportedRegexWordDetector(this.config);
 
       this.registerDetector(regexDetector);
       this.registerDetector(segmenterDetector);
@@ -4597,7 +3370,7 @@ export class WordDetectionManager {
   /**
  * コンテキストに基づいて適切なディテクターを取得
    */
-  async getDetectorForContext(context?: DetectionContext, text?: string): Promise<WordDetector | null> {
+  async getDetectorForContext(context?: DetectionContext, text?: string): Promise<ImportedWordDetector | null> {
     try {
       if (!this.initialized) {
         return null;

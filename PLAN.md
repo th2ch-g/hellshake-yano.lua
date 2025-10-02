@@ -94,6 +94,22 @@
 - [x] 重複するバリデーション関数を統合（121行実質削減達成）
 - [x] 汎用的な型ガード関数を実装（9関数追加）
 
+#### sub5: テスト失敗修正（word.ts分割後の循環依存解消）
+@target: denops/hellshake-yano/word.ts, denops/hellshake-yano/word/word-detector-strategies.ts
+@ref: 34件のテスト失敗（process2 sub1実施後の問題）
+- [ ] word.tsで`extractWords`関数をglobalThisに登録（型定義含む）
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
+- [ ] word-detector-strategies.tsの型定義を修正（必要に応じて）
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
+- [ ] テスト実行で全645テストがパスすることを確認
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
+- [ ] 循環依存を解消（オプション: extractWordsの実装を適切な場所に移動）
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
+
 ### process2: モジュール分割と最適化
 #### sub1: word.ts分割（4,923行 → 2,000行）
 @target: denops/hellshake-yano/word/
