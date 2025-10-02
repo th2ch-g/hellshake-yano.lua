@@ -29,90 +29,36 @@ function! hellshake_yano#show_error(...) abort
 endfunction
 
 "=============================================================================
-" 状態管理関数群
+" 状態管理関数群（state.vimへ移行済み）
 " バッファ状態、カウント管理、タイマー管理を担当
 "=============================================================================
-
-" スクリプトローカル変数
-let s:motion_count = {}  " バッファごとの移動カウント
-let s:last_motion_time = {}  " バッファごとの最後の移動時刻
-let s:timer_id = {}  " バッファごとのキー別タイマーID {bufnr: {key: timer_id}}
-let s:hints_visible = v:false  " ヒント表示状態
-
-" キーリピート検出用変数
-let s:last_key_time = {}  " バッファごとの最後のキー入力時刻
-let s:is_key_repeating = {}  " バッファごとのキーリピート状態フラグ
-let s:repeat_end_timer = {}  " バッファごとのリピート終了検出タイマー
+" Note: 状態管理変数はautoload/hellshake_yano/state.vimに移行しました
+" - g:hellshake_yano_internal.motion_count
+" - g:hellshake_yano_internal.last_motion_time
+" - g:hellshake_yano_internal.timer_id
+" - g:hellshake_yano_internal.hints_visible
+" - g:hellshake_yano_internal.last_key_time
+" - g:hellshake_yano_internal.is_key_repeating
+" - g:hellshake_yano_internal.repeat_end_timer
 
 " バッファ番号を取得
 function! s:bufnr() abort
   return bufnr('%')
 endfunction
 
-" バッファ状態を包括的に初期化
-function! s:init_buffer_state(bufnr) abort
-  call s:init_motion_tracking(a:bufnr)
-  call s:init_key_repeat_detection(a:bufnr)
-endfunction
-
-" モーション追跡の初期化
-function! s:init_motion_tracking(bufnr) abort
-  if !has_key(s:motion_count, a:bufnr)
-    let s:motion_count[a:bufnr] = {}  " キー別カウント辞書
-    let s:last_motion_time[a:bufnr] = 0
-  endif
-  if !has_key(s:timer_id, a:bufnr)
-    let s:timer_id[a:bufnr] = {}  " キー別タイマー辞書
-  endif
-endfunction
+" Note: バッファ状態初期化関数は state.vim に移行済み
+" → hellshake_yano#state#init_buffer_state()
+" → hellshake_yano#state#init_motion_tracking()
+" → hellshake_yano#state#init_key_repeat_detection()
 
 " ============================================================================
-" カウント管理関数群
+" カウント管理関数群（count.vimへ移行済み）
 " ============================================================================
-
-" キー別カウントの初期化（最適化版）
-" 責務: 指定されたバッファとキーのカウント構造を初期化
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:init_key_count(bufnr, key) abort
-  " 一度の条件チェックで両方を初期化
-  if !has_key(s:motion_count, a:bufnr)
-    let s:motion_count[a:bufnr] = {a:key: 0}
-  elseif !has_key(s:motion_count[a:bufnr], a:key)
-    let s:motion_count[a:bufnr][a:key] = 0
-  endif
-endfunction
-
-" キー別カウントを取得（初期化不要版）
-" 責務: 現在のカウント値を取得（未初期化の場合0を返す）
-" @param bufnr バッファ番号
-" @param key キー文字
-" @return カウント値
-function! s:get_key_count(bufnr, key) abort
-  if has_key(s:motion_count, a:bufnr) && has_key(s:motion_count[a:bufnr], a:key)
-    return s:motion_count[a:bufnr][a:key]
-  endif
-  return 0
-endfunction
-
-" キー別カウントを増加
-" 責務: カウントをインクリメント（必要に応じて初期化）
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:increment_key_count(bufnr, key) abort
-  call s:init_key_count(a:bufnr, a:key)
-  let s:motion_count[a:bufnr][a:key] += 1
-endfunction
-
-" キー別カウントをリセット
-" 責務: カウントを0にリセット（構造が存在する場合のみ）
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:reset_key_count(bufnr, key) abort
-  if has_key(s:motion_count, a:bufnr) && has_key(s:motion_count[a:bufnr], a:key)
-    let s:motion_count[a:bufnr][a:key] = 0
-  endif
-endfunction
+" Note: カウント管理関数はautoload/hellshake_yano/count.vimに移行しました
+" - hellshake_yano#count#init_key_count()
+" - hellshake_yano#count#get_key_count()
+" - hellshake_yano#count#increment_key_count()
+" - hellshake_yano#count#reset_key_count()
 
 " ============================================================================
 " 設定管理関数群
@@ -172,68 +118,26 @@ endfunction
 " @param key キー文字
 " @return v:true = ヒント表示, v:false = 表示しない
 function! s:should_trigger_hints_for_key(bufnr, key) abort
-  if get(s:is_key_repeating, a:bufnr, v:false)
+  if hellshake_yano#state#is_key_repeating(a:bufnr)
     return v:false
   endif
 
-  let key_count = s:get_key_count(a:bufnr, a:key)
+  let key_count = hellshake_yano#count#get_key_count(a:bufnr, a:key)
   let threshold = s:get_motion_count_for_key(a:key)
   return key_count >= threshold
 endfunction
 
-" キー別モーションカウント処理
-" 責務: キー入力を処理し、カウントを更新し、タイマーをリセット
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:process_motion_count_for_key(bufnr, key) abort
-  " 既存のタイマーをクリア（キー別）
-  call s:stop_and_clear_timer_for_key(a:bufnr, a:key)
-
-  " キー別カウントを増加
-  call s:increment_key_count(a:bufnr, a:key)
-  let s:last_motion_time[a:bufnr] = reltime()
-endfunction
-
-" キーリピート検出の初期化
-function! s:init_key_repeat_detection(bufnr) abort
-  if !has_key(s:last_key_time, a:bufnr)
-    let s:last_key_time[a:bufnr] = s:get_elapsed_time()
-    let s:is_key_repeating[a:bufnr] = v:false
-  endif
-endfunction
+" Note: s:process_motion_count_for_key は count.vim に移行済み
+" → hellshake_yano#count#process_motion_count_for_key()
 
 " ============================================================================
-" タイマー管理関数群
+" タイマー管理関数群（timer.vimへ移行済み）
 " ============================================================================
-
-" モーションタイムアウトタイマーを設定
-" 責務: 指定されたキーのタイマーを設定し、タイムアウト時にカウントをリセット
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:set_motion_timeout(bufnr, key) abort
-  if !has_key(s:timer_id, a:bufnr)
-    let s:timer_id[a:bufnr] = {}
-  endif
-
-  " 既存のタイマーがあれば停止
-  if has_key(s:timer_id[a:bufnr], a:key)
-    call timer_stop(s:timer_id[a:bufnr][a:key])
-  endif
-
-  " 新しいタイマーを設定
-  let s:timer_id[a:bufnr][a:key] = timer_start(
-        \ get(g:hellshake_yano, 'motion_timeout', 2000),
-        \ {-> s:reset_count_for_key(a:bufnr, a:key)})
-endfunction
-
-" キー別にカウントをリセット
-" 責務: カウントとタイマーを両方リセット（タイムアウト時に使用）
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:reset_count_for_key(bufnr, key) abort
-  call s:reset_key_count(a:bufnr, a:key)
-  call s:stop_and_clear_timer_for_key(a:bufnr, a:key)
-endfunction
+" Note: タイマー管理関数はautoload/hellshake_yano/timer.vimに移行しました
+" - hellshake_yano#timer#set_motion_timeout()
+" - hellshake_yano#timer#reset_count_for_key()
+" - hellshake_yano#timer#stop_and_clear_timer()
+" - hellshake_yano#timer#stop_and_clear_timer_for_key()
 
 " デバッグ表示を処理
 function! s:handle_debug_display() abort
@@ -252,7 +156,7 @@ function! hellshake_yano#motion(key) abort
   endif
 
   let bufnr = s:bufnr()
-  call s:init_buffer_state(bufnr)
+  call hellshake_yano#state#init_buffer_state(bufnr)
 
   " キーリピート検出処理
   let current_time = s:get_elapsed_time()
@@ -264,18 +168,18 @@ function! hellshake_yano#motion(key) abort
   endif
 
   " キー別モーションカウントを処理
-  call s:process_motion_count_for_key(bufnr, a:key)
+  call hellshake_yano#count#process_motion_count_for_key(bufnr, a:key)
 
   " キー別ヒント表示かタイムアウト設定を判定・実行
   if s:should_trigger_hints_for_key(bufnr, a:key)
-    call s:reset_key_count(bufnr, a:key)
+    call hellshake_yano#count#reset_key_count(bufnr, a:key)
     call hellshake_yano#show_hints_with_key(a:key)
     call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
   else
-    call s:set_motion_timeout(bufnr, a:key)
+    call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
     call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:get_key_count(bufnr, a:key) })
+          \ 'key': a:key, 'count': hellshake_yano#count#get_key_count(bufnr, a:key) })
   endif
 
   call s:handle_debug_display()
@@ -284,18 +188,8 @@ endfunction
 
 " カウントのリセット（後方互換性のため保持、全キーをリセット）
 function! s:reset_count(bufnr) abort
-  if has_key(s:motion_count, a:bufnr)
-    " 新しい辞書構造の場合は全キーをリセット
-    if type(s:motion_count[a:bufnr]) == v:t_dict
-      for key in keys(s:motion_count[a:bufnr])
-        let s:motion_count[a:bufnr][key] = 0
-      endfor
-    else
-      " 古い構造の場合（migration中）
-      let s:motion_count[a:bufnr] = 0
-    endif
-  endif
-  call s:stop_and_clear_timer(s:timer_id, a:bufnr)
+  call hellshake_yano#count#reset_all_counts(a:bufnr)
+  call hellshake_yano#timer#stop_and_clear_timer(g:hellshake_yano_internal.timer_id, a:bufnr)
 endfunction
 
 " 経過時間をミリ秒で取得（高精度）
@@ -304,44 +198,12 @@ function! s:get_elapsed_time() abort
   return float2nr(str2float(time_str) * 1000.0)
 endfunction
 
-" リピート状態をリセット
-function! s:reset_repeat_state(bufnr) abort
-  if has_key(s:is_key_repeating, a:bufnr)
-    let s:is_key_repeating[a:bufnr] = v:false
-  endif
-  call s:stop_and_clear_timer(s:repeat_end_timer, a:bufnr)
-endfunction
+" Note: s:reset_repeat_state は state.vim に移行済み
+" → hellshake_yano#state#reset_repeat_state()
 
-" タイマー管理の共通関数
-" @param timer_dict タイマー辞書（s:timer_id または s:repeat_end_timer）
-" @param bufnr バッファ番号
-function! s:stop_and_clear_timer(timer_dict, bufnr) abort
-  if has_key(a:timer_dict, a:bufnr)
-    " 新しいキー別構造の場合
-    if type(a:timer_dict[a:bufnr]) == v:t_dict
-      " 全キーのタイマーを停止
-      for key in keys(a:timer_dict[a:bufnr])
-        call timer_stop(a:timer_dict[a:bufnr][key])
-      endfor
-    else
-      " 古い構造の場合（互換性保持）
-      call timer_stop(a:timer_dict[a:bufnr])
-    endif
-    unlet a:timer_dict[a:bufnr]
-  endif
-endfunction
-
-" キー別タイマー管理関数
-" @param bufnr バッファ番号
-" @param key キー文字
-function! s:stop_and_clear_timer_for_key(bufnr, key) abort
-  if has_key(s:timer_id, a:bufnr) && type(s:timer_id[a:bufnr]) == v:t_dict
-    if has_key(s:timer_id[a:bufnr], a:key)
-      call timer_stop(s:timer_id[a:bufnr][a:key])
-      unlet s:timer_id[a:bufnr][a:key]
-    endif
-  endif
-endfunction
+" Note: タイマー管理関数は timer.vim に移行済み
+" → hellshake_yano#timer#stop_and_clear_timer()
+" → hellshake_yano#timer#stop_and_clear_timer_for_key()
 
 " キーリピート設定を取得
 function! s:get_key_repeat_config() abort
@@ -461,31 +323,29 @@ endfunction
 function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
   " 機能が無効の場合は通常処理
   if !a:config.enabled
-    let s:last_key_time[a:bufnr] = a:current_time
+    call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
     return v:false
   endif
 
   " 前回のキー入力時刻との差を計算
-  let time_diff = a:current_time - s:last_key_time[a:bufnr]
+  let last_key_time = hellshake_yano#state#get_last_key_time(a:bufnr)
+  let time_diff = a:current_time - last_key_time
 
   " キーリピート判定（初回キー入力は除外、2回目以降で判定）
-  if time_diff < a:config.threshold && s:last_key_time[a:bufnr] > 0
+  if time_diff < a:config.threshold && last_key_time > 0
     " リピート状態に設定
-    let s:is_key_repeating[a:bufnr] = v:true
+    call hellshake_yano#state#set_key_repeating(a:bufnr, v:true)
 
     " 既存のリピート終了タイマーをクリアして新しく設定
-    call s:stop_and_clear_timer(s:repeat_end_timer, a:bufnr)
-    let s:repeat_end_timer[a:bufnr] = timer_start(
-          \ a:config.reset_delay,
-          \ {-> s:reset_repeat_state(a:bufnr)})
+    call hellshake_yano#timer#set_repeat_end_timer(a:bufnr, a:config.reset_delay)
 
     " キー時刻更新してヒント表示をスキップ
-    let s:last_key_time[a:bufnr] = a:current_time
+    call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
     return v:true
   endif
 
   " 通常処理: キー時刻を更新
-  let s:last_key_time[a:bufnr] = a:current_time
+  call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
   return v:false
 endfunction
 
@@ -573,7 +433,7 @@ endfunction
 " ヒントをトリガー
 function! s:trigger_hints() abort
   if s:call_denops_function('showHints', [], 'show hints')
-    let s:hints_visible = v:true
+    call hellshake_yano#state#set_hints_visible(v:true)
   endif
 endfunction
 
@@ -585,7 +445,7 @@ endfunction
 " ヒントを非表示
 function! hellshake_yano#hide() abort
   if s:call_denops_function('hideHints', [], 'hide hints')
-    let s:hints_visible = v:false
+    call hellshake_yano#state#set_hints_visible(v:false)
   endif
 endfunction
 
@@ -607,7 +467,7 @@ function! hellshake_yano#disable() abort
   call s:clear_motion_mappings()
 
   " ヒントを非表示
-  if s:hints_visible
+  if hellshake_yano#state#is_hints_visible()
     call hellshake_yano#hide()
   endif
 
@@ -662,13 +522,13 @@ endfunction
 " バッファ進入時の処理
 function! hellshake_yano#on_buf_enter() abort
   let bufnr = s:bufnr()
-  call s:init_buffer_state(bufnr)
+  call hellshake_yano#state#init_buffer_state(bufnr)
 endfunction
 
 " バッファ離脱時の処理
 function! hellshake_yano#on_buf_leave() abort
   " ヒントが表示されていれば非表示にする
-  if s:hints_visible
+  if hellshake_yano#state#is_hints_visible()
     call hellshake_yano#hide()
   endif
 endfunction
@@ -701,7 +561,7 @@ endfunction
 " デバッグ情報を取得（詳細版）
 function! s:get_debug_info() abort
   let bufnr = s:bufnr()
-  call s:init_buffer_state(bufnr)
+  call hellshake_yano#state#init_buffer_state(bufnr)
 
   let debug_info = {}
   " 基本設定情報
@@ -717,8 +577,8 @@ function! s:get_debug_info() abort
   " バッファ状態
   let debug_info.current_buffer = bufnr
   " キー別カウント情報を含める
-  let debug_info.key_counts = get(s:motion_count, bufnr, {})
-  let debug_info.hints_visible = s:hints_visible
+  let debug_info.key_counts = get(g:hellshake_yano_internal.motion_count, bufnr, {})
+  let debug_info.hints_visible = hellshake_yano#state#is_hints_visible()
   let debug_info.denops_ready = s:is_denops_ready()
 
   " キーリピート検出状態
@@ -726,16 +586,16 @@ function! s:get_debug_info() abort
         \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
         \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
         \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300),
-        \ 'is_repeating': get(s:is_key_repeating, bufnr, v:false),
-        \ 'last_key_time': get(s:last_key_time, bufnr, 0),
+        \ 'is_repeating': hellshake_yano#state#is_key_repeating(bufnr),
+        \ 'last_key_time': hellshake_yano#state#get_last_key_time(bufnr),
         \ 'current_time': s:get_elapsed_time()
         \ }
 
   " 時間計測データ
   let debug_info.timing = {
-        \ 'last_motion_time': get(s:last_motion_time, bufnr, 0),
-        \ 'timer_active': has_key(s:timer_id, bufnr),
-        \ 'repeat_timer_active': has_key(s:repeat_end_timer, bufnr)
+        \ 'last_motion_time': hellshake_yano#state#get_last_motion_time(bufnr),
+        \ 'timer_active': has_key(g:hellshake_yano_internal.timer_id, bufnr),
+        \ 'repeat_timer_active': has_key(g:hellshake_yano_internal.repeat_end_timer, bufnr)
         \ }
 
   " ハイライト設定
@@ -749,7 +609,7 @@ endfunction
 
 " デバッグ情報を表示形式に整形
 function! s:build_debug_info(bufnr) abort
-  call s:init_buffer_state(a:bufnr)
+  call hellshake_yano#state#init_buffer_state(a:bufnr)
   let l:lines = []
   call add(l:lines, '=== hellshake-yano Debug Info ===')
   call add(l:lines, 'Enabled: ' . (has_key(g:hellshake_yano, 'enabled') ? g:hellshake_yano.enabled : 'v:false'))
@@ -759,13 +619,13 @@ function! s:build_debug_info(bufnr) abort
   call add(l:lines, 'Timeout: ' . get(g:hellshake_yano, 'motion_timeout', 0) . 'ms')
   call add(l:lines, 'Current buffer: ' . a:bufnr)
   " キー別カウント情報を表示
-  let key_counts = get(s:motion_count, a:bufnr, {})
+  let key_counts = get(g:hellshake_yano_internal.motion_count, a:bufnr, {})
   if type(key_counts) == v:t_dict && !empty(key_counts)
     call add(l:lines, 'Key counts: ' . string(key_counts))
   else
     call add(l:lines, 'Key counts: (none)')
   endif
-  call add(l:lines, 'Hints visible: ' . (s:hints_visible ? 'v:true' : 'v:false'))
+  call add(l:lines, 'Hints visible: ' . (hellshake_yano#state#is_hints_visible() ? 'v:true' : 'v:false'))
   call add(l:lines, 'Denops ready: ' . (s:is_denops_ready() ? 'true' : 'false'))
   call add(l:lines, 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'))
   call add(l:lines, 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText'))
@@ -774,16 +634,16 @@ function! s:build_debug_info(bufnr) abort
   call add(l:lines, 'Key repeat suppression: ' . (get(g:hellshake_yano, 'suppress_on_key_repeat', v:true) ? 1 : 0))
   call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'key_repeat_threshold', 50) . 'ms')
   call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'key_repeat_reset_delay', 300) . 'ms')
-  call add(l:lines, 'Key repeating (current buffer): ' . (get(s:is_key_repeating, a:bufnr, v:false) ? 1 : 0))
+  call add(l:lines, 'Key repeating (current buffer): ' . (hellshake_yano#state#is_key_repeating(a:bufnr) ? 1 : 0))
 
   " デバッグモード専用情報
   if get(g:hellshake_yano, 'debug_mode', v:false)
     call add(l:lines, '--- Debug Mode Details ---')
-    call add(l:lines, 'Last key time: ' . get(s:last_key_time, a:bufnr, 0))
+    call add(l:lines, 'Last key time: ' . hellshake_yano#state#get_last_key_time(a:bufnr))
     call add(l:lines, 'Current time: ' . s:get_elapsed_time())
-    call add(l:lines, 'Time since last key: ' . (s:get_elapsed_time() - get(s:last_key_time, a:bufnr, 0)) . 'ms')
-    call add(l:lines, 'Motion timer active: ' . (has_key(s:timer_id, a:bufnr) ? 'YES' : 'NO'))
-    call add(l:lines, 'Repeat timer active: ' . (has_key(s:repeat_end_timer, a:bufnr) ? 'YES' : 'NO'))
+    call add(l:lines, 'Time since last key: ' . (s:get_elapsed_time() - hellshake_yano#state#get_last_key_time(a:bufnr)) . 'ms')
+    call add(l:lines, 'Motion timer active: ' . (has_key(g:hellshake_yano_internal.timer_id, a:bufnr) ? 'YES' : 'NO'))
+    call add(l:lines, 'Repeat timer active: ' . (has_key(g:hellshake_yano_internal.repeat_end_timer, a:bufnr) ? 'YES' : 'NO'))
   endif
 
   return l:lines
@@ -1024,7 +884,7 @@ function! hellshake_yano#motion_with_key_context(key) abort
   endif
 
   let bufnr = s:bufnr()
-  call s:init_buffer_state(bufnr)
+  call hellshake_yano#state#init_buffer_state(bufnr)
 
   " キーリピート検出処理
   let current_time = s:get_elapsed_time()
@@ -1036,19 +896,19 @@ function! hellshake_yano#motion_with_key_context(key) abort
   endif
 
   " キー別モーションカウントを処理
-  call s:process_motion_count_for_key(bufnr, a:key)
+  call hellshake_yano#count#process_motion_count_for_key(bufnr, a:key)
 
   " キー別ヒント表示かタイムアウト設定を判定・実行
   if s:should_trigger_hints_for_key(bufnr, a:key)
-    call s:reset_key_count(bufnr, a:key)
+    call hellshake_yano#count#reset_key_count(bufnr, a:key)
     " キー情報付きでヒント表示を呼び出し
     call hellshake_yano#show_hints_with_key(a:key)
     call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
   else
-    call s:set_motion_timeout(bufnr, a:key)
+    call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
     call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:get_key_count(bufnr, a:key) })
+          \ 'key': a:key, 'count': hellshake_yano#count#get_key_count(bufnr, a:key) })
   endif
 
   call s:handle_debug_display()
@@ -1061,7 +921,7 @@ endfunction
 
 " テスト用: キー別カウントを取得（外部からアクセス可能）
 function! hellshake_yano#debug_get_key_count(bufnr, key) abort
-  return s:get_key_count(a:bufnr, a:key)
+  return hellshake_yano#count#get_key_count(a:bufnr, a:key)
 endfunction
 
 " テスト用: キー別motion_count設定値を取得
@@ -1076,12 +936,12 @@ endfunction
 
 " テスト用: キー別のモーションカウントを手動で増加
 function! hellshake_yano#debug_increment_key_count(bufnr, key) abort
-  call s:increment_key_count(a:bufnr, a:key)
+  call hellshake_yano#count#increment_key_count(a:bufnr, a:key)
 endfunction
 
 " テスト用: キー別のモーションカウントをリセット
 function! hellshake_yano#debug_reset_key_count(bufnr, key) abort
-  call s:reset_key_count(a:bufnr, a:key)
+  call hellshake_yano#count#reset_key_count(a:bufnr, a:key)
 endfunction
 
 " 保存と復元
