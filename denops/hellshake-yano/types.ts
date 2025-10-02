@@ -124,6 +124,14 @@ export interface HintKeyConfig {
   useNumericMultiCharHints?: boolean;
 }
 
+// ===== デフォルト値定義 =====
+
+/**
+ * デフォルトヒントマーカー（アルファベット順）
+ * config.tsのデフォルト値と統一
+ */
+export const DEFAULT_HINT_MARKERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
 // ===== 型エイリアス =====
 
 export type HintPositionType = "start" | "end" | "overlay" | "same" | "both";

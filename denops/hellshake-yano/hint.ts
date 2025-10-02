@@ -5,7 +5,10 @@ import type {
   HintPositionWithCoordinateSystem,
   Word,
 } from "./types.ts";
+import { DEFAULT_HINT_MARKERS } from "./types.ts";
 import type { Config } from "./config.ts";
+import { HintGeneratorFactory } from "./hint/hint-generator-strategies.ts";
+import { loadCharacterRanges, loadHintKeys } from "./config/config-loader.ts";
 // Utility functions migrated from hint-utils.ts are now defined in this file
 // Display width calculation functions integrated from utils/display.ts
 import { CacheType, GlobalCache, type CacheStatistics } from "./cache.ts";
@@ -500,26 +503,6 @@ export function generateHints(
     options = optionsOrMarkers || {};
   }
 
-  // 数字専用モード
-  if (options.numeric) {
-    return generateNumericHintsImpl(wordCount);
-  }
-
-  // グループベースのヒント生成
-  if (options.groups) {
-    const config: HintKeyConfig = {
-      singleCharKeys: options.singleCharKeys,
-      multiCharKeys: options.multiCharKeys,
-      maxSingleCharHints: options.maxSingleCharHints,
-      useNumericMultiCharHints: options.useNumericMultiCharHints,
-      markers: options.markers,
-    };
-    return generateHintsWithGroupsImpl(wordCount, config);
-  }
-
-  // 基本的なヒント生成（デフォルト）
-  const defaultMarkers = options.markers || "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
   // ヒント数制限を適用
   const effectiveWordCount = options.maxHints ? Math.min(wordCount, options.maxHints) : wordCount;
 
@@ -527,28 +510,16 @@ export function generateHints(
     return [];
   }
 
-  // キャッシュキーを生成
-  const cacheKey = `${effectiveWordCount}-${defaultMarkers.join("")}`;
+  // Strategy パターンを使用してヒント生成（Factory経由）
+  const config: HintKeyConfig = {
+    singleCharKeys: options.singleCharKeys,
+    multiCharKeys: options.multiCharKeys,
+    maxSingleCharHints: options.maxSingleCharHints,
+    useNumericMultiCharHints: options.useNumericMultiCharHints || options.numeric,
+    markers: options.markers || DEFAULT_HINT_MARKERS.split(""),
+  };
 
-  // キャッシュヒットチェック
-  if (hintCache.has(cacheKey)) {
-    return hintCache.get(cacheKey)!;
-  }
-
-  const hints: string[] = [];
-
-  if (effectiveWordCount <= defaultMarkers.length) {
-    // 単一文字のヒント
-    hints.push(...defaultMarkers.slice(0, effectiveWordCount));
-  } else {
-    // 複数文字のヒントを最適化して生成
-    hints.push(...generateMultiCharHintsOptimized(effectiveWordCount, defaultMarkers));
-  }
-
-  // キャッシュに保存（統一キャッシュのLRUアルゴリズムが自動管理）
-  hintCache.set(cacheKey, hints);
-
-  return hints;
+  return HintGeneratorFactory.generate(effectiveWordCount, config);
 }
 
 /**
@@ -675,31 +646,7 @@ export function assignHintsToWords(
   return mappings;
 }
 
-/**
- * 複数文字ヒントを最適化して生成
- */
-function generateMultiCharHintsOptimized(wordCount: number, markers: string[]): string[] {
-  const hints: string[] = [];
-
-  // まず単一文字ヒントを追加
-  hints.push(...markers.slice(0, Math.min(wordCount, markers.length)));
-
-  // 残りのヒントを2文字で生成
-  const remaining = wordCount - markers.length;
-  if (remaining > 0) {
-    // 効率的な2文字ヒント生成
-    const maxDoubleHints = markers.length * markers.length;
-    const actualDoubleHints = Math.min(remaining, maxDoubleHints);
-
-    for (let i = 0; i < actualDoubleHints; i++) {
-      const firstChar = markers[Math.floor(i / markers.length)];
-      const secondChar = markers[i % markers.length];
-      hints.push(firstChar + secondChar);
-    }
-  }
-
-  return hints.slice(0, wordCount);
-}
+// generateMultiCharHintsOptimized: Strategy パターンに移行（hint-generator-strategies.ts）
 
 /**
  * カーソル位置からの距離で単語を最適化してソート
@@ -1019,86 +966,8 @@ export function calculateHintPosition(
 // HintKeyConfig interface moved to types.ts for consolidation
 // Use: import type { HintKeyConfig } from "./types.ts";
 
-/**
- * キーグループを使用したヒント生成（高度な振り分けロジック付き）- 内部実装
- * @param wordCount
- * @returns 
- */
-function generateHintsWithGroupsImpl(
-  wordCount: number,
-  config: HintKeyConfig,
-): string[] {
-  const defaultMarkers = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  const defaultSingleCharKeys = "ASDFGHJKLNM0123456789".split("");
-  const defaultMultiCharKeys = "BCEIOPQRTUVWXYZ".split("");
-
-  // 厳密な分離: single_char_keysとmulti_char_keysを独立して扱う
-  // 型ガード: 文字列が渡された場合は配列に変換
-  const singleCharKeys = Array.isArray(config.singleCharKeys)
-    ? config.singleCharKeys
-    : (typeof config.singleCharKeys === 'string'
-        ? (config.singleCharKeys as string).split('')
-        : []);
-  const multiCharKeys = Array.isArray(config.multiCharKeys)
-    ? config.multiCharKeys
-    : (typeof config.multiCharKeys === 'string'
-        ? (config.multiCharKeys as string).split('')
-        : []);
-
-  // 両方とも未定義の場合のみ、従来のロジックにフォールバック
-  if (singleCharKeys.length === 0 && multiCharKeys.length === 0) {
-    // 互換性のため、markersまたはデフォルトを使用
-    const fallbackKeys = config.markers || defaultMarkers;
-    return generateHints(wordCount, fallbackKeys);
-  }
-
-  if (wordCount <= 0) {
-    return [];
-  }
-
-  const hints: string[] = [];
-
-  // 1文字ヒントの数を決定
-  const maxSingleChars = config.maxSingleCharHints !== undefined
-    ? Math.min(config.maxSingleCharHints, singleCharKeys.length)
-    : singleCharKeys.length;
-  const singleCharCount = Math.min(wordCount, maxSingleChars);
-
-  // 1文字ヒントを生成
-  hints.push(...generateSingleCharHints(singleCharKeys, singleCharCount));
-
-  // 2文字以上のヒントが必要な場合
-  let remainingCount = wordCount - singleCharCount;
-
-  if (remainingCount > 0) {
-    // まずアルファベット2文字ヒントを生成（multiCharKeysが利用可能な範囲で）
-    const doubleLimit = multiCharKeys.length * multiCharKeys.length;
-    const actualAlphaCount = Math.min(remainingCount, doubleLimit);
-    if (actualAlphaCount > 0) {
-      hints.push(...generateMultiCharHintsFromKeys(multiCharKeys, actualAlphaCount, 2));
-      remainingCount -= actualAlphaCount;
-    }
-
-    // アルファベット2文字ヒントを使い切った後、数字2文字ヒントを生成
-    if (config.useNumericMultiCharHints && remainingCount > 0) {
-      const numericHints = generateNumericHintsImpl(remainingCount);
-      hints.push(...numericHints);
-      remainingCount -= numericHints.length;
-    }
-  }
-
-  // 数字フォールバックを削除 - single_char_keysとmulti_char_keysの組み合わせのみを使用
-  // 3文字ヒントも生成しない（厳密にsingle/multiの定義に従う）
-
-  return hints;
-}
-
-/**
- * 1文字ヒントの生成
- */
-function generateSingleCharHints(keys: string[], count: number): string[] {
-  return keys.slice(0, count);
-}
+// generateHintsWithGroupsImpl: Strategy パターンに移行（hint-generator-strategies.ts の HybridHintStrategy に統合済み）
+// generateSingleCharHints: Strategy パターンに移行（hint-generator-strategies.ts の SingleCharHintStrategy に統合済み）
 
 /**
  * 指定されたキーから複数文字ヒントを生成（多段階フォールバック付き）
@@ -1118,39 +987,7 @@ export function isNumericOnlyKeys(keys: string[]): boolean {
   return keys.every(key => key.length === 1 && key >= "0" && key <= "9");
 }
 
-/**
- * 数字2文字ヒントを優先順位順に生成する - 内部実装
- * @param count
- * @returns 
- */
-function generateNumericHintsImpl(count: number): string[] {
-  const hints: string[] = [];
-
-  // 0個以下の要求は空配列を返す
-  if (count <= 0) {
-    return hints;
-  }
-
-  // 最大100個まで生成
-  const maxCount = Math.min(count, 100);
-
-  // 優先順位1: 01-09を生成
-  for (let i = 1; i <= 9 && hints.length < maxCount; i++) {
-    hints.push(String(i).padStart(2, "0"));
-  }
-
-  // 優先順位2: 10-99を生成
-  for (let i = 10; i < 100 && hints.length < maxCount; i++) {
-    hints.push(String(i).padStart(2, "0"));
-  }
-
-  // 優先順位3: 最後に00を生成
-  if (hints.length < maxCount) {
-    hints.push("00");
-  }
-
-  return hints;
-}
+// generateNumericHintsImpl: Strategy パターンに移行（hint-generator-strategies.ts の NumericHintStrategy に統合済み）
 
 export function generateMultiCharHintsFromKeys(
   keys: string[],
