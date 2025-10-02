@@ -25,6 +25,7 @@ import type {
   HealthCheckResult,
   InitializeResult,
   HintOperationsDependencies,
+  HintOperations,
 } from "./types.ts";
 import { createMinimalConfig } from "./types.ts";
 import type { Config } from "./config.ts";
@@ -49,7 +50,8 @@ import {
   validateHighlightGroupName,
   isValidColorName,
   isValidHexColor,
-  validateHighlightColor as validateHighlightColorBase,
+  validateHighlightColor,
+  isControlCharacter,
 } from "./validation-utils.ts";
 // motion.ts は統合されたため削除（MotionManagerはcore.ts内部で実装済み）
 
@@ -2231,93 +2233,14 @@ export class Core {
   }
 
   /**
- * main.ts の validateHighlightColor 関数の実装をCore.validateHighlightColor静的メソッドとして移植   * @param colorConfig 検証するハイライト色設定
- * @returns 
+   * ハイライト色設定を検証（validation-utils.tsにデリゲート）
+   * @param colorConfig 検証するハイライト色設定
+   * @returns 検証結果
    */
   public static validateHighlightColor(
     colorConfig: string | HighlightColor,
   ): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    // null と undefined のチェック
-    if (colorConfig === null) {
-      errors.push("highlight_hint_marker must be a string");
-      return { valid: false, errors };
-    }
-
-    // 数値や配列などの無効な型チェック
-    if (typeof colorConfig === "number") {
-      errors.push("highlight_hint_marker must be a string");
-      return { valid: false, errors };
-    }
-
-    if (Array.isArray(colorConfig)) {
-      errors.push("highlight_hint_marker must be a string");
-      return { valid: false, errors };
-    }
-
-    // 文字列の場合（従来のハイライトグループ名）
-    if (typeof colorConfig === "string") {
-      // 空文字列チェック
-      if (colorConfig === "") {
-        errors.push("highlight_hint_marker must be a non-empty string");
-        return { valid: false, errors };
-      }
-
-      // ハイライトグループ名のバリデーション
-      if (!Core.validateHighlightGroupName(colorConfig)) {
-        // より詳細なエラーメッセージを提供
-        if (!/^[a-zA-Z_]/.test(colorConfig)) {
-          errors.push("highlight_hint_marker must start with a letter or underscore");
-        } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
-          errors.push(
-            "highlight_hint_marker must contain only alphanumeric characters and underscores",
-          );
-        } else if (colorConfig.length > 100) {
-          errors.push("highlight_hint_marker must be 100 characters or less");
-        } else {
-          errors.push(`Invalid highlight group name: ${colorConfig}`);
-        }
-      }
-      return { valid: errors.length === 0, errors };
-    }
-
-    // オブジェクトの場合（fg/bg個別指定）
-    if (typeof colorConfig === "object" && colorConfig !== null) {
-      const { fg, bg } = colorConfig;
-
-      // fgの検証
-      if (fg !== undefined) {
-        if (typeof fg !== "string") {
-          errors.push("fg must be a string");
-        } else if (fg === "") {
-          errors.push("fg cannot be empty string");
-        } else if (!Core.isValidColorName(fg) && !Core.isValidHexColor(fg)) {
-          errors.push(`Invalid fg color: ${fg}`);
-        }
-      }
-
-      // bgの検証
-      if (bg !== undefined) {
-        if (typeof bg !== "string") {
-          errors.push("bg must be a string");
-        } else if (bg === "") {
-          errors.push("bg cannot be empty string");
-        } else if (!Core.isValidColorName(bg) && !Core.isValidHexColor(bg)) {
-          errors.push(`Invalid bg color: ${bg}`);
-        }
-      }
-
-      // fgもbgも指定されていない場合
-      if (fg === undefined && bg === undefined) {
-        errors.push("At least one of fg or bg must be specified");
-      }
-
-      return { valid: errors.length === 0, errors };
-    }
-
-    errors.push("Color configuration must be a string or object");
-    return { valid: false, errors };
+    return validateHighlightColor(colorConfig);
   }
 
   /**
@@ -3755,38 +3678,13 @@ export class Core {
     denops: Denops;
     config?: Partial<Config>;
     dependencies?: HintOperationsDependencies;
-  }): {
-    show: (denops: Denops, config?: { debounce?: number; force?: boolean; debounceDelay?: number }) => Promise<void>;
-    hide: (denops: Denops) => Promise<void>;
-    clear: (denops: Denops) => Promise<void>;
-    showHints: () => Promise<void>;
-    showHintsImmediately: () => Promise<void>;
-    hideHints: () => Promise<void>;
-    isHintsVisible: () => boolean;
-    getCurrentHints: () => HintMapping[];
-  } {
+  }): HintOperations {
     const { denops, dependencies } = config || {};
 
     return {
       show: Core.showHints.bind(Core),
       hide: Core.hideHints.bind(Core),
       clear: Core.clearHintDisplay.bind(Core),
-      showHints: async () => {
-        // @deprecated Use show() instead. This stub is kept for backward compatibility.
-        // Note: Proper implementation requires denops and bufnr arguments.
-        (Core as any).hintsVisible = true;
-      },
-      showHintsImmediately: async () => {
-        // @deprecated Use show() instead. This stub is kept for backward compatibility.
-        // Note: Proper implementation requires dependency injection.
-        (Core as any).hintsVisible = true;
-      },
-      hideHints: async () => {
-        // @deprecated Use hide() instead. This stub is kept for backward compatibility.
-        // Note: Proper implementation requires denops argument.
-        (Core as any).hintsVisible = false;
-        (Core as any).currentHints = [];
-      },
       isHintsVisible: () => (Core as any).hintsVisible,
       getCurrentHints: () => (Core as any).currentHints,
     };
@@ -3827,66 +3725,9 @@ export { validateHighlightGroupName };
 // 後方互換性のために export
 export { isValidColorName };
 
-// isValidHexColor は validation-utils.ts から re-export
+// isValidHexColor と validateHighlightColor は validation-utils.ts から re-export
 // 後方互換性のために export
-export { isValidHexColor };
-
-/**
- * ハイライト色設定の総合検証（拡張版）
- * string | HighlightColor の両方をサポート
- * validation-utils.tsの関数をラップして、stringのケースにも対応
- */
-export function validateHighlightColor(
-  colorConfig: string | HighlightColor,
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  if (colorConfig === null) {
-    errors.push("highlight_hint_marker must be a string");
-    return { valid: false, errors };
-  }
-
-  if (typeof colorConfig === "number") {
-    errors.push("highlight_hint_marker must be a string");
-    return { valid: false, errors };
-  }
-
-  if (Array.isArray(colorConfig)) {
-    errors.push("highlight_hint_marker must be a string");
-    return { valid: false, errors };
-  }
-
-  // 文字列の場合（ハイライトグループ名）
-  if (typeof colorConfig === "string") {
-    if (colorConfig === "") {
-      errors.push("highlight_hint_marker must be a non-empty string");
-      return { valid: false, errors };
-    }
-
-    if (!validateHighlightGroupName(colorConfig)) {
-      if (!/^[a-zA-Z_]/.test(colorConfig)) {
-        errors.push("highlight_hint_marker must start with a letter or underscore");
-      } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
-        errors.push(
-          "highlight_hint_marker must contain only alphanumeric characters and underscores",
-        );
-      } else if (colorConfig.length > 100) {
-        errors.push("highlight_hint_marker must be 100 characters or less");
-      } else {
-        errors.push(`Invalid highlight group name: ${colorConfig}`);
-      }
-    }
-    return { valid: errors.length === 0, errors };
-  }
-
-  // オブジェクトの場合（validation-utils.tsの関数を使用）
-  if (typeof colorConfig === "object" && colorConfig !== null) {
-    return validateHighlightColorBase(colorConfig);
-  }
-
-  errors.push("Color configuration must be a string or object");
-  return { valid: false, errors };
-}
+export { isValidHexColor, validateHighlightColor };
 
 /**
  * HellshakeYanoプラグインのユーザー向けインターフェースクラス
@@ -4359,24 +4200,8 @@ export function analyzeInputCharacter(char: string, config: any) {
   };
 }
 
-export function isControlCharacter(char: string): boolean {
-  if (char.length === 0) return true;
-
-  // 基本的なコントロール文字
-  if (char.length === 1) {
-    const code = char.charCodeAt(0);
-    return code < 32 || code === 127;
-  }
-
-  // 特殊キーパターン
-  const controlPatterns = [
-    /^<.*>$/,  // <key> 形式
-    /^\x1b/,   // ESC シーケンス
-    /^\u001b/, // Unicode ESC
-  ];
-
-  return controlPatterns.some(pattern => pattern.test(char));
-}
+// isControlCharacter は validation-utils.ts から re-export
+export { isControlCharacter };
 
 export function findMatchingHints(input: string, hints: any[]): any[] {
   // Implementation for hint matching

@@ -346,9 +346,6 @@ export interface HintOperations {
   show: (denops: Denops, config?: ShowHintsConfig) => Promise<void>;
   hide: (denops: Denops) => Promise<void>;
   clear: (denops: Denops) => Promise<void>;
-  showHints: () => Promise<void>;
-  showHintsImmediately: () => Promise<void>;
-  hideHints: () => Promise<void>;
   isHintsVisible: () => boolean;
   getCurrentHints: () => HintMapping[];
 }

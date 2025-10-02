@@ -2785,6 +2785,8 @@ export class ContextDetector {
       case 'typescript':
       case 'javascript':
         return trimmed.startsWith('/**');
+      default:
+        return false;
     }
   }
 

@@ -3,6 +3,7 @@
  */
 
 import type { HighlightColor, HintPositionType } from "./types.ts";
+import { validateHighlightGroupName } from "./validation-utils.ts";
 
 export interface Config {
   enabled: boolean;
@@ -107,8 +108,9 @@ export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config
   return { ...defaults, ...partialConfig };
 }
 
+// Alias for backward compatibility - uses validateHighlightGroupName from validation-utils.ts
 function isValidHighlightGroup(name: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) && name.length <= 100;
+  return validateHighlightGroupName(name);
 }
 
 function validateCoreSettings(config: Partial<Config>, errors: string[]): void {

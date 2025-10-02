@@ -47,11 +47,11 @@ export function isValidHexColor(hexColor: string): boolean {
 }
 
 /**
- * ハイライト色設定の妥当性を検証する
+ * ハイライト色設定の妥当性を検証する（オブジェクトのみ）
  * @param color - ハイライト色設定オブジェクト
  * @returns 検証結果（有効性とエラーメッセージ）
  */
-export function validateHighlightColor(
+export function validateHighlightColorObject(
   color: HighlightColor,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -93,6 +93,64 @@ export function validateHighlightColor(
   }
 
   return { valid: errors.length === 0, errors };
+}
+
+/**
+ * ハイライト色設定の総合検証（拡張版）
+ * string | HighlightColor の両方をサポート
+ * @param colorConfig - ハイライト色設定（文字列またはオブジェクト）
+ * @returns 検証結果（有効性とエラーメッセージ）
+ */
+export function validateHighlightColor(
+  colorConfig: string | HighlightColor,
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (colorConfig === null) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  if (typeof colorConfig === "number") {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  if (Array.isArray(colorConfig)) {
+    errors.push("highlight_hint_marker must be a string");
+    return { valid: false, errors };
+  }
+
+  // 文字列の場合（ハイライトグループ名）
+  if (typeof colorConfig === "string") {
+    if (colorConfig === "") {
+      errors.push("highlight_hint_marker must be a non-empty string");
+      return { valid: false, errors };
+    }
+
+    if (!validateHighlightGroupName(colorConfig)) {
+      if (!/^[a-zA-Z_]/.test(colorConfig)) {
+        errors.push("highlight_hint_marker must start with a letter or underscore");
+      } else if (!/^[a-zA-Z0-9_]+$/.test(colorConfig)) {
+        errors.push(
+          "highlight_hint_marker must contain only alphanumeric characters and underscores",
+        );
+      } else if (colorConfig.length > 100) {
+        errors.push("highlight_hint_marker must be 100 characters or less");
+      } else {
+        errors.push(`Invalid highlight group name: ${colorConfig}`);
+      }
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  // オブジェクトの場合
+  if (typeof colorConfig === "object" && colorConfig !== null) {
+    return validateHighlightColorObject(colorConfig);
+  }
+
+  errors.push("Color configuration must be a string or object");
+  return { valid: false, errors };
 }
 
 /**
