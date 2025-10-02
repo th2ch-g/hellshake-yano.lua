@@ -48,8 +48,83 @@ import {
   isValidHexColor,
   validateHighlightColor,
   isControlCharacter,
-} from "./core/core-validation.ts";
-import { MotionCounter, MotionManager, CommandFactory } from "./core/core-motion.ts";
+} from "./validation-utils.ts";
+/**
+ * @param threshold
+ * @param timeoutMs
+ */
+class MotionCounter {
+  private count = 0;
+  private lastMotionTime = 0;
+  private timeoutMs: number;
+  private threshold: number;
+  private onThresholdReached?: () => void;
+  constructor(threshold = 3, timeoutMs = 2000, onThresholdReached?: () => void) {
+    this.threshold = threshold;
+    this.timeoutMs = timeoutMs;
+    this.onThresholdReached = onThresholdReached;
+  }
+  increment(): boolean {
+    const now = Date.now();
+    if (this.lastMotionTime && now - this.lastMotionTime > this.timeoutMs) this.count = 0;
+    this.count++;
+    this.lastMotionTime = now;
+    if (this.count >= this.threshold) {
+      if (this.onThresholdReached) this.onThresholdReached();
+      this.count = 0;
+      return true;
+    }
+    return false;
+  }
+  getCount(): number { return this.count; }
+  reset(): void { this.count = 0; this.lastMotionTime = 0; }
+}
+/**
+ */
+class MotionManager {
+  private counters = new Map<number, MotionCounter>();
+  getCounter(bufnr: number, threshold?: number, timeout?: number): MotionCounter {
+    if (!this.counters.has(bufnr)) this.counters.set(bufnr, new MotionCounter(threshold, timeout));
+    return this.counters.get(bufnr)!;
+  }
+  resetCounter(bufnr: number): void {
+    const counter = this.counters.get(bufnr);
+    if (counter) counter.reset();
+  }
+  clearAll(): void { this.counters.clear(); }
+}
+/**
+ * @param config
+ */
+class CommandFactory {
+  constructor(private config: Config) {}
+  createCommand(command: string): CommandObject {
+    return { command, config: this.config };
+  }
+  getController(): Controller {
+    const core = Core.getInstance(this.config);
+    return {
+      enable: () => core.enable(),
+      disable: () => core.disable(),
+      toggle: () => core.toggle(),
+    };
+  }
+  getConfigManager(): ConfigManager {
+    return {
+      getConfig: () => this.config,
+      updateConfig: (newConfig: Partial<Config>) => { Object.assign(this.config, newConfig); },
+      setCount: (count: number) => { this.config.motionCount = count; },
+      setTimeout: (timeout: number) => { this.config.motionTimeout = timeout; }
+    };
+  }
+  getDebugController(): DebugController {
+    return {
+      getStatistics: () => Core.getInstance(this.config).getStatistics(),
+      clearCache: () => Core.getInstance(this.config).clearCache(),
+      toggleDebugMode: () => { this.config.debugMode = !this.config.debugMode; }
+    };
+  }
+}
 /**
  */
 export const HIGHLIGHT_BATCH_SIZE = 15;
