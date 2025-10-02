@@ -2,6 +2,9 @@
  * プラグインの中核となるロジックを統合管理するCoreクラス
  * TDD Red-Green-Refactor方法論に従って実装 */
 import type { Denops } from "@denops/std";
+import { LRUCache, type CacheStatistics } from "./cache.ts";
+import type { Config } from "./config.ts";
+import { getDefaultConfig } from "./config.ts";
 import type {
   CoreState,
   DebugInfo,
@@ -26,10 +29,6 @@ import type {
   HintOperationsDependencies,
   HintOperations,
 } from "./types.ts";
-import { createMinimalConfig } from "./types.ts";
-import type { Config } from "./config.ts";
-import { getDefaultConfig } from "./config.ts";
-import { LRUCache, type CacheStatistics } from "./cache.ts";
 import type { EnhancedWordConfig } from "./word.ts";
 import {
   detectWordsWithManager,
@@ -330,7 +329,8 @@ export class Core {
       clearTimeout(this._pendingHighlightTimer);
       this._pendingHighlightTimer = null;
     }
-    } catch {
+    } catch (error) {
+      console.error('[hellshake-yano] Core: Cleanup failed:', error);
     }
   }
   async getHealthStatus(denops: Denops): Promise<{
@@ -361,7 +361,8 @@ export class Core {
   } {
     try {
       return getPluginStatistics();
-    } catch {
+    } catch (error) {
+      console.error('[hellshake-yano] Core: Get statistics failed:', error);
       return {
         cacheStats: {
           words: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 },
@@ -380,7 +381,8 @@ export class Core {
   updateState(updates: Partial<PluginState>): void {
     try {
       updatePluginState(updates);
-    } catch {
+    } catch (error) {
+      console.error('[hellshake-yano] Core: Update state failed:', error);
     }
   }
   recordPerformanceMetric(operation: string, duration: number): void {
@@ -389,7 +391,8 @@ export class Core {
       if (state.performanceMetrics[operation as keyof typeof state.performanceMetrics]) {
         state.performanceMetrics[operation as keyof typeof state.performanceMetrics].push(duration);
       }
-    } catch {
+    } catch (error) {
+      console.error('[hellshake-yano] Core: Record performance metric failed:', error);
     }
   }
   getConfig(): Config {
@@ -929,7 +932,8 @@ export class Core {
     if (withBell) {
       try {
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
-      } catch {
+      } catch (error) {
+        console.error('[hellshake-yano] Core: Bell sound failed:', error);
       }
     }
   }
@@ -1135,7 +1139,8 @@ export class Core {
       try {
         await denops.cmd("echohl ErrorMsg | echo 'Input error - hints cleared' | echohl None");
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
-      } catch {
+      } catch (error) {
+        console.error('[hellshake-yano] Core: Error feedback failed:', error);
       }
       await this.hideHintsOptimized(denops);
       throw error;

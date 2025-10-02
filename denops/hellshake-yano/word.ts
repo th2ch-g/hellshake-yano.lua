@@ -1,41 +1,28 @@
 import type { Denops } from "@denops/std";
-import type {
-  DetectionContext,
-  LineContext,
-  SyntaxContext,
-  Word,
-  WordDetectionResult,
-} from "./types.ts";
 import { exists } from "https://deno.land/std@0.212.0/fs/exists.ts";
 import { resolve } from "https://deno.land/std@0.212.0/path/resolve.ts";
 import { parse as parseYaml } from "https://deno.land/std@0.212.0/yaml/parse.ts";
-import { DEFAULT_UNIFIED_CONFIG, getDefaultConfig } from "./config.ts";
-import type { WordDetectionConfig as ImportedWordDetectionConfig, WordDetector as ImportedWordDetector } from "./word/word-detector-strategies.ts";
-import { RegexWordDetector as ImportedRegexWordDetector, TinySegmenterWordDetector as ImportedTinySegmenterWordDetector, HybridWordDetector as ImportedHybridWordDetector } from "./word/word-detector-strategies.ts";
-/**
- */
-export interface EnhancedWordConfig extends WordDetectionManagerConfig {
-  /** 単語検出ストラテジー */
-  strategy?: "regex" | "tinysegmenter" | "hybrid";
-  /** キー別の最小文字数設定 */
-  perKeyMinLength?: Record<string, number>;
-  /** キー別最小文字数のデフォルト */
-  defaultMinWordLength?: number;
-  /** 現在のキーコンテキスト（内部用） */
-  currentKeyContext?: string;
-  wordDetectionStrategy?: "regex" | "tinysegmenter" | "hybrid";
-  /** 日本語処理を有効にするかどうか */
-  useJapanese?: boolean;
-  /** 最小単語長 */
-  minWordLength?: number;
-  /** 最大単語長 */
-  maxWordLength?: number;
-  /** TinySegmenterを有効にするかどうか */
-  enableTinySegmenter?: boolean;
-}
 import { CacheType, GlobalCache } from "./cache.ts";
 import type { Config } from "./config.ts";
-import { Core } from "./core.ts";
+import { DEFAULT_UNIFIED_CONFIG } from "./config.ts";
+import type {
+  DetectionContext,
+  Word,
+  WordDetectionResult,
+} from "./types.ts";
+import type { WordDetectionConfig as ImportedWordDetectionConfig, WordDetector as ImportedWordDetector } from "./word/word-detector-strategies.ts";
+import { RegexWordDetector as ImportedRegexWordDetector, TinySegmenterWordDetector as ImportedTinySegmenterWordDetector, HybridWordDetector as ImportedHybridWordDetector } from "./word/word-detector-strategies.ts";
+export interface EnhancedWordConfig extends WordDetectionManagerConfig {
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
+  perKeyMinLength?: Record<string, number>;
+  defaultMinWordLength?: number;
+  currentKeyContext?: string;
+  wordDetectionStrategy?: "regex" | "tinysegmenter" | "hybrid";
+  useJapanese?: boolean;
+  minWordLength?: number;
+  maxWordLength?: number;
+  enableTinySegmenter?: boolean;
+}
 const LARGE_FILE_THRESHOLD = 1000;
 const MAX_WORDS_PER_FILE = 1000;
 const wordDetectionCache = GlobalCache.getInstance().getCache<string, Word[]>(
