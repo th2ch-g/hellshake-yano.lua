@@ -1,7 +1,3 @@
-/**
- * 設定管理モジュール
- */
-
 import type { HighlightColor, HintPositionType } from "./types.ts";
 import { validateHighlightGroupName } from "./validation-utils.ts";
 
@@ -61,11 +57,8 @@ export const DEFAULT_CONFIG: Config = {
   useNumbers: false,
   highlightSelected: false,
   debugCoordinates: false,
-  singleCharKeys: [
-    "A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M",
-    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-  ],
-  multiCharKeys: ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"],
+  singleCharKeys: ["A","S","D","F","G","H","J","K","L","N","M","0","1","2","3","4","5","6","7","8","9"],
+  multiCharKeys: ["B","C","E","I","O","P","Q","R","T","U","V","W","X","Y","Z"],
   maxSingleCharHints: 21,
   useHintGroups: true,
   highlightHintMarker: "DiffAdd",
@@ -94,384 +87,166 @@ export const DEFAULT_CONFIG: Config = {
 };
 
 export const DEFAULT_UNIFIED_CONFIG: Config = DEFAULT_CONFIG;
-
-export function getDefaultConfig(): Config {
-  return DEFAULT_CONFIG;
+export function getDefaultConfig(): Config { return DEFAULT_CONFIG; }
+export function getDefaultUnifiedConfig(): Config { return DEFAULT_UNIFIED_CONFIG; }
+export function createMinimalConfig(p: Partial<Config> = {}): Config {
+  return { ...DEFAULT_CONFIG, ...p };
 }
 
-export function getDefaultUnifiedConfig(): Config {
-  return DEFAULT_UNIFIED_CONFIG;
-}
+function isValidHighlightGroup(n: string): boolean { return validateHighlightGroupName(n); }
 
-export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config {
-  const defaults = getDefaultConfig();
-  return { ...defaults, ...partialConfig };
-}
-
-// Alias for backward compatibility - uses validateHighlightGroupName from validation-utils.ts
-function isValidHighlightGroup(name: string): boolean {
-  return validateHighlightGroupName(name);
-}
-
-function validateCoreSettings(config: Partial<Config>, errors: string[]): void {
-  if (config.markers !== undefined) {
-    if (!Array.isArray(config.markers)) {
-      errors.push("markers must be an array");
-    } else if (config.markers.length === 0) {
-      errors.push("markers must not be empty");
-    } else {
-      if (!config.markers.every(m => typeof m === "string")) {
-        errors.push("markers must be an array of strings");
-      } else {
-        const uniqueMarkers = new Set(config.markers);
-        if (uniqueMarkers.size !== config.markers.length) {
-          errors.push("markers must contain unique values");
-        }
-      }
+function vCore(c: Partial<Config>, e: string[]): void {
+  if (c.markers !== undefined) {
+    if (!Array.isArray(c.markers)) e.push("markers must be an array");
+    else if (c.markers.length === 0) e.push("markers must not be empty");
+    else {
+      if (!c.markers.every(m => typeof m === "string")) e.push("markers must be an array of strings");
+      else if (new Set(c.markers).size !== c.markers.length) e.push("markers must contain unique values");
     }
   }
-
-  if (config.motionCount !== undefined) {
-    if (config.motionCount === null || !Number.isInteger(config.motionCount) || config.motionCount <= 0) {
-      errors.push("motionCount must be a positive integer");
-    }
+  if (c.motionCount !== undefined && (c.motionCount === null || !Number.isInteger(c.motionCount) || c.motionCount <= 0)) {
+    e.push("motionCount must be a positive integer");
   }
-
-  if (config.motionTimeout !== undefined) {
-    if (!Number.isInteger(config.motionTimeout) || config.motionTimeout < 100) {
-      errors.push("motionTimeout must be at least 100ms");
-    }
+  if (c.motionTimeout !== undefined && (!Number.isInteger(c.motionTimeout) || c.motionTimeout < 100)) {
+    e.push("motionTimeout must be at least 100ms");
   }
-
-  if (config.hintPosition !== undefined) {
-    const validPositions = ["start", "end", "overlay"];
-    if (config.hintPosition === null || !validPositions.includes(config.hintPosition)) {
-      errors.push("hintPosition must be one of: start, end, overlay");
-    }
+  if (c.hintPosition !== undefined) {
+    const vp = ["start", "end", "overlay"];
+    if (c.hintPosition === null || !vp.includes(c.hintPosition)) e.push("hintPosition must be one of: start, end, overlay");
   }
 }
 
-function validateHintSettings(config: Partial<Config>, errors: string[]): void {
-  if (config.maxHints !== undefined) {
-    if (!Number.isInteger(config.maxHints) || config.maxHints <= 0) {
-      errors.push("maxHints must be a positive integer");
-    }
-  }
-
-  if (config.debounceDelay !== undefined) {
-    if (!Number.isInteger(config.debounceDelay) || config.debounceDelay < 0) {
-      errors.push("debounceDelay must be a non-negative number");
-    }
-  }
-
-  if (config.useNumbers !== undefined && typeof config.useNumbers !== "boolean") {
-    errors.push("useNumbers must be a boolean");
-  }
-
-  if (config.singleCharKeys !== undefined) {
-    if (!Array.isArray(config.singleCharKeys)) {
-      errors.push("singleCharKeys must be an array");
-    } else if (config.singleCharKeys.length > 0) {
-      const validSymbols = new Set([";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"]);
-
-      for (let i = 0; i < config.singleCharKeys.length; i++) {
-        const key = config.singleCharKeys[i];
-
-        if (typeof key !== "string") {
-          errors.push("singleCharKeys must be an array of strings");
-          break;
-        }
-
-        if (key === "") {
-          errors.push("singleCharKeys must not contain empty strings");
-          break;
-        }
-
-        if (key.length !== 1) {
-          errors.push("singleCharKeys must contain only single character strings");
-          break;
-        }
-
-        const isAlphanumeric = /^[a-zA-Z0-9]$/.test(key);
-        const isValidSymbol = validSymbols.has(key);
-        const isWhitespace = /^\s$/.test(key);
-        const isControlChar = key.charCodeAt(0) < 32 || key.charCodeAt(0) === 127;
-
-        if (!isAlphanumeric && !isValidSymbol) {
-          if (isWhitespace) {
-            errors.push("singleCharKeys must not contain whitespace characters (space, tab, newline)");
-          } else if (isControlChar) {
-            errors.push("singleCharKeys must not contain control characters");
-          } else {
-            errors.push(`singleCharKeys contains invalid character: '${key}'. Valid symbols are: ; : [ ] ' " , . / \\ - = \``);
-          }
+function vHint(c: Partial<Config>, e: string[]): void {
+  if (c.maxHints !== undefined && (!Number.isInteger(c.maxHints) || c.maxHints <= 0)) e.push("maxHints must be a positive integer");
+  if (c.debounceDelay !== undefined && (!Number.isInteger(c.debounceDelay) || c.debounceDelay < 0)) e.push("debounceDelay must be a non-negative number");
+  if (c.useNumbers !== undefined && typeof c.useNumbers !== "boolean") e.push("useNumbers must be a boolean");
+  if (c.singleCharKeys !== undefined) {
+    if (!Array.isArray(c.singleCharKeys)) e.push("singleCharKeys must be an array");
+    else if (c.singleCharKeys.length > 0) {
+      const vs = new Set([";",":","[","]","'",'"',",",".","/","\\","-","=","`"]);
+      for (let i = 0; i < c.singleCharKeys.length; i++) {
+        const k = c.singleCharKeys[i];
+        if (typeof k !== "string") { e.push("singleCharKeys must be an array of strings"); break; }
+        if (k === "") { e.push("singleCharKeys must not contain empty strings"); break; }
+        if (k.length !== 1) { e.push("singleCharKeys must contain only single character strings"); break; }
+        const isAn = /^[a-zA-Z0-9]$/.test(k);
+        const isVs = vs.has(k);
+        const isWs = /^\s$/.test(k);
+        const isCc = k.charCodeAt(0) < 32 || k.charCodeAt(0) === 127;
+        if (!isAn && !isVs) {
+          if (isWs) e.push("singleCharKeys must not contain whitespace characters (space, tab, newline)");
+          else if (isCc) e.push("singleCharKeys must not contain control characters");
+          else e.push(`singleCharKeys contains invalid character: '${k}'. Valid symbols are: ; : [ ] ' " , . / \\ - = \``);
           break;
         }
       }
-
-      const uniqueKeys = new Set(config.singleCharKeys);
-      if (uniqueKeys.size !== config.singleCharKeys.length) {
-        errors.push("singleCharKeys must contain unique values");
-      }
+      if (new Set(c.singleCharKeys).size !== c.singleCharKeys.length) e.push("singleCharKeys must contain unique values");
     }
   }
 }
 
-function validateExtendedHintSettings(config: Partial<Config>, errors: string[]): void {
-  if (config.maxSingleCharHints !== undefined) {
-    if (!Number.isInteger(config.maxSingleCharHints) || config.maxSingleCharHints <= 0) {
-      errors.push("maxSingleCharHints must be a positive integer");
-    }
+function vExtHint(c: Partial<Config>, e: string[]): void {
+  if (c.maxSingleCharHints !== undefined && (!Number.isInteger(c.maxSingleCharHints) || c.maxSingleCharHints <= 0)) {
+    e.push("maxSingleCharHints must be a positive integer");
   }
-
-  if (config.highlightHintMarker !== undefined) {
-    if (typeof config.highlightHintMarker === 'string') {
-      if (config.highlightHintMarker === '') {
-        errors.push("highlightHintMarker must be a non-empty string");
-      } else if (!isValidHighlightGroup(config.highlightHintMarker)) {
-        if (config.highlightHintMarker.length > 100) {
-          errors.push("highlightHintMarker must be 100 characters or less");
-        } else if (/^[0-9]/.test(config.highlightHintMarker)) {
-          errors.push("highlightHintMarker must start with a letter or underscore");
-        } else {
-          errors.push("highlightHintMarker must contain only alphanumeric characters and underscores");
+  const vHlg = (v: string | HighlightColor | undefined, n: string) => {
+    if (v !== undefined) {
+      if (typeof v === 'string') {
+        if (v === '') e.push(`${n} must be a non-empty string`);
+        else if (!isValidHighlightGroup(v)) {
+          if (v.length > 100) e.push(`${n} must be 100 characters or less`);
+          else if (/^[0-9]/.test(v)) e.push(`${n} must start with a letter or underscore`);
+          else e.push(`${n} must contain only alphanumeric characters and underscores`);
         }
-      }
-    } else if (typeof config.highlightHintMarker !== 'object') {
-      errors.push("highlightHintMarker must be a string or HighlightColor object");
+      } else if (typeof v !== 'object') e.push(`${n} must be a string or HighlightColor object`);
     }
-  }
-
-  if (config.highlightHintMarkerCurrent !== undefined) {
-    if (typeof config.highlightHintMarkerCurrent === 'string') {
-      if (config.highlightHintMarkerCurrent === '') {
-        errors.push("highlightHintMarkerCurrent must be a non-empty string");
-      } else if (!isValidHighlightGroup(config.highlightHintMarkerCurrent)) {
-        if (config.highlightHintMarkerCurrent.length > 100) {
-          errors.push("highlightHintMarkerCurrent must be 100 characters or less");
-        } else if (/^[0-9]/.test(config.highlightHintMarkerCurrent)) {
-          errors.push("highlightHintMarkerCurrent must start with a letter or underscore");
-        } else {
-          errors.push("highlightHintMarkerCurrent must contain only alphanumeric characters and underscores");
-        }
-      }
-    } else if (typeof config.highlightHintMarkerCurrent !== 'object') {
-      errors.push("highlightHintMarkerCurrent must be a string or HighlightColor object");
-    }
-  }
-}
-
-function validateWordDetectionSettings(config: Partial<Config>, errors: string[]): void {
-  if (config.keyRepeatThreshold !== undefined) {
-    if (!Number.isInteger(config.keyRepeatThreshold) || config.keyRepeatThreshold < 0) {
-      errors.push("keyRepeatThreshold must be a non-negative integer");
-    }
-  }
-
-  if (config.wordDetectionStrategy !== undefined) {
-    const validStrategies = ["regex", "tinysegmenter", "hybrid"];
-    if (!validStrategies.includes(config.wordDetectionStrategy)) {
-      errors.push(`wordDetectionStrategy must be one of: ${validStrategies.join(", ")}`);
-    }
-  }
-
-  if (config.segmenterThreshold !== undefined) {
-    if (!Number.isInteger(config.segmenterThreshold) || config.segmenterThreshold <= 0) {
-      errors.push("segmenterThreshold must be a positive integer");
-    }
-  }
-}
-
-function validateJapaneseWordSettings(config: Partial<Config>, errors: string[]): void {
-  if (config.japaneseMinWordLength !== undefined) {
-    if (!Number.isInteger(config.japaneseMinWordLength) || config.japaneseMinWordLength <= 0) {
-      errors.push("japaneseMinWordLength must be a positive integer");
-    }
-  }
-
-  if (config.japaneseMergeThreshold !== undefined) {
-    if (!Number.isInteger(config.japaneseMergeThreshold) || config.japaneseMergeThreshold <= 0) {
-      errors.push("japaneseMergeThreshold must be a positive integer");
-    }
-  }
-
-  if (config.defaultMinWordLength !== undefined) {
-    if (!Number.isInteger(config.defaultMinWordLength) || config.defaultMinWordLength <= 0) {
-      errors.push("defaultMinWordLength must be a positive integer");
-    }
-  }
-
-  if (config.defaultMotionCount !== undefined) {
-    if (!Number.isInteger(config.defaultMotionCount) || config.defaultMotionCount <= 0) {
-      errors.push("defaultMotionCount must be a positive integer");
-    }
-  }
-}
-
-export function validateUnifiedConfig(
-  config: Partial<Config>,
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  validateCoreSettings(config, errors);
-  validateHintSettings(config, errors);
-  validateExtendedHintSettings(config, errors);
-  validateWordDetectionSettings(config, errors);
-  validateJapaneseWordSettings(config, errors);
-
-  return { valid: errors.length === 0, errors };
-}
-
-export function validateConfig(
-  config: Partial<Config>,
-): { valid: boolean; errors: string[] } {
-  // 入力されたconfigが数値型のhighlightHintMarkerなどを含む場合、
-  // 直接バリデーションする必要がある
-  const errors: string[] = [];
-  const c = config as Record<string, unknown>;
-
-  // motionCount の型チェック
-  if (c.motionCount !== undefined && c.motionCount === null) {
-    errors.push("motionCount cannot be null");
-  }
-
-  // hintPosition の型チェック
-  if (c.hintPosition !== undefined && c.hintPosition === null) {
-    errors.push("hintPosition cannot be null");
-  }
-
-  // highlightHintMarker の型チェック
-  if (c.highlightHintMarker !== undefined) {
-    if (c.highlightHintMarker === null) {
-      errors.push("highlightHintMarker cannot be null");
-    } else if (typeof c.highlightHintMarker === 'number') {
-      errors.push("highlightHintMarker must be a string");
-    } else if (Array.isArray(c.highlightHintMarker)) {
-      errors.push("highlightHintMarker must be a string");
-    } else if (typeof c.highlightHintMarker === 'string') {
-      if (c.highlightHintMarker === '') {
-        errors.push("highlightHintMarker must be a non-empty string");
-      } else if (!isValidHighlightGroup(c.highlightHintMarker)) {
-        if (c.highlightHintMarker.length > 100) {
-          errors.push("highlightHintMarker must be 100 characters or less");
-        } else if (/^[0-9]/.test(c.highlightHintMarker)) {
-          errors.push("highlightHintMarker must start with a letter or underscore");
-        } else {
-          errors.push("highlightHintMarker must contain only alphanumeric characters and underscores");
-        }
-      }
-    }
-  }
-
-  // highlightHintMarkerCurrent の型チェック
-  if (c.highlightHintMarkerCurrent !== undefined) {
-    if (c.highlightHintMarkerCurrent === null) {
-      errors.push("highlightHintMarkerCurrent cannot be null");
-    } else if (typeof c.highlightHintMarkerCurrent === 'number') {
-      errors.push("highlightHintMarkerCurrent must be a string");
-    } else if (Array.isArray(c.highlightHintMarkerCurrent)) {
-      errors.push("highlightHintMarkerCurrent must be a string");
-    } else if (typeof c.highlightHintMarkerCurrent === 'string') {
-      if (c.highlightHintMarkerCurrent === '') {
-        errors.push("highlightHintMarkerCurrent must be a non-empty string");
-      } else if (!isValidHighlightGroup(c.highlightHintMarkerCurrent)) {
-        if (c.highlightHintMarkerCurrent.length > 100) {
-          errors.push("highlightHintMarkerCurrent must be 100 characters or less");
-        } else if (/^[0-9]/.test(c.highlightHintMarkerCurrent)) {
-          errors.push("highlightHintMarkerCurrent must start with a letter or underscore");
-        } else {
-          errors.push("highlightHintMarkerCurrent must contain only alphanumeric characters and underscores");
-        }
-      }
-    }
-  }
-
-  // 早期エラーがあれば返す
-  if (errors.length > 0) {
-    return { valid: false, errors };
-  }
-
-  // Process1: 直接Configとして扱う
-  const configObj = config as Config;
-  const result = validateUnifiedConfig(configObj);
-
-  // snake_caseは完全に廃止されたため、変換は不要
-  const allErrors = [...errors, ...result.errors];
-  return { valid: result.valid && errors.length === 0, errors: allErrors };
-}
-
-export function mergeConfig(baseConfig: Config, updates: Partial<Config>): Config {
-  // バリデーションを実行
-  const validation = validateConfig(updates);
-  if (!validation.valid) {
-    throw new Error(`Invalid config: ${validation.errors.join(", ")}`);
-  }
-
-  return { ...baseConfig, ...updates };
-}
-
-export function cloneConfig(config: Config): Config {
-  return JSON.parse(JSON.stringify(config));
-}
-
-export function getPerKeyValue<T>(
-  config: Config,
-  key: string,
-  perKeyRecord: Record<string, T> | undefined,
-  defaultValue: T | undefined,
-  fallbackValue: T,
-): T {
-  // キー別設定が存在する場合
-  if (perKeyRecord && perKeyRecord[key] !== undefined) {
-    return perKeyRecord[key];
-  }
-
-  // デフォルト値が設定されている場合
-  if (defaultValue !== undefined) {
-    return defaultValue;
-  }
-
-  // フォールバック値を使用
-  return fallbackValue;
-}
-
-export interface DeprecationWarning {
-  property: string;
-  replacement: string;
-  message: string;
-}
-
-export interface NamingValidation {
-  followsConvention: boolean;
-  hasConfigSuffix: boolean;
-  hasManagerSuffix: boolean;
-  hasBooleanPrefix: boolean;
-}
-
-export function createModernConfig(input: Partial<Config> = {}): Config {
-  return createMinimalConfig(input);
-}
-
-export function validateNamingConvention(name: string): NamingValidation {
-  const hasConfigSuffix = name.endsWith("Config");
-  const hasManagerSuffix = name.endsWith("Manager");
-  const hasBooleanPrefix = /^(is|has|should)[A-Z]/.test(name);
-
-  const followsConvention = hasConfigSuffix || hasManagerSuffix || hasBooleanPrefix;
-
-  return {
-    followsConvention,
-    hasConfigSuffix,
-    hasManagerSuffix,
-    hasBooleanPrefix,
   };
+  vHlg(c.highlightHintMarker, "highlightHintMarker");
+  vHlg(c.highlightHintMarkerCurrent, "highlightHintMarkerCurrent");
 }
 
-export function getDeprecationWarnings(
-  config: Partial<Config>,
-): DeprecationWarning[] {
-  return [];
+function vWord(c: Partial<Config>, e: string[]): void {
+  if (c.keyRepeatThreshold !== undefined && (!Number.isInteger(c.keyRepeatThreshold) || c.keyRepeatThreshold < 0)) {
+    e.push("keyRepeatThreshold must be a non-negative integer");
+  }
+  if (c.wordDetectionStrategy !== undefined) {
+    const vs = ["regex", "tinysegmenter", "hybrid"];
+    if (!vs.includes(c.wordDetectionStrategy)) e.push(`wordDetectionStrategy must be one of: ${vs.join(", ")}`);
+  }
+  if (c.segmenterThreshold !== undefined && (!Number.isInteger(c.segmenterThreshold) || c.segmenterThreshold <= 0)) {
+    e.push("segmenterThreshold must be a positive integer");
+  }
 }
+
+function vJpWord(c: Partial<Config>, e: string[]): void {
+  if (c.japaneseMinWordLength !== undefined && (!Number.isInteger(c.japaneseMinWordLength) || c.japaneseMinWordLength <= 0)) {
+    e.push("japaneseMinWordLength must be a positive integer");
+  }
+  if (c.japaneseMergeThreshold !== undefined && (!Number.isInteger(c.japaneseMergeThreshold) || c.japaneseMergeThreshold <= 0)) {
+    e.push("japaneseMergeThreshold must be a positive integer");
+  }
+  if (c.defaultMinWordLength !== undefined && (!Number.isInteger(c.defaultMinWordLength) || c.defaultMinWordLength <= 0)) {
+    e.push("defaultMinWordLength must be a positive integer");
+  }
+  if (c.defaultMotionCount !== undefined && (!Number.isInteger(c.defaultMotionCount) || c.defaultMotionCount <= 0)) {
+    e.push("defaultMotionCount must be a positive integer");
+  }
+}
+
+export function validateUnifiedConfig(c: Partial<Config>): { valid: boolean; errors: string[] } {
+  const e: string[] = [];
+  vCore(c, e); vHint(c, e); vExtHint(c, e); vWord(c, e); vJpWord(c, e);
+  return { valid: e.length === 0, errors: e };
+}
+
+export function validateConfig(c: Partial<Config>): { valid: boolean; errors: string[] } {
+  const e: string[] = [];
+  const r = c as Record<string, unknown>;
+  if (r.motionCount !== undefined && r.motionCount === null) e.push("motionCount cannot be null");
+  if (r.hintPosition !== undefined && r.hintPosition === null) e.push("hintPosition cannot be null");
+  if (r.highlightHintMarker !== undefined) {
+    if (r.highlightHintMarker === null) e.push("highlightHintMarker cannot be null");
+    else if (typeof r.highlightHintMarker === 'number') e.push("highlightHintMarker must be a string");
+    else if (Array.isArray(r.highlightHintMarker)) e.push("highlightHintMarker must be a string");
+    else if (typeof r.highlightHintMarker === 'string') {
+      if (r.highlightHintMarker === '') e.push("highlightHintMarker must be a non-empty string");
+      else if (!isValidHighlightGroup(r.highlightHintMarker)) {
+        if (r.highlightHintMarker.length > 100) e.push("highlightHintMarker must be 100 characters or less");
+        else if (/^[0-9]/.test(r.highlightHintMarker)) e.push("highlightHintMarker must start with a letter or underscore");
+        else e.push("highlightHintMarker must contain only alphanumeric characters and underscores");
+      }
+    }
+  }
+  if (r.highlightHintMarkerCurrent !== undefined) {
+    if (r.highlightHintMarkerCurrent === null) e.push("highlightHintMarkerCurrent cannot be null");
+    else if (typeof r.highlightHintMarkerCurrent === 'number') e.push("highlightHintMarkerCurrent must be a string");
+    else if (Array.isArray(r.highlightHintMarkerCurrent)) e.push("highlightHintMarkerCurrent must be a string");
+    else if (typeof r.highlightHintMarkerCurrent === 'string') {
+      if (r.highlightHintMarkerCurrent === '') e.push("highlightHintMarkerCurrent must be a non-empty string");
+      else if (!isValidHighlightGroup(r.highlightHintMarkerCurrent)) {
+        if (r.highlightHintMarkerCurrent.length > 100) e.push("highlightHintMarkerCurrent must be 100 characters or less");
+        else if (/^[0-9]/.test(r.highlightHintMarkerCurrent)) e.push("highlightHintMarkerCurrent must start with a letter or underscore");
+        else e.push("highlightHintMarkerCurrent must contain only alphanumeric characters and underscores");
+      }
+    }
+  }
+  if (e.length > 0) return { valid: false, errors: e };
+  const v = validateUnifiedConfig(c);
+  return { valid: v.valid && e.length === 0, errors: [...e, ...v.errors] };
+}
+
+export function mergeConfig(b: Config, u: Partial<Config>): Config {
+  const v = validateConfig(u);
+  if (!v.valid) throw new Error(`Invalid config: ${v.errors.join(", ")}`);
+  return { ...b, ...u };
+}
+export function cloneConfig(c: Config): Config { return JSON.parse(JSON.stringify(c)); }
+export function getPerKeyValue<T>(c: Config, k: string, p: Record<string, T> | undefined, d: T | undefined, f: T): T {
+  if (p && p[k] !== undefined) return p[k];
+  if (d !== undefined) return d;
+  return f;
+}
+export function createModernConfig(i: Partial<Config> = {}): Config { return createMinimalConfig(i); }
 
 export interface ValidationRules {
   type?: "string" | "number" | "boolean" | "array" | "object";
@@ -483,141 +258,72 @@ export interface ValidationRules {
   enum?: readonly (string | number | boolean)[];
   custom?: (value: unknown) => boolean;
 }
+export interface ValidationResult { valid: boolean; error?: string; }
 
-export interface ValidationResult {
-  valid: boolean;
-  error?: string;
+function isValidType(v: unknown, t: string): boolean {
+  if (t === "string") return typeof v === "string";
+  if (t === "number") return typeof v === "number" && !isNaN(v);
+  if (t === "boolean") return typeof v === "boolean";
+  if (t === "array") return Array.isArray(v);
+  if (t === "object") return typeof v === "object" && v !== null && !Array.isArray(v);
+  return false;
 }
-
-export function isValidType(value: unknown, expectedType: string): boolean {
-  switch (expectedType) {
-    case "string":
-      return typeof value === "string";
-    case "number":
-      return typeof value === "number" && !isNaN(value);
-    case "boolean":
-      return typeof value === "boolean";
-    case "array":
-      return Array.isArray(value);
-    case "object":
-      return typeof value === "object" && value !== null && !Array.isArray(value);
-    default:
-      return false;
-  }
-}
-
-export function isInRange(value: number, min?: number, max?: number): boolean {
-  if (min !== undefined && value < min) return false;
-  if (max !== undefined && value > max) return false;
+function isInRange(v: number, min?: number, max?: number): boolean {
+  if (min !== undefined && v < min) return false;
+  if (max !== undefined && v > max) return false;
   return true;
 }
-
-export function isValidLength(value: string, minLength?: number, maxLength?: number): boolean {
-  if (minLength !== undefined && value.length < minLength) return false;
-  if (maxLength !== undefined && value.length > maxLength) return false;
+function isValidLength(v: string, min?: number, max?: number): boolean {
+  if (min !== undefined && v.length < min) return false;
+  if (max !== undefined && v.length > max) return false;
   return true;
 }
-
-export function isValidArrayLength(array: unknown[], minLength?: number, maxLength?: number): boolean {
-  if (minLength !== undefined && array.length < minLength) return false;
-  if (maxLength !== undefined && array.length > maxLength) return false;
+function isValidArrayLength(a: unknown[], min?: number, max?: number): boolean {
+  if (min !== undefined && a.length < min) return false;
+  if (max !== undefined && a.length > max) return false;
   return true;
 }
-
-export function isValidEnum(value: unknown, validValues: readonly (string | number | boolean)[]): boolean {
-  return validValues.includes(value as string | number | boolean);
+function isValidEnum(v: unknown, vs: readonly (string | number | boolean)[]): boolean {
+  return vs.includes(v as string | number | boolean);
 }
-
-export function validateConfigValue(
-  key: string,
-  value: unknown,
-  rules: {
-    type?: string;
-    required?: boolean;
-    min?: number;
-    max?: number;
-    minLength?: number;
-    maxLength?: number;
-    enum?: readonly (string | number | boolean)[];
-    custom?: (value: unknown) => boolean;
-  }
-): { valid: boolean; error?: string } {
-  // 必須チェック
-  if (rules.required && (value === undefined || value === null)) {
-    return { valid: false, error: `${key} is required` };
-  }
-
-  // 値がundefinedまたはnullで必須でない場合はバリデーション通過
-  if (value === undefined || value === null) {
-    return { valid: true };
-  }
-
-  // 型チェック
-  if (rules.type && !isValidType(value, rules.type)) {
-    return { valid: false, error: `${key} must be of type ${rules.type}` };
-  }
-
-  // 数値の範囲チェック（型ガードで型を絞り込む）
-  if (rules.type === "number" && typeof value === "number") {
-    if (!isInRange(value, rules.min, rules.max)) {
-      const minStr = rules.min !== undefined ? `min: ${rules.min}` : "";
-      const maxStr = rules.max !== undefined ? `max: ${rules.max}` : "";
-      const rangeStr = [minStr, maxStr].filter(s => s).join(", ");
-      return { valid: false, error: `${key} is out of range (${rangeStr})` };
+export function validateConfigValue(k: string, v: unknown, r: ValidationRules): ValidationResult {
+  if (r.required && (v === undefined || v === null)) return { valid: false, error: `${k} is required` };
+  if (v === undefined || v === null) return { valid: true };
+  if (r.type && !isValidType(v, r.type)) return { valid: false, error: `${k} must be of type ${r.type}` };
+  if (r.type === "number" && typeof v === "number") {
+    if (!isInRange(v, r.min, r.max)) {
+      const ms = r.min !== undefined ? `min: ${r.min}` : "";
+      const xs = r.max !== undefined ? `max: ${r.max}` : "";
+      const rs = [ms, xs].filter(s => s).join(", ");
+      return { valid: false, error: `${k} is out of range (${rs})` };
     }
   }
-
-  // 文字列の長さチェック（型ガードで型を絞り込む）
-  if (rules.type === "string" && typeof value === "string") {
-    if (!isValidLength(value, rules.minLength, rules.maxLength)) {
-      const minStr = rules.minLength !== undefined ? `min: ${rules.minLength}` : "";
-      const maxStr = rules.maxLength !== undefined ? `max: ${rules.maxLength}` : "";
-      const lengthStr = [minStr, maxStr].filter(s => s).join(", ");
-      return { valid: false, error: `${key} length is invalid (${lengthStr})` };
+  if (r.type === "string" && typeof v === "string") {
+    if (!isValidLength(v, r.minLength, r.maxLength)) {
+      const ms = r.minLength !== undefined ? `min: ${r.minLength}` : "";
+      const xs = r.maxLength !== undefined ? `max: ${r.maxLength}` : "";
+      const ls = [ms, xs].filter(s => s).join(", ");
+      return { valid: false, error: `${k} length is invalid (${ls})` };
     }
   }
-
-  // 配列の要素数チェック（型ガードで型を絞り込む）
-  if (rules.type === "array" && Array.isArray(value)) {
-    if (!isValidArrayLength(value, rules.minLength, rules.maxLength)) {
-      const minStr = rules.minLength !== undefined ? `min: ${rules.minLength}` : "";
-      const maxStr = rules.maxLength !== undefined ? `max: ${rules.maxLength}` : "";
-      const lengthStr = [minStr, maxStr].filter(s => s).join(", ");
-      return { valid: false, error: `${key} array length is invalid (${lengthStr})` };
+  if (r.type === "array" && Array.isArray(v)) {
+    if (!isValidArrayLength(v, r.minLength, r.maxLength)) {
+      const ms = r.minLength !== undefined ? `min: ${r.minLength}` : "";
+      const xs = r.maxLength !== undefined ? `max: ${r.maxLength}` : "";
+      const ls = [ms, xs].filter(s => s).join(", ");
+      return { valid: false, error: `${k} array length is invalid (${ls})` };
     }
   }
-
-  // 列挙値チェック
-  if (rules.enum && !isValidEnum(value, rules.enum)) {
-    return { valid: false, error: `${key} must be one of: ${rules.enum.join(", ")}` };
-  }
-
-  // カスタムバリデーション
-  if (rules.custom && !rules.custom(value)) {
-    return { valid: false, error: `${key} failed custom validation` };
-  }
-
+  if (r.enum && !isValidEnum(v, r.enum)) return { valid: false, error: `${k} must be one of: ${r.enum.join(", ")}` };
+  if (r.custom && !r.custom(v)) return { valid: false, error: `${k} failed custom validation` };
   return { valid: true };
 }
-
-export function validateConfigObject(
-  config: Record<string, unknown>,
-  rulesMap: Record<string, ValidationRules>
-): ValidationResult & { errors?: Record<string, string> } {
-  const errors: Record<string, string> = {};
-  let hasError = false;
-
-  for (const [key, rules] of Object.entries(rulesMap)) {
-    const result = validateConfigValue(key, config[key], rules);
-    if (!result.valid && result.error) {
-      errors[key] = result.error;
-      hasError = true;
-    }
+export function validateConfigObject(c: Record<string, unknown>, rm: Record<string, ValidationRules>): ValidationResult & { errors?: Record<string, string> } {
+  const es: Record<string, string> = {};
+  let he = false;
+  for (const [k, r] of Object.entries(rm)) {
+    const res = validateConfigValue(k, c[k], r);
+    if (!res.valid && res.error) { es[k] = res.error; he = true; }
   }
-
-  return {
-    valid: !hasError,
-    ...(hasError && { error: `Validation failed for: ${Object.keys(errors).join(", ")}` }),
-    ...(hasError && { errors })
-  };
+  return { valid: !he, ...(he && { error: `Validation failed for: ${Object.keys(es).join(", ")}`, errors: es }) };
 }
