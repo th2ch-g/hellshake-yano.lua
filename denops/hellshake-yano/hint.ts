@@ -32,166 +32,45 @@ const assignmentCacheVisual = globalCache.getCache<string, Word[]>(CacheType.HIN
 const assignmentCacheOther = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
 /** 文字幅キャッシュ */
 const CHAR_WIDTH_CACHE = globalCache.getCache<number, number>(CacheType.CHAR_WIDTH);
-/** CJK文字範囲の定義 */
-const CJK_RANGES = [[0x3000, 0x303F], [0x3040, 0x309F], [0x30A0, 0x30FF], [0x4E00, 0x9FFF], [0xFF00, 0xFFEF]] as const;
-/** 絵文字範囲の定義 */
-const EMOJI_RANGES = [[0x1F600, 0x1F64F], [0x1F300, 0x1F5FF], [0x1F680, 0x1F6FF], [0x1F1E6, 0x1F1FF]] as const;
-/**
- */
-function initializeASCIICache(): void {
-  for (let i = 0x20; i <= 0x7E; i++) {
-    if (CHAR_WIDTH_CACHE.get(i) === undefined) {
-      CHAR_WIDTH_CACHE.set(i, 1);
-    }
-  }
+/** ASCII文字幅キャッシュの初期化 */
+for (let i = 0x20; i <= 0x7E; i++) {
+  if (!CHAR_WIDTH_CACHE.has(i)) CHAR_WIDTH_CACHE.set(i, 1);
 }
-initializeASCIICache();
-/**
- * @param codePoint
- * @returns 
- */
-function isLatinMathSymbol(codePoint: number): boolean {
-  return (codePoint >= 0x00B0 && codePoint <= 0x00B1) || (codePoint >= 0x00B7 && codePoint <= 0x00B7) ||
-         (codePoint >= 0x00D7 && codePoint <= 0x00D7) || (codePoint >= 0x00F7 && codePoint <= 0x00F7) ||
-         (codePoint >= 0x2190 && codePoint <= 0x21FF) || (codePoint >= 0x2200 && codePoint <= 0x22FF) ||
-         (codePoint >= 0x2300 && codePoint <= 0x23FF) || (codePoint >= 0x25A0 && codePoint <= 0x25FF) ||
-         (codePoint >= 0x2600 && codePoint <= 0x26FF) || (codePoint >= 0x2700 && codePoint <= 0x27BF);
-}
-/**
- * @param codePoint
- * @returns 
- */
-function isInCJKRange(codePoint: number): boolean {
-  for (const [start, end] of CJK_RANGES) {
-    if (codePoint >= start && codePoint <= end) return true;
-  }
-  return false;
-}
-/**
- * @param codePoint
- * @returns 
- */
-function isInEmojiRange(codePoint: number): boolean {
-  for (const [start, end] of EMOJI_RANGES) {
-    if (codePoint >= start && codePoint <= end) return true;
-  }
-  return false;
-}
-/**
- * @param codePoint
- * @returns 
- */
-function isInExtendedWideRange(codePoint: number): boolean {
-  return isLatinMathSymbol(codePoint) || (codePoint >= 0x2460 && codePoint <= 0x24FF) ||
-         (codePoint >= 0x2E80 && codePoint <= 0x2EFF) || (codePoint >= 0x2F00 && codePoint <= 0x2FDF) ||
-         (codePoint >= 0x2FF0 && codePoint <= 0x2FFF) || (codePoint >= 0x3400 && codePoint <= 0x4DBF) ||
-         (codePoint >= 0x20000 && codePoint <= 0x2A6DF) || (codePoint >= 0x2A700 && codePoint <= 0x2B73F) ||
-         (codePoint >= 0x2B740 && codePoint <= 0x2B81F) || (codePoint >= 0x2B820 && codePoint <= 0x2CEAF) ||
-         (codePoint >= 0x2CEB0 && codePoint <= 0x2EBEF) || (codePoint >= 0xF900 && codePoint <= 0xFAFF) ||
-         (codePoint >= 0xFE30 && codePoint <= 0xFE4F);
-}
-/**
- * @param codePoint
- * @param tabWidth
- * @returns 
- */
+
 function calculateCharWidth(codePoint: number, tabWidth: number): number {
   if (codePoint === 0x09) return tabWidth;
   if (codePoint >= 0x20 && codePoint <= 0x7E) return 1;
   if (codePoint < 0x20 || (codePoint >= 0x7F && codePoint < 0xA0)) return 0;
-  if (isLatinMathSymbol(codePoint)) return 2;
-  if (codePoint < 0x100) return 1;
-  if (isInCJKRange(codePoint) || isInEmojiRange(codePoint)) return 2;
-  if (isInExtendedWideRange(codePoint)) return 2;
+  // CJK、絵文字、数学記号、全角記号などの全角文字
+  if ((codePoint >= 0x00B0 && codePoint <= 0x00F7) ||
+      (codePoint >= 0x2000 && codePoint <= 0x2EFF) ||
+      (codePoint >= 0x3000 && codePoint <= 0x9FFF) ||
+      (codePoint >= 0xF900 && codePoint <= 0xFAFF) ||
+      (codePoint >= 0xFF00 && codePoint <= 0xFFEF) ||
+      (codePoint >= 0x1F000 && codePoint <= 0x1F9FF) ||
+      (codePoint >= 0x20000 && codePoint <= 0x2EBEF)) return 2;
   return 1;
 }
-/**
- * @param char
- * @param tabWidth
- * @returns 
- */
 export function getCharDisplayWidth(char: string, tabWidth = 8): number {
-  if (!char || char.length === 0) return 0;
+  if (!char) return 0;
   const codePoint = char.codePointAt(0);
   if (codePoint === undefined) return 0;
-  if (tabWidth === 8) {
-    const cached = CHAR_WIDTH_CACHE.get(codePoint);
-    if (cached !== undefined) return cached;
+  if (tabWidth === 8 && CHAR_WIDTH_CACHE.has(codePoint)) {
+    return CHAR_WIDTH_CACHE.get(codePoint)!;
   }
   const width = calculateCharWidth(codePoint, tabWidth);
-  if (tabWidth === 8 && width !== tabWidth) {
-    CHAR_WIDTH_CACHE.set(codePoint, width);
-  }
+  if (tabWidth === 8 && width !== tabWidth) CHAR_WIDTH_CACHE.set(codePoint, width);
   return width;
 }
-/**
- * @returns 
- */
-function isEmojiSequence(text: string): boolean {
-  return /[\u{1F1E6}-\u{1F1FF}]{2}/u.test(text) || /[\u{1F600}-\u{1F64F}]/u.test(text) ||
-         /[\u{1F300}-\u{1F5FF}]/u.test(text) || /[\u{1F680}-\u{1F6FF}]/u.test(text) ||
-         /[\u{1F900}-\u{1F9FF}]/u.test(text);
-}
-/**
- * @param text
- * @param tabWidth
- * @returns 
- */
-function getDisplayWidthFallback(text: string, tabWidth = 8): number {
+
+export function getDisplayWidth(text: string, tabWidth = 8): number {
+  if (!text) return 0;
   let totalWidth = 0;
   for (let i = 0; i < text.length;) {
     const codePoint = text.codePointAt(i);
-    if (codePoint === undefined) {
-      i++;
-      continue;
-    }
-    const char = String.fromCodePoint(codePoint);
-    totalWidth += getCharDisplayWidth(char, tabWidth);
+    if (codePoint === undefined) { i++; continue; }
+    totalWidth += calculateCharWidth(codePoint, tabWidth);
     i += codePoint > 0xFFFF ? 2 : 1;
-  }
-  return totalWidth;
-}
-/**
- * @param text
- * @param tabWidth
- * @returns 
- */
-export function getDisplayWidth(text: string, tabWidth = 8): number {
-  if (text == null || text.length === 0) return 0;
-  let totalWidth = 0;
-  try {
-    let segmenter: Intl.Segmenter;
-    try {
-      segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-    } catch (e) {
-      return getDisplayWidthFallback(text, tabWidth);
-    }
-    for (const segment of segmenter.segment(text)) {
-      const cluster = segment.segment;
-      if (cluster.length === 1) {
-        totalWidth += getCharDisplayWidth(cluster, tabWidth);
-      } else {
-        const hasZWJ = cluster.includes('\u200D');
-        const hasEmojiModifier = /[\u{1F3FB}-\u{1F3FF}]/u.test(cluster);
-        const hasVariationSelector = /[\uFE0E\uFE0F]/u.test(cluster);
-        if (hasZWJ || hasEmojiModifier || hasVariationSelector || isEmojiSequence(cluster)) {
-          totalWidth += 2;
-        } else {
-          for (let i = 0; i < cluster.length;) {
-            const codePoint = cluster.codePointAt(i);
-            if (codePoint === undefined) {
-              i++;
-              continue;
-            }
-            const char = String.fromCodePoint(codePoint);
-            totalWidth += getCharDisplayWidth(char, tabWidth);
-            i += codePoint > 0xFFFF ? 2 : 1;
-          }
-        }
-      }
-    }
-  } catch (error) {
-    return getDisplayWidthFallback(text, tabWidth);
   }
   return totalWidth;
 }
@@ -288,79 +167,24 @@ function hashString(value: string): string {
   }
   return hash.toString(36);
 }
-/**
- * @param word
- * @param hint
- * @param effectiveHintPosition
- * @returns 
- */
-function createLazyHintMapping(
-  word: Word,
-  hint: string,
-  effectiveHintPosition: string,
-  endHint?: string, // bothモード用の終了位置ヒント
-): HintMapping | HintMapping[] {
-  if (effectiveHintPosition === "both" && endHint) {
-    const startMapping = createSingleHintMapping(word, hint, "start");
-    const endMapping = createSingleHintMapping(word, endHint, "end");
-    return [startMapping, endMapping];
-  }
-  return createSingleHintMapping(word, hint, effectiveHintPosition);
-}
-/**
- * @param word
- * @param hint
- * @param effectiveHintPosition
- * @returns 
- */
-function createSingleHintMapping(
-  word: Word,
-  hint: string,
-  effectiveHintPosition: string,
-): HintMapping {
+function createSingleHintMapping(word: Word, hint: string, effectiveHintPosition: string): HintMapping {
   let cachedHintCol: number | undefined;
   let cachedHintByteCol: number | undefined;
-
   const compute = () => {
-    if (cachedHintCol !== undefined && cachedHintByteCol !== undefined) {
-      return;
+    if (cachedHintCol === undefined) {
+      if (effectiveHintPosition === "end") {
+        cachedHintCol = word.col + word.text.length - 1;
+        cachedHintByteCol = word.byteCol ? word.byteCol + getByteLength(word.text) - 1 : cachedHintCol;
+      } else {
+        cachedHintCol = word.col;
+        cachedHintByteCol = word.byteCol ?? word.col;
+      }
     }
-    let hintCol = word.col;
-    let hintByteCol = word.byteCol ?? word.col;
-
-    switch (effectiveHintPosition) {
-      case "end":
-        hintCol = word.col + word.text.length - 1;
-        if (word.byteCol) {
-          const textByteLength = getByteLength(word.text);
-          hintByteCol = word.byteCol + textByteLength - 1;
-        } else {
-          hintByteCol = hintCol;
-        }
-        break;
-      case "overlay":
-        hintCol = word.col;
-        hintByteCol = word.byteCol ?? word.col;
-        break;
-      default:
-        hintCol = word.col;
-        hintByteCol = word.byteCol ?? word.col;
-        break;
-    }
-    cachedHintCol = hintCol;
-    cachedHintByteCol = hintByteCol;
   };
   return {
-    word,
-    hint,
-    get hintCol(): number {
-      compute();
-      return cachedHintCol ?? word.col;
-    },
-    get hintByteCol(): number {
-      compute();
-      return cachedHintByteCol ?? (word.byteCol ?? word.col);
-    },
+    word, hint,
+    get hintCol(): number { compute(); return cachedHintCol ?? word.col; },
+    get hintByteCol(): number { compute(); return cachedHintByteCol ?? (word.byteCol ?? word.col); }
   };
 }
 /**
@@ -454,28 +278,15 @@ export function assignHintsToWords(
   );
   const cachedWords = assignmentCache.get(cacheKey);
   if (cachedWords) {
-    const effectiveHintPosition = hintPositionSetting;
-    if (effectiveHintPosition === "both") {
+    if (hintPositionSetting === "both") {
       const mappings: HintMapping[] = [];
-      cachedWords.forEach((word, index) => {
-        const startHintIndex = index * 2;
-        const endHintIndex = index * 2 + 1;
-        if (hints[startHintIndex]) {
-          const startMapping = createSingleHintMapping(word, hints[startHintIndex], "start");
-          mappings.push(startMapping);
-        }
-        if (hints[endHintIndex]) {
-          const endMapping = createSingleHintMapping(word, hints[endHintIndex], "end");
-          mappings.push(endMapping);
-        }
+      cachedWords.forEach((word, i) => {
+        if (hints[i * 2]) mappings.push(createSingleHintMapping(word, hints[i * 2], "start"));
+        if (hints[i * 2 + 1]) mappings.push(createSingleHintMapping(word, hints[i * 2 + 1], "end"));
       });
       return mappings;
     }
-
-    return cachedWords.map((word, index) => {
-      const result = createLazyHintMapping(word, hints[index] || "", effectiveHintPosition);
-      return Array.isArray(result) ? result[0] : result;
-    });
+    return cachedWords.map((word, i) => createSingleHintMapping(word, hints[i] || "", hintPositionSetting));
   }
   let filteredWords = words;
   const shouldSkipOverlapDetection = optimizationConfig?.skipOverlapDetection ?? false;
@@ -492,115 +303,26 @@ export function assignHintsToWords(
     filteredWords = words.filter((word) => !wordsToSkip.has(word));
   }
   const sortedWords = sortWordsByDistanceOptimized(filteredWords, cursorLine, cursorCol);
-  const effectiveHintPosition = hintPositionSetting;
   const mappings: HintMapping[] = [];
-
-  if (effectiveHintPosition === "both") {
-    sortedWords.forEach((word, index) => {
-      const startHintIndex = index * 2;
-      const endHintIndex = index * 2 + 1;
-      const startHint = hints[startHintIndex] || "";
-      const endHint = hints[endHintIndex] || "";
-      if (startHint) {
-        const startMapping = createSingleHintMapping(word, startHint, "start");
-        mappings.push(startMapping);
-      }
-      if (endHint) {
-        const endMapping = createSingleHintMapping(word, endHint, "end");
-        mappings.push(endMapping);
-      }
+  if (hintPositionSetting === "both") {
+    sortedWords.forEach((word, i) => {
+      if (hints[i * 2]) mappings.push(createSingleHintMapping(word, hints[i * 2], "start"));
+      if (hints[i * 2 + 1]) mappings.push(createSingleHintMapping(word, hints[i * 2 + 1], "end"));
     });
   } else {
-    sortedWords.forEach((word, index) => {
-      const result = createLazyHintMapping(word, hints[index] || "", effectiveHintPosition);
-      if (Array.isArray(result)) {
-        mappings.push(result[0]);
-      } else {
-        mappings.push(result);
-      }
-    });
+    sortedWords.forEach((word, i) => mappings.push(createSingleHintMapping(word, hints[i] || "", hintPositionSetting)));
   }
   storeAssignmentCache(assignmentCache, cacheKey, sortedWords);
   return mappings;
 }
-/**
- * @param words
- * @param cursorCol
- * @returns 
- */
-function sortWordsByDistanceOptimized(
-  words: Word[],
-  cursorLine: number,
-  cursorCol: number,
-): Word[] {
-  if (words.length > BATCH_PROCESS_THRESHOLD) {
-    return sortWordsInBatches(words, cursorLine, cursorCol);
-  }
-  const wordsWithDistance = words.map((word) => {
-    const lineDiff = Math.abs(word.line - cursorLine);
-    const colDiff = Math.abs(word.col - cursorCol);
-    const distance = lineDiff * 1000 + colDiff;
-    return { word, distance };
-  });
-  wordsWithDistance.sort((a, b) => {
-    if (a.distance !== b.distance) {
-      return a.distance - b.distance;
-    }
-    if (a.word.line !== b.word.line) {
-      return a.word.line - b.word.line;
-    }
-    return a.word.col - b.word.col;
-  });
-  return wordsWithDistance.map((item) => item.word);
-}
-/**
- * @param words
- * @param cursorCol
- * @returns 
- */
-function sortWordsInBatches(words: Word[], cursorLine: number, cursorCol: number): Word[] {
-  const batchSize = BATCH_BATCH_SIZE;
-  const sortedBatches: Word[][] = [];
-  for (let i = 0; i < words.length; i += batchSize) {
-    const batch = words.slice(i, i + batchSize);
-    const sortedBatch = sortWordsByDistanceOptimized(batch, cursorLine, cursorCol);
-    sortedBatches.push(sortedBatch);
-  }
-  return mergeSortedBatches(sortedBatches, cursorLine, cursorCol);
-}
-/**
- * @param batches
- * @param cursorCol
- * @returns 
- */
-function mergeSortedBatches(batches: Word[][], cursorLine: number, cursorCol: number): Word[] {
-  if (batches.length === 0) return [];
-  if (batches.length === 1) return batches[0];
-  const result: Word[] = [];
-  const pointers = new Array(batches.length).fill(0);
-  while (result.length < batches.reduce((sum, batch) => sum + batch.length, 0)) {
-    let minDistance = Infinity;
-    let minBatchIndex = -1;
-    for (let i = 0; i < batches.length; i++) {
-      if (pointers[i] < batches[i].length) {
-        const word = batches[i][pointers[i]];
-        const lineDiff = Math.abs(word.line - cursorLine);
-        const colDiff = Math.abs(word.col - cursorCol);
-        const distance = lineDiff * 1000 + colDiff;
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          minBatchIndex = i;
-        }
-      }
-    }
-
-    if (minBatchIndex !== -1) {
-      result.push(batches[minBatchIndex][pointers[minBatchIndex]]);
-      pointers[minBatchIndex]++;
-    }
-  }
-  return result;
+function sortWordsByDistanceOptimized(words: Word[], cursorLine: number, cursorCol: number): Word[] {
+  return words.map(word => ({
+    word,
+    distance: Math.abs(word.line - cursorLine) * 1000 + Math.abs(word.col - cursorCol)
+  }))
+  .sort((a, b) => a.distance !== b.distance ? a.distance - b.distance :
+    a.word.line !== b.word.line ? a.word.line - b.word.line : a.word.col - b.word.col)
+  .map(item => item.word);
 }
 /**
  */
@@ -661,124 +383,34 @@ export function getGlobalCacheStats(): HintCacheStatistics {
     overallHitRate: totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0
   };
 }
-/**
- */
 export interface CalculateHintPositionOptions {
-  /** ヒント位置設定（"start", "end", "overlay", "both"） */
   hintPosition?: string;
-  /** 座標系（"vim" または "nvim"）。指定するとVim/Neovim座標変換が有効になる */
   coordinateSystem?: 'vim' | 'nvim';
-  /** 表示モード（"before", "after", "overlay"） */
   displayMode?: 'before' | 'after' | 'overlay';
-  /** デバッグログの有効化 */
   enableDebug?: boolean;
-  /** タブ幅（デフォルト: 8） */
   tabWidth?: number;
 }
-/**
- */
+
 export function calculateHintPosition(
   word: Word,
   hintPositionOrOptions?: string | CalculateHintPositionOptions,
 ): HintPosition | HintPositionWithCoordinateSystem {
   const options: CalculateHintPositionOptions = typeof hintPositionOrOptions === 'string'
-    ? { hintPosition: hintPositionOrOptions }
-    : (hintPositionOrOptions || {});
-
+    ? { hintPosition: hintPositionOrOptions } : (hintPositionOrOptions || {});
   const hintPosition = options.hintPosition || 'start';
   const tabWidth = options.tabWidth || 8;
-  const enableDebug = options.enableDebug || false;
-  const coordinateSystem = options.coordinateSystem;
-  if (coordinateSystem) {
-    let col: number;
-    let byteCol: number;
-    let display_mode: "before" | "after" | "overlay";
-    if (options.displayMode) {
-      display_mode = options.displayMode;
-    }
-
-    switch (hintPosition) {
-      case "start":
-        col = word.col; // 1ベース
-        byteCol = word.byteCol || word.col;
-        if (!options.displayMode) display_mode = "before";
-        break;
-      case "end":
-        col = word.col + word.text.length - 1; // 1ベース
-        if (word.byteCol) {
-          const textByteLength = getByteLength(word.text);
-          byteCol = word.byteCol + textByteLength - 1;
-        } else {
-          byteCol = col;
-        }
-        if (!options.displayMode) display_mode = "after";
-        break;
-      case "overlay":
-        col = word.col; // 1ベース
-        byteCol = word.byteCol || word.col;
-        if (!options.displayMode) display_mode = "overlay";
-        break;
-      case "both":
-        col = word.col;
-        byteCol = word.byteCol || word.col;
-        if (!options.displayMode) display_mode = "before";
-        break;
-      default:
-        col = word.col; // 1ベース
-        byteCol = word.byteCol || word.col;
-        if (!options.displayMode) display_mode = "before";
-        break;
-    }
-    const vim_line = word.line; // Vim: 1ベース行番号
-    const nvim_line = word.line - 1; // Neovim: 0ベース行番号
-    const vim_col = col; // Vim: 1ベース表示列番号
-    const nvim_col = Math.max(0, byteCol - 1); // Neovim: 0ベースバイト列番号
-
-    if (enableDebug) {
-    }
+  const isEnd = hintPosition === 'end';
+  const col = isEnd ? getWordDisplayEndCol(word, tabWidth) : word.col;
+  const byteCol = isEnd && word.byteCol ? word.byteCol + getByteLength(word.text) - 1 : word.byteCol || word.col;
+  const display_mode = options.displayMode || (isEnd ? 'after' : hintPosition === 'overlay' ? 'overlay' : 'before');
+  if (options.coordinateSystem) {
     return {
-      line: word.line,
-      col: col,
-      display_mode: display_mode!,
-      vim_col,
-      nvim_col,
-      vim_line,
-      nvim_line,
+      line: word.line, col, display_mode,
+      vim_col: col, nvim_col: Math.max(0, byteCol - 1),
+      vim_line: word.line, nvim_line: word.line - 1
     };
   }
-  let col: number;
-  let display_mode: "before" | "after" | "overlay";
-  if (options.displayMode) {
-    display_mode = options.displayMode;
-  }
-  if (hintPosition === "both") {
-    col = word.col;
-    if (!options.displayMode) display_mode = "before";
-  } else {
-    switch (hintPosition) {
-      case "start":
-        col = word.col;
-        if (!options.displayMode) display_mode = "before";
-        break;
-      case "end":
-        col = getWordDisplayEndCol(word, tabWidth);
-        if (!options.displayMode) display_mode = "after";
-        break;
-      case "overlay":
-        col = word.col;
-        if (!options.displayMode) display_mode = "overlay";
-        break;
-      default:
-        col = word.col;
-        if (!options.displayMode) display_mode = "before";
-        break;
-    }
-  }
-  return {
-    line: word.line,
-    col: col,
-    display_mode: display_mode!,
-  };
+  return { line: word.line, col, display_mode };
 }
 /**
  * @param keys
@@ -1078,124 +710,14 @@ export function canDisplayHint(
   }
   return true; // Sufficient space available
 }
-/**
- * @param words
- * @param tabWidth
- * @returns 
- */
-export function prioritizeHints(
-  words: { word: Word; adjacentWords: Word[] }[],
-  tabWidth = 8,
-): Word[] {
-  const prioritizedWords: Word[] = [];
-  const wordsByLine = new Map<number, { word: Word; adjacentWords: Word[] }[]>();
-
-  for (const wordInfo of words) {
-    const line = wordInfo.word.line;
-    if (!wordsByLine.has(line)) {
-      wordsByLine.set(line, []);
-    }
-    wordsByLine.get(line)!.push(wordInfo);
-  }
-  for (const [line, lineWords] of wordsByLine) {
-    const lineResult = prioritizeWordsOnLine(lineWords, tabWidth);
-    prioritizedWords.push(...lineResult);
-  }
-  return prioritizedWords;
-}
-/**
- * @param lineWords
- * @param tabWidth
- * @returns 
- */
-function prioritizeWordsOnLine(
-  lineWords: { word: Word; adjacentWords: Word[] }[],
-  tabWidth: number,
-): Word[] {
-  const result: Word[] = [];
-  const processedWords = new Set<Word>();
-  const sortedWords = lineWords.sort((a, b) => a.word.col - b.word.col);
-
-  for (const wordInfo of sortedWords) {
-    if (processedWords.has(wordInfo.word)) {
-      continue; // Already processed in a conflict resolution
-    }
-    const conflicts = findConflictingWords(wordInfo, lineWords, tabWidth);
-
-    if (conflicts.length === 0) {
-      result.push(wordInfo.word);
-      processedWords.add(wordInfo.word);
-    } else {
-      const winner = resolveConflict([
-        wordInfo,
-        ...conflicts.map((w) => lineWords.find((lw) => lw.word === w)!),
-      ]);
-      result.push(winner);
-      processedWords.add(wordInfo.word);
-      for (const conflict of conflicts) {
-        processedWords.add(conflict);
-      }
-    }
-  }
-  return result;
-}
-/**
- * @param wordInfo
- * @param allWords
- * @param tabWidth
- * @returns 
- */
-function findConflictingWords(
-  wordInfo: { word: Word; adjacentWords: Word[] },
-  allWords: { word: Word; adjacentWords: Word[] }[],
-  tabWidth: number,
-): Word[] {
-  const conflicts: Word[] = [];
-
-  for (const otherWordInfo of allWords) {
-    if (otherWordInfo.word === wordInfo.word) continue;
-    if (
-      !canDisplayHint(wordInfo.word, [otherWordInfo.word], 2, tabWidth) ||
-      !canDisplayHint(otherWordInfo.word, [wordInfo.word], 2, tabWidth)
-    ) {
-      conflicts.push(otherWordInfo.word);
-    }
-  }
-  return conflicts;
-}
-/**
- * @param conflictingWords
- * @returns 
- */
-function resolveConflict(conflictingWords: { word: Word; adjacentWords: Word[] }[]): Word {
-  if (conflictingWords.length === 1) {
-    return conflictingWords[0].word;
-  }
-  const textWords = conflictingWords.filter((w) => !isSymbolWord(w.word));
-  const symbolWords = conflictingWords.filter((w) => isSymbolWord(w.word));
-
-  if (textWords.length > 0) {
-    return resolveSameTypeConflict(textWords);
-  } else {
-    return resolveSameTypeConflict(symbolWords);
-  }
-}
-/**
- * @param words
- * @returns 
- */
-function resolveSameTypeConflict(words: { word: Word; adjacentWords: Word[] }[]): Word {
-  if (words.length === 1) {
-    return words[0].word;
-  }
-  const maxLength = Math.max(...words.map((w) => w.word.text.length));
-  const longestWords = words.filter((w) => w.word.text.length === maxLength);
-
-  if (longestWords.length === 1) {
-    return longestWords[0].word;
-  }
-  longestWords.sort((a, b) => a.word.col - b.word.col);
-  return longestWords[0].word;
+export function prioritizeHints(words: { word: Word; adjacentWords: Word[] }[], tabWidth = 8): Word[] {
+  const processed = new Set<Word>();
+  return words.filter(({ word, adjacentWords }) => {
+    if (processed.has(word)) return false;
+    const canDisplay = canDisplayHint(word, adjacentWords, 2, tabWidth);
+    if (canDisplay) processed.add(word);
+    return canDisplay;
+  }).map(w => w.word);
 }
 /**
  * @param word
@@ -1235,54 +757,25 @@ export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number
     return word1.col - word2EndCol - 1;
   }
 }
-/**
- */
 export class HintManager {
-  /** ヒント管理に必要な設定オブジェクト */
   private config: Config;
-  /** 現在のキーコンテキスト */
   private currentKeyContext?: string;
-  /**
-   */
   constructor(config: Config) {
     this.config = config;
     this.currentKeyContext = config.currentKeyContext;
   }
-  /**
- * @param key
-   */
   onKeyPress(key: string): void {
-    const hasKeyChanged = this.currentKeyContext !== key;
-
-    if (hasKeyChanged) {
-      this.clearCurrentHints();
-    }
+    if (this.currentKeyContext !== key) this.clearCurrentHints();
     this.currentKeyContext = key;
     this.config.currentKeyContext = key;
   }
-  /**
- * @param key
- * @returns 
-   */
   getMinLengthForKey(key: string): number {
     return Core.getMinLengthForKey(this.config, key);
   }
-  /**
-   */
-  clearCurrentHints(): void {
-
-    if (this.currentKeyContext) {
-    }
-  }
-  /**
- * @returns 
-   */
+  clearCurrentHints(): void {}
   getCurrentKeyContext(): string | undefined {
     return this.currentKeyContext;
   }
-  /**
- * @returns 
-   */
   getConfig(): Readonly<Config> {
     return this.config;
   }
