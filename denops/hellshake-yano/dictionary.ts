@@ -22,7 +22,7 @@ export async function initializeDictionarySystem(denops: Denops): Promise<void> 
     const core = await getCoreForDictionary(denops);
     await core.initializeDictionarySystem(denops);
   } catch (error) {
-    console.error("Failed to initialize dictionary system:", error);
+    // エラーは無視（process1_sub2）
   }
 }
 

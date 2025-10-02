@@ -142,12 +142,7 @@ async function displayHintsBatched(
   _isRenderingHints = true;
   try {
     // デバッグ: 記号ヒントの検出
-    const symbolHints = hints.filter(h =>
-      [';', ':', '[', ']', "'", '"', ',', '.', '/', '\\', '-', '=', '`', '@'].includes(h.hint)
-    );
-    if (symbolHints.length > 0 && config.debug) {
-      console.log(`[hellshake-yano] Symbol hints detected: ${symbolHints.map(h => h.hint).join(', ')}`);
-    }
+    // シンボルヒントのデバッグログは削除（process1_sub2）
 
     for (let i = 0; i < hints.length; i += HIGHLIGHT_BATCH_SIZE) {
       if (!_isRenderingHints) break;
@@ -258,8 +253,7 @@ export function highlightCandidateHintsAsync(
           onComplete();
         }
       })
-      .catch((err) => {
-        console.error("highlightCandidateHintsAsync error:", err);
+      .catch(() => {
         // エラーが発生してもコールバックは呼び出す
         if (onComplete) {
           onComplete();
@@ -317,8 +311,7 @@ export async function highlightCandidateHintsHybrid(
       try {
         await displayHintsBatched(denops, asyncCandidates, config, extmarkNamespace, fallbackMatchIds);
         if (onComplete) onComplete();
-      } catch (err) {
-        console.error("highlightCandidateHintsHybrid async error:", err);
+      } catch {
         if (onComplete) onComplete();
       }
     });
@@ -365,10 +358,7 @@ async function processExtmarksBatched(
 ): Promise<void> {
   for (const hint of hints) {
     const position = calculateHintPosition(hint.word, { hintPosition: "offset" });
-    // 記号を含むヒントのデバッグ
-    if (config.debug && [';', ':', '[', ']', "'", '"', ',', '.', '/', '\\', '-', '=', '`', '@'].includes(hint.hint)) {
-      console.log(`[extmark] Displaying symbol hint: "${hint.hint}" at line ${position.line}, col ${position.col}`);
-    }
+    // 記号を含むヒントのデバッグログは削除（process1_sub2）
     await denops.call(
       "nvim_buf_set_extmark",
       0,
@@ -403,9 +393,7 @@ async function processMatchaddBatched(
     const isSymbol = !hint.hint.match(/^[A-Za-z0-9]+$/);
 
     if (isSymbol) {
-      if (config.debug || config.debugMode) {
-        console.log(`[matchadd] Symbol hint detected: "${hint.hint}" at line ${position.line}, col ${position.col}`);
-      }
+      // シンボルヒントのデバッグログは削除（process1_sub2）
 
       try {
         // 方法1: prop_typeを使用（Vim 8.2以降）
@@ -448,8 +436,7 @@ async function processMatchaddBatched(
           const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern, 10) as number;
           fallbackMatchIds.push(matchId);
         }
-      } catch (error) {
-        console.error(`[matchadd] Failed to display symbol "${hint.hint}":`, error);
+      } catch {
         // フォールバック: 通常の文字として処理
         const pattern = `\\%${position.line}l\\%${position.col}c.`;
         const matchId = await denops.call("matchadd", "HellshakeYanoMarker", pattern) as number;

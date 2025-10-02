@@ -188,7 +188,6 @@ export class KeyBasedWordCache {
       this.globalCache = GlobalCache.getInstance();
       this.wordsCache = this.globalCache.getCache<string, Word[]>(CacheType.WORDS);
     } catch (error) {
-      console.error("Failed to initialize KeyBasedWordCache with GlobalCache:", error);
       throw new Error(
         `KeyBasedWordCache initialization failed: ${
           error instanceof Error ? error.message : String(error)
@@ -256,8 +255,7 @@ export class KeyBasedWordCache {
         description: config.description,
         unified: true, // GlobalCache統合済みであることを示すフラグ
       };
-    } catch (error) {
-      console.warn("Failed to retrieve GlobalCache statistics, returning fallback:", error);
+    } catch {
       // フォールバック統計情報
       return {
         size: 0,
@@ -564,16 +562,10 @@ export class TinySegmenterWordDetector implements WordDetector {
             }
           }
         } else if (!segmentResult.success) {
-          // セグメンテーション失敗の場合はログに記録して次の行へ
-          console.warn(`TinySegmenter segmentation failed for line ${lineNumber}: ${segmentResult.error || 'Unknown error'}`);
+          // セグメンテーション失敗の場合は次の行へ
         }
-      } catch (error) {
+      } catch {
         // 予期しないエラーが発生した場合
-        if (error instanceof Error) {
-          console.error(`TinySegmenterWordDetector error for line ${lineNumber}: ${error.message}`);
-        } else {
-          console.error(`TinySegmenterWordDetector unexpected error for line ${lineNumber}:`, error);
-        }
         continue; // エラーが発生した行はスキップして処理を続行
       }
     }
@@ -726,30 +718,15 @@ export class HybridWordDetector implements WordDetector {
       const tinySegmenterWords = tinySegmenterWordsResult.status === "fulfilled"
         ? tinySegmenterWordsResult.value : [];
 
-      // 部分的なエラーをログに記録
-      if (regexWordsResult.status === "rejected") {
-        console.warn("HybridWordDetector: RegexWordDetector failed:", regexWordsResult.reason);
-      }
-      if (tinySegmenterWordsResult.status === "rejected") {
-        console.warn("HybridWordDetector: TinySegmenterWordDetector failed:", tinySegmenterWordsResult.reason);
-      }
+      // 部分的なエラーは無視（process1_sub2）
 
       // 結果をマージして重複を除去
       const mergedWords = this.mergeAndDeduplicateWords(regexWords, tinySegmenterWords);
 
       // 位置順でソート
       return this.sortWordsByPosition(mergedWords);
-    } catch (error) {
-      // 予期しないエラーの詳細ログ
-      if (error instanceof Error) {
-        console.error(`HybridWordDetector unexpected error: ${error.message}`, {
-          text: text.substring(0, 100), // テキストの先頭部分のみログ
-          startLine,
-          stack: error.stack,
-        });
-      } else {
-        console.error("HybridWordDetector unknown error:", error);
-      }
+    } catch {
+      // 予期しないエラーは無視して空配列を返す（process1_sub2）
       return [];
     }
   }
@@ -3342,8 +3319,8 @@ export class WordDictionaryImpl implements WordDictionary {
           this.addCompoundPattern(new RegExp(pattern, "g"));
         }
       }
-    } catch (error) {
-      console.warn(`Failed to load dictionary from ${this.config.dictionaryPath}:`, error);
+    } catch {
+      // 辞書の読み込み失敗は無視（process1_sub2）
     }
   }
 
@@ -3569,8 +3546,8 @@ export class DictionaryLoader {
           const content = await Deno.readTextFile(resolvedPath);
           return await this.parseDictionaryContent(content, resolvedPath);
         }
-      } catch (error) {
-        console.warn(`Failed to load dictionary from ${searchPath}:`, error);
+      } catch {
+        // 辞書の読み込み失敗は無視（process1_sub2）
       }
     }
 
@@ -3578,8 +3555,8 @@ export class DictionaryLoader {
       try {
         const content = await Deno.readTextFile(resolvedConfig.dictionaryPath);
         return await this.parseDictionaryContent(content, resolvedConfig.dictionaryPath);
-      } catch (error) {
-        console.warn(`Failed to load dictionary from ${resolvedConfig.dictionaryPath}:`, error);
+      } catch {
+        // 辞書の読み込み失敗は無視（process1_sub2）
       }
     }
 
@@ -3853,8 +3830,7 @@ export class VimConfigBridge {
       config.autoReload = await denops.eval('get(g:, "hellshake_yano_auto_reload_dict", 0)') as boolean;
 
       return config;
-    } catch (error) {
-      console.warn('Failed to get Vim config:', error);
+    } catch {
       return {};
     }
   }
@@ -3865,8 +3841,8 @@ export class VimConfigBridge {
   async notifyError(denops: Denops, error: string): Promise<void> {
     try {
       await denops.cmd(`echohl ErrorMsg | echo '${error}' | echohl None`);
-    } catch (e) {
-      console.error('Failed to notify error:', e);
+    } catch {
+      // エラー通知の失敗は無視（process1_sub2）
     }
   }
 
@@ -3876,8 +3852,8 @@ export class VimConfigBridge {
   async reloadDictionary(denops: Denops): Promise<void> {
     try {
       await denops.call('hellshake_yano#reload_dictionary');
-    } catch (error) {
-      console.warn('Failed to reload dictionary:', error);
+    } catch {
+      // 辞書の再読み込み失敗は無視（process1_sub2）
     }
   }
 }
@@ -4748,7 +4724,6 @@ export class WordDetectionManager {
   async getDetectorForContext(context?: DetectionContext, text?: string): Promise<WordDetector | null> {
     try {
       if (!this.initialized) {
-        console.warn("WordDetectionManager is not initialized");
         return null;
       }
 
@@ -4804,8 +4779,7 @@ export class WordDetectionManager {
       }
 
       return null;
-    } catch (error) {
-      console.error("Error in getDetectorForContext:", error);
+    } catch {
       return null;
     }
   }

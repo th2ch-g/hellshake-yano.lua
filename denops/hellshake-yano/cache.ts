@@ -288,7 +288,7 @@ interface CacheConfig {
  *
  * // 統計情報の取得
  * const stats = cache.getAllStats();
- * console.log(`Words cache hit rate: ${stats.WORDS.hitRate}`);
+ * // ヒット率は stats.WORDS.hitRate で取得可能
  * ```
  */
 export class GlobalCache {
@@ -402,8 +402,8 @@ export class GlobalCache {
    * ```typescript
    * const cache = GlobalCache.getInstance();
    * const stats = cache.getAllStats();
-   * console.log(`Words cache hit rate: ${stats.WORDS.hitRate}`);
-   * console.log(`Total caches: ${Object.keys(stats).length}`);
+   * // ヒット率やキャッシュ数は stats オブジェクトから取得可能
+   * // 例: stats.WORDS.hitRate, Object.keys(stats).length
    * ```
    */
   public getAllStats(): Record<string, CacheStatistics> {

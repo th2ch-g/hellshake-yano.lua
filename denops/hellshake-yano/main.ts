@@ -78,39 +78,7 @@ export async function main(denops: Denops): Promise<void> {
     const defaultConfig = DEFAULT_CONFIG;
     config = { ...defaultConfig, ...userConfig } as Config;
 
-    // デバッグログ: 設定の内容を確認
-    if (config.debug || config.debugMode) {
-      console.log("[hellshake-yano] Configuration loaded:");
-      console.log("  singleCharKeys:", config.singleCharKeys);
-      console.log("  multiCharKeys:", config.multiCharKeys);
-      console.log("  singleCharKeys type:", typeof config.singleCharKeys);
-      console.log("  multiCharKeys type:", typeof config.multiCharKeys);
-
-      // 記号の詳細な確認
-      if (config.singleCharKeys && Array.isArray(config.singleCharKeys)) {
-        const symbols = config.singleCharKeys.filter((k) => !k.match(/[A-Za-z0-9]/));
-        if (symbols.length > 0) {
-          console.log("  Symbols in singleCharKeys:", symbols);
-          console.log("  Symbol characters (char codes):");
-          symbols.forEach((s) => {
-            console.log(`    "${s}" = ${s.charCodeAt(0)}`);
-          });
-        }
-      }
-
-      // ヒント生成のテスト
-      const testHintConfig = {
-        singleCharKeys: config.singleCharKeys,
-        multiCharKeys: config.multiCharKeys,
-        maxSingleCharHints: config.maxSingleCharHints,
-      };
-      const testHints = generateHints(15, testHintConfig);
-      console.log("  Test hint generation (first 15):", testHints);
-      const symbolHints = testHints.filter((h) => !h.match(/^[A-Za-z0-9]+$/));
-      if (symbolHints.length > 0) {
-        console.log("  Symbol hints generated:", symbolHints);
-      }
-    }
+    // デバッグログは削除されました（process1_sub2）
 
     // Coreインスタンスの設定を更新（use_japanese, enable_tinysegmenterなどが反映される）
     core.updateConfig(config);
@@ -163,7 +131,6 @@ export async function main(denops: Denops): Promise<void> {
           );
           hintsVisible = true;
         } catch (error) {
-          console.error("showHints error:", error);
           throw error;
         } finally {
           recordPerformance("showHints", performance.now() - startTime);
@@ -319,7 +286,6 @@ export async function main(denops: Denops): Promise<void> {
     };
     // updatePluginStateはcore.tsに統合されたため、必要に応じてCoreクラス経由で呼び出し
   } catch (error) {
-    console.error("Plugin initialization failed:", error);
     // updatePluginStateはcore.tsに統合されたため、必要に応じてCoreクラス経由で呼び出し
     throw error;
   }

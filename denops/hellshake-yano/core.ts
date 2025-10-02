@@ -547,11 +547,7 @@ export class Core {
   async initialize(denops: Denops, options?: InitializeOptions): Promise<void> {
     try {
       await initializePlugin(denops, options || {});
-      if (this.config.debugMode) {
-        console.log('[Core] Plugin initialized successfully via lifecycle.ts');
-      }
     } catch (error) {
-      console.error('[Core] Initialization failed:', error);
       throw error;
     }
   }
@@ -582,13 +578,8 @@ export class Core {
 
 
       // 必要に応じて他のクリーンアップ処理をここに追加
-
-      if (this.config.debugMode) {
-        console.log('[Core] Cleanup completed via lifecycle.ts');
-      }
-    } catch (error) {
-      console.error('[Core] Cleanup failed:', error);
-      // クリーンアップエラーはスローさせるが、ログで記録
+    } catch {
+      // クリーンアップエラーは無視（process1_sub2）
     }
   }
 
@@ -604,12 +595,8 @@ export class Core {
   }> {
     try {
       const result = await healthCheck(denops);
-      if (this.config.debugMode) {
-        console.log(`[Core] Health check completed: ${result.healthy ? 'HEALTHY' : 'ISSUES_FOUND'}`);
-      }
       return result;
     } catch (error) {
-      console.error('[Core] Health check failed:', error);
       return {
         healthy: false,
         issues: [`Health check error: ${error instanceof Error ? error.message : String(error)}`],
@@ -634,8 +621,7 @@ export class Core {
   } {
     try {
       return getPluginStatistics();
-    } catch (error) {
-      console.error('[Core] Failed to get statistics:', error);
+    } catch {
       // フォールバック統計を返す
       return {
         cacheStats: {
@@ -660,11 +646,8 @@ export class Core {
   updateState(updates: Partial<PluginState>): void {
     try {
       updatePluginState(updates);
-      if (this.config.debugMode) {
-        console.log('[Core] State updated via lifecycle.ts:', Object.keys(updates));
-      }
-    } catch (error) {
-      console.error('[Core] State update failed:', error);
+    } catch {
+      // 状態更新の失敗は無視（process1_sub2）
     }
   }
 
@@ -678,13 +661,9 @@ export class Core {
       const state = getPluginState();
       if (state.performanceMetrics[operation as keyof typeof state.performanceMetrics]) {
         state.performanceMetrics[operation as keyof typeof state.performanceMetrics].push(duration);
-
-        if (this.config.debugMode) {
-          console.log(`[Core] Performance metric recorded: ${operation} = ${duration}ms`);
-        }
       }
-    } catch (error) {
-      console.error(`[Core] Failed to record performance metric for ${operation}:`, error);
+    } catch {
+      // パフォーマンスメトリクスの記録失敗は無視（process1_sub2）
     }
   }
 
@@ -809,7 +788,7 @@ export class Core {
           // 注：候補ハイライトも同じnamespaceを使用するため、上記のクリアで両方削除される
         } catch (error) {
           // extmarkのクリアに失敗した場合はログに記録するが処理は続行
-          console.warn("[Core] hideHintsOptimized extmark clear error:", error);
+          // extmarkクリアエラーは無視（process1_sub2）
         }
       } else {
         // Vim: matchesをクリア
@@ -822,11 +801,11 @@ export class Core {
           }
         } catch (error) {
           // matchのクリアに失敗した場合はログに記録するが処理は続行
-          console.warn("[Core] hideHintsOptimized match clear error:", error);
+          // matchクリアエラーは無視（process1_sub2）
         }
       }
     } catch (error) {
-      console.error("[Core] hideHintsOptimized error:", error);
+      // エラーは無視（process1_sub2）
     }
   }
 
@@ -850,7 +829,7 @@ export class Core {
         // 現在の実装では特別なキャッシュクリア処理は不要
       }
     } catch (error) {
-      console.error("[Core] clearCache error:", error);
+      // エラーは無視（process1_sub2）
     }
   }
 
@@ -972,7 +951,7 @@ export class Core {
    * ```typescript
    * const core = new Core();
    * const hints = core.generateHintsOptimized(5, ['a', 's', 'd', 'f']);
-   * console.log(hints); // ['a', 's', 'd', 'f', 'aa']
+   * // 結果: ['a', 's', 'd', 'f', 'aa']
    * ```
    */
   generateHintsOptimized(wordCount: number, markers: string[]): string[] {
@@ -1065,7 +1044,7 @@ export class Core {
       }
     } catch (error) {
       // フォールバック処理
-      console.error("[Core] displayHintsOptimized error:", error);
+      // エラーは無視（process1_sub2）
       // 基本的な表示処理（実装はシンプルに）
       await this.displayHintsWithMatchAddBatch(denops, hints, mode, signal);
     }
@@ -1124,7 +1103,7 @@ export class Core {
         // 中断は正常な動作なので、エラーログは出力しない
         return;
       }
-      console.error("[Core] displayHintsAsync error:", error);
+      // エラーは無視（process1_sub2）
     } finally {
       // この描画が現在のものである場合のみフラグをリセット
       if (currentController === this._renderingAbortController) {
@@ -1227,7 +1206,7 @@ export class Core {
         // CPU負荷軽減が必要な場合はmain.tsレベルで制御
       } catch (batchError) {
         // バッチエラーの場合は次のバッチに続く
-        console.error("[Core] displayHintsWithExtmarksBatch batch error:", batchError);
+        // エラーは無視（process1_sub2）
       }
     }
   }
@@ -1278,7 +1257,7 @@ export class Core {
 
             return matchId;
           } catch (matchError) {
-            console.error("[Core] displayHintsWithMatchAddBatch match error:", matchError);
+            // エラーは無視（process1_sub2）
             return null;
           }
         });
@@ -1289,7 +1268,7 @@ export class Core {
         // CPU負荷軽減が必要な場合はmain.tsレベルで制御
       } catch (batchError) {
         // バッチエラーの場合は次のバッチに続く
-        console.error("[Core] displayHintsWithMatchAddBatch batch error:", batchError);
+        // エラーは無視（process1_sub2）
       }
     }
   }
@@ -1390,7 +1369,7 @@ export class Core {
       await this.waitForUserInput(denops);
 
     } catch (error) {
-      console.error("[Core] showHintsInternal error:", error);
+      // エラーは無視（process1_sub2）
       // エラー時は状態をクリア
       this.hideHints();
     }
@@ -1411,7 +1390,7 @@ export class Core {
       // 既存のshowHintsInternal処理を呼び出し（モード情報付き）
       await this.showHintsInternal(denops, modeString);
     } catch (error) {
-      console.error("[Core] showHintsWithKey error:", error);
+      // エラーは無視（process1_sub2）
       // フォールバック: 通常のshowHintsを呼び出し
       await this.showHints(denops);
     }
@@ -1436,10 +1415,7 @@ export class Core {
       this.performanceMetrics[operation] = this.performanceMetrics[operation].slice(-50);
     }
 
-    // デバッグモードの場合はコンソールにもログ出力
-    if (this.config.debugMode) {
-      console.log(`[Core:PERF] ${operation}: ${duration}ms`);
-    }
+    // パフォーマンスログは削除（process1_sub2）
   }
 
   /*   * Phase 8: ユーティリティ機能 - デバッグ情報を収集   * @returns デバッグ情報オブジェクト
@@ -1491,17 +1467,7 @@ export class Core {
       const jumpCol = target.hintByteCol || target.hintCol ||
         target.word.byteCol || target.word.col;
 
-      // デバッグログ: ジャンプ位置の詳細
-      if (this.config.debugMode) {
-        console.log(`[hellshake-yano:DEBUG] Jump to target (${context}):`);
-        console.log(`  - text: "${target.word.text}"`);
-        console.log(`  - line: ${target.word.line}`);
-        console.log(`  - col: ${target.word.col} (display)`);
-        console.log(`  - byteCol: ${target.word.byteCol} (byte)`);
-        console.log(`  - hintCol: ${target.hintCol} (hint display)`);
-        console.log(`  - hintByteCol: ${target.hintByteCol} (hint byte)`);
-        console.log(`  - jumpCol (used): ${jumpCol}`);
-      }
+      // デバッグログは削除（process1_sub2）
 
       await denops.call("cursor", target.word.line, jumpCol);
     } catch (jumpError) {
@@ -1731,7 +1697,7 @@ export class Core {
           await this.highlightCandidateHintsHybrid(denops, currentHints, inputChar, { mode: "normal" });
         } catch (error: unknown) {
           // 同期的なエラーをキャッチ（非同期エラーは関数内部で処理）
-          console.warn("Hybrid highlight processing failed:", error);
+          // エラーは無視（process1_sub2）
         }
       }
 
@@ -1779,7 +1745,7 @@ export class Core {
         }
       } catch (error) {
         // 入力処理のエラーハンドリングを強化
-        console.error("第2文字入力中にエラーが発生:", error);
+        // エラーは無視（process1_sub2）
         return; // エラー時は処理を中止
       }
 
@@ -1889,9 +1855,9 @@ export class Core {
       const dictConfig = await this.vimConfigBridge.getConfig(denops);
       await this.dictionaryLoader.loadUserDictionary(dictConfig);
 
-      console.log("[hellshake-yano] Dictionary system initialized");
+      // ログは削除（process1_sub2）
     } catch (error) {
-      console.error("[hellshake-yano] Failed to initialize dictionary system:", error);
+      // エラーは無視（process1_sub2）
       throw error;
     }
   }
@@ -2758,12 +2724,7 @@ export class Core {
 
       } catch (error) {
         // エラーハンドリング（ログ出力のみ、Fire-and-forgetのためrethrowしない）
-        console.error("highlightCandidateHintsAsync error:", {
-          partialInput,
-          hintCount: hintMappings.length,
-          mode: config.mode,
-          error: error instanceof Error ? error.message : error
-        });
+        // エラーは無視（process1_sub2）
       }
     }, 0) as unknown as number;
   }
@@ -2894,18 +2855,13 @@ export class Core {
               }
             }
           } catch (err) {
-            console.error("highlightCandidateHintsHybrid async error:", err);
+            // エラーは無視（process1_sub2）
           }
         });
       }
 
     } catch (error) {
-      console.error("highlightCandidateHintsHybrid error:", {
-        partialInput,
-        hintCount: hintMappings.length,
-        mode: config.mode,
-        error: error instanceof Error ? error.message : error
-      });
+      // エラーは無視（process1_sub2）
     }
   }
 
@@ -3312,7 +3268,7 @@ export class Core {
       // マネージャーの設定を同期
       this.syncManagerConfigInternal();
     } catch (error) {
-      console.error("[hellshake-yano] Config update error:", error);
+      // エラーは無視（process1_sub2）
     }
   }
 
@@ -3323,7 +3279,7 @@ export class Core {
       this.config = getDefaultConfig();
       this.syncManagerConfigInternal();
     } catch (error) {
-      console.error("[hellshake-yano] Config reset error:", error);
+      // エラーは無視（process1_sub2）
     }
   }
 
@@ -3488,7 +3444,7 @@ export class Core {
 
       return { extmarkNamespace, caches: pluginState.caches };
     } catch (error) {
-      console.error("[hellshake-yano] Plugin initialization error:", error);
+      // エラーは無視（process1_sub2）
       return { extmarkNamespace: null, caches: pluginState.caches };
     }
   }
@@ -3579,7 +3535,7 @@ export class Core {
       // 既存のsyncManagerConfig機能を活用
       // WordManagerへの設定同期は既存の実装を使用
     } catch (error) {
-      console.error("[hellshake-yano] Manager config sync error:", error);
+      // エラーは無視（process1_sub2）
     }
   }
 
@@ -4404,7 +4360,7 @@ export class HellshakeYanoCore {
    * @returns Promise resolving to display width   * @example
    * ```typescript
    * const width = await Core.getVimDisplayWidth(denops, "hello\tworld");
-   * console.log(width); // Vimのネイティブ計算またはフォールバックを使用
+   * // Vimのネイティブ計算またはフォールバックを使用
    * ```
    */
   static async getVimDisplayWidth(denops: Denops, text: string): Promise<number> {
@@ -4446,8 +4402,8 @@ export class HellshakeYanoCore {
    * キャッシュヒット率やサイズを監視して性能調整に活用。   * @returns キャッシュヒット/ミス統計を含むオブジェクト   * @example
    * ```typescript
    * const stats = Core.getDisplayWidthCacheStats();
-   * console.log(`ヒット率: ${stats.stringCache.hitRate * 100}%`);
-   * console.log(`文字キャッシュサイズ: ${stats.charCacheSize}`);
+   * // ヒット率: stats.stringCache.hitRate * 100
+   * // 文字キャッシュサイズ: stats.charCacheSize
    * ```
    */
   static async getDisplayWidthCacheStats() {
