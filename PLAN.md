@@ -211,11 +211,38 @@ function! hellshake_yano#validation#normalize_color_name(color)
 - [x] s:get_motion_keys() → config.vimにhellshake_yano#config#get_motion_keys()として移行済み
 - [x] s:clear_motion_mappings() → mapping.vimにhellshake_yano#mapping#clear_motion_mappings()として存在
 
-### process3: メインファイルの更新
-@target: autoload/hellshake_yano.vim
-- [ ] 移動した関数を削除
-- [ ] 各モジュールへの委譲関数を作成（後方互換性のため）
-- [ ] 残った関数の整理
+### process3: メインファイルの更新 ✅ 完了
+@target: autoload/hellshake_yano.vim (256行、元は952行 → 73%削減)
+- [x] 移動した関数を削除（重複コードの完全削除）
+- [x] 各モジュールへの委譲関数を作成（後方互換性のため）
+- [x] 残った関数の整理（明確なセクション分けとコメント）
+- [x] motion.vimにテスト用公開関数を追加（hellshake_yano#motion#should_trigger_hints_for_key）
+
+#### 削除した重複コード
+- `hellshake_yano#show_error()` → ラッパー化（utils.vimへ委譲）
+- `s:bufnr()` → 削除（utils.vimの関数を使用）
+- `hellshake_yano#apply_highlights()` → ラッパー化（highlight.vimへ委譲）
+- `s:apply_highlight_setting()` → 削除（highlight.vimの関数を使用）
+- 大量のNoteコメントを整理し、明確なセクション構造に
+
+#### 最終的なファイル構成
+1. **ヘッダー部** - モジュール構成の説明
+2. **エラー処理・ユーティリティ** - utils.vimへ委譲
+3. **モーション処理** - motion.vimへ委譲
+4. **内部ヘルパー関数** - s:reset_count()のみ保持
+5. **カウント・状態管理** - count.vim/state.vimへ委譲
+6. **ヒント表示** - hint.vimへ委譲
+7. **プラグイン制御** - plugin.vimへ委譲
+8. **コマンド関数** - command.vimへ委譲
+9. **ハイライト管理** - highlight.vimへ委譲
+10. **キーマッピング** - mapping.vimへ委譲
+11. **検証関数** - validation.vimへ委譲
+12. **デバッグ機能** - debug.vimへ委譲
+13. **テスト用デバッグ関数群** - 各モジュールへの委譲
+
+#### 構文チェック結果
+- ✅ autoload/hellshake_yano.vim: OK
+- ✅ autoload/hellshake_yano/motion.vim: OK
 
 ### process4: 動作確認とテスト
 - [ ] Vimでプラグインをロードし、構文エラーがないことを確認

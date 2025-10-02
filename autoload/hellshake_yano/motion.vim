@@ -252,6 +252,15 @@ function! hellshake_yano#motion#with_key_context(key) abort
   return a:key
 endfunction
 
+"=============================================================================
+" テスト用公開関数
+"=============================================================================
+
+" テスト用: ヒント表示判定を取得
+function! hellshake_yano#motion#should_trigger_hints_for_key(bufnr, key) abort
+  return s:should_trigger_hints_for_key(a:bufnr, a:key)
+endfunction
+
 " 保存と復元
 let &cpo = s:save_cpo
 unlet s:save_cpo
