@@ -14,7 +14,7 @@ const TEST_FILES_TO_UPDATE = [
   "debug_core_methods.ts",
   "main_test.ts",
   "config_validation_test.ts",
-  "word_context_config_test.ts",
+  // "word_context_config_test.ts", // Removed: ContextDetector was deleted in process6 sub4
   "word_detector_config_test.ts",
   "word_manager_config_test.ts",
   "config_defaults_test.ts",

@@ -1,7 +1,6 @@
 /* * Hellshake-Yano Core Class * Phase1: 基盤作成
  * プラグインの中核となるロジックを統合管理するCoreクラス
  * TDD Red-Green-Refactor方法論に従って実装 */
-
 import type { Denops } from "@denops/std";
 import type {
   CoreState,
@@ -41,10 +40,7 @@ import {
   generateHints,
   validateHintKeyConfig
 } from "./hint.ts";
-// Dictionary system imports
 import { DictionaryLoader, VimConfigBridge, type UserDictionary } from "./word.ts";
-// commands.ts は統合されたため削除（機能はcore.ts内部で実装済み）
-// lifecycle.ts は統合されたため削除（機能はcore.ts内部で実装済み）
 import { validateConfig } from "./config.ts";
 import {
   validateHighlightGroupName,
@@ -54,17 +50,14 @@ import {
   isControlCharacter,
 } from "./core/core-validation.ts";
 import { MotionCounter, MotionManager, CommandFactory } from "./core/core-motion.ts";
-
-// === Constants ===
 /**
- * ハイライト処理のバッチサイズ
  */
 export const HIGHLIGHT_BATCH_SIZE = 15;
 export const HYBRID_SYNC_BATCH_SIZE = 15;
 
-/**
- * プラグインの状態インターフェース
- */
+const DEFAULT_SINGLE_KEYS = ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const DEFAULT_MULTI_KEYS = ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+
 interface PluginState {
   /** プラグインの現在のステータス */
   status: "uninitialized" | "initialized" | "cleaned";
@@ -84,9 +77,7 @@ interface PluginState {
   /** パフォーマンスメトリクス */
   performanceMetrics: PerformanceMetrics;
 }
-
 /**
- * プラグインの状態を管理するグローバルオブジェクト
  */
 let pluginState: PluginState = {
   status: "uninitialized",
@@ -105,26 +96,13 @@ let pluginState: PluginState = {
     hintGeneration: []
   }
 };
-
 /**
- * 初期化オプションのインターフェース
  */
-
 /**
- * 初期化結果のインターフェース
- */
-
-/**
- * プラグインを初期化する
- * @param denops
- * @param options
- * @returns 
  */
 function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<InitializeResult> {
   pluginState.status = "initialized";
   pluginState.initialized = true;
-
-  // オプションでキャッシュサイズを設定可能に
   if (options?.cacheSizes) {
     if (options.cacheSizes.words) {
       pluginState.caches.words = new LRUCache<string, Word[]>(options.cacheSizes.words);
@@ -133,36 +111,20 @@ function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<
       pluginState.caches.hints = new LRUCache<string, string[]>(options.cacheSizes.hints);
     }
   }
-
   return Promise.resolve({
     extmarkNamespace: null,
     caches: pluginState.caches
   });
 }
-
-/**
- * プラグインをクリーンアップする
- * @param denops
- * @returns 
- */
 function cleanupPlugin(denops: Denops): Promise<void> {
   pluginState.status = "cleaned";
   pluginState.initialized = false;
   pluginState.hintsVisible = false;
-  // Clear caches on cleanup
   pluginState.caches.words.clear();
   pluginState.caches.hints.clear();
   return Promise.resolve();
 }
-
 /**
- * ヘルスチェック結果のインターフェース
- */
-
-/**
- * プラグインのヘルスチェックを実行する
- * @param denops
- * @returns 
  */
 function healthCheck(denops: Denops): Promise<HealthCheckResult> {
   return Promise.resolve({
@@ -171,21 +133,11 @@ function healthCheck(denops: Denops): Promise<HealthCheckResult> {
     recommendations: []
   });
 }
-
 /**
- * パフォーマンス統計項目のインターフェース
  */
-
 /**
- * プラグイン統計情報のインターフェース
- */
-
-/**
- * プラグインの統計情報を取得する
- * @returns 
  */
 function getPluginStatistics(): PluginStatistics {
-  // Calculate statistics from performance metrics
   const calculateStats = (metrics: number[]): PerformanceStats => {
     if (metrics.length === 0) {
       return { count: 0, average: 0, max: 0, min: 0 };
@@ -197,7 +149,6 @@ function getPluginStatistics(): PluginStatistics {
     const min = Math.min(...metrics);
     return { count, average, max, min };
   };
-
   return {
     cacheStats: {
       words: pluginState.caches.words.getStats ? pluginState.caches.words.getStats() : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 },
@@ -216,74 +167,33 @@ function getPluginStatistics(): PluginStatistics {
     }
   };
 }
-
-/**
- * プラグインの状態を更新する
- * @param updates
- */
 function updatePluginState(updates: Partial<PluginState>): void {
   Object.assign(pluginState, updates);
 }
-
-/**
- * 現在のプラグイン状態を取得する
- * @returns 
- */
 function getPluginState(): PluginState {
   return pluginState;
 }
-
-/**
- * プラグインを有効化する
- * @param config
- */
 function enable(config: Config): void {
   config.enabled = true;
 }
-
-/**
- * プラグインを無効化する
- * @param config
- */
 function disable(config: Config): void {
   config.enabled = false;
 }
-
-/**
- * プラグインの有効/無効を切り替える
- * @param config
- * @returns 
- */
 function toggle(config: Config): boolean {
   config.enabled = !config.enabled;
   return config.enabled;
 }
-
-/**
- * モーションカウントを設定する
- * @param config
- * @param count
- */
 function setCount(config: Config, count: number): void {
   config.motionCount = count;
 }
-
-/**
- * モーションタイムアウトを設定する
- * @param config
- * @param timeout
- */
 function setTimeoutCommand(config: Config, timeout: number): void {
   config.motionTimeout = timeout;
 }
-
 /**
- * Hellshake-Yano プラグインの中核クラス
  */
 export class Core {
   /** シングルトンインスタンス */
   private static instance: Core | null = null;
-
   /** プラグインの設定 */
   private config: Config;
   /** プラグインのアクティブ状態 */
@@ -297,63 +207,33 @@ export class Core {
     wordDetection: [],
     hintGeneration: [],
   };
-
   /** 辞書システムのローダー */
   private dictionaryLoader: DictionaryLoader | null = null;
   /** Vim設定ブリッジ */
   private vimConfigBridge: VimConfigBridge | null = null;
-
   /** ヒント描画中かどうかの状態 */
   private _isRenderingHints: boolean = false;
   /** 描画処理を中断するためのAbortController */
   private _renderingAbortController: AbortController | null = null;
   /** ペンディング中のハイライトタイマー */
   private _pendingHighlightTimer: number | null = null;
-
   /** モーションカウンターの管理クラス */
   private motionManager: MotionManager = new MotionManager();
-
-  /**
- * Coreクラスのプライベートコンストラクタ（シングルトン用）
- * @param config
-   */
   private constructor(config?: Partial<Config>) {
-    // Configのデフォルト設定を使用
     this.config = { ...getDefaultConfig(), ...config };
   }
-
-  /**
- * シングルトンインスタンスを取得する
- * @param config
- * @returns 
-   */
   public static getInstance(config?: Partial<Config>): Core {
     if (!Core.instance) {
       Core.instance = new Core(config);
     }
     return Core.instance;
   }
-
-  /**
- * テスト用リセットメソッド
-   */
   public static resetForTesting(): void {
     Core.instance = null;
   }
-
-  /**
- * インスタンスリセット（テスト用）
-   */
   reset(): void {
     Core.instance = null;
   }
-
-  /**
- * プラグインを初期化する
- * @param denops
- * @param options
-   * @throws {Error} 初期化に失敗した場合
-   */
   async initialize(denops: Denops, options?: InitializeOptions): Promise<void> {
     try {
       await initializePlugin(denops, options || {});
@@ -361,42 +241,23 @@ export class Core {
       throw error;
     }
   }
-
-  /**
- * プラグインをクリーンアップする
- * @param denops
-   */
   async cleanup(denops?: Denops): Promise<void> {
     try {
-      // lifecycle.tsのクリーンアップを優先実行
       if (denops) {
         await cleanupPlugin(denops);
       }
-
-      // 既存のクリーンアップロジックも実行
-    // デバウンス処理はmain.tsで管理するためCoreクラス内では不要
-    // 表示状態のクリーンアップ (sub2-3)
-    this.abortCurrentRendering();
+    if (this._renderingAbortController) {
+      this._renderingAbortController.abort();
+    }
     this._isRenderingHints = false;
     this._renderingAbortController = null;
-
-    // ペンディング中のタイマーをクリア
     if (this._pendingHighlightTimer !== null) {
       clearTimeout(this._pendingHighlightTimer);
       this._pendingHighlightTimer = null;
     }
-
-      // 必要に応じて他のクリーンアップ処理をここに追加
     } catch {
-      // クリーンアップエラーは無視（process1_sub2）
     }
   }
-
-  /**
- * プラグインのヘルスチェックを実行する
- * @param denops
- * @returns 
-   */
   async getHealthStatus(denops: Denops): Promise<{
     healthy: boolean;
     issues: string[];
@@ -413,11 +274,6 @@ export class Core {
       };
     }
   }
-
-  /**
- * プラグインの統計情報を取得する
- * @returns 
-   */
   getStatistics(): {
     cacheStats: { words: CacheStatistics; hints: CacheStatistics };
     performanceStats: {
@@ -431,7 +287,6 @@ export class Core {
     try {
       return getPluginStatistics();
     } catch {
-      // フォールバック統計を返す
       return {
         cacheStats: {
           words: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 },
@@ -447,24 +302,12 @@ export class Core {
       };
     }
   }
-
-  /**
- * プラグインの状態を更新する
- * @param updates
-   */
   updateState(updates: Partial<PluginState>): void {
     try {
       updatePluginState(updates);
     } catch {
-      // 状態更新の失敗は無視（process1_sub2）
     }
   }
-
-  /**
- * パフォーマンスメトリクスを記録する
- * @param operation
- * @param duration
-   */
   recordPerformanceMetric(operation: string, duration: number): void {
     try {
       const state = getPluginState();
@@ -472,25 +315,12 @@ export class Core {
         state.performanceMetrics[operation as keyof typeof state.performanceMetrics].push(duration);
       }
     } catch {
-      // パフォーマンスメトリクスの記録失敗は無視（process1_sub2）
     }
   }
-
-  /**
- * 現在の設定を取得する
- * @returns 
-   */
   getConfig(): Config {
     return { ...this.config };
   }
-
-  /**
- * 設定を更新する
- * @param newConfig
-   * @throws {Error} 不正な設定値の場合
-   */
   updateConfig(newConfig: Partial<Config>): void {
-    // motion設定のバリデーション
     if (newConfig.motionCounterThreshold !== undefined && newConfig.motionCounterThreshold <= 0) {
       throw new Error("threshold must be greater than 0");
     }
@@ -499,30 +329,13 @@ export class Core {
     }
     this.config = { ...this.config, ...newConfig };
   }
-
-  /**
- * プラグインの有効状態を取得する
- * @returns 
-   */
   isEnabled(): boolean {
     return this.config.enabled;
   }
-
-  /**
- * ヒント表示中かどうかを確認する
- * @returns 
-   */
   isHintsVisible(): boolean {
     return this.isActive && this.currentHints.length > 0;
   }
-
-  /**
- * 単語検出を実行する
- * @param context
- * @returns 
-   */
   detectWords(context?: DetectionContext): WordDetectionResult {
-    // TDD Green Phase: 最小限の実装
     return {
       words: [],
       detector: "minimal",
@@ -534,71 +347,39 @@ export class Core {
       },
     };
   }
-
-  /**
- * ヒント生成を実行する
- * @param words
- * @returns 
-   */
   generateHints(words: Word[]): HintMapping[] {
-    // TDD Green Phase: 最小限の実装
     return [];
   }
-
-  /**
- * ヒント表示を実行する（Legacy用）
- * @param hints
-   */
   showHintsLegacy(hints: HintMapping[]): void {
     if (!this.isEnabled()) {
       return;
     }
-
     this.currentHints = [...hints];
     this.isActive = true;
-    // Note: このメソッドは状態管理のみ。実際のVim/Neovim表示はdisplayHintsOptimized等を使用
   }
-
-  /**
- * ヒント非表示を実行する（状態管理のみ）
-   */
   hideHints(): void {
     this.currentHints = [];
     this.isActive = false;
   }
-
-  /**
- * Vim/Neovimの実際のヒント表示を最適化してクリアする
- * @param denops
- * @returns 
-   */
   async hideHintsOptimized(denops: Denops): Promise<void> {
     try {
-      // 状態をクリア
       this.currentHints = [];
       this.isActive = false;
-
-      // 現在のレンダリングを中断
-      this.abortCurrentRendering();
-
-      // バッファ番号を取得
+      if (this._renderingAbortController) {
+        this._renderingAbortController.abort();
+      }
       const bufnr = await denops.call("bufnr", "%") as number;
       if (bufnr === -1) {
         return;
       }
 
       if (denops.meta.host === "nvim") {
-        // Neovim: extmarkをクリア
         try {
           const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
           await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
-          // 注：候補ハイライトも同じnamespaceを使用するため、上記のクリアで両方削除される
         } catch (error) {
-          // extmarkのクリアに失敗した場合はログに記録するが処理は続行
-          // extmarkクリアエラーは無視（process1_sub2）
         }
       } else {
-        // Vim: matchesをクリア
         try {
           const matches = await denops.call("getmatches") as Array<{ id: number; group: string }>;
           for (const match of matches) {
@@ -607,45 +388,31 @@ export class Core {
             }
           }
         } catch (error) {
-          // matchのクリアに失敗した場合はログに記録するが処理は続行
-          // matchクリアエラーは無視（process1_sub2）
         }
       }
     } catch (error) {
-      // エラーは無視（process1_sub2）
     }
   }
-
   /*   * sub2-5-4: clearCache - キャッシュをクリア   * main.ts のキャッシュクリア機能をCoreクラスに移植
    * 内部状態とヒントをリセットする   */
   clearCache(): void {
     try {
-      // ヒント関連の状態をクリア
       this.currentHints = [];
       this.isActive = false;
-
-      // レンダリング状態をクリア
-      this.abortCurrentRendering();
-
-      // パフォーマンスメトリクスをクリア
+      if (this._renderingAbortController) {
+        this._renderingAbortController.abort();
+      }
       this.clearDebugInfo();
-
-      // 辞書システムのキャッシュもクリア（存在する場合）
       if (this.dictionaryLoader) {
-        // 辞書ローダーのキャッシュクリアは内部実装に依存
-        // 現在の実装では特別なキャッシュクリア処理は不要
       }
     } catch (error) {
-      // エラーは無視（process1_sub2）
     }
   }
-
   /*   * 現在のヒント一覧を取得   * @returns 現在表示中のヒントマッピング配列
    */
   getCurrentHints(): HintMapping[] {
     return [...this.currentHints];
   }
-
   /*   * Phase2: 状態管理の移行 - 現在の状態を取得   * @returns 現在のCoreState
    */
   getState(): CoreState {
@@ -656,48 +423,32 @@ export class Core {
       isActive: this.isActive,
     };
   }
-
   /*   * Phase2: 状態管理の移行 - 状態を設定   * @param state 新しいCoreState
    */
   setState(state: CoreState): void {
-    // TDD Refactor Phase: 状態整合性の向上
     this.config = { ...state.config };
     this.currentHints = [...state.currentHints];
     this.isActive = state.isActive;
-
-    // hintsVisibleは計算プロパティだが、状態との整合性を確認
-    // state.hintsVisible が true の場合、currentHints が空でないことを確認
     if (state.hintsVisible && state.currentHints.length === 0) {
-      // 整合性のため、hintsVisible=trueなら最低限activeである必要がある
       this.isActive = true;
     }
   }
-
   /*   * Phase2: 状態管理の移行 - 状態を初期化
    */
   initializeState(): void {
-    // 既存の状態を初期値に戻す
     this.isActive = false;
     this.currentHints = [];
-    // configは既にコンストラクタで初期化済み
   }
-
   /*   * 指定されたキーの最小文字数を取得   * @param key - 対象のキー
    * @returns 最小文字数
    */
   private getMinLengthForKey(key: string): number {
-    // Config型をConfigに変換
     const unifiedConfig = this.config; // 既にConfig形式
-
-    // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMinLength && unifiedConfig.perKeyMinLength[key] !== undefined) {
       return unifiedConfig.perKeyMinLength[key];
     }
-
-    // デフォルト値を使用
     return unifiedConfig.defaultMinWordLength || 1;
   }
-
   /*   * 単語検出用のEnhancedWordConfigを作成   * @returns 単語検出に最適化された設定オブジェクト
    */
   private createEnhancedWordConfig(): EnhancedWordConfig {
@@ -710,7 +461,6 @@ export class Core {
       autoDetectLanguage: true,
     };
   }
-
   /*   * Phase4: 単語検出機能の移行 - 最適化された単語検出   * キャッシュを使用して高速に単語を検出する
    * main.tsのdetectWordsOptimized関数と同等の機能を提供
    *   * @param bufnr - バッファ番号
@@ -719,28 +469,22 @@ export class Core {
   async detectWordsOptimized(denops: Denops, bufnr: number): Promise<Word[]> {
     try {
       const enhancedConfig = this.createEnhancedWordConfig();
-
-      // current_key_contextからコンテキストを作成
       const context = this.config.currentKeyContext
         ? {
             minWordLength: this.getMinLengthForKey(this.config.currentKeyContext),
           }
         : undefined;
-
       const result = await detectWordsWithManager(denops, enhancedConfig, context);
 
       if (result.success) {
         return result.words;
       } else {
-        // フォールバックとしてレガシーメソッドを使用
         return await this.fallbackWordDetection(denops);
       }
     } catch (error) {
-      // 最終フォールバックとしてレガシーメソッドを使用
       return await this.fallbackWordDetection(denops);
     }
   }
-
   /*   * フォールバック用の単語検出
    *   * @returns 検出された単語の配列
    */
@@ -750,19 +494,8 @@ export class Core {
     };
     return await detectWordsWithConfig(denops, fallbackConfig);
   }
-
-  /*   * Phase5: ヒント生成機能の移行 - 最適化されたヒント生成   * main.tsのgenerateHintsOptimized関数の機能をCoreクラスに統合した実装。
-   * ヒントグループ機能、キャッシュ、設定の検証を含む包括的なヒント生成機能を提供します。   * @param wordCount - 対象となる単語数（0以上の整数）
-   * @param markers - ヒントマーカーの文字配列（空配列の場合はデフォルトマーカーを使用）
-   * @returns 生成されたヒント文字列の配列（wordCountと同じ長さ）   * @example
-   * ```typescript
-   * const core = new Core();
-   * const hints = core.generateHintsOptimized(5, ['a', 's', 'd', 'f']);
-   * // 結果: ['a', 's', 'd', 'f', 'aa']
-   * ```
-   */
+  /* Phase5: ヒント生成機能の移行 - 最適化されたヒント生成   * main.tsのgenerateHintsOptimized関数の機能をCoreクラスに統合した実装。 */
   generateHintsOptimized(wordCount: number, markers: string[]): string[] {
-    // 入力値の検証
     if (wordCount < 0) {
       throw new Error("wordCount must be non-negative");
     }
@@ -770,13 +503,8 @@ export class Core {
     if (wordCount === 0) {
       return [];
     }
-
-    // Config型をConfigに変換
     const unifiedConfig = this.config; // 既にConfig形式
-
-    // singleCharKeys/multiCharKeysが設定されている場合は常に優先
     if (unifiedConfig.singleCharKeys || unifiedConfig.multiCharKeys) {
-      // HintKeyConfigオブジェクトを作成
       const hintConfig: HintKeyConfig = {
         singleCharKeys: unifiedConfig.singleCharKeys,
         multiCharKeys: unifiedConfig.multiCharKeys,
@@ -784,14 +512,10 @@ export class Core {
         maxSingleCharHints: unifiedConfig.maxSingleCharHints,
         useNumericMultiCharHints: unifiedConfig.useNumericMultiCharHints,
       };
-
-      // 設定の検証
       const validation = validateHintKeyConfig(hintConfig);
       if (!validation.valid && validation.errors) {
-        // 無効な設定の場合はフォールバック
         return generateHints(wordCount, markers);
       }
-
       return generateHints(wordCount, {
         groups: true,
         singleCharKeys: hintConfig.singleCharKeys,
@@ -801,23 +525,9 @@ export class Core {
         markers: hintConfig.markers
       });
     }
-
-    // 従来のヒント生成処理
     return generateHints(wordCount, markers);
   }
-
-  /*   * Phase6: 表示処理系の移行 - 最適化されたヒント表示   * main.tsのdisplayHintsOptimized関数の機能をCoreクラスに統合した実装。
-   * バッファ検証、ExtmarksとMatchaddの使い分け、フォールバック処理を含む
-   * 包括的なヒント表示機能を提供します。
-   *   * @param hints - 表示するヒントマッピング配列
-   * @param mode - 表示モード（デフォルト: "normal"）
-   * @param signal - 中断用のAbortSignal（オプション）
-   * @returns Promise<void> - 非同期で完了   * @example
-   * ```typescript
-   * const core = new Core();
-   * await core.displayHintsOptimized(denops, hintMappings, "normal");
-   * ```
-   */
+  /* Phase6: 表示処理系の移行 - 最適化されたヒント表示   * main.tsのdisplayHintsOptimized関数の機能をCoreクラスに統合した実装。 */
   async displayHintsOptimized(
     denops: Denops,
     hints: HintMapping[],
@@ -825,66 +535,38 @@ export class Core {
     signal?: AbortSignal,
   ): Promise<void> {
     try {
-      // バッファの存在確認
       const bufnr = await denops.call("bufnr", "%") as number;
       if (bufnr === -1) {
         throw new Error("Invalid buffer: no current buffer available");
       }
-
-      // バッファが読み込み専用かチェック
       const readonly = await denops.call("getbufvar", bufnr, "&readonly") as number;
       if (readonly) {
-        // 読み込み専用の場合は処理をスキップ
       }
-
-      // 中断チェック
       if (signal?.aborted) {
         return;
       }
 
       if (denops.meta.host === "nvim") {
-        // Neovim: バッチ処理でextmarkを作成
         await this.displayHintsWithExtmarksBatch(denops, bufnr, hints, mode, signal);
       } else {
-        // Vim: バッチ処理でmatchaddを作成
         await this.displayHintsWithMatchAddBatch(denops, hints, mode, signal);
       }
     } catch (error) {
-      // フォールバック処理
-      // エラーは無視（process1_sub2）
-      // 基本的な表示処理（実装はシンプルに）
       await this.displayHintsWithMatchAddBatch(denops, hints, mode, signal);
     }
   }
-
-  /*   * Phase6: 表示処理系の移行 - 非同期ヒント表示   * main.tsのdisplayHintsAsync関数の機能をCoreクラスに統合した実装。
-   * Fire-and-forgetパターンで描画処理を実行し、ユーザー入力をブロックしない
-   * パフォーマンス最適化により大量のヒントも効率的に処理します。
-   *   * @param hints - 表示するヒントマッピング配列
-   * @param config - 表示設定オブジェクト（モード情報等）
-   * @param onComplete - 表示完了時のコールバック関数（オプション）
-   * @returns Promise<void> - 非同期で完了   * @example
-   * ```typescript
-   * const core = new Core();
-   * await core.displayHintsAsync(denops, hintMappings, { mode: 'normal' });
-   * ```
-   */
+  /* Phase6: 表示処理系の移行 - 非同期ヒント表示   * main.tsのdisplayHintsAsync関数の機能をCoreクラスに統合した実装。 */
   async displayHintsAsync(
     denops: Denops,
     hints: HintMapping[],
     config: { mode?: string; [key: string]: unknown },
     signal?: AbortSignal,
   ): Promise<void> {
-    // 現在のレンダリングを中断
     if (this._renderingAbortController) {
       this._renderingAbortController.abort();
     }
-
-    // 新しいコントローラーを作成
     this._renderingAbortController = new AbortController();
     const currentController = this._renderingAbortController;
-
-    // 外部からのAbortSignalもリッスンする
     if (signal) {
       signal.addEventListener('abort', () => {
         if (currentController === this._renderingAbortController) {
@@ -892,42 +574,26 @@ export class Core {
         }
       });
     }
-
     this._isRenderingHints = true;
-
     try {
-      // 中断チェック
       if (currentController.signal.aborted) {
         return;
       }
-
       const mode = config.mode || "normal";
       const bufnr = await denops.call("bufnr", "%") as number;
-
       await this.displayHintsWithExtmarksBatch(denops, bufnr, hints, mode, currentController.signal);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // 中断は正常な動作なので、エラーログは出力しない
         return;
       }
-      // エラーは無視（process1_sub2）
     } finally {
-      // この描画が現在のものである場合のみフラグをリセット
       if (currentController === this._renderingAbortController) {
         this._isRenderingHints = false;
         this._renderingAbortController = null;
       }
     }
   }
-
-  /*   * Phase6: 表示処理系の移行 - Extmarksバッチ表示   * main.tsのdisplayHintsWithExtmarksBatch関数の機能をCoreクラスに統合した実装。
-   * Neovim用のextmarkを使ったバッチ処理でヒントを効率的に表示します。
-   *   * @param bufnr - バッファ番号
-   * @param hints - 表示するヒントマッピング配列
-   * @param mode - 表示モード（デフォルト: "normal"）
-   * @param signal - 中断用のAbortSignal（オプション）
-   * @returns Promise<void> - 非同期で完了
-   */
+  /* Phase6: 表示処理系の移行 - Extmarksバッチ表示   * main.tsのdisplayHintsWithExtmarksBatch関数の機能をCoreクラスに統合した実装。 */
   async displayHintsWithExtmarksBatch(
     denops: Denops,
     bufnr: number,
@@ -938,51 +604,36 @@ export class Core {
     const batchSize = 50; // バッチサイズ
     let extmarkFailCount = 0;
     const maxFailures = 5;
-
-    // extmarkNamespaceを取得または作成
     let extmarkNamespace: number;
     try {
       extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
     } catch (error) {
-      // Extmark作成に失敗した場合はmatchaddにフォールバック
       await this.displayHintsWithMatchAddBatch(denops, hints, mode, signal);
       return;
     }
 
     for (let i = 0; i < hints.length; i += batchSize) {
-      // 中断チェック
       if (signal?.aborted) {
         return;
       }
-
       const batch = hints.slice(i, i + batchSize);
-
       try {
-        // バッチ内の各extmarkを作成
         await Promise.all(batch.map(async (mapping, index) => {
           const { word, hint } = mapping;
           try {
-            // バッファの有効性を再確認
             const bufValid = await denops.call("bufexists", bufnr) as number;
             if (!bufValid) {
               throw new Error(`Buffer ${bufnr} no longer exists`);
             }
-
-            // HintMappingのhintCol/hintByteColを使用して位置を決定
             const hintLine = word.line;
             const hintCol = mapping.hintCol || word.col;
             const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-            // 行とカラムの境界チェック
             const lineCount = await denops.call("line", "$") as number;
             if (hintLine > lineCount || hintLine < 1) {
               return;
             }
-
-            // Neovim用の0ベース座標に変換
             const nvimLine = hintLine - 1;
             const nvimCol = hintByteCol - 1;
-
             await denops.call(
               "nvim_buf_set_extmark",
               bufnr,
@@ -997,8 +648,6 @@ export class Core {
             );
           } catch (extmarkError) {
             extmarkFailCount++;
-
-            // 失敗が多すぎる場合はextmarkを諦めてmatchaddに切り替え
             if (extmarkFailCount >= maxFailures) {
               const remainingHints = hints.slice(i + index + 1);
               if (remainingHints.length > 0) {
@@ -1008,23 +657,11 @@ export class Core {
             }
           }
         }));
-
-        // バッチ間の遅延は削除（Promise pendingエラー対策）
-        // CPU負荷軽減が必要な場合はmain.tsレベルで制御
       } catch (batchError) {
-        // バッチエラーの場合は次のバッチに続く
-        // エラーは無視（process1_sub2）
       }
     }
   }
-
-  /*   * Phase6: 表示処理系の移行 - MatchAddバッチ表示   * main.tsのdisplayHintsWithMatchAddBatch関数の機能をCoreクラスに統合した実装。
-   * Vim用のmatchaddを使ったバッチ処理でヒントを効率的に表示します。
-   *   * @param hints - 表示するヒントマッピング配列
-   * @param mode - 表示モード（デフォルト: "normal"）
-   * @param signal - 中断用のAbortSignal（オプション）
-   * @returns Promise<void> - 非同期で完了
-   */
+  /* Phase6: 表示処理系の移行 - MatchAddバッチ表示   * main.tsのdisplayHintsWithMatchAddBatch関数の機能をCoreクラスに統合した実装。 */
   async displayHintsWithMatchAddBatch(
     denops: Denops,
     hints: HintMapping[],
@@ -1034,54 +671,35 @@ export class Core {
     const batchSize = 100; // matchaddはより高速なので大きなバッチサイズ
 
     for (let i = 0; i < hints.length; i += batchSize) {
-      // 中断チェック
       if (signal?.aborted) {
         return;
       }
-
       const batch = hints.slice(i, i + batchSize);
-
       try {
-        // バッチ内の各matchを作成
         const matchPromises = batch.map(async (mapping) => {
           const { word, hint } = mapping;
           try {
-            // HintMappingのhintCol/hintByteColを使用して位置を決定
             const hintLine = word.line;
             const hintCol = mapping.hintCol || word.col;
             const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-            // VimはbyteColを使用
             const vimCol = hintByteCol;
             const pattern = `\\%${hintLine}l\\%${vimCol}c.`;
-
             const matchId = await denops.call(
               "matchadd",
               "HellshakeYanoMarker",
               pattern,
               100,
             ) as number;
-
             return matchId;
           } catch (matchError) {
-            // エラーは無視（process1_sub2）
             return null;
           }
         });
-
         await Promise.all(matchPromises);
-
-        // バッチ間の遅延は削除（Promise pendingエラー対策）
-        // CPU負荷軽減が必要な場合はmain.tsレベルで制御
       } catch (batchError) {
-        // バッチエラーの場合は次のバッチに続く
-        // エラーは無視（process1_sub2）
       }
     }
   }
-
-  // Phase7: showHints系の移行 - ヒント表示統合（デバウンス処理はmain.tsで管理）
-
   /*   * Phase7: showHints系の移行 - ヒントを表示   * main.tsのshowHints関数の機能をCoreクラスに統合した実装。
    * デバウンス処理はmain.tsで管理し、Coreクラスは純粋なヒント表示ワークフローを提供します。
    *   * @returns Promise<void> - 非同期で完了
@@ -1090,11 +708,8 @@ export class Core {
     if (!this.isEnabled()) {
       return;
     }
-
-    // デバウンス処理はmain.tsで管理するため、直接内部処理を呼び出し
     await this.showHintsInternal(denops);
   }
-
   /*   * Phase7: showHints系の移行 - 内部的なヒント表示処理（最適化版）   * main.tsのshowHintsInternal関数の機能をCoreクラスに統合した実装。
    * 単語検出、ヒント生成、ヒント表示の完全なワークフローを提供します。
    *   * @param mode - 表示モード（デフォルト: "normal"）
@@ -1102,38 +717,24 @@ export class Core {
    */
   async showHintsInternal(denops: Denops, mode?: string): Promise<void> {
     const modeString = mode || "normal";
-
     try {
       if (!this.isEnabled()) {
         return;
       }
-
-      // バッファ番号を取得
       const bufnr = await denops.call("bufnr", "%") as number;
       if (bufnr === -1) {
         return;
       }
-
-      // 既存のヒントを非表示
       this.hideHints();
-
-      // 単語検出を実行
       const words = await this.detectWordsOptimized(denops, bufnr);
 
       if (words.length === 0) {
         return;
       }
-
-      // カーソル位置を取得
-      // getpos('.')は [bufnum, lnum, col, off] の形式を返す
       const cursorPos = await denops.call("getpos", ".") as [number, number, number, number] | undefined;
       const cursorLine = cursorPos ? cursorPos[1] : 1;
       const cursorCol = cursorPos ? cursorPos[2] : 1;
-
-      // ヒント生成 - singleCharKeysとmultiCharKeysを使用
       const unifiedConfig = this.config; // 既にConfig形式
-
-      // singleCharKeys/multiCharKeysが設定されている場合は優先的に使用
       let hints: string[];
       if (unifiedConfig.singleCharKeys || unifiedConfig.multiCharKeys) {
         const hintConfig: HintKeyConfig = {
@@ -1152,7 +753,6 @@ export class Core {
           markers: hintConfig.markers
         });
       } else {
-        // フォールバック: 従来のmarkers方式
         const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
         hints = this.generateHintsOptimized(words.length, markers);
       }
@@ -1160,49 +760,26 @@ export class Core {
       if (hints.length === 0) {
         return;
       }
-
-      // HintMappingを作成 - カーソル位置を基準に距離ソートして割り当て
       const hintMappings = assignHintsToWords(words, hints, cursorLine, cursorCol, modeString);
-
-      // ヒント表示
       await this.displayHintsOptimized(denops, hintMappings, modeString);
-
-      // 状態を更新
       this.currentHints = hintMappings;
       this.isActive = true;
-
-      // sub2-5-2: 重要なバグ修正 - ヒント表示後にユーザー入力を待機
-      // ユーザーがヒントを選択できるようにwaitForUserInputを呼び出す
       await this.waitForUserInput(denops);
 
     } catch (error) {
-      // エラーは無視（process1_sub2）
-      // エラー時は状態をクリア
       this.hideHints();
     }
   }
-
-  /*   * Phase7: showHints系の移行 - キー指定でのヒント表示   * main.tsのshowHintsWithKey関数の機能をCoreクラスに統合した実装。
-   * 特定のキーコンテキストでのヒント表示機能を提供します。
-   *   * @param key - キー文字列
-   * @param mode - 表示モード（デフォルト: "normal"）
-   * @returns Promise<void> - 非同期で完了
-   */
+  /* Phase7: showHints系の移行 - キー指定でのヒント表示   * main.tsのshowHintsWithKey関数の機能をCoreクラスに統合した実装。 */
   async showHintsWithKey(denops: Denops, key: string, mode?: string): Promise<void> {
     try {
-      // グローバル設定のcurrent_key_contextを更新
       this.config.currentKeyContext = key;
-
       const modeString = mode || "normal";
-      // 既存のshowHintsInternal処理を呼び出し（モード情報付き）
       await this.showHintsInternal(denops, modeString);
     } catch (error) {
-      // エラーは無視（process1_sub2）
-      // フォールバック: 通常のshowHintsを呼び出し
       await this.showHints(denops);
     }
   }
-
   /*   * Phase 8: ユーティリティ機能 - パフォーマンス測定を記録   * @param operation 測定対象の操作名
    * @param startTime 開始時刻（performance.now()の値）
    * @param endTime 終了時刻（performance.now()の値）
@@ -1213,18 +790,12 @@ export class Core {
     endTime: number
   ): void {
     if (!this.config.performanceLog) return;
-
     const duration = endTime - startTime;
     this.performanceMetrics[operation].push(duration);
-
-    // 最新50件のみ保持（メモリ使用量制限）
     if (this.performanceMetrics[operation].length > 50) {
       this.performanceMetrics[operation] = this.performanceMetrics[operation].slice(-50);
     }
-
-    // パフォーマンスログは削除（process1_sub2）
   }
-
   /*   * Phase 8: ユーティリティ機能 - デバッグ情報を収集   * @returns デバッグ情報オブジェクト
    */
   collectDebugInfo(): DebugInfo {
@@ -1241,7 +812,6 @@ export class Core {
       timestamp: Date.now(),
     };
   }
-
   /*   * Phase 8: ユーティリティ機能 - デバッグ情報をクリア
    */
   clearDebugInfo(): void {
@@ -1252,14 +822,12 @@ export class Core {
       hintGeneration: [],
     };
   }
-
   /*   * Phase 8: ユーティリティ機能 - 現在のヒントを設定（テスト用）   * @param hints ヒントマッピングの配列
    */
   setCurrentHints(hints: HintMapping[]): void {
     this.currentHints = hints;
     this.isActive = hints.length > 0;
   }
-
   /*   * Phase 8: ユーティリティ機能 - ユーザー入力を待機   * ヒント表示後にユーザーの文字入力を待ち、対応するヒントの位置へジャンプする。
   /**
  * main.tsのwaitForUserInput関数から移行した実装。   * @param denops Denopsインスタンス
@@ -1270,18 +838,13 @@ export class Core {
    */
   private async jumpToHintTarget(denops: Denops, target: HintMapping, context: string): Promise<void> {
     try {
-      // ヒント位置情報を使用（Visual modeでの語尾ジャンプ対応）
       const jumpCol = target.hintByteCol || target.hintCol ||
         target.word.byteCol || target.word.col;
-
-      // デバッグログは削除（process1_sub2）
-
       await denops.call("cursor", target.word.line, jumpCol);
     } catch (jumpError) {
       await denops.cmd("echohl ErrorMsg | echo 'Failed to jump to target' | echohl None");
     }
   }
-
   /*   * エラーメッセージとフィードバック表示（REFACTOR: 重複コードの共通化）
    *   * @param message - 表示するメッセージ
    * @param withBell - ベル音を鳴らすかどうか（デフォルト: true）
@@ -1292,11 +855,9 @@ export class Core {
       try {
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
       } catch {
-        // ベル音が失敗しても続行
       }
     }
   }
-
   /*   * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする   * main.tsから移行された完全版実装。hideHintsOptimizedを使用して
    * 実際の表示を適切に非表示にする重要なバグ修正を含む。
    *   * @throws ユーザーがESCでキャンセルした場合
@@ -1304,34 +865,22 @@ export class Core {
   async waitForUserInput(denops: Denops): Promise<void> {
     const config = this.config;
     const currentHints = this.currentHints;
-
     if (currentHints.length === 0) return;
-
     let timeoutId: number | undefined;
-
     try {
-      // 入力タイムアウト設定（設定可能）
       const inputTimeout = config.motionTimeout || 2000;
-
-      // 短い待機時間を入れて、前回の入力が誤って拾われるのを防ぐ
       await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // タイムアウト付きでユーザー入力を取得
       const inputPromise = denops.call("getchar") as Promise<number>;
       const timeoutPromise = new Promise<number>((resolve) => {
         timeoutId = setTimeout(() => resolve(-2), inputTimeout) as unknown as number; // -2 = 全体タイムアウト
       });
-
       const char = await Promise.race([inputPromise, timeoutPromise]);
 
       if (timeoutId) {
         clearTimeout(timeoutId);
         timeoutId = undefined;
       }
-
-      // 全体タイムアウトの場合
       if (char === -2) {
-        // motion_count === 1の場合、単一文字ヒントがあれば自動選択
         if (config.motionCount === 1) {
           const singleCharHints = currentHints.filter(h => h.hint.length === 1);
           if (singleCharHints.length === 1) {
@@ -1341,40 +890,26 @@ export class Core {
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // ESCキーの場合はキャンセル
       if (char === 27) {
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // Ctrl+C やその他の制御文字の処理
       if (char < 32 && char !== 13) { // Enter(13)以外の制御文字
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // 元の入力が大文字かどうかを記録（A-Z: 65-90）
       const wasUpperCase = char >= 65 && char <= 90;
-      // 元の入力が数字かどうかを記録（0-9: 48-57）
       const wasNumber = char >= 48 && char <= 57;
-      // 元の入力が小文字かどうかを記録（a-z: 97-122）
       const wasLowerCase = char >= 97 && char <= 122;
-
-      // 小文字の場合は、ヒントをキャンセルして通常のVim動作を実行
       if (wasLowerCase) {
         await this.hideHintsOptimized(denops);
-        // 小文字をそのままVimに渡す
         const originalChar = String.fromCharCode(char);
         await denops.call("feedkeys", originalChar, "n");
         return;
       }
-
-      // 文字に変換
       let inputChar: string;
       try {
         inputChar = String.fromCharCode(char);
-        // アルファベットの場合は大文字に変換（数字はそのまま）
         if (/[a-zA-Z]/.test(inputChar)) {
           inputChar = inputChar.toUpperCase();
         }
@@ -1383,81 +918,35 @@ export class Core {
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // 現在のキー設定から有効な入力文字を判定
       const allKeys = [...(config.singleCharKeys || []), ...(config.multiCharKeys || [])];
-
-      // useNumericMultiCharHintsが有効な場合、数字0-9を追加
       if (config.useNumericMultiCharHints) {
         allKeys.push(...["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
       }
-
-      // 大文字に正規化されたキー設定を作成（アルファベットの場合のみ大文字化）
       const normalizedKeys = allKeys.map(k => /[a-zA-Z]/.test(k) ? k.toUpperCase() : k);
       const validKeysSet = new Set(normalizedKeys);
-
-      // 入力文字が設定されたキーに含まれているかチェック
       if (!validKeysSet.has(inputChar)) {
-        // エラーメッセージを生成（最初の10個のキーを表示）
         const keysSample = normalizedKeys.slice(0, 10).join(", ");
         const moreKeys = normalizedKeys.length > 10 ? `, ... (${normalizedKeys.length} total)` : "";
         await this.showErrorFeedback(denops, `Please use configured hint keys: ${keysSample}${moreKeys}`);
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // 入力文字で始まる全てのヒントを探す（単一文字と複数文字の両方）
       const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
 
       if (matchingHints.length === 0) {
-        // 該当するヒントがない場合は終了（視覚・音声フィードバック付き）
         await this.showErrorFeedback(denops, "No matching hint found");
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // 単一文字のヒントと複数文字のヒントを分離
       const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
       const multiCharHints = matchingHints.filter((h) => h.hint.length > 1);
 
       if (config.useHintGroups) {
-        // デフォルトのキー設定
-        let defaultSingleKeys = [
-          "A",
-          "S",
-          "D",
-          "F",
-          "G",
-          "H",
-          "J",
-          "K",
-          "L",
-          "N",
-          "M",
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-        ];
-
-        // useNumericMultiCharHintsが有効な場合、数字を単一文字キーから除外
-        // これにより数字は必ず2文字ヒントとして扱われる
-        if (config.useNumericMultiCharHints) {
-          defaultSingleKeys = defaultSingleKeys.filter(k => !/^\d$/.test(k));
-        }
-
+        const defaultSingleKeys = config.useNumericMultiCharHints
+          ? DEFAULT_SINGLE_KEYS.filter(k => !/^\d$/.test(k))
+          : DEFAULT_SINGLE_KEYS;
         const singleOnlyKeys = config.singleCharKeys || defaultSingleKeys;
-        const multiOnlyKeys = config.multiCharKeys ||
-          ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
-
-        // 1文字専用キーの場合：即座にジャンプ（タイムアウトなし）
-        // ただし、useNumericMultiCharHintsが有効で数字の場合はスキップ
+        const multiOnlyKeys = config.multiCharKeys || DEFAULT_MULTI_KEYS;
         const shouldJumpImmediately = singleOnlyKeys.includes(inputChar) &&
           singleCharTarget &&
           !(config.useNumericMultiCharHints && /^\d$/.test(inputChar));
@@ -1467,68 +956,32 @@ export class Core {
           await this.hideHintsOptimized(denops);
           return;
         }
-
-        // 2文字専用キーの場合：必ず2文字目を待つ（タイムアウトなし）
-        // useNumericMultiCharHintsが有効な場合、数字も2文字専用として扱う
         const isMultiCharKey = multiOnlyKeys.includes(inputChar) ||
           (config.useNumericMultiCharHints && /^\d$/.test(inputChar));
 
         if (isMultiCharKey && multiCharHints.length > 0) {
-          // 2文字目の入力を待つ処理は後続のコードで実行される
-          // ただし、タイムアウト処理をスキップするフラグを設定
-          // この場合は通常の処理フローを続ける
         }
       } else {
-        // Option 3: 1文字ヒントが存在する場合は即座にジャンプ（他の条件に関係なく）
         if (singleCharTarget) {
           await this.jumpToHintTarget(denops, singleCharTarget, "single char target (Option 3)");
           await this.hideHintsOptimized(denops);
           return;
         }
       }
-
-      // 第2文字の入力を待機 - ハイライト処理とは完全に分離
-      // ハイライト処理は並行して実行されるが、入力処理をブロックしない
       let secondChar: number;
-
-      // 候補のヒントをハイライト表示（UX改善） - 入力処理と並行実行
-      // Option 3: 1文字ヒントが存在する場合はハイライト処理をスキップ
-      const shouldHighlight = config.highlightSelected && !singleCharTarget;
-
-      // ハイライト処理をバックグラウンドで開始（入力処理をブロックしない）
-      if (shouldHighlight) {
-        // ハイブリッド方式でハイライトを実行（最初の15個は同期、残りは非同期）
-        // process3実装：1文字目入力時の即時ハイライト表示
-        try {
-          // awaitして最初のバッチが確実に表示されるまで待つ
-          await this.highlightCandidateHintsHybrid(denops, currentHints, inputChar, { mode: "normal" });
-        } catch (error: unknown) {
-          // 同期的なエラーをキャッチ（非同期エラーは関数内部で処理）
-          // エラーは無視（process1_sub2）
-        }
-      }
-
-      // 入力処理を即座開始 - ハイライト処理の完了を待たない
       try {
         if (config.useHintGroups) {
-          const multiOnlyKeys = config.multiCharKeys ||
-            ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
-
-          // useNumericMultiCharHintsが有効な場合、数字も2文字専用として扱う
+          const multiOnlyKeys = config.multiCharKeys || DEFAULT_MULTI_KEYS;
           const isMultiCharKey = multiOnlyKeys.includes(inputChar) ||
             (config.useNumericMultiCharHints && /^\d$/.test(inputChar));
 
           if (isMultiCharKey) {
-            // 2文字専用キーの場合：タイムアウトなしで2文字目を待つ
-            // ハイライト処理とは独立して実行
             secondChar = await denops.call("getchar") as number;
           } else {
-            // それ以外（従来の動作）：タイムアウトあり
             const secondInputPromise = denops.call("getchar") as Promise<number>;
             const secondTimeoutPromise = new Promise<number>((resolve) => {
               timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
             });
-
             secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
 
             if (timeoutId) {
@@ -1537,12 +990,10 @@ export class Core {
             }
           }
         } else {
-          // 従来の動作：タイムアウトあり
           const secondInputPromise = denops.call("getchar") as Promise<number>;
           const secondTimeoutPromise = new Promise<number>((resolve) => {
             timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
           });
-
           secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
 
           if (timeoutId) {
@@ -1551,18 +1002,13 @@ export class Core {
           }
         }
       } catch (error) {
-        // 入力処理のエラーハンドリングを強化
-        // エラーは無視（process1_sub2）
         return; // エラー時は処理を中止
       }
 
       if (secondChar === -1) {
-        // タイムアウトの場合
         if (matchingHints.length === 1) {
-          // 候補が1つの場合は自動選択
           await this.jumpToHintTarget(denops, matchingHints[0], "auto-select single candidate");
         } else if (singleCharTarget) {
-          // タイムアウトで単一文字ヒントがある場合はそれを選択
           await this.jumpToHintTarget(denops, singleCharTarget, "timeout select single char hint");
         } else {
           await denops.cmd(`echo 'Timeout - ${matchingHints.length} candidates available'`);
@@ -1570,19 +1016,14 @@ export class Core {
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // ESCキーの場合はキャンセル
       if (secondChar === 27) {
         await denops.cmd("echo 'Cancelled'");
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // 第2文字を結合
       let secondInputChar: string;
       try {
         secondInputChar = String.fromCharCode(secondChar);
-        // アルファベットの場合は大文字に変換（数字はそのまま）
         if (/[a-zA-Z]/.test(secondInputChar)) {
           secondInputChar = secondInputChar.toUpperCase();
         }
@@ -1591,8 +1032,6 @@ export class Core {
         await this.hideHintsOptimized(denops);
         return;
       }
-
-      // 有効な文字範囲チェック（数字対応、useNumericMultiCharHintsも考慮）
       const secondValidPattern = (config.useNumbers || config.useNumericMultiCharHints) ? /[A-Z0-9]/ : /[A-Z]/;
       const secondErrorMessage = (config.useNumbers || config.useNumericMultiCharHints)
         ? "Second character must be alphabetic or numeric"
@@ -1603,108 +1042,288 @@ export class Core {
         await this.hideHintsOptimized(denops);
         return;
       }
-
       const fullHint = inputChar + secondInputChar;
-
-      // 完全なヒントを探す
       const target = currentHints.find((h) => h.hint === fullHint);
 
       if (target) {
-        // カーソルを移動（byteColが利用可能な場合は使用）
         await this.jumpToHintTarget(denops, target, `hint "${fullHint}"`);
       } else {
-        // 無効なヒント組み合わせの場合（視覚・音声フィードバック付き）
         await this.showErrorFeedback(denops, `Invalid hint combination: ${fullHint}`);
       }
-
-      // バックグラウンドのハイライト処理は fire-and-forget 方式
-      // 入力処理は独立して実行され、ハイライト処理の完了を待たない
-      // エラーハンドリングは highlightCandidateHintsAsync 内部で処理される
-
-      // ヒントを非表示
       await this.hideHintsOptimized(denops);
     } catch (error) {
-      // タイムアウトをクリア
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-
-      // エラー時のユーザーフィードバック
       try {
         await denops.cmd("echohl ErrorMsg | echo 'Input error - hints cleared' | echohl None");
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
       } catch {
-        // フィードバックが失敗しても続行
       }
-
       await this.hideHintsOptimized(denops);
       throw error;
     }
   }
-
+  highlightCandidateHintsAsync(
+    denops: Denops,
+    hintMappings: HintMapping[],
+    partialInput: string,
+    config: { mode?: "normal" | "visual" | "operator" } = {}
+  ): void {
+    if (this._renderingAbortController) {
+      this._renderingAbortController.abort();
+    }
+    this._renderingAbortController = new AbortController();
+    const signal = this._renderingAbortController.signal;
+    if (this._pendingHighlightTimer !== null) {
+      clearTimeout(this._pendingHighlightTimer);
+      this._pendingHighlightTimer = null;
+    }
+    this._pendingHighlightTimer = setTimeout(async () => {
+      this._pendingHighlightTimer = null;
+      try {
+        if (signal.aborted) return;
+        if (!partialInput) {
+          return;
+        }
+        const mode = config.mode || "normal";
+        const bufnr = await denops.call("bufnr", "%") as number;
+        if (signal.aborted) return;
+        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+        if (signal.aborted) return;
+        await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+        if (signal.aborted) return;
+        const candidateHints: HintMapping[] = [];
+        const nonCandidateHints: HintMapping[] = [];
+        for (const mapping of hintMappings) {
+          const isCandidate = mapping.hint.startsWith(partialInput);
+          if (isCandidate) {
+            candidateHints.push(mapping);
+          } else {
+            nonCandidateHints.push(mapping);
+          }
+        }
+        const totalHints = candidateHints.length + nonCandidateHints.length;
+        if (totalHints <= HIGHLIGHT_BATCH_SIZE) {
+          for (const mapping of hintMappings) {
+            if (signal.aborted) return;
+            const isCandidate = mapping.hint.startsWith(partialInput);
+            const { word, hint } = mapping;
+            const hintLine = word.line;
+            const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+            const nvimLine = hintLine - 1;
+            const nvimCol = hintByteCol - 1;
+            const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+            const priority = isCandidate ? 1001 : 1000;
+            try {
+              await denops.call(
+                "nvim_buf_set_extmark",
+                bufnr,
+                extmarkNamespace,
+                nvimLine,
+                nvimCol,
+                {
+                  "virt_text": [[hint, highlightGroup]],
+                  "virt_text_pos": "overlay",
+                  "priority": priority,
+                }
+              );
+            } catch (error) {
+            }
+          }
+          return;
+        }
+        await this.processBatchedExtmarks(denops, candidateHints, true, bufnr, extmarkNamespace, signal);
+        if (signal.aborted) return;
+        await this.processBatchedExtmarks(denops, nonCandidateHints, false, bufnr, extmarkNamespace, signal);
+      } catch (error) {
+      }
+    }, 0) as unknown as number;
+  }
+  async highlightCandidateHintsHybrid(
+    denops: Denops,
+    hintMappings: HintMapping[],
+    partialInput: string,
+    config: { mode?: "normal" | "visual" | "operator" } = {}
+  ): Promise<void> {
+    const SYNC_BATCH_SIZE = HYBRID_SYNC_BATCH_SIZE;
+    try {
+      if (this._renderingAbortController) {
+        this._renderingAbortController.abort();
+      }
+      this._renderingAbortController = new AbortController();
+      const signal = this._renderingAbortController.signal;
+      if (!partialInput) {
+        return;
+      }
+      const mode = config.mode || "normal";
+      const bufnr = await denops.call("bufnr", "%") as number;
+      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+      if (signal.aborted) return;
+      await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
+      if (signal.aborted) return;
+      const candidateHints: HintMapping[] = [];
+      const nonCandidateHints: HintMapping[] = [];
+      for (const mapping of hintMappings) {
+        if (mapping.hint.startsWith(partialInput)) {
+          candidateHints.push(mapping);
+        } else {
+          nonCandidateHints.push(mapping);
+        }
+      }
+      const syncCandidates = candidateHints.slice(0, SYNC_BATCH_SIZE);
+      const asyncCandidates = candidateHints.slice(SYNC_BATCH_SIZE);
+      for (const mapping of syncCandidates) {
+        if (signal.aborted) return;
+        try {
+          await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
+        } catch (error) {
+        }
+      }
+      const syncNonCandidates = nonCandidateHints.slice(0, Math.min(5, nonCandidateHints.length));
+      for (const mapping of syncNonCandidates) {
+        if (signal.aborted) return;
+        try {
+          await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, false);
+        } catch (error) {
+        }
+      }
+      await denops.cmd("redraw");
+      const asyncNonCandidates = nonCandidateHints.slice(5);
+      if (asyncCandidates.length > 0 || asyncNonCandidates.length > 0) {
+        queueMicrotask(async () => {
+          try {
+            for (const mapping of asyncCandidates) {
+              if (signal.aborted) return;
+              try {
+                await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
+              } catch (error) {
+              }
+            }
+            for (const mapping of asyncNonCandidates) {
+              if (signal.aborted) return;
+              try {
+                await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, false);
+              } catch (error) {
+              }
+            }
+          } catch (err) {
+          }
+        });
+      }
+    } catch (error) {
+    }
+  }
+  private async setHintExtmark(
+    denops: Denops,
+    mapping: HintMapping,
+    bufnr: number,
+    extmarkNamespace: number,
+    isCandidate: boolean = true
+  ): Promise<void> {
+    const { word, hint } = mapping;
+    const hintLine = word.line;
+    const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+    const nvimLine = hintLine - 1;
+    const nvimCol = hintByteCol - 1;
+    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+    await denops.call(
+      "nvim_buf_set_extmark",
+      bufnr,
+      extmarkNamespace,
+      nvimLine,
+      nvimCol,
+      {
+        "virt_text": [[hint, highlightGroup]],
+        "virt_text_pos": "overlay",
+        "priority": 1001,
+      }
+    );
+  }
+  private async processBatchedExtmarks(
+    denops: Denops,
+    hints: HintMapping[],
+    isCandidate: boolean,
+    bufnr: number,
+    extmarkNamespace: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    const batchSize = HIGHLIGHT_BATCH_SIZE;
+    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
+    const priority = isCandidate ? 1001 : 1000;
+    for (let i = 0; i < hints.length; i += batchSize) {
+      if (signal.aborted) return;
+      const batch = hints.slice(i, i + batchSize);
+      for (const mapping of batch) {
+        if (signal.aborted) return;
+        const { word, hint } = mapping;
+        const hintLine = word.line;
+        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
+        const nvimLine = hintLine - 1;
+        const nvimCol = hintByteCol - 1;
+        try {
+          await denops.call(
+            "nvim_buf_set_extmark",
+            bufnr,
+            extmarkNamespace,
+            nvimLine,
+            nvimCol,
+            {
+              "virt_text": [[hint, highlightGroup]],
+              "virt_text_pos": "overlay",
+              "priority": priority,
+            }
+          );
+        } catch (error) {
+        }
+      }
+      if (i + batchSize < hints.length) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+  }
   /*   * Phase 9: Dictionary System Migration
    * 辞書システムの移行 - TDD Green Phase Implementation
    */
-
   /*   * Initialize dictionary system
    *   * @returns Promise<void>
    */
   async initializeDictionarySystem(denops: Denops): Promise<void> {
     try {
-      // Initialize dictionary loader and vim config bridge
       this.dictionaryLoader = new DictionaryLoader();
       this.vimConfigBridge = new VimConfigBridge();
-
-      // Register dictionary commands
       await this.registerDictionaryCommands(denops);
-
-      // Load initial dictionary
       const dictConfig = await this.vimConfigBridge.getConfig(denops);
       await this.dictionaryLoader.loadUserDictionary(dictConfig);
-
-      // ログは削除（process1_sub2）
     } catch (error) {
-      // エラーは無視（process1_sub2）
       throw error;
     }
   }
-
   /*   * Register dictionary-related Vim commands
    *   * @returns Promise<void>
    */
   private async registerDictionaryCommands(denops: Denops): Promise<void> {
-    // Add to dictionary command
     await denops.cmd(
       `command! -nargs=+ HellshakeYanoAddWord call denops#request("${denops.name}", "addToDictionary", split('<args>'))`
     );
-
-    // Reload dictionary command
     await denops.cmd(
       `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`
     );
-
-    // Edit dictionary command
     await denops.cmd(
       `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`
     );
-
-    // Show dictionary command
     await denops.cmd(
       `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`
     );
-
-    // Validate dictionary command
     await denops.cmd(
       `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`
     );
   }
-
   /*   * Check if dictionary system is initialized   * @returns boolean - True if dictionary system is ready
    */
   hasDictionarySystem(): boolean {
     return this.dictionaryLoader !== null && this.vimConfigBridge !== null;
   }
-
   /*   * Reload user dictionary
    *   * @returns Promise<void>
    */
@@ -1713,16 +1332,13 @@ export class Core {
       if (!this.dictionaryLoader || !this.vimConfigBridge) {
         await this.initializeDictionarySystem(denops);
       }
-
       const dictConfig = await this.vimConfigBridge!.getConfig(denops);
       const dictionary = await this.dictionaryLoader!.loadUserDictionary(dictConfig);
-
       await denops.cmd('echo "Dictionary reloaded successfully"');
     } catch (error) {
       await denops.cmd(`echoerr "Failed to reload dictionary: ${error}"`);
     }
   }
-
   /*   * Edit dictionary file
    *   * @returns Promise<void>
    */
@@ -1731,14 +1347,12 @@ export class Core {
       if (!this.dictionaryLoader || !this.vimConfigBridge) {
         await this.initializeDictionarySystem(denops);
       }
-
       const dictConfig = await this.vimConfigBridge!.getConfig(denops);
       const dictionaryPath = dictConfig.dictionaryPath || ".hellshake-yano/dictionary.json";
 
       if (dictionaryPath) {
         await denops.cmd(`edit ${dictionaryPath}`);
       } else {
-        // Create new dictionary file if not exists
         const newPath = ".hellshake-yano/dictionary.json";
         try {
           await Deno.mkdir(".hellshake-yano", { recursive: true });
@@ -1761,7 +1375,6 @@ export class Core {
       await denops.cmd(`echoerr "Failed to edit dictionary: ${error}"`);
     }
   }
-
   /*   * Show dictionary contents in a new buffer
    *   * @returns Promise<void>
    */
@@ -1770,17 +1383,13 @@ export class Core {
       if (!this.dictionaryLoader || !this.vimConfigBridge) {
         await this.initializeDictionarySystem(denops);
       }
-
       const dictConfig = await this.vimConfigBridge!.getConfig(denops);
       const dictionary = await this.dictionaryLoader!.loadUserDictionary(dictConfig);
-
-      // Create a new buffer to show dictionary content
       await denops.cmd("new");
       await denops.cmd("setlocal buftype=nofile");
       await denops.cmd("setlocal bufhidden=wipe");
       await denops.cmd("setlocal noswapfile");
       await denops.cmd("file [HellshakeYano Dictionary]");
-
       const content = JSON.stringify(dictionary, null, 2);
       const lines = content.split('\n');
       await denops.call("setline", 1, lines);
@@ -1788,7 +1397,6 @@ export class Core {
       await denops.cmd(`echoerr "Failed to show dictionary: ${error}"`);
     }
   }
-
   /*   * Validate dictionary format
    *   * @returns Promise<void>
    */
@@ -1797,10 +1405,7 @@ export class Core {
       if (!this.dictionaryLoader || !this.vimConfigBridge) {
         await this.initializeDictionarySystem(denops);
       }
-
       const dictConfig = await this.vimConfigBridge!.getConfig(denops);
-
-      // Validate dictionary file exists
       if (dictConfig.dictionaryPath) {
         try {
           await Deno.stat(dictConfig.dictionaryPath);
@@ -1809,8 +1414,6 @@ export class Core {
           return;
         }
       }
-
-      // Validate dictionary format (basic check)
       const result = { errors: [] as string[] };
       if (result.errors.length === 0) {
         await denops.cmd('echo "Dictionary format is valid"');
@@ -1821,36 +1424,22 @@ export class Core {
       await denops.cmd(`echoerr "Failed to validate dictionary: ${error}"`);
     }
   }
-
-  /*   * Add word to user dictionary
-   * TDD Green Phase: sub2-4-1 implementation
-   *   * @param word - 追加する単語
-   * @param meaning - 単語の意味
-   * @param type - 単語の種類（noun, verb, adjective等）
-   * @returns Promise<void>
-   */
+  /* Add word to user dictionary */
   async addToDictionary(denops: Denops, word: string, meaning: string, type: string): Promise<void> {
     try {
-      // Validate input
       if (!word || !word.trim()) {
         await denops.cmd('echoerr "Invalid word: word cannot be empty"');
         return;
       }
-
-      // Initialize dictionary system if needed
       if (!this.dictionaryLoader || !this.vimConfigBridge) {
         await this.initializeDictionarySystem(denops);
       }
-
       const dictConfig = await this.vimConfigBridge!.getConfig(denops);
       const dictionaryPath = dictConfig.dictionaryPath || ".hellshake-yano/dictionary.json";
-
-      // Load existing dictionary or create new one
       let dictionary: UserDictionary;
       try {
         dictionary = await this.dictionaryLoader!.loadUserDictionary(dictConfig);
       } catch (_) {
-        // Create new dictionary if not exists (using UserDictionary format)
         dictionary = {
           customWords: [],
           preserveWords: [],
@@ -1862,24 +1451,16 @@ export class Core {
           }
         };
       }
-
-      // Create word entry and add to customWords
       const wordEntry = word.trim();
-
-      // Check if word already exists
       const existingIndex = dictionary.customWords.indexOf(wordEntry);
       if (existingIndex === -1) {
-        // Add new word
         dictionary.customWords.push(wordEntry);
       }
-
-      // Also handle the raw JSON format for file storage
       let jsonDictionary;
       try {
         const content = await Deno.readTextFile(dictionaryPath);
         jsonDictionary = JSON.parse(content);
       } catch (_) {
-        // Create new JSON dictionary if not exists
         jsonDictionary = {
           words: [],
           patterns: [],
@@ -1890,16 +1471,12 @@ export class Core {
           }
         };
       }
-
-      // Create structured word entry for JSON storage
       const structuredWordEntry = {
         word: word.trim(),
         meaning: meaning.trim() || word.trim(),
         type: type.trim() || "unknown",
         added: new Date().toISOString()
       };
-
-      // Check if word already exists in JSON format
       if (!jsonDictionary.words) {
         jsonDictionary.words = [];
       }
@@ -1907,24 +1484,15 @@ export class Core {
         typeof w === 'object' && w !== null && 'word' in w && (w as { word: string }).word === structuredWordEntry.word
       );
       if (jsonExistingIndex !== -1) {
-        // Update existing word
         jsonDictionary.words[jsonExistingIndex] = structuredWordEntry;
       } else {
-        // Add new word
         jsonDictionary.words.push(structuredWordEntry);
       }
-
-      // Ensure directory exists
       try {
         await Deno.mkdir(".hellshake-yano", { recursive: true });
       } catch (_) {
-        // Directory might already exist
       }
-
-      // Save updated JSON dictionary
       await Deno.writeTextFile(dictionaryPath, JSON.stringify(jsonDictionary, null, 2));
-
-      // Reload dictionary to update cache
       await this.dictionaryLoader!.loadUserDictionary(dictConfig);
 
       await denops.cmd(`echo "Word added to dictionary: ${word}"`);
@@ -1932,52 +1500,27 @@ export class Core {
       await denops.cmd(`echoerr "Failed to add word to dictionary: ${error}"`);
     }
   }
-
-  /*   * Vimのハイライトグループ名として有効かどうか検証する
-   * Phase 11: process3 sub2-1-1 - main.tsからCore classへの移行
-   * TDD Green Phase: 既存のvalidateHighlightGroupName関数のロジックを移植   * Vimのハイライトグループ名のルール：
-   * - 英字またはアンダースコアで開始
-   * - 英数字とアンダースコアのみ使用可能
-   * - 100文字以下
-   * @param groupName 検証するハイライトグループ名
-   * @returns 有効な場合はtrue、無効な場合はfalse
-   */
+  /* Vimのハイライトグループ名として有効かどうか検証する */
   static validateHighlightGroupName(groupName: string): boolean {
-    // 空文字列チェック
     if (!groupName || groupName.length === 0) {
       return false;
     }
-
-    // 長さチェック（100文字以下）
     if (groupName.length > 100) {
       return false;
     }
-
-    // 最初の文字は英字またはアンダースコアでなければならない
     const firstChar = groupName.charAt(0);
     if (!/[a-zA-Z_]/.test(firstChar)) {
       return false;
     }
-
-    // 全体の文字列は英数字とアンダースコアのみ
     if (!/^[a-zA-Z0-9_]+$/.test(groupName)) {
       return false;
     }
-
     return true;
   }
-
-  /**
- * main.ts の isValidColorName 関数の実装をCore.isValidColorName静的メソッドとして移植
- * @param colorName
- * @returns 
-   */
   public static isValidColorName(colorName: string): boolean {
     if (!colorName || typeof colorName !== "string") {
       return false;
     }
-
-    // 標準的なVim色名（大文字小文字不区別）
     const validColorNames = [
       "black",
       "darkblue",
@@ -2007,10 +1550,8 @@ export class Core {
       "none",
       "NONE",
     ];
-
     return validColorNames.includes(colorName.toLowerCase());
   }
-
   /**
  * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
  * @returns 
@@ -2019,24 +1560,15 @@ export class Core {
     if (!hexColor || typeof hexColor !== "string") {
       return false;
     }
-
-    // #で始まること
     if (!hexColor.startsWith("#")) {
       return false;
     }
-
-    // #を除いた部分
     const hex = hexColor.slice(1);
-
-    // 3桁または6桁の16進数
     if (hex.length !== 3 && hex.length !== 6) {
       return false;
     }
-
-    // 有効な16進数文字のみ
     return /^[0-9a-fA-F]+$/.test(hex);
   }
-
   /**
  * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
  * @returns 
@@ -2045,18 +1577,12 @@ export class Core {
     if (!color || typeof color !== "string") {
       return color;
     }
-
-    // 16進数色の場合はそのまま返す
     if (color.startsWith("#")) {
       return color;
     }
-
-    // 色名の場合は最初の文字を大文字、残りを小文字にする
     return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
   }
-
   /**
-   * ハイライト色設定を検証（validation-utils.tsにデリゲート）
    * @param colorConfig 検証するハイライト色設定
    * @returns 検証結果
    */
@@ -2065,7 +1591,6 @@ export class Core {
   ): { valid: boolean; errors: string[] } {
     return validateHighlightColor(colorConfig);
   }
-
   /**
  * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
  * @param colorConfig
@@ -2075,22 +1600,17 @@ export class Core {
     hlGroupName: string,
     colorConfig: string | HighlightColor,
   ): string {
-    // 文字列の場合（従来のハイライトグループ名）
     if (typeof colorConfig === "string") {
       return `highlight default link ${hlGroupName} ${colorConfig}`;
     }
-
-    // オブジェクトの場合（fg/bg個別指定）
     const { fg, bg } = colorConfig;
     const parts = [`highlight ${hlGroupName}`];
 
     if (fg !== undefined) {
       const normalizedFg = Core.normalizeColorName(fg);
       if (fg.startsWith("#")) {
-        // 16進数色の場合はguifgのみ
         parts.push(`guifg=${fg}`);
       } else {
-        // 色名の場合はctermfgとguifgの両方
         parts.push(`ctermfg=${normalizedFg}`);
         parts.push(`guifg=${normalizedFg}`);
       }
@@ -2099,18 +1619,14 @@ export class Core {
     if (bg !== undefined) {
       const normalizedBg = Core.normalizeColorName(bg);
       if (bg.startsWith("#")) {
-        // 16進数色の場合はguibgのみ
         parts.push(`guibg=${bg}`);
       } else {
-        // 色名の場合はctermbgとguibgの両方
         parts.push(`ctermbg=${normalizedBg}`);
         parts.push(`guibg=${normalizedBg}`);
       }
     }
-
     return parts.join(" ");
   }
-
   /**
  * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
  * @returns 
@@ -2122,105 +1638,69 @@ export class Core {
     },
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-
-    // highlightHintMarkerの検証
     if (config.highlightHintMarker !== undefined) {
       const markerResult = Core.validateHighlightColor(config.highlightHintMarker);
       if (!markerResult.valid) {
         errors.push(...markerResult.errors.map((e) => `highlightHintMarker: ${e}`));
       }
     }
-
-    // highlightHintMarkerCurrentの検証
     if (config.highlightHintMarkerCurrent !== undefined) {
       const currentResult = Core.validateHighlightColor(config.highlightHintMarkerCurrent);
       if (!currentResult.valid) {
         errors.push(...currentResult.errors.map((e) => `highlightHintMarkerCurrent: ${e}`));
       }
     }
-
     return { valid: errors.length === 0, errors };
   }
-
   /**
  * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
  * @param key
  * @returns 
    */
   public static getMinLengthForKey(config: Config | Config, key: string): number {
-    // 既にConfig形式であることを前提
     const unifiedConfig = config as EnhancedConfig;
-
-    // Check for perKeyMinLength first (highest priority)
     if (
       "perKeyMinLength" in unifiedConfig && unifiedConfig.perKeyMinLength &&
       typeof unifiedConfig.perKeyMinLength === "object"
     ) {
       const perKeyValue = (unifiedConfig.perKeyMinLength as Record<string, number>)[key];
-      // Validate that the value is positive (0 and negative values are invalid)
       if (perKeyValue !== undefined && perKeyValue > 0) return perKeyValue;
     }
-
-    // Check for defaultMinWordLength (second priority)
     if ("defaultMinWordLength" in unifiedConfig && typeof unifiedConfig.defaultMinWordLength === "number") {
       return unifiedConfig.defaultMinWordLength;
     }
-
-    // Check for default_min_length (third priority) - レガシー設定
     if ("default_min_length" in unifiedConfig && typeof unifiedConfig.default_min_length === "number") {
       return unifiedConfig.default_min_length;
     }
-
-    // Check for min_length (fourth priority) - レガシー設定
     if ("min_length" in unifiedConfig && typeof unifiedConfig.min_length === "number") {
       return unifiedConfig.min_length;
     }
-
-    // Check for legacy minWordLength (fifth priority) - レガシー設定
     if ("minWordLength" in unifiedConfig && typeof unifiedConfig.minWordLength === "number") {
       return unifiedConfig.minWordLength;
     }
-
-    // Default fallback
     return 3;
   }
-
   /**
  * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
  * @param config
  * @returns 
    */
   public static getMotionCountForKey(key: string, config: Config | Config): number {
-    // 既にConfig形式であることを前提
     const unifiedConfig = config as Config;
-
-    // キー別設定が存在し、そのキーの設定があれば使用
     if (unifiedConfig.perKeyMotionCount && unifiedConfig.perKeyMotionCount[key] !== undefined) {
       const value = unifiedConfig.perKeyMotionCount[key];
-      // 1以上の整数値のみ有効とみなす
       if (value >= 1 && Number.isInteger(value)) {
         return value;
       }
     }
-
-    // defaultMotionCount が設定されていれば使用
     if (unifiedConfig.defaultMotionCount !== undefined && unifiedConfig.defaultMotionCount >= 1) {
       return unifiedConfig.defaultMotionCount;
     }
-
-    // 既存のmotionCountを使用
     if (unifiedConfig.motionCount !== undefined && unifiedConfig.motionCount >= 1) {
       return unifiedConfig.motionCount;
     }
-
-    // 最終的なデフォルト値（DEFAULT_UNIFIED_CONFIG.motionCount と同じ）
     return 3;
   }
-
-  // ========================================
-  // sub2-3: Display Functions Implementation
-  // ========================================
-
   /*   * sub2-3-2: isRenderingHints - ヒントの描画処理中かどうかを取得   * 非同期描画の状態を外部から確認するためのステータス関数
   /**
  * main.ts の isRenderingHints 関数をCoreクラスに移植   * @returns boolean 描画処理中の場合はtrue、そうでなければfalse   * const core = Core.getInstance();
@@ -2228,10 +1708,11 @@ export class Core {
   isRenderingHints(): boolean {
     return this._isRenderingHints;
   }
-
-  /*   * sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断   * 進行中の非同期描画処理を安全に中断します
+  /* sub2-3-3: abortCurrentRendering - 現在実行中の描画処理を中断   * 進行中の非同期描画処理を安全に中断します */
   /**
- * main.ts の abortCurrentRendering 関数をCoreクラスに移植   * const core = Core.getInstance();
+   * main.ts の abortCurrentRendering 関数をCoreクラスに移植
+   * const core = Core.getInstance();
+   * core.abortCurrentRendering();
    */
   abortCurrentRendering(): void {
     if (this._renderingAbortController) {
@@ -2241,442 +1722,14 @@ export class Core {
     }
   }
 
-  /**
- * 候補ヒントを同期的にハイライト表示（即座に反映）
- * @param denops
- * @param hintMappings
- * @param partialInput
- * @param config
-   */
-  async highlightCandidateHintsSync(
-    denops: Denops,
-    hintMappings: HintMapping[],
-    partialInput: string,
-    config: { mode?: "normal" | "visual" | "operator" } = {}
-  ): Promise<void> {
-    try {
-      // 空の部分入力の場合は何もしない
-      if (!partialInput) {
-        return;
-      }
-
-      const mode = config.mode || "normal";
-      const bufnr = await denops.call("bufnr", "%") as number;
-
-      // 候補ヒントをハイライト表示
-      // 元のヒントと同じnamespaceを使って全ヒントを再描画（重複を防ぐため）
-      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
-
-      // 既存のハイライトをクリア
-      await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
-
-      // 全ヒントを再描画（候補かどうかでハイライトグループを切り替え）
-      let candidateCount = 0;
-      let nonCandidateCount = 0;
-
-      for (const mapping of hintMappings) {
-        const { word, hint } = mapping;
-        const hintLine = word.line;
-        const hintCol = mapping.hintCol || word.col;
-        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-        // 候補かどうか判定
-        const isCandidate = hint.startsWith(partialInput);
-        const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
-
-        if (isCandidate) candidateCount++;
-        else nonCandidateCount++;
-
-        // Neovim用の0ベース座標に変換
-        const nvimLine = hintLine - 1;
-        const nvimCol = hintByteCol - 1;
-
-        try {
-          await denops.call(
-            "nvim_buf_set_extmark",
-            bufnr,
-            extmarkNamespace,
-            nvimLine,
-            nvimCol,
-            {
-              "virt_text": [[hint, highlightGroup]], // 候補かどうかでハイライトグループを切り替え
-              "virt_text_pos": "overlay",
-              "priority": isCandidate ? 1001 : 1000, // 候補は高優先度
-            }
-          );
-        } catch (error) {
-          // 個別のextmarkエラーは無視（バッファが変更された可能性）
-          // 個別のextmarkエラーは無視（バッファが変更された可能性）
-        }
-      }
-
-    } catch (error) {
-      // エラーハンドリング
-    }
-  }
-
-  /**
- * 候補ヒントを非同期でハイライト表示する（Fire-and-forget方式）
- * @param denops
- * @param hintMappings
- * @param partialInput
- * @param config
- * @param config
-   */
-  highlightCandidateHintsAsync(
-    denops: Denops,
-    hintMappings: HintMapping[],
-    partialInput: string,
-    config: { mode?: "normal" | "visual" | "operator" } = {}
-  ): void {
-    // 既存のレンダリング処理をキャンセル
-    if (this._renderingAbortController) {
-      this._renderingAbortController.abort();
-    }
-
-    // 新しいAbortControllerを作成
-    this._renderingAbortController = new AbortController();
-    const signal = this._renderingAbortController.signal;
-
-    // 既存のタイマーをクリア
-    if (this._pendingHighlightTimer !== null) {
-      clearTimeout(this._pendingHighlightTimer);
-      this._pendingHighlightTimer = null;
-    }
-
-    // Fire-and-forget: Promiseを返さず、awaitを使わない
-    // setTimeout(0)でメインスレッドをブロックしない
-    this._pendingHighlightTimer = setTimeout(async () => {
-      this._pendingHighlightTimer = null;
-      try {
-        if (signal.aborted) return;
-
-        // 空の部分入力の場合は何もしない
-        if (!partialInput) {
-          return;
-        }
-
-        const mode = config.mode || "normal";
-        const bufnr = await denops.call("bufnr", "%") as number;
-
-        if (signal.aborted) return;
-
-        // 候補ヒントをハイライト表示
-        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
-
-        if (signal.aborted) return;
-
-        // 既存のハイライトをクリア
-        await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
-
-        if (signal.aborted) return;
-
-        // バッチ処理で効率的にextmarkを設定
-        const candidateHints: HintMapping[] = [];
-        const nonCandidateHints: HintMapping[] = [];
-
-        // 候補と非候補を分離
-        for (const mapping of hintMappings) {
-          const isCandidate = mapping.hint.startsWith(partialInput);
-          if (isCandidate) {
-            candidateHints.push(mapping);
-          } else {
-            nonCandidateHints.push(mapping);
-          }
-        }
-
-        // 効率化: 候補が少ない場合は混在処理
-        const totalHints = candidateHints.length + nonCandidateHints.length;
-        if (totalHints <= HIGHLIGHT_BATCH_SIZE) {
-          // 少数のヒントは候補判定を個別に行いながら一括処理
-          for (const mapping of hintMappings) {
-            if (signal.aborted) return;
-
-            const isCandidate = mapping.hint.startsWith(partialInput);
-            const { word, hint } = mapping;
-            const hintLine = word.line;
-            const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-            const nvimLine = hintLine - 1;
-            const nvimCol = hintByteCol - 1;
-            const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
-            const priority = isCandidate ? 1001 : 1000;
-
-            try {
-              await denops.call(
-                "nvim_buf_set_extmark",
-                bufnr,
-                extmarkNamespace,
-                nvimLine,
-                nvimCol,
-                {
-                  "virt_text": [[hint, highlightGroup]],
-                  "virt_text_pos": "overlay",
-                  "priority": priority,
-                }
-              );
-            } catch (error) {
-              // 個別のextmarkエラーは無視（バッファが変更された可能性）
-              // デバッグ情報は開発時のみ出力
-            }
-          }
-          return;
-        }
-
-        // 候補ヒントを優先的に処理（HIGHLIGHT_BATCH_SIZEずつ）
-        await this.processBatchedExtmarks(denops, candidateHints, true, bufnr, extmarkNamespace, signal);
-
-        if (signal.aborted) return;
-
-        // 非候補ヒントを処理
-        await this.processBatchedExtmarks(denops, nonCandidateHints, false, bufnr, extmarkNamespace, signal);
-
-      } catch (error) {
-        // エラーハンドリング（ログ出力のみ、Fire-and-forgetのためrethrowしない）
-        // エラーは無視（process1_sub2）
-      }
-    }, 0) as unknown as number;
-  }
-
-  /**
- * 候補ヒントのハイブリッドハイライト表示（TDD実装）
- * @param denops
- * @param hintMappings
- * @param partialInput
- * @param config
- * @returns 
-   */
-  async highlightCandidateHintsHybrid(
-    denops: Denops,
-    hintMappings: HintMapping[],
-    partialInput: string,
-    config: { mode?: "normal" | "visual" | "operator" } = {}
-  ): Promise<void> {
-    const SYNC_BATCH_SIZE = HYBRID_SYNC_BATCH_SIZE; // 同期処理する候補数
-
-    try {
-      // 既存のレンダリング処理をキャンセル
-      if (this._renderingAbortController) {
-        this._renderingAbortController.abort();
-      }
-
-      // 新しいAbortControllerを作成
-      this._renderingAbortController = new AbortController();
-      const signal = this._renderingAbortController.signal;
-
-      // 空の部分入力の場合は何もしない
-      if (!partialInput) {
-        return;
-      }
-
-      const mode = config.mode || "normal";
-      const bufnr = await denops.call("bufnr", "%") as number;
-      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
-
-      if (signal.aborted) return;
-
-      // 既存のハイライトをクリア
-      await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
-
-      if (signal.aborted) return;
-
-      // 全ヒントを候補と非候補に分類
-      const candidateHints: HintMapping[] = [];
-      const nonCandidateHints: HintMapping[] = [];
-
-      for (const mapping of hintMappings) {
-        if (mapping.hint.startsWith(partialInput)) {
-          candidateHints.push(mapping);
-        } else {
-          nonCandidateHints.push(mapping);
-        }
-      }
-
-      // Phase 1: 候補ヒントを優先的に同期表示（最初の15個）
-      const syncCandidates = candidateHints.slice(0, SYNC_BATCH_SIZE);
-      const asyncCandidates = candidateHints.slice(SYNC_BATCH_SIZE);
-
-      // 候補ヒントを同期表示（HellshakeYanoMarkerCurrent - 赤背景）
-      for (const mapping of syncCandidates) {
-        if (signal.aborted) return;
-
-        try {
-          await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
-        } catch (error) {
-          // 個別のextmarkエラーは無視（デバッグログは共通メソッドで処理）
-        }
-      }
-
-      // 非候補ヒントも同期表示（HellshakeYanoMarker - 通常背景）
-      // 最初の数個を同期表示してコンテキストを保持
-      const syncNonCandidates = nonCandidateHints.slice(0, Math.min(5, nonCandidateHints.length));
-      for (const mapping of syncNonCandidates) {
-        if (signal.aborted) return;
-
-        try {
-          await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, false);
-        } catch (error) {
-          // 個別のextmarkエラーは無視
-        }
-      }
-
-      // 即座にredrawして表示を更新
-      await denops.cmd("redraw");
-
-      // Phase 2: 残りを非同期で処理（fire-and-forget）
-      const asyncNonCandidates = nonCandidateHints.slice(5);
-
-      if (asyncCandidates.length > 0 || asyncNonCandidates.length > 0) {
-        // 非同期処理を開始（awaitしない）
-        queueMicrotask(async () => {
-          try {
-            // 残りの候補ヒント（赤背景）
-            for (const mapping of asyncCandidates) {
-              if (signal.aborted) return;
-
-              try {
-                await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, true);
-              } catch (error) {
-                // 個別のextmarkエラーは無視
-              }
-            }
-
-            // 残りの非候補ヒント（通常背景）
-            for (const mapping of asyncNonCandidates) {
-              if (signal.aborted) return;
-
-              try {
-                await this.setHintExtmark(denops, mapping, bufnr, extmarkNamespace, false);
-              } catch (error) {
-                // 個別のextmarkエラーは無視
-              }
-            }
-          } catch (err) {
-            // エラーは無視（process1_sub2）
-          }
-        });
-      }
-
-    } catch (error) {
-      // エラーは無視（process1_sub2）
-    }
-  }
-
-  /**
- * 単一ヒントのextmarkを設定する共通メソッド（リファクタリング）
- * @param denops
- * @param mapping
- * @param bufnr
- * @param extmarkNamespace
- * @param isCandidate
-   */
-  private async setHintExtmark(
-    denops: Denops,
-    mapping: HintMapping,
-    bufnr: number,
-    extmarkNamespace: number,
-    isCandidate: boolean = true
-  ): Promise<void> {
-    const { word, hint } = mapping;
-    const hintLine = word.line;
-    const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-    const nvimLine = hintLine - 1;
-    const nvimCol = hintByteCol - 1;
-    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
-
-    await denops.call(
-      "nvim_buf_set_extmark",
-      bufnr,
-      extmarkNamespace,
-      nvimLine,
-      nvimCol,
-      {
-        "virt_text": [[hint, highlightGroup]],
-        "virt_text_pos": "overlay",
-        "priority": 1001,
-      }
-    );
-  }
-
-  /**
- * バッチ処理でextmarkを設定する
- * @param denops
- * @param hints
- * @param isCandidate
- * @param bufnr
- * @param extmarkNamespace
- * @param signal
-   */
-  private async processBatchedExtmarks(
-    denops: Denops,
-    hints: HintMapping[],
-    isCandidate: boolean,
-    bufnr: number,
-    extmarkNamespace: number,
-    signal: AbortSignal
-  ): Promise<void> {
-    const batchSize = HIGHLIGHT_BATCH_SIZE;
-    const highlightGroup = isCandidate ? "HellshakeYanoMarkerCurrent" : "HellshakeYanoMarker";
-    const priority = isCandidate ? 1001 : 1000;
-
-    for (let i = 0; i < hints.length; i += batchSize) {
-      if (signal.aborted) return;
-
-      const batch = hints.slice(i, i + batchSize);
-
-      // バッチ内の各ヒントを処理
-      for (const mapping of batch) {
-        if (signal.aborted) return;
-
-        const { word, hint } = mapping;
-        const hintLine = word.line;
-        const hintByteCol = mapping.hintByteCol || mapping.hintCol || word.byteCol || word.col;
-
-        // Neovim用の0ベース座標に変換
-        const nvimLine = hintLine - 1;
-        const nvimCol = hintByteCol - 1;
-
-        try {
-          await denops.call(
-            "nvim_buf_set_extmark",
-            bufnr,
-            extmarkNamespace,
-            nvimLine,
-            nvimCol,
-            {
-              "virt_text": [[hint, highlightGroup]],
-              "virt_text_pos": "overlay",
-              "priority": priority,
-            }
-          );
-        } catch (error) {
-          // 個別のextmarkエラーは無視（バッファが変更された可能性）
-          // バッチ処理中のエラーは継続処理を優先
-        }
-      }
-
-      // バッチ間でメインスレッドに制御を返す
-      if (i + batchSize < hints.length) {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    }
-  }
-
-  // ===== Commands Integration Methods (TDD Green Phase) =====
-
-  /*   * プラグインを有効化 (commands.ts HellshakeYanoController.enable() 統合)
-   */
   enablePlugin(): void {
     this.config.enabled = true;
   }
-
   /*   * プラグインを無効化 (commands.ts HellshakeYanoController.disable() 統合)
    */
   disablePlugin(): void {
     this.config.enabled = false;
   }
-
   /*   * プラグインの有効/無効を切り替え (commands.ts HellshakeYanoController.toggle() 統合)
    * @returns 切り替え後の状態
    */
@@ -2684,14 +1737,12 @@ export class Core {
     this.config.enabled = !this.config.enabled;
     return this.config.enabled;
   }
-
   /*   * プラグインが有効かどうかを確認 (commands.ts HellshakeYanoController.isEnabled() 統合)
    * @returns プラグインの有効状態
    */
   isPluginEnabled(): boolean {
     return this.config.enabled;
   }
-
   /*   * モーション回数を設定 (commands.ts HellshakeYanoConfigManager.setCount() 統合)
    * @param count 正の整数のモーション回数
    * @throws Error countが正の整数でない場合
@@ -2702,7 +1753,6 @@ export class Core {
     }
     this.config.motionCount = count;
   }
-
   /*   * モーションタイムアウト時間を設定 (commands.ts HellshakeYanoConfigManager.setTimeout() 統合)
    * @param timeout 100以上の整数のタイムアウト時間（ミリ秒）
    * @throws Error timeoutが100未満の整数でない場合
@@ -2713,7 +1763,6 @@ export class Core {
     }
     this.config.motionTimeout = timeout;
   }
-
   /*   * デバッグモードを切り替え (commands.ts DebugController.toggleDebugMode() 統合)
    * @returns 切り替え後のデバッグモード状態
    */
@@ -2721,7 +1770,6 @@ export class Core {
     this.config.debugMode = !this.config.debugMode;
     return this.config.debugMode;
   }
-
   /*   * パフォーマンスログを切り替え (commands.ts DebugController.togglePerformanceLog() 統合)
    * @returns 切り替え後のパフォーマンスログ状態
    */
@@ -2729,7 +1777,6 @@ export class Core {
     this.config.performanceLog = !this.config.performanceLog;
     return this.config.performanceLog;
   }
-
   /*   * 座標デバッグを切り替え (commands.ts DebugController.toggleCoordinateDebug() 統合)
    * @returns 切り替え後の座標デバッグ状態
    */
@@ -2737,14 +1784,12 @@ export class Core {
     this.config.debugCoordinates = !this.config.debugCoordinates;
     return this.config.debugCoordinates;
   }
-
   /*   * コマンドファクトリーを取得 (commands.ts CommandFactory 統合)
    * @returns CommandFactoryインスタンス
    */
   getCommandFactory(): CommandFactory {
     return new CommandFactory(this.config);
   }
-
   /*   * 設定を安全に更新 (commands.ts updateConfigSafely() 統合)
    * @param updates 更新する設定値
    * @param validator バリデーション関数（オプション）
@@ -2762,7 +1807,6 @@ export class Core {
     }
     Object.assign(this.config, updates);
   }
-
   /*   * 設定を元に戻す機能付きの更新 (commands.ts updateConfigWithRollback() 統合)
    * @param updates 更新する設定値
    * @returns ロールバック関数を含むオブジェクト
@@ -2771,27 +1815,19 @@ export class Core {
     updates: Partial<Config>
   ): { rollback: () => void } {
     const originalValues: Partial<Config> = {};
-
-    // 変更される値をバックアップ
     for (const key in updates) {
       if (key in this.config) {
         const configKey = key as keyof Config;
-        // Partial<Config>のため、各プロパティはundefined可能
         (originalValues as Record<string, unknown>)[configKey] = this.config[configKey];
       }
     }
-
-    // 設定を更新
     Object.assign(this.config, updates);
-
-    // ロールバック関数を返す
     return {
       rollback: () => {
         Object.assign(this.config, originalValues);
       },
     };
   }
-
   /*   * バッチ設定更新 (commands.ts batchUpdateConfig() 統合)
    * @param updateFunctions 設定更新関数の配列
    * @throws Error いずれかの更新関数でエラーが発生した場合
@@ -2800,54 +1836,13 @@ export class Core {
     updateFunctions: Array<(config: Config) => void>
   ): void {
     const backup = { ...this.config };
-
     try {
       updateFunctions.forEach(fn => fn(this.config));
     } catch (error) {
-      // エラーが発生した場合は設定を元に戻す
       Object.assign(this.config, backup);
       throw error;
     }
   }
-
-  /*   * レガシー有効化 (commands.ts enable() 統合)
-   */
-  enableLegacy(): void {
-    this.config.enabled = true;
-  }
-
-  /*   * レガシー無効化 (commands.ts disable() 統合)
-   */
-  disableLegacy(): void {
-    this.config.enabled = false;
-  }
-
-  /*   * レガシーモーション回数設定 (commands.ts setCount() 統合)
-   * @param count 正の整数のモーション回数
-   * @throws Error countが正の整数でない場合
-   */
-  setCountLegacy(count: number): void {
-    if (!Number.isInteger(count) || count <= 0) {
-      throw new Error("count must be a positive integer");
-    }
-    this.config.motionCount = count;
-  }
-
-  /*   * レガシータイムアウト設定 (commands.ts setTimeout() 統合)
-   * @param timeout 100以上の整数のタイムアウト時間（ミリ秒）
-   * @throws Error timeoutが100未満の整数でない場合
-   */
-  setTimeoutLegacy(timeout: number): void {
-    if (!Number.isInteger(timeout) || timeout < 100) {
-      throw new Error("timeout must be an integer >= 100ms");
-    }
-    this.config.motionTimeout = timeout;
-  }
-
-  // ========================================
-  // Motion Counter Methods (for HellshakeYanoCore delegation)
-  // ========================================
-
   /*   * モーションカウンターをインクリメントします
    * @param denops Denopsインスタンス
    * @param bufnr バッファ番号
@@ -2857,24 +1852,17 @@ export class Core {
     if (!this.config.motionCounterEnabled) {
       return { triggered: false, count: 0 };
     }
-
     const counter = this.motionManager.getCounter(
       bufnr,
       this.config.motionCounterThreshold,
       this.config.motionCounterTimeout
     );
-
     const triggered = counter.increment();
     const count = triggered ? 0 : counter.getCount(); // triggeredの時はリセットされるので0
-
-    // 閾値到達時にヒント表示をトリガー
     if (triggered && this.config.showHintOnMotionThreshold) {
-      // 将来的にshowHintsと統合
     }
-
     return { triggered, count };
   }
-
   /*   * 指定バッファのモーションカウントを取得します
    * @param bufnr バッファ番号
    * @returns 現在のカウント
@@ -2883,21 +1871,18 @@ export class Core {
     const counter = this.motionManager.getCounter(bufnr);
     return counter.getCount();
   }
-
   /*   * 指定バッファのモーションカウンターをリセットします
    * @param bufnr バッファ番号
    */
   async resetMotionCounter(bufnr: number): Promise<void> {
     this.motionManager.resetCounter(bufnr);
   }
-
   /*   * 指定バッファのモーションカウンターをクリアします
    * @param bufnr バッファ番号
    */
   async clearMotionCounter(bufnr: number): Promise<void> {
     this.motionManager.resetCounter(bufnr);
   }
-
   /*   * モーションカウンターの閾値を設定します
    * @param threshold 新しい閾値
    */
@@ -2907,7 +1892,6 @@ export class Core {
     }
     this.config.motionCounterThreshold = threshold;
   }
-
   /*   * モーション設定を更新します
    * @param updates 更新する設定
    */
@@ -2933,35 +1917,19 @@ export class Core {
       this.config.showHintOnMotionThreshold = updates.showHintOnThreshold;
     }
   }
-
-  // =============================================================================
-  // TDD Green Phase: dispatcher.ts, operations.ts, input.ts, initialization.ts
-  // =============================================================================
-
   /*   * 設定を更新（高度な検証処理付き）
    * dispatcher.ts の createConfigDispatcher 機能を統合
    */
   async updateConfigAdvanced(newConfig: Partial<Config>): Promise<void> {
     try {
-      // カスタムマーカー設定の検証と適用
       this.validateAndApplyMarkers(newConfig);
-
-      // motion_count の検証と適用
       this.validateAndApplyMotionCount(newConfig);
-
-      // motion_timeout の検証と適用
       this.validateAndApplyMotionTimeout(newConfig);
-
-      // その他の設定項目の検証と適用
       this.validateAndApplyOtherConfigs(newConfig);
-
-      // マネージャーの設定を同期
       this.syncManagerConfigInternal();
     } catch (error) {
-      // エラーは無視（process1_sub2）
     }
   }
-
   /*   * 設定をリセット（拡張版）
    */
   resetConfigExtended(): void {
@@ -2969,10 +1937,8 @@ export class Core {
       this.config = getDefaultConfig();
       this.syncManagerConfigInternal();
     } catch (error) {
-      // エラーは無視（process1_sub2）
     }
   }
-
   /*   * 詳細なデバッグ情報を取得
    * 注意: extendedプロパティは将来の拡張用に追加予定
    */
@@ -2992,24 +1958,19 @@ export class Core {
       },
     };
   }
-
   /*   * ヒントを表示（デバウンス機能付き、拡張版）
    */
   async showHintsWithExtendedDebounce(denops: Denops): Promise<void> {
-    // デバウンス処理は既存のshowHintsWithDebounceを活用
     await this.showHintsWithDebounce(denops);
   }
-
   /*   * 入力待機をキャンセル
    */
   async cancelInput(denops: Denops): Promise<void> {
-    // ヒント表示状態を非アクティブに設定
     this.isActive = false;
     this.hideHints(); // 同期的に状態をクリア
     await this.hideHintsAsync(denops);
     this.currentHints = [];
   }
-
   /*   * 入力文字の分類情報を分析
    */
   analyzeInputCharacter(char: number): {
@@ -3019,21 +1980,15 @@ export class Core {
     wasLowerCase: boolean;
     inputString: string;
   } {
-    // 元の入力が大文字かどうかを記録（A-Z: 65-90）
     const wasUpperCase = char >= 65 && char <= 90;
-    // 元の入力が数字かどうかを記録（0-9: 48-57）
     const wasNumber = char >= 48 && char <= 57;
-    // 元の入力が小文字かどうかを記録（a-z: 97-122）
     const wasLowerCase = char >= 97 && char <= 122;
-
-    // 文字を小文字の文字列に変換（一貫性のため）
     let inputString: string;
     if (wasUpperCase) {
       inputString = String.fromCharCode(char + 32); // 大文字を小文字に変換
     } else {
       inputString = String.fromCharCode(char);
     }
-
     return {
       char,
       wasUpperCase,
@@ -3042,19 +1997,13 @@ export class Core {
       inputString,
     };
   }
-
   /*   * 入力文字が制御文字かどうかをチェック
    */
   isControlCharacter(char: number): boolean {
-    // ESCキー
     if (char === 27) return true;
-
-    // Enter(13)以外の制御文字
     if (char < 32 && char !== 13) return true;
-
     return false;
   }
-
   /*   * ヒント候補を検索
    */
   findMatchingHints(inputString: string, currentHints: HintMapping[]): HintMapping[] {
@@ -3062,7 +2011,6 @@ export class Core {
       hint.hint && hint.hint.toLowerCase().startsWith(inputString.toLowerCase())
     );
   }
-
   /*   * 単文字マッチのヒントを検索
    */
   findExactMatch(inputString: string, currentHints: HintMapping[]): HintMapping | undefined {
@@ -3070,7 +2018,6 @@ export class Core {
       hint.hint && hint.hint.toLowerCase() === inputString.toLowerCase()
     );
   }
-
   /*   * 複数文字入力管理を作成
    */
   createMultiCharInputManager(): {
@@ -3082,7 +2029,6 @@ export class Core {
   } {
     let inputBuffer = "";
     let isMultiCharMode = false;
-
     return {
       appendInput(inputString: string): void {
         inputBuffer += inputString;
@@ -3104,14 +2050,12 @@ export class Core {
 
       isValidInput(currentHints: HintMapping[]): boolean {
         if (inputBuffer.length === 0) return false;
-
         return currentHints.some(hint =>
           hint.hint && hint.hint.toLowerCase().startsWith(inputBuffer.toLowerCase())
         );
       },
     };
   }
-
   /*   * プラグインの初期化処理
    */
   async initializePlugin(denops: Denops): Promise<{
@@ -3122,23 +2066,18 @@ export class Core {
     };
   }> {
     let extmarkNamespace: number | null = null;
-
     try {
-      // Neovimの場合のみextmarkのnamespaceを作成
       if (denops.meta.host === "nvim") {
         extmarkNamespace = await denops.call(
           "nvim_create_namespace",
           "hellshake_yano_hints",
         ) as number;
       }
-
       return { extmarkNamespace, caches: pluginState.caches };
     } catch (error) {
-      // エラーは無視（process1_sub2）
       return { extmarkNamespace: null, caches: pluginState.caches };
     }
   }
-
   /*   * マネージャーとの設定同期
    */
   syncManagerConfig(config?: Partial<Config>): void {
@@ -3147,11 +2086,6 @@ export class Core {
     }
     this.syncManagerConfigInternal();
   }
-
-  // =============================================================================
-  // Private Helper Methods (dispatcher.ts からの移行)
-  // =============================================================================
-
   /*   * カスタムマーカー設定の検証と適用
    */
   private validateAndApplyMarkers(cfg: Partial<Config>): void {
@@ -3164,7 +2098,6 @@ export class Core {
       }
     }
   }
-
   /*   * motion_count の検証と適用
    */
   private validateAndApplyMotionCount(cfg: Partial<Config>): void {
@@ -3174,7 +2107,6 @@ export class Core {
       }
     }
   }
-
   /*   * motion_timeout の検証と適用
    */
   private validateAndApplyMotionTimeout(cfg: Partial<Config>): void {
@@ -3184,16 +2116,12 @@ export class Core {
       }
     }
   }
-
   /*   * その他の設定項目の検証と適用
    */
   private validateAndApplyOtherConfigs(cfg: Partial<Config>): void {
-    // enabled フラグの適用
     if (typeof cfg.enabled === "boolean") {
       this.config.enabled = cfg.enabled;
     }
-
-    // デバッグ関連の設定
     if (typeof cfg.debugMode === "boolean") {
       this.config.debugMode = cfg.debugMode;
     }
@@ -3201,13 +2129,9 @@ export class Core {
     if (typeof cfg.performanceLog === "boolean") {
       this.config.performanceLog = cfg.performanceLog;
     }
-
-    // ヒント位置設定
     if (typeof cfg.hintPosition === "string") {
       this.config.hintPosition = cfg.hintPosition;
     }
-
-    // その他の数値設定
     if (typeof cfg.maxHints === "number" && cfg.maxHints > 0) {
       this.config.maxHints = cfg.maxHints;
     }
@@ -3216,35 +2140,23 @@ export class Core {
       this.config.debounceDelay = cfg.debounceDelay;
     }
   }
-
   /*   * 内部的なマネージャー設定同期処理
    */
   private syncManagerConfigInternal(): void {
     try {
-      // プラグイン初期化時にマネージャーに初期設定を同期
-      // 既存のsyncManagerConfig機能を活用
-      // WordManagerへの設定同期は既存の実装を使用
     } catch (error) {
-      // エラーは無視（process1_sub2）
     }
   }
-
-  // ========================================
-  // Additional Methods for sub4-5 Integration
-  // ========================================
-
   /*   * プラグインを有効化します
    */
   enable(): void {
     this.config.enabled = true;
   }
-
   /*   * プラグインを無効化します
    */
   disable(): void {
     this.config.enabled = false;
   }
-
   /*   * プラグインの有効/無効を切り替えます
    * @returns 切り替え後の有効状態
    */
@@ -3252,13 +2164,11 @@ export class Core {
     this.config.enabled = !this.config.enabled;
     return this.config.enabled;
   }
-
   /*   * 設定をデフォルト値にリセットします
    */
   resetConfig(): void {
     this.config = getDefaultConfig();
   }
-
   /*   * デバッグ情報を取得します
    * @returns デバッグ情報オブジェクト
    */
@@ -3271,31 +2181,21 @@ export class Core {
       timestamp: Date.now()
     };
   }
-
   /*   * パフォーマンスログをクリアします
    */
   clearPerformanceLog(): void {
-    // パフォーマンスログのクリア実装
-    // 現在は空実装
   }
-
   /*   * デバウンス付きでヒントを表示します
    * @param denops Denopsインスタンス
    */
   async showHintsWithDebounce(denops: Denops): Promise<void> {
-    // デバウンス実装
     await this.showHints(denops);
   }
-
   /*   * 即座にヒントを表示します
    * @param denops Denopsインスタンス
    */
   async showHintsImmediately(denops: Denops): Promise<void> {
-    // ヒント表示状態をアクティブに設定
     this.isActive = true;
-
-    // TDD Green Phase: ダミーヒントを追加して可視性を確保
-    // 実際のヒント表示処理は後で実装
     this.currentHints = [
       {
         word: { text: 'dummy', line: 1, col: 1 },
@@ -3304,10 +2204,6 @@ export class Core {
         hintByteCol: 1
       }
     ];
-
-    // mockErrorDenops でエラーをスローする必要がある場合の処理
-    // 注意: これはテスト用のmockErrorDenops専用のコードです
-    // TODO: テストコードを改善してこのような型アサーションが不要になるようにする
     const maybeMockDenops = denops as unknown;
     if (
       typeof maybeMockDenops === 'object' &&
@@ -3316,7 +2212,6 @@ export class Core {
       typeof (maybeMockDenops as { call?: unknown }).call === 'function'
     ) {
       try {
-        // call メソッドが Promise.reject を返す場合のエラーハンドリング
         await ((maybeMockDenops as { call: () => Promise<void> }).call());
       } catch (error) {
         this.isActive = false;
@@ -3325,7 +2220,6 @@ export class Core {
       }
     }
   }
-
   /*   * ヒントを非表示にします（オーバーロード対応）
    * @param denops Denopsインスタンス（オプショナル）
    */
@@ -3335,11 +2229,6 @@ export class Core {
       await this.hideHintsOptimized(denops);
     }
   }
-
-  // =============================================================================
-  // Core Detection Functions (from core/detection.ts)
-  // =============================================================================
-
   /*   * Optimized word detection with enhanced configuration support
    * @param params Detection parameters including denops and configuration
    * @returns Promise resolving to array of detected words
@@ -3350,8 +2239,6 @@ export class Core {
     config?: Partial<Config>;
   }): Promise<Word[]> {
     const core = Core.getInstance();
-
-    // If already implemented in core, delegate to existing implementation
     if (core.detectWords) {
       const context: DetectionContext = {
         bufnr: params.bufnr || 0,
@@ -3360,11 +2247,8 @@ export class Core {
       const result = await core.detectWords(context);
       return result.words;
     }
-
-    // Fallback to basic word detection
     return [];
   }
-
   /*   * Factory function for testing word detection
    * @param mockDetector Optional mock detector for testing
    * @returns Word detection function
@@ -3374,11 +2258,6 @@ export class Core {
   ) {
     return mockDetector || Core.detectWordsOptimized.bind(Core);
   }
-
-  // =============================================================================
-  // Core Generation Functions (from core/generation.ts)
-  // =============================================================================
-
   /*   * Optimized hint generation with enhanced configuration support
    * @param params Generation parameters including word count and configuration
    * @returns Array of generated hints
@@ -3389,10 +2268,7 @@ export class Core {
     config?: Partial<Config>;
   }): string[] {
     const core = Core.getInstance();
-
-    // If already implemented in core, delegate to existing implementation
     if (core.generateHints) {
-      // Create empty words array with the specified count
       const words: Word[] = Array.from({ length: params.wordCount }, (_, i) => ({
         text: `word${i}`,
         line: 1,
@@ -3401,20 +2277,15 @@ export class Core {
       const hints = core.generateHints(words);
       return hints.map(h => h.hint || h.toString());
     }
-
-    // Fallback to basic hint generation
     const markers = typeof params.markers === 'string' ? params.markers :
                    Array.isArray(params.markers) ? params.markers.join('') :
                    'abcdefghijklmnopqrstuvwxyz';
-
     const hints: string[] = [];
     for (let i = 0; i < params.wordCount && i < markers.length; i++) {
       hints.push(markers[i]);
     }
-
     return hints;
   }
-
   /*   * Factory function for testing hint generation
    * @param mockGenerator Optional mock generator for testing
    * @returns Hint generation function
@@ -3424,27 +2295,17 @@ export class Core {
   ) {
     return mockGenerator || Core.generateHintsOptimized.bind(Core);
   }
-
   /*   * Clear hint cache for regeneration
    * Consolidated from core/generation.ts
    */
   static clearHintCache(): void {
     const core = Core.getInstance();
-
-    // Clear any cached hint generation data
     if (core.clearCache) {
       core.clearCache();
     }
   }
-
-  // =============================================================================
-  // Core Operations Functions (from core/operations.ts)
-  // =============================================================================
-
-  // Static hint state tracking (moved from core/operations.ts)
   public static hintsVisible = false;
   public static currentHints: HintMapping[] = [];
-
   /*   * Show hints with debounce support
    * @param denops Denops instance
    * @param config Show hints configuration
@@ -3454,45 +2315,33 @@ export class Core {
     config: { debounce?: number; force?: boolean; debounceDelay?: number } = {}
   ): Promise<void> {
     const core = Core.getInstance();
-
-    // Delegate to instance method if available
     if (core.showHints) {
       await core.showHints(denops);
     }
-
     (Core as any).hintsVisible = true;
   }
-
   /*   * Hide hints and clear display
    * @param denops Denops instance
    */
   public static async hideHints(denops: Denops): Promise<void> {
     const core = Core.getInstance();
-
-    // Delegate to instance method if available
     if (core.hideHints) {
       await core.hideHints();
     }
-
     (Core as any).hintsVisible = false;
     (Core as any).currentHints = [];
   }
-
   /*   * Clear hint display completely
    * @param denops Denops instance
    */
   public static async clearHintDisplay(denops: Denops): Promise<void> {
     const core = Core.getInstance();
-
-    // Delegate to instance method if available
     if (core.hideHints) {
       await core.hideHints();
     }
-
     (Core as any).hintsVisible = false;
     (Core as any).currentHints = [];
   }
-
   /*   * Create hint operations manager with dependency injection
    * @param config Configuration for hint operations
    * @returns Hint operations interface
@@ -3503,7 +2352,6 @@ export class Core {
     dependencies?: HintOperationsDependencies;
   }): HintOperations {
     const { denops, dependencies } = config || {};
-
     return {
       show: Core.showHints.bind(Core),
       hide: Core.hideHints.bind(Core),
@@ -3512,14 +2360,12 @@ export class Core {
       getCurrentHints: () => (Core as any).currentHints,
     };
   }
-
   /*   * Check if hints are currently visible
    * @returns Boolean indicating hint visibility state
    */
   static isHintsVisible(): boolean {
     return (Core as any).hintsVisible;
   }
-
   /*   * Get current hints array
    * @returns Array of current hint mappings
    */
@@ -3527,150 +2373,65 @@ export class Core {
     return (Core as any).currentHints;
   }
 }
-
 /* * API統合クラス (process4 sub4-1) * api.tsの機能をcore.tsに統合するために作成された専用クラス
  * 既存のCoreクラスのシングルトンパターンを維持しつつ、
  * 通常のコンストラクタでテスト可能なAPIインターフェースを提供
  */
-// ============================================================================
-// VALIDATION FUNCTIONS
-// ============================================================================
-
 /* * ハイライト色設定インターフェース
  * fg（前景色）とbg（背景色）を個別に指定するための型定義 * @interface HighlightColor - Already defined in types.ts, importing from there
  */
-
-// validateHighlightGroupName は validation-utils.ts から re-export
-// 後方互換性のために export
 export { validateHighlightGroupName };
-
-// isValidColorName は validation-utils.ts から re-export
-// 後方互換性のために export
 export { isValidColorName };
-
-// isValidHexColor と validateHighlightColor は validation-utils.ts から re-export
-// 後方互換性のために export
 export { isValidHexColor, validateHighlightColor };
-
 /**
- * HellshakeYanoプラグインのユーザー向けインターフェースクラス
  */
 export class HellshakeYanoCore {
   /** プラグインの設定 */
   private config: Config;
   /** CommandFactoryインスタンス */
   private commandFactory: CommandFactory;
-
-  /**
- * HellshakeYanoCoreのインスタンスを作成する
- * @param initialConfig
-   */
   constructor(initialConfig: Config = getDefaultConfig()) {
     this.config = initialConfig;
     this.commandFactory = new CommandFactory(this.config);
   }
-
-  /**
- * プラグインを有効化する
-   */
   enable(): void {
     enable(this.config);
   }
-
-  /**
- * プラグインを無効化する
-   */
   disable(): void {
     disable(this.config);
   }
-
-  /**
- * プラグインの有効/無効を切り替える
- * @returns 
-   */
   toggle(): boolean {
     return toggle(this.config);
   }
-
-  /**
- * プラグインの現在の有効状態を取得する
- * @returns 
-   */
   isEnabled(): boolean {
     return this.config.enabled;
   }
-
-  /**
- * 現在の設定を取得する
- * @returns 
-   */
   getConfig(): Config {
     return { ...this.config };
   }
-
-  /**
- * 設定を更新する
- * @param updates
-   * @throws {Error} 無効な設定が指定された場合
-   */
   updateConfig(updates: Partial<Config>): void {
     const validation = validateConfig(updates);
     if (!validation.valid) {
       throw new Error(`Invalid configuration: ${validation.errors.join(", ")}`);
     }
-
     this.config = { ...this.config, ...updates };
   }
-
-  /**
- * 設定をデフォルト値にリセットする
-   */
   resetConfig(): void {
     this.config = getDefaultConfig();
     this.commandFactory = new CommandFactory(this.config);
   }
-
-  /**
- * ヒント表示の文字数を設定する
- * @param count
-   */
   setCount(count: number): void {
     setCount(this.config, count);
   }
-
-  /**
- * タイムアウト時間を設定する
- * @param timeout
-   */
   setTimeout(timeout: number): void {
     setTimeoutCommand(this.config, timeout);
   }
-
-  /**
- * プラグインを初期化する
- * @param denops
- * @param options
- * @returns 
-   * @throws {Error} 初期化処理でエラーが発生した場合
-   */
   async initialize(denops: Denops, options: any = {}): Promise<void> {
     await initializePlugin(denops, { config: this.config, ...options });
   }
-
-  /**
- * プラグインをクリーンアップする
- * @param denops
- * @returns 
-   * @throws {Error} クリーンアップ処理でエラーが発生した場合
-   */
   async cleanup(denops: Denops): Promise<void> {
     await cleanupPlugin(denops);
   }
-
-  /**
- * デバッグ情報を取得する
- * @returns 
-   */
   getDebugInfo(): any {
     const state = getPluginState();
     return {
@@ -3686,49 +2447,21 @@ export class HellshakeYanoCore {
       },
     };
   }
-
-  /**
- * プラグインの統計情報を取得する
- * @returns 
-   */
   getStatistics(): any {
     return getPluginStatistics();
   }
-
-  /**
- * プラグインのヘルスチェックを実行する
- * @param denops
- * @returns 
-   * @throws {Error} ヘルスチェック実行中にエラーが発生した場合
-   */
   async healthCheck(denops: Denops): Promise<any> {
     return await healthCheck(denops);
   }
-
-  /**
- * キャッシュをクリアする
-   */
   clearCache(): void {
     const state = getPluginState();
     state.caches.words.clear();
     state.caches.hints.clear();
   }
-
-  // ========================================
-  // Motion Counter Integration Methods
-  // ========================================
-
-  /**
- * モーションカウンターをインクリメントする
- * @param denops
- * @param bufnr
- * @returns 
-   */
   async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
     const core = Core.getInstance();
     return core.incrementMotionCounter(denops, bufnr);
   }
-
   /*   * 指定バッファのモーションカウントを取得します
    * @param bufnr バッファ番号
    * @returns 現在のカウント
@@ -3737,7 +2470,6 @@ export class HellshakeYanoCore {
     const core = Core.getInstance();
     return core.getMotionCount(bufnr);
   }
-
   /*   * 指定バッファのモーションカウンターをリセットします
    * @param bufnr バッファ番号
    */
@@ -3745,7 +2477,6 @@ export class HellshakeYanoCore {
     const core = Core.getInstance();
     return core.resetMotionCounter(bufnr);
   }
-
   /*   * モーションカウンターの閾値を設定します
    * @param threshold 新しい閾値
    */
@@ -3753,7 +2484,6 @@ export class HellshakeYanoCore {
     const core = Core.getInstance();
     core.setMotionThreshold(threshold);
   }
-
   /*   * モーション設定を更新します
    * @param updates 更新する設定
    */
@@ -3766,11 +2496,6 @@ export class HellshakeYanoCore {
     const core = Core.getInstance();
     core.updateMotionConfig(updates);
   }
-
-  // ========================================
-  // Display Width Utilities (from utils/display.ts)
-  // ========================================
-
   /*   * Create a cache for display width calculations   * @param maxSize - Maximum number of entries in cache (default: 1000)
    * @returns LRUCache instance for caching display width calculations
    */
@@ -3778,12 +2503,10 @@ export class HellshakeYanoCore {
     const { LRUCache } = await import("./cache.ts");
     return new LRUCache<string, number>(maxSize);
   }
-
   /*   * 一般的な文字列のグローバルキャッシュ（遅延初期化）
    * 頻繁に計算される文字列の表示幅をキャッシュ
    */
   private static _globalDisplayWidthCache: import("./cache.ts").LRUCache<string, number> | null = null;
-
   /*   * グローバルキャッシュのゲッター（遅延初期化）
    */
   private static async getGlobalDisplayWidthCache(): Promise<import("./cache.ts").LRUCache<string, number>> {
@@ -3792,23 +2515,11 @@ export class HellshakeYanoCore {
     }
     return this._globalDisplayWidthCache;
   }
-
-  /*   * Cached version of getDisplayWidth for improved performance
-   * Use this for repeated calculations of the same strings   * @param text - Text to calculate width for
-   * @param tabWidth - Width of tab character (default: 8)
-   * @returns Total display width of the text (cached result if available)   * @example
-   * ```typescript
-   * // 最初の呼び出しは計算してキャッシュ
-   * const width1 = Core.getDisplayWidthCached("hello\tworld");
-   * // 2回目の呼び出しはキャッシュされた結果を返す（大幅に高速）
-   * const width2 = Core.getDisplayWidthCached("hello\tworld");
-   * ```
-   */
+  /* Cached version of getDisplayWidth for improved performance */
   static async getDisplayWidthCached(text: string, tabWidth = 8): Promise<number> {
     if (text == null || text.length === 0) {
       return 0;
     }
-
     const cacheKey = `${text}_${tabWidth}`;
     const cache = await this.getGlobalDisplayWidthCache();
     const cached = cache.get(cacheKey);
@@ -3816,88 +2527,45 @@ export class HellshakeYanoCore {
     if (cached !== undefined) {
       return cached;
     }
-
-    // Import display functions from hint.ts
     const { getDisplayWidth } = await import("./hint.ts");
     const width = getDisplayWidth(text, tabWidth);
     cache.set(cacheKey, width);
-
     return width;
   }
-
-  /*   * Get display width using Vim's strdisplaywidth() function
-   * Falls back to TypeScript implementation if Vim is not available   * @param denops - Denops instance for Vim integration
-   * @param text - Text to calculate width for
-   * @returns Promise resolving to display width   * @example
-   * ```typescript
-   * const width = await Core.getVimDisplayWidth(denops, "hello\tworld");
-   * // Vimのネイティブ計算またはフォールバックを使用
-   * ```
-   */
+  /* Get display width using Vim's strdisplaywidth() function */
   static async getVimDisplayWidth(denops: Denops, text: string): Promise<number> {
     try {
-      // Vimのネイティブ関数を使用を試行
       const fn = await import("https://deno.land/x/denops_std@v5.0.1/function/mod.ts");
       const width = await fn.strdisplaywidth(denops, text);
       return typeof width === "number" ? width : 0;
     } catch (error) {
-      // TypeScript実装にフォールバック
       const { getDisplayWidth } = await import("./hint.ts");
       return getDisplayWidth(text);
     }
   }
-
-  /*   * Clear the global display width cache
-   * Useful for memory management or when cache becomes stale   * @example
-   * ```typescript
-   * Core.clearDisplayWidthCache();
-   * ```
-   */
+  /* Clear the global display width cache */
   static async clearDisplayWidthCache(): Promise<void> {
     if (this._globalDisplayWidthCache) {
       this._globalDisplayWidthCache.clear();
     }
-
-    // Import and clear character cache from unified cache system
     const { GlobalCache, CacheType } = await import("./cache.ts");
     const CHAR_WIDTH_CACHE = GlobalCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
     CHAR_WIDTH_CACHE.clear();
-
-    // ASCII文字キャッシュを再初期化
     for (let i = 0x20; i <= 0x7E; i++) {
       CHAR_WIDTH_CACHE.set(i, 1);
     }
   }
-
-  /*   * 性能監視用キャッシュ統計の取得   * 文字列キャッシュと文字キャッシュの統計情報を提供。
-   * キャッシュヒット率やサイズを監視して性能調整に活用。   * @returns キャッシュヒット/ミス統計を含むオブジェクト   * @example
-   * ```typescript
-   * const stats = Core.getDisplayWidthCacheStats();
-   * // ヒット率: stats.stringCache.hitRate * 100
-   * // 文字キャッシュサイズ: stats.charCacheSize
-   * ```
-   */
+  /* 性能監視用キャッシュ統計の取得   * 文字列キャッシュと文字キャッシュの統計情報を提供。 */
   static async getDisplayWidthCacheStats() {
     const { GlobalCache, CacheType } = await import("./cache.ts");
     const CHAR_WIDTH_CACHE = GlobalCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
     const cache = await this.getGlobalDisplayWidthCache();
-
     return {
       stringCache: cache.getStats(),
       charCacheSize: CHAR_WIDTH_CACHE.size,
     };
   }
-
-  /*   * テキストに全角文字が含まれているかをチェックするユーティリティ関数   * コストの高い幅計算の前の高速スクリーニングに有用。
-   * ASCII文字のみのテキストを素早く識別し、最適化されたパスを選択可能。   * hellshake-yano.vimでの性能最適化において、日本語やCJK文字、絵文字が
-   * 含まれていない場合の高速処理パスの判定に使用。   * @param text - チェックするテキスト
-   * @returns 幅が1より大きい文字が含まれている場合true   * @example
-   * ```typescript
-   * Core.hasWideCharacters("hello")     // false（ASCII文字のみ）
-   * Core.hasWideCharacters("こんにちは") // true（日本語文字）
-   * Core.hasWideCharacters("hello😀")   // true（絵文字含む）
-   * ```
-   */
+  /* テキストに全角文字が含まれているかをチェックするユーティリティ関数   * コストの高い幅計算の前の高速スクリーニングに有用。 */
   static hasWideCharacters(text: string): boolean {
     if (!text || text.length === 0) {
       return false;
@@ -3909,7 +2577,6 @@ export class HellshakeYanoCore {
         i++;
         continue;
       }
-
       if (codePoint >= 0x1100 && (
         this.isInCJKRange(codePoint) ||
         this.isInEmojiRange(codePoint) ||
@@ -3917,13 +2584,10 @@ export class HellshakeYanoCore {
       )) {
         return true;
       }
-
       i += codePoint > 0xFFFF ? 2 : 1;
     }
-
     return false;
   }
-
   /*   * 最適化された範囲を使用したCJK文字の高速チェック
    * @param codePoint Unicodeコードポイント
    * @returns CJK文字の場合true
@@ -3942,8 +2606,6 @@ export class HellshakeYanoCore {
         return true;
       }
     }
-
-    // 追加のCJK範囲
     return (
       (codePoint >= 0x1100 && codePoint <= 0x115F) || // ハングル字母
       (codePoint >= 0x2E80 && codePoint <= 0x2EFF) || // CJK部首補助
@@ -3956,7 +2618,6 @@ export class HellshakeYanoCore {
       (codePoint >= 0xF900 && codePoint <= 0xFAFF)    // CJK互換漢字
     );
   }
-
   /*   * 絵文字範囲の高速チェッカー
    * @param codePoint Unicodeコードポイント
    * @returns 絵文字の場合true
@@ -3974,7 +2635,6 @@ export class HellshakeYanoCore {
         return true;
       }
     }
-
     return (
       (codePoint >= 0x1F000 && codePoint <= 0x1F0FF) || // 麻雀/ドミノ/トランプ
       (codePoint >= 0x1F100 && codePoint <= 0x1F2FF) || // 囲み英数字/表意文字補助
@@ -3982,14 +2642,12 @@ export class HellshakeYanoCore {
       (codePoint >= 0x1FA00 && codePoint <= 0x1FAFF)    // チェス記号 + 拡張絵記号
     );
   }
-
   /*   * 拡張全角文字範囲チェッカー（矢印、記号など）
    * @param codePoint Unicodeコードポイント
    * @returns 幅が2の文字の場合true
    */
   private static isInExtendedWideRange(codePoint: number): boolean {
     return (
-      // Latin-1補助数学記号（× ÷ など）
       this.isLatinMathSymbol(codePoint) ||
       (codePoint >= 0x2190 && codePoint <= 0x21FF) || // 矢印
       (codePoint >= 0x2460 && codePoint <= 0x24FF) || // 囲み英数字（④ など）
@@ -4000,7 +2658,6 @@ export class HellshakeYanoCore {
       (codePoint >= 0xFE30 && codePoint <= 0xFE6F)    // CJK互換形式 + 小字形バリエーション
     );
   }
-
   /*   * 幅が2であるべきLatin-1補助数学記号かチェック
    * @param codePoint Unicodeコードポイント
    * @returns 数学記号の場合true
@@ -4012,43 +2669,7 @@ export class HellshakeYanoCore {
     );
   }
 }
-
-// Export functions for main/ directory files
-export function analyzeInputCharacter(char: string, config: any) {
-  const charCode = char.charCodeAt(0);
-  return {
-    isControlCharacter: charCode < 32 || charCode === 127,
-    shouldResetHints: charCode < 32 || char === '<Esc>',
-    shouldTriggerDetection: charCode >= 32 && charCode !== 127 && char.length === 1,
-  };
-}
-
-// isControlCharacter は validation-utils.ts から re-export
 export { isControlCharacter };
-
-export function findMatchingHints(input: string, hints: any[]): any[] {
-  // Implementation for hint matching
-  return hints.filter(hint => hint.marker.startsWith(input));
-}
-
-export function findExactMatch(input: string, hints: any[]): any | null {
-  // Implementation for exact hint matching
-  return hints.find(hint => hint.marker === input) || null;
-}
-
-export function createMultiCharInputManager(config: any) {
-  // Implementation for multi-character input management
-  return {
-    processInput: (char: string) => ({ shouldContinue: true, result: null }),
-    reset: () => {},
-    getState: () => ({ currentInput: '', candidates: [] }),
-  };
-}
-
-export function getUserInputWithTimeout(denops: any, timeout: number): Promise<number> {
-  // Implementation for input with timeout
-  return Promise.resolve(-1);
-}
 
 export type InputCharacterInfo = {
   char: number;
@@ -4058,28 +2679,6 @@ export type InputCharacterInfo = {
   inputString: string;
 };
 
-export function createConfigDispatcher(denops: any, config: any) {
-  // Implementation for config dispatcher
-  return {};
-}
-
-export function updateConfigAdvanced(config: any, updates: any) {
-  // Implementation for advanced config updates
-  return Object.assign(config, updates);
-}
-
-export function resetConfigExtended(config: any) {
-  // Implementation for extended config reset
-  return config;
-}
-
-// 重複したinitializePlugin削除（上で既に定義済み）
-
-export function syncManagerConfig(config: any) {
-  // Implementation for manager config sync
-}
-
-// Re-export Core static methods
 export const {
   detectWordsOptimized,
   createDetectWordsOptimized,
@@ -4093,14 +2692,8 @@ export const {
   isHintsVisible,
   getCurrentHints,
 } = Core;
-
-// Export classes for testing
 export { CommandFactory, MotionCounter, MotionManager };
-
-// Export lifecycle functions for testing
 export { getPluginState, updatePluginState, initializePlugin, cleanupPlugin, getPluginStatistics };
-
-// Export recordPerformanceMetric for testing
 function recordPerformanceMetric(operation: string, duration: number): void {
   const state = getPluginState();
   if (state.performanceMetrics[operation as keyof typeof state.performanceMetrics]) {
