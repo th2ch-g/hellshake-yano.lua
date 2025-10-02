@@ -126,12 +126,28 @@ function charIndexToByteIndex(text: string, charIndex: number): number {
 
 // extractWords関数の参照（word.tsから）
 // NOTE: 循環参照を避けるため、グローバルスコープから参照
+// ExtractWordsOptions型をインポートできないため、互換性のあるインターフェースを定義
+interface ExtractWordsOptions {
+  useImprovedDetection?: boolean;
+  excludeJapanese?: boolean;
+  useJapanese?: boolean;
+  strategy?: "regex" | "tinysegmenter" | "hybrid";
+  perKeyMinLength?: Record<string, number>;
+  defaultMinWordLength?: number;
+  currentKeyContext?: string;
+  minWordLength?: number;
+  maxWordLength?: number;
+  enableTinySegmenter?: boolean;
+  legacyMode?: boolean;
+}
+
 declare global {
+  // deno-lint-ignore no-var
   var extractWords: ((
     lineText: string,
     lineNumber: number,
-    options?: { useImprovedDetection?: boolean; excludeJapanese?: boolean }
-  ) => Promise<Word[]>) | undefined;
+    options?: ExtractWordsOptions
+  ) => Word[]) | undefined;
 }
 
 /**
@@ -202,7 +218,7 @@ export class RegexWordDetector implements WordDetector {
       const lineNumber = startLine + i;
 
       // 常に改善版検出を使用（統合済み）
-      const lineWords = await this.extractWordsImproved(lineText, lineNumber, context);
+      const lineWords = this.extractWordsImproved(lineText, lineNumber, context);
 
       words.push(...lineWords);
     }
@@ -244,11 +260,11 @@ export class RegexWordDetector implements WordDetector {
   /**
    * 正規表現ベースの単語抽出（リファクタリング後）
    */
-  private async extractWordsImproved(
+  private extractWordsImproved(
     lineText: string,
     lineNumber: number,
     context?: DetectionContext,
-  ): Promise<Word[]> {
+  ): Word[] {
     // RegexWordDetectorは正規表現ベースの処理のみを行う
     // 日本語処理はTinySegmenterWordDetectorに委譲される
     // contextのuseJapaneseを優先し、未定義の場合はthis.config.useJapaneseを使用
@@ -257,7 +273,7 @@ export class RegexWordDetector implements WordDetector {
 
     // NOTE: extractWords は word.ts から一時的に参照
     // 完全な分離後は、このファイル内に実装を移動
-    return (globalThis as any).extractWords?.(lineText, lineNumber, { useImprovedDetection: true, excludeJapanese }) || [];
+    return globalThis.extractWords?.(lineText, lineNumber, { useImprovedDetection: true, excludeJapanese }) || [];
   }
 
   /**

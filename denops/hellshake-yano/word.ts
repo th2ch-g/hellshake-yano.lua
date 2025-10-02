@@ -3544,3 +3544,19 @@ export function getWordDetectionManager(
 export function resetWordDetectionManager(): void {
   globalManager = null;
 }
+
+// ==================== globalThis への extractWords 登録 ====================
+// NOTE: 循環依存を避けるため、word-detector-strategies.ts から参照できるように
+//       extractWords 関数を globalThis に登録します。
+
+declare global {
+  // deno-lint-ignore no-var
+  var extractWords: ((
+    lineText: string,
+    lineNumber: number,
+    options?: ExtractWordsOptions,
+  ) => Word[]) | undefined;
+}
+
+// extractWords 関数を globalThis に登録
+globalThis.extractWords = extractWords;
