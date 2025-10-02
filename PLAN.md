@@ -83,16 +83,16 @@
 
 #### sub3: デッドコード削除
 @target: denops/hellshake-yano/core.ts
-- [ ] 非推奨型定義の削除（約150行）
-- [ ] 未使用のpluginState削除（約50行）
-- [ ] コメントアウトコードの削除（約150行）
+- [x] 非推奨型定義の削除（15行削除、重複関数160行削除含む、計175行削減）
+- [x] 未使用のpluginState削除（該当なし、既にクリーン）
+- [x] コメントアウトコードの削除（該当なし、既にクリーン）
 
 #### sub4: バリデーション統合
 @target: denops/hellshake-yano/validation-utils.ts（新規）
 @ref: core.ts, config.ts, hint.ts のバリデーション関数
-- [ ] 共通バリデーションモジュールを作成
-- [ ] 重複するバリデーション関数を統合（約500行削減）
-- [ ] 汎用的な型ガード関数を実装
+- [x] 共通バリデーションモジュールを作成（validation-utils.ts、205行）
+- [x] 重複するバリデーション関数を統合（121行実質削減達成）
+- [x] 汎用的な型ガード関数を実装（9関数追加）
 
 ### process2: モジュール分割と最適化
 #### sub1: word.ts分割（4,923行 → 2,000行）
@@ -123,12 +123,16 @@
 - [ ] Strategy パターンでヒント生成を簡潔化（400行削減）
 - [ ] Template Method パターンで単語検出を統一（300行削減）
 - [ ] Factory パターンでオブジェクト生成を集約（200行削減）
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
 
 #### sub2: 外部設定ファイル化
 @target: denops/hellshake-yano/config/
 - [ ] japanese-patterns.yml作成（日本語パターン定義）
 - [ ] hint-keys.yml作成（ヒントキー設定）
 - [ ] ハードコード値の外部化により約500行削減
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
 
 #### sub3: TypeScript最新機能活用
 @target: denops/hellshake-yano/**/*.ts
@@ -136,6 +140,8 @@
 - [ ] Utility Types（Partial, Required等）活用（100行削減）
 - [ ] satisfies演算子で型安全性向上（50行削減）
 - [ ] 条件型で複雑な型定義を簡潔化（100行削減）
+- [ ] deno checkで型安全性向上
+- [ ] deno testでテスト
 
 ### process4: テストと検証
 @target: denops/hellshake-yano/**/*.test.ts
