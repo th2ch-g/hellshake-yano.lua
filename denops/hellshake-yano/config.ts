@@ -107,46 +107,17 @@ export function createMinimalConfig(partialConfig: Partial<Config> = {}): Config
   return { ...defaults, ...partialConfig };
 }
 
-export function isValidHighlightGroup(name: string): boolean {
-  // 空文字列は無効
-  if (!name || name === '') {
-    return false;
-  }
-
-  // 長さチェック（100文字以内）
-  if (name.length > 100) {
-    return false;
-  }
-
-  // 数字で始まる場合は無効
-  if (/^[0-9]/.test(name)) {
-    return false;
-  }
-
-  // 特殊文字を含む場合は無効（英数字とアンダースコアのみ許可）
-  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
-    return false;
-  }
-
-  return true;
+function isValidHighlightGroup(name: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) && name.length <= 100;
 }
 
-export function validateUnifiedConfig(
-  config: Partial<Config>,
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // Core settings validation (6 properties)
-  // enabled - boolean（バリデーション不要、型で保証）
-
-  // markers - 配列の検証
+function validateCoreSettings(config: Partial<Config>, errors: string[]): void {
   if (config.markers !== undefined) {
     if (!Array.isArray(config.markers)) {
       errors.push("markers must be an array");
     } else if (config.markers.length === 0) {
       errors.push("markers must not be empty");
     } else {
-      // すべて文字列かチェック
       if (!config.markers.every(m => typeof m === "string")) {
         errors.push("markers must be an array of strings");
       } else {
@@ -158,14 +129,12 @@ export function validateUnifiedConfig(
     }
   }
 
-  // motionCount - 正の整数
   if (config.motionCount !== undefined) {
     if (config.motionCount === null || !Number.isInteger(config.motionCount) || config.motionCount <= 0) {
       errors.push("motionCount must be a positive integer");
     }
   }
 
-  // motionTimeout - 100ms 以上の整数
   if (config.motionTimeout !== undefined) {
     if (!Number.isInteger(config.motionTimeout) || config.motionTimeout < 100) {
       errors.push("motionTimeout must be at least 100ms");
@@ -178,64 +147,49 @@ export function validateUnifiedConfig(
       errors.push("hintPosition must be one of: start, end, overlay");
     }
   }
+}
 
-
-  // Hint settings validation (8 properties)
-  // triggerOnHjkl, useNumbers, highlightSelected - boolean（型で保証）
-
-  // countedMotions - 配列（バリデーション不要、型で保証）
-
-  // maxHints - 正の整数
+function validateHintSettings(config: Partial<Config>, errors: string[]): void {
   if (config.maxHints !== undefined) {
     if (!Number.isInteger(config.maxHints) || config.maxHints <= 0) {
       errors.push("maxHints must be a positive integer");
     }
   }
 
-  // debounceDelay - 非負整数（0を許可）
   if (config.debounceDelay !== undefined) {
     if (!Number.isInteger(config.debounceDelay) || config.debounceDelay < 0) {
       errors.push("debounceDelay must be a non-negative number");
     }
   }
 
-  // useNumbers - boolean
   if (config.useNumbers !== undefined && typeof config.useNumbers !== "boolean") {
     errors.push("useNumbers must be a boolean");
   }
 
-  // debugCoordinates - boolean（型で保証）
-
-  // singleCharKeys - 配列の検証 + 記号文字の検証 (process2 sub2)
   if (config.singleCharKeys !== undefined) {
     if (!Array.isArray(config.singleCharKeys)) {
       errors.push("singleCharKeys must be an array");
     } else if (config.singleCharKeys.length > 0) {
-      // 有効な記号のホワイトリスト
       const validSymbols = new Set([";", ":", "[", "]", "'", '"', ",", ".", "/", "\\", "-", "=", "`"]);
 
       for (let i = 0; i < config.singleCharKeys.length; i++) {
         const key = config.singleCharKeys[i];
 
-        // 型チェック
         if (typeof key !== "string") {
           errors.push("singleCharKeys must be an array of strings");
           break;
         }
 
-        // 空文字列チェック
         if (key === "") {
           errors.push("singleCharKeys must not contain empty strings");
           break;
         }
 
-        // 1文字チェック
         if (key.length !== 1) {
           errors.push("singleCharKeys must contain only single character strings");
           break;
         }
 
-        // 有効な文字チェック（英数字または有効な記号）
         const isAlphanumeric = /^[a-zA-Z0-9]$/.test(key);
         const isValidSymbol = validSymbols.has(key);
         const isWhitespace = /^\s$/.test(key);
@@ -253,27 +207,21 @@ export function validateUnifiedConfig(
         }
       }
 
-      // 重複チェック
       const uniqueKeys = new Set(config.singleCharKeys);
       if (uniqueKeys.size !== config.singleCharKeys.length) {
         errors.push("singleCharKeys must contain unique values");
       }
     }
   }
+}
 
-  // multiCharKeys - 配列（型で保証）
-
-  // Extended hint settings validation (4 properties)
-  // maxSingleCharHints - オプショナル正の整数
+function validateExtendedHintSettings(config: Partial<Config>, errors: string[]): void {
   if (config.maxSingleCharHints !== undefined) {
     if (!Number.isInteger(config.maxSingleCharHints) || config.maxSingleCharHints <= 0) {
       errors.push("maxSingleCharHints must be a positive integer");
     }
   }
 
-  // useHintGroups - boolean（型で保証）
-
-  // highlightHintMarker - ハイライトグループ名の検証
   if (config.highlightHintMarker !== undefined) {
     if (typeof config.highlightHintMarker === 'string') {
       if (config.highlightHintMarker === '') {
@@ -292,7 +240,6 @@ export function validateUnifiedConfig(
     }
   }
 
-  // highlightHintMarkerCurrent - ハイライトグループ名の検証
   if (config.highlightHintMarkerCurrent !== undefined) {
     if (typeof config.highlightHintMarkerCurrent === 'string') {
       if (config.highlightHintMarkerCurrent === '') {
@@ -310,20 +257,15 @@ export function validateUnifiedConfig(
       errors.push("highlightHintMarkerCurrent must be a string or HighlightColor object");
     }
   }
+}
 
-  // Word detection settings validation (7 properties)
-  // suppressOnKeyRepeat - boolean（型で保証）
-
-  // keyRepeatThreshold - 非負整数
+function validateWordDetectionSettings(config: Partial<Config>, errors: string[]): void {
   if (config.keyRepeatThreshold !== undefined) {
     if (!Number.isInteger(config.keyRepeatThreshold) || config.keyRepeatThreshold < 0) {
       errors.push("keyRepeatThreshold must be a non-negative integer");
     }
   }
 
-  // useJapanese - オプショナルboolean（型で保証）
-
-  // wordDetectionStrategy - 列挙値
   if (config.wordDetectionStrategy !== undefined) {
     const validStrategies = ["regex", "tinysegmenter", "hybrid"];
     if (!validStrategies.includes(config.wordDetectionStrategy)) {
@@ -331,52 +273,51 @@ export function validateUnifiedConfig(
     }
   }
 
-  // enableTinySegmenter - boolean（型で保証）
-
-  // segmenterThreshold - 正の整数
   if (config.segmenterThreshold !== undefined) {
     if (!Number.isInteger(config.segmenterThreshold) || config.segmenterThreshold <= 0) {
       errors.push("segmenterThreshold must be a positive integer");
     }
   }
+}
 
-  // Japanese word settings validation (7 properties)
-  // japaneseMinWordLength - 正の整数
+function validateJapaneseWordSettings(config: Partial<Config>, errors: string[]): void {
   if (config.japaneseMinWordLength !== undefined) {
     if (!Number.isInteger(config.japaneseMinWordLength) || config.japaneseMinWordLength <= 0) {
       errors.push("japaneseMinWordLength must be a positive integer");
     }
   }
 
-  // japaneseMergeParticles - boolean（型で保証）
-
-  // japaneseMergeThreshold - 正の整数
   if (config.japaneseMergeThreshold !== undefined) {
     if (!Number.isInteger(config.japaneseMergeThreshold) || config.japaneseMergeThreshold <= 0) {
       errors.push("japaneseMergeThreshold must be a positive integer");
     }
   }
 
-  // perKeyMinLength, perKeyMotionCount - Record<string, number>（バリデーション不要、型で保証）
-
-  // defaultMinWordLength - 正の整数
   if (config.defaultMinWordLength !== undefined) {
     if (!Number.isInteger(config.defaultMinWordLength) || config.defaultMinWordLength <= 0) {
       errors.push("defaultMinWordLength must be a positive integer");
     }
   }
 
-  // defaultMotionCount - オプショナル正の整数
   if (config.defaultMotionCount !== undefined) {
     if (!Number.isInteger(config.defaultMotionCount) || config.defaultMotionCount <= 0) {
       errors.push("defaultMotionCount must be a positive integer");
     }
   }
+}
 
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+export function validateUnifiedConfig(
+  config: Partial<Config>,
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  validateCoreSettings(config, errors);
+  validateHintSettings(config, errors);
+  validateExtendedHintSettings(config, errors);
+  validateWordDetectionSettings(config, errors);
+  validateJapaneseWordSettings(config, errors);
+
+  return { valid: errors.length === 0, errors };
 }
 
 export function validateConfig(
