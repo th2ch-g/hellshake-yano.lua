@@ -71,6 +71,7 @@
 @target: denops/hellshake-yano/*.ts
 @ref: 現在のJSDocコメント構造
 - [ ] 過度に詳細なJSDocを1-2行に簡潔化（約1,500行削減）
+  - @prama, @returns, @throws のみ残す
 - [ ] @exampleセクションをREADMEへ移動
 - [ ] 不要な@since, @see タグを削除
 
