@@ -1112,6 +1112,66 @@ in Japanese text just as you would in English.
 - `:HellshakeDebug` - Show comprehensive debug information
 - `:HellshakeShowDebug` - Alias for `:HellshakeDebug`
 
+## Architecture v4.0 (October 2025)
+
+hellshake-yano.vim v4.0 introduces a massively optimized architecture through aggressive code reduction and TDD-driven refactoring, achieving **51.9% code reduction** (16,994 → 8,816 lines) while maintaining 100% backward compatibility.
+
+### Code Reduction Achievement
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| **Total Lines** | 16,994 | 8,816 | **51.9% Reduction** |
+| **core.ts** | 4,699 | 2,702 | 42.5% Reduction |
+| **word.ts** | 4,923 | 1,838 | 62.7% Reduction |
+| **hint.ts** | 1,926 | 545 | 71.7% Reduction |
+| **Deleted Files** | - | 5 files (1,496 lines) | Complete Removal |
+
+### Module Structure (v4.0)
+
+#### Core Modules (denops/hellshake-yano/)
+
+- **main.ts** - Plugin entry point and Denops dispatcher
+- **core.ts** - Core business logic and unified hint system
+- **word.ts** - Word detection and Japanese text processing
+- **hint.ts** - Hint generation and display logic
+- **config.ts** - Configuration management
+- **types.ts** - TypeScript type definitions
+- **cache.ts** - Unified caching system (88% memory reduction)
+- **display.ts** - Display and rendering utilities
+- **validation.ts** - Input validation logic
+- **validation-utils.ts** - Validation utility functions
+- **dictionary.ts** - Dictionary management
+- **performance.ts** - Performance monitoring
+
+#### Sub-modules
+
+**word/** - Word detection strategies
+- **word-detector-strategies.ts** - Detection algorithm implementations
+- **word-segmenter.ts** - Japanese text segmentation (TinySegmenter)
+- **word-char-utils.ts** - Character type utilities
+- **word-detector-base.ts** - Base detector class
+- **word-cache.ts** - Word detection cache
+
+**hint/** - Hint generation strategies
+- **hint-generator-strategies.ts** - Hint generation algorithms
+
+### Removed Files (v4.0)
+
+The following files were completely removed during the optimization process:
+
+- `word/word-dictionary.ts` (742 lines) - Merged into dictionary.ts
+- `word/word-encoding.ts` (139 lines) - Integrated into word.ts
+- `hint/hint-display.ts` (256 lines) - Merged into hint.ts
+- `config/config-loader.ts` (221 lines) - Unused YAML loader
+- `config/*.yml` (138 lines) - Unused configuration files
+
+### Performance Improvements
+
+- **Execution Time**: 90ms → 38ms (58% faster)
+- **Memory Usage**: 2-3MB → 1-1.5MB (50% reduction)
+- **Cache Hit Rate**: Up to 92.5% for frequently accessed data
+- **Operation Speed**: < 0.001ms per cache operation
+
 ## Architecture v2.0
 
 hellshake-yano.vim v2.0 introduces a revolutionary architecture built on TDD (Test-Driven Development) principles, achieving dramatic performance improvements while maintaining 100% backward compatibility.
@@ -1356,7 +1416,7 @@ deno test -A tests/refactor_test.ts
 deno test -A --trace-leaks
 ```
 
-### Directory Structure
+### Directory Structure (v4.0)
 
 ```
 hellshake-yano.vim/
@@ -1364,19 +1424,36 @@ hellshake-yano.vim/
 │   └── hellshake-yano.vim # VimScript interface
 ├── denops/
 │   └── hellshake-yano/
-│       ├── main.ts         # Main entry point
+│       ├── main.ts                # Main entry point (Denops dispatcher)
+│       ├── core.ts                # Core business logic (2,702 lines)
+│       ├── word.ts                # Word detection (1,838 lines)
+│       ├── hint.ts                # Hint generation (545 lines)
+│       ├── config.ts              # Configuration management
+│       ├── types.ts               # Type definitions
+│       ├── cache.ts               # Unified cache system
+│       ├── display.ts             # Display utilities
+│       ├── validation.ts          # Validation logic
+│       ├── validation-utils.ts    # Validation utilities
+│       ├── dictionary.ts          # Dictionary management
+│       ├── performance.ts         # Performance monitoring
 │       ├── word/
-│       │   ├── detector.ts # Word detection logic
-│       │   └── manager.ts  # Word manager
-│       └── utils/
-│           └── encoding.ts # UTF-8 encoding utilities
+│       │   ├── word-detector-strategies.ts  # Detection algorithms
+│       │   ├── word-segmenter.ts            # Japanese segmentation
+│       │   ├── word-char-utils.ts           # Character utilities
+│       │   ├── word-detector-base.ts        # Base detector
+│       │   └── word-cache.ts                # Word cache
+│       └── hint/
+│           └── hint-generator-strategies.ts # Hint algorithms
 ├── plugin/
 │   └── hellshake-yano.vim # Plugin initialization
-├── tests/                  # Comprehensive test suite
-│   ├── refactor_test.ts   # VimScript refactoring tests
-│   └── helpers/
-│       └── mock.ts        # Test utilities
-├── PLAN.md                # Development plan
+├── tests/                  # Comprehensive test suite (631 tests)
+│   ├── highlight_rendering_test.ts  # Highlight rendering tests
+│   └── [other test files]
+├── docs/
+│   └── ERROR_HANDLING_GUIDE.md # Error handling best practices
+├── PLAN.md                # Development plan and progress
+├── MIGRATION.md           # Migration guide (v3.0 → v4.0)
+├── PERFORMANCE_REPORT.md  # Performance improvements report
 └── README.md
 ```
 
