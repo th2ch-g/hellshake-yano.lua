@@ -838,7 +838,17 @@ export class Core {
       if (hints.length === 0) {
         return;
       }
-      const hintMappings = assignHintsToWords(words, hints, cursorLine, cursorCol, modeString);
+      const hintMappings = assignHintsToWords(
+        words,
+        hints,
+        cursorLine,
+        cursorCol,
+        modeString,
+        {
+          hintPosition: this.config.hintPosition,
+          bothMinWordLength: this.config.bothMinWordLength,
+        },
+      );
       await this.displayHintsOptimized(denops, hintMappings, modeString);
       this.currentHints = hintMappings;
       this.isActive = true;

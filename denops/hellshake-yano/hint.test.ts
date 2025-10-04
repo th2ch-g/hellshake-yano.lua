@@ -5,7 +5,7 @@
 
 import { assertEquals, assertExists } from "jsr:@std/assert";
 import type { Word, HintMapping, HintKeyConfig } from "./types.ts";
-import { assignHintsToWords, generateHints, type GenerateHintsOptions } from "./hint.ts";
+import { assignHintsToWords, clearHintCache, generateHints, type GenerateHintsOptions } from "./hint.ts";
 import type { Config } from "./config.ts";
 
 // ===== テストヘルパー関数 =====
@@ -561,6 +561,96 @@ Deno.test("Sub5: generateHints (groups mode) - useNumericMultiCharHints未定義
   assertEquals(hints[1], "BB");
 
   // useNumericMultiCharHints未定義（デフォルトfalse）なので数字ヒントは追加されない
+});
+
+// ===== Process1 Sub2-1: bothMinWordLength のテスト =====
+
+Deno.test("Process1 Sub2-1: 閾値未満は片側、閾値以上は両端ヒント", () => {
+  clearHintCache();
+  const words: Word[] = [
+    { text: "go", line: 1, col: 1 },      // 2文字 (閾値未満)
+    { text: "rust", line: 1, col: 10 },   // 4文字 (閾値未満)
+    { text: "hello", line: 1, col: 20 },  // 5文字 (閾値以上)
+    { text: "world!", line: 1, col: 30 }, // 6文字 (閾値以上)
+  ];
+  const hints = ["h0", "h1", "h2", "h3", "h4", "h5", "h6", "h7"];
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    1,
+    1,
+    "normal",
+    { hintPosition: "both", bothMinWordLength: 5 },
+    { skipOverlapDetection: true },
+  );
+
+  const countFor = (label: string) => result.filter((m) => m.word.text === label).length;
+  assertEquals(countFor("go"), 1);
+  assertEquals(countFor("rust"), 1);
+  assertEquals(countFor("hello"), 2);
+  assertEquals(countFor("world!"), 2);
+
+  const helloHints = result
+    .filter((m) => m.word.text === "hello")
+    .map((m) => ({ hint: m.hint, col: m.hintCol }))
+    .sort((a, b) => a.col - b.col);
+  assertEquals(helloHints.map((h) => h.hint), ["h2", "h3"]);
+  assertEquals(helloHints[0].col, 20);
+  assertEquals(helloHints[1].col, 20 + "hello".length - 1);
+
+  const worldHints = result
+    .filter((m) => m.word.text === "world!")
+    .map((m) => ({ hint: m.hint, col: m.hintCol }))
+    .sort((a, b) => a.col - b.col);
+  assertEquals(worldHints.map((h) => h.hint), ["h4", "h5"]);
+});
+
+Deno.test("Process1 Sub2-1: bothMinWordLength 未指定時は従来通り両端", () => {
+  clearHintCache();
+  const words: Word[] = [
+    { text: "hi", line: 1, col: 1 },
+    { text: "there", line: 1, col: 5 },
+  ];
+  const hints = ["h0", "h1", "h2", "h3"];
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    1,
+    1,
+    "normal",
+    { hintPosition: "both" },
+    { skipOverlapDetection: true },
+  );
+
+  assertEquals(result.length, 4);
+  const counts = new Map(result.map((m) => [m.word.text, 0]));
+  result.forEach((m) => counts.set(m.word.text, (counts.get(m.word.text) ?? 0) + 1));
+  assertEquals(counts.get("hi"), 2);
+  assertEquals(counts.get("there"), 2);
+});
+
+Deno.test("Process1 Sub2-1: hintPosition が both 以外の場合は閾値を無視", () => {
+  clearHintCache();
+  const words: Word[] = [
+    { text: "go", line: 1, col: 1 },
+    { text: "typescript", line: 1, col: 10 },
+  ];
+  const hints = ["h0", "h1"];
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    1,
+    1,
+    "normal",
+    { hintPosition: "start", bothMinWordLength: 5 },
+    { skipOverlapDetection: true },
+  );
+
+  assertEquals(result.length, 2);
+  assertEquals(result.every((m) => m.hintCol === m.word.col), true);
 });
 
 Deno.test("Sub7: generateHints (groups mode) - 大量のヒント要求時の数字ヒント追加", () => {

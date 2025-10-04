@@ -89,6 +89,15 @@ if !has_key(g:hellshake_yano, 'default_motion_count')
   let g:hellshake_yano.default_motion_count = 3
 endif
 
+" bothMinWordLength 設定（camelCase / snake_case 両対応）
+if !has_key(g:hellshake_yano, 'bothMinWordLength') && has_key(g:hellshake_yano, 'both_min_word_length')
+  let g:hellshake_yano.bothMinWordLength = g:hellshake_yano.both_min_word_length
+endif
+if !has_key(g:hellshake_yano, 'bothMinWordLength')
+  let g:hellshake_yano.bothMinWordLength = 5
+endif
+let g:hellshake_yano.both_min_word_length = g:hellshake_yano.bothMinWordLength
+
 " 設定値の基本検証（TypeScript側でより詳細な検証を実施）
 function! s:validate_config() abort
   " key_repeat_threshold が設定されている場合のみ検証
@@ -164,6 +173,32 @@ function! s:validate_config() abort
       echom '[hellshake-yano] Warning: default_motion_count must be a non-negative number'
       echohl None
       unlet g:hellshake_yano.default_motion_count
+    endif
+  endif
+
+  " both_min_word_length / bothMinWordLength の検証
+  if has_key(g:hellshake_yano, 'both_min_word_length') && !has_key(g:hellshake_yano, 'bothMinWordLength')
+    if type(g:hellshake_yano.both_min_word_length) == v:t_number && g:hellshake_yano.both_min_word_length > 0
+      let g:hellshake_yano.bothMinWordLength = g:hellshake_yano.both_min_word_length
+    else
+      echohl WarningMsg
+      echom '[hellshake-yano] Warning: both_min_word_length must be a positive number'
+      echohl None
+      unlet g:hellshake_yano.both_min_word_length
+    endif
+  endif
+
+  if has_key(g:hellshake_yano, 'bothMinWordLength')
+    if type(g:hellshake_yano.bothMinWordLength) != v:t_number || g:hellshake_yano.bothMinWordLength < 1
+      echohl WarningMsg
+      echom '[hellshake-yano] Warning: bothMinWordLength must be a positive number'
+      echohl None
+      unlet g:hellshake_yano.bothMinWordLength
+      if has_key(g:hellshake_yano, 'both_min_word_length')
+        unlet g:hellshake_yano.both_min_word_length
+      endif
+    else
+      let g:hellshake_yano.both_min_word_length = g:hellshake_yano.bothMinWordLength
     endif
   endif
 

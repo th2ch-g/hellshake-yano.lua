@@ -48,7 +48,10 @@ export async function displayHintsOptimized(
   const cl = cp[1], cc = cp[2];
   let ah = hints;
   if (hints.length < words.length) ah = generateHintsFromConfig(words.length, config);
-  const nh = assignHintsToWords(words, ah, cl, cc, "normal");
+  const nh = assignHintsToWords(words, ah, cl, cc, "normal", {
+    hintPosition: config.hintPosition,
+    bothMinWordLength: config.bothMinWordLength,
+  });
   if (currentHints) { currentHints.length = 0; currentHints.push(...nh); }
   if (hintsVisible) hintsVisible.value = true;
   await displayHintsBatched(denops, nh, config, extmarkNamespace, fallbackMatchIds);

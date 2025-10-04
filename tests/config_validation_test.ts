@@ -129,7 +129,7 @@ Deno.test("validateConfigFunction - debounceDelay バリデーション", () => 
 
 Deno.test("validateConfigFunction - hintPosition バリデーション", () => {
   // 正常系
-  const validPositions = ["start", "end", "overlay"];
+  const validPositions = ["start", "end", "overlay", "both"];
   for (const position of validPositions) {
     const result = validateConfigFunction({ hintPosition: position as any });
     assertEquals(result.valid, true);
@@ -139,7 +139,7 @@ Deno.test("validateConfigFunction - hintPosition バリデーション", () => {
   // 異常系: 無効な値
   const result = validateConfigFunction({ hintPosition: "invalid" as any });
   assertEquals(result.valid, false);
-  assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay"), true);
+  assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay, both"), true);
 });
 
 
@@ -195,7 +195,7 @@ Deno.test("validateConfigFunction - 複数エラーの処理", () => {
   assertEquals(result.errors.includes("motionCount must be a positive integer"), true);
   assertEquals(result.errors.includes("motionTimeout must be at least 100ms"), true);
   assertEquals(result.errors.includes("maxHints must be a positive integer"), true);
-  assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay"), true);
+  assertEquals(result.errors.includes("hintPosition must be one of: start, end, overlay, both"), true);
   assertEquals(result.errors.includes("markers must not be empty"), true);
 });
 

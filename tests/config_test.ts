@@ -99,7 +99,7 @@ describe("Config Tests", () => {
     it("should reject invalid hintPosition values", () => {
       const result1 = validateConfig({ hintPosition: "middle" as any });
       assertEquals(result1.valid, false);
-      assertEquals(result1.errors[0], "hintPosition must be one of: start, end, overlay");
+      assertEquals(result1.errors[0], "hintPosition must be one of: start, end, overlay, both");
 
       const result2 = validateConfig({ hintPosition: "top" as any });
       assertEquals(result2.valid, false);
@@ -210,7 +210,7 @@ describe("Config Tests", () => {
       assertEquals(result.errors.includes("motionCount must be a positive integer"), true);
       assertEquals(result.errors.includes("motionTimeout must be at least 100ms"), true);
       assertEquals(
-        result.errors.includes("hintPosition must be one of: start, end, overlay"),
+        result.errors.includes("hintPosition must be one of: start, end, overlay, both"),
         true,
       );
       assertEquals(result.errors.includes("markers must not be empty"), true);

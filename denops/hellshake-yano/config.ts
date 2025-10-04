@@ -6,7 +6,7 @@ export interface Config {
   markers: string[];
   motionCount: number;
   motionTimeout: number;
-  hintPosition: "start" | "end" | "overlay";
+  hintPosition: "start" | "end" | "overlay" | "both";
   triggerOnHjkl: boolean;
   countedMotions: string[];
   maxHints: number;
@@ -42,6 +42,7 @@ export interface Config {
   performanceLog: boolean;
   debug?: boolean;
   useNumericMultiCharHints?: boolean;
+  bothMinWordLength?: number;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -84,6 +85,7 @@ export const DEFAULT_CONFIG: Config = {
   performanceLog: false,
   debug: false,
   useNumericMultiCharHints: false,
+  bothMinWordLength: 5,
 };
 
 export const DEFAULT_UNIFIED_CONFIG: Config = DEFAULT_CONFIG;
@@ -111,8 +113,10 @@ function vCore(c: Partial<Config>, e: string[]): void {
     e.push("motionTimeout must be at least 100ms");
   }
   if (c.hintPosition !== undefined) {
-    const vp = ["start", "end", "overlay"];
-    if (c.hintPosition === null || !vp.includes(c.hintPosition)) e.push("hintPosition must be one of: start, end, overlay");
+    const vp = ["start", "end", "overlay", "both"];
+    if (c.hintPosition === null || !vp.includes(c.hintPosition as string)) {
+      e.push("hintPosition must be one of: start, end, overlay, both");
+    }
   }
 }
 
@@ -120,6 +124,9 @@ function vHint(c: Partial<Config>, e: string[]): void {
   if (c.maxHints !== undefined && (!Number.isInteger(c.maxHints) || c.maxHints <= 0)) e.push("maxHints must be a positive integer");
   if (c.debounceDelay !== undefined && (!Number.isInteger(c.debounceDelay) || c.debounceDelay < 0)) e.push("debounceDelay must be a non-negative number");
   if (c.useNumbers !== undefined && typeof c.useNumbers !== "boolean") e.push("useNumbers must be a boolean");
+  if (c.bothMinWordLength !== undefined && (!Number.isInteger(c.bothMinWordLength) || c.bothMinWordLength < 1)) {
+    e.push("bothMinWordLength must be a positive integer");
+  }
   if (c.singleCharKeys !== undefined) {
     if (!Array.isArray(c.singleCharKeys)) e.push("singleCharKeys must be an array");
     else if (c.singleCharKeys.length > 0) {

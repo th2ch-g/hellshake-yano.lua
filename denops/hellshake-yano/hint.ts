@@ -70,10 +70,18 @@ export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolea
 function getAssignmentCacheForMode(mode: string) {
   return mode === "visual" ? assignmentCacheVisual : mode === "normal" ? assignmentCacheNormal : assignmentCacheOther;
 }
-function createAssignmentCacheKey(words: Word[], cursorLine: number, cursorCol: number, hintPositionSetting: string, optimizationConfig?: { skipOverlapDetection?: boolean }): string {
+function createAssignmentCacheKey(
+  words: Word[],
+  cursorLine: number,
+  cursorCol: number,
+  hintPositionSetting: string,
+  optimizationConfig?: { skipOverlapDetection?: boolean },
+  bothMinWordLength?: number,
+): string {
   const sig = hashString(words.map((w) => `${w.line},${w.col}`).join(";"));
   const skip = optimizationConfig?.skipOverlapDetection ?? false;
-  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${skip}-${sig}`;
+  const threshold = bothMinWordLength ?? 0;
+  return `${words.length}-${cursorLine}-${cursorCol}-${hintPositionSetting}-${skip}-${threshold}-${sig}`;
 }
 function hashString(value: string): string {
   let h = 0;
@@ -158,13 +166,14 @@ export function assignHintsToWords(
   cursorLine: number,
   cursorCol: number,
   mode: string = "normal",
-  config?: { hintPosition?: string },
+  config?: { hintPosition?: string; bothMinWordLength?: number },
   optimizationConfig?: { skipOverlapDetection?: boolean },
 ): HintMapping[] {
   if (words.length === 0 || hints.length === 0) {
     return [];
   }
   const hintPositionSetting = config?.hintPosition ?? "start";
+  const bothMinWordLength = config?.bothMinWordLength;
   const assignmentCache = getAssignmentCacheForMode(mode);
   const cacheKey = createAssignmentCacheKey(
     words,
@@ -172,14 +181,29 @@ export function assignHintsToWords(
     cursorCol,
     hintPositionSetting,
     optimizationConfig,
+    bothMinWordLength,
   );
   const cachedWords = assignmentCache.get(cacheKey);
   if (cachedWords) {
     if (hintPositionSetting === "both") {
       const mappings: HintMapping[] = [];
-      cachedWords.forEach((word, i) => {
-        if (hints[i * 2]) mappings.push(createSingleHintMapping(word, hints[i * 2], "start"));
-        if (hints[i * 2 + 1]) mappings.push(createSingleHintMapping(word, hints[i * 2 + 1], "end"));
+      let hintIndex = 0;
+      const nextHint = () => {
+        const hint = hints[hintIndex];
+        hintIndex += 1;
+        return hint;
+      };
+      cachedWords.forEach((word) => {
+        const useBothHints = bothMinWordLength === undefined || word.text.length >= bothMinWordLength;
+        if (useBothHints) {
+          const startHint = nextHint();
+          if (startHint) mappings.push(createSingleHintMapping(word, startHint, "start"));
+          const endHint = nextHint();
+          if (endHint) mappings.push(createSingleHintMapping(word, endHint, "end"));
+        } else {
+          const hint = nextHint();
+          if (hint) mappings.push(createSingleHintMapping(word, hint, "start"));
+        }
       });
       return mappings;
     }
@@ -202,9 +226,23 @@ export function assignHintsToWords(
   const sortedWords = sortWordsByDistanceOptimized(filteredWords, cursorLine, cursorCol);
   const mappings: HintMapping[] = [];
   if (hintPositionSetting === "both") {
-    sortedWords.forEach((word, i) => {
-      if (hints[i * 2]) mappings.push(createSingleHintMapping(word, hints[i * 2], "start"));
-      if (hints[i * 2 + 1]) mappings.push(createSingleHintMapping(word, hints[i * 2 + 1], "end"));
+    let hintIndex = 0;
+    const nextHint = () => {
+      const hint = hints[hintIndex];
+      hintIndex += 1;
+      return hint;
+    };
+    sortedWords.forEach((word) => {
+      const useBothHints = bothMinWordLength === undefined || word.text.length >= bothMinWordLength;
+      if (useBothHints) {
+        const startHint = nextHint();
+        if (startHint) mappings.push(createSingleHintMapping(word, startHint, "start"));
+        const endHint = nextHint();
+        if (endHint) mappings.push(createSingleHintMapping(word, endHint, "end"));
+      } else {
+        const hint = nextHint();
+        if (hint) mappings.push(createSingleHintMapping(word, hint, "start"));
+      }
     });
   } else {
     sortedWords.forEach((word, i) => mappings.push(createSingleHintMapping(word, hints[i] || "", hintPositionSetting)));
