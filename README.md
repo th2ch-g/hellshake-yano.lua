@@ -1121,8 +1121,8 @@ hellshake-yano.vim v4.0 introduces a massively optimized architecture through ag
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
 | **Total Lines** | 16,994 | 8,816 | **51.9% Reduction** |
-| **core.ts** | 4,699 | 2,702 | 42.5% Reduction |
-| **word.ts** | 4,923 | 1,838 | 62.7% Reduction |
+| **core.ts** | 4,699 | 2,792 | 40.6% Reduction |
+| **word.ts** | 4,923 | 1,825 | 62.9% Reduction |
 | **hint.ts** | 1,926 | 545 | 71.7% Reduction |
 | **Deleted Files** | - | 5 files (1,496 lines) | Complete Removal |
 
@@ -1425,8 +1425,8 @@ hellshake-yano.vim/
 ├── denops/
 │   └── hellshake-yano/
 │       ├── main.ts                # Main entry point (Denops dispatcher)
-│       ├── core.ts                # Core business logic (2,702 lines)
-│       ├── word.ts                # Word detection (1,838 lines)
+│       ├── core.ts                # Core business logic (2,792 lines)
+│       ├── word.ts                # Word detection (1,825 lines)
 │       ├── hint.ts                # Hint generation (545 lines)
 │       ├── config.ts              # Configuration management
 │       ├── types.ts               # Type definitions
