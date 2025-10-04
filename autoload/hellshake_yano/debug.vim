@@ -35,9 +35,9 @@ function! hellshake_yano#debug#get_info() abort
 
   " キーリピート検出状態
   let debug_info.key_repeat = {
-        \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
-        \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
-        \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300),
+        \ 'enabled': get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true),
+        \ 'threshold': get(g:hellshake_yano, 'keyRepeatThreshold', 50),
+        \ 'reset_delay': get(g:hellshake_yano, 'keyRepeatResetDelay', 300),
         \ 'is_repeating': hellshake_yano#state#is_key_repeating(bufnr),
         \ 'last_key_time': hellshake_yano#state#get_last_key_time(bufnr),
         \ 'current_time': hellshake_yano#utils#get_elapsed_time()
@@ -83,9 +83,9 @@ function! hellshake_yano#debug#build_info(bufnr) abort
   call add(l:lines, 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText'))
   call add(l:lines, 'Counted motions: ' . string(hellshake_yano#config#get_motion_keys()))
   " Key repeat detection debug
-  call add(l:lines, 'Key repeat suppression: ' . (get(g:hellshake_yano, 'suppress_on_key_repeat', v:true) ? 1 : 0))
-  call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'key_repeat_threshold', 50) . 'ms')
-  call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'key_repeat_reset_delay', 300) . 'ms')
+  call add(l:lines, 'Key repeat suppression: ' . (get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true) ? 1 : 0))
+  call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'keyRepeatThreshold', 50) . 'ms')
+  call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'keyRepeatResetDelay', 300) . 'ms')
   call add(l:lines, 'Key repeating (current buffer): ' . (hellshake_yano#state#is_key_repeating(a:bufnr) ? 1 : 0))
 
   " デバッグモード専用情報

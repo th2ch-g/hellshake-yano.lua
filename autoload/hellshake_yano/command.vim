@@ -22,6 +22,7 @@ function! s:is_denops_ready() abort
 endfunction
 
 " denops設定更新を通知（準備状態チェック込み）
+" Note: キャッシュクリアは各コマンド関数で必要な場合のみ個別に実行
 function! s:notify_denops_config() abort
   if s:is_denops_ready()
     try
@@ -32,13 +33,6 @@ function! s:notify_denops_config() abort
       endif
     endtry
   endif
-endfunction
-
-" モーションカウント設定キャッシュをクリア
-" Note: この関数は将来的にconfig.vimに移動する予定
-function! s:clear_motion_count_cache() abort
-  " Note: キャッシュ変数はautoload/hellshake_yano.vimで定義されているため、
-  " ここでは何もしない（将来的に移動時に実装）
 endfunction
 
 " マッピング対象キーを取得
@@ -98,11 +92,13 @@ function! hellshake_yano#command#set_count(count) abort
       call hellshake_yano#reset_count()
     endif
 
+    " キャッシュをクリア
+    if exists('*hellshake_yano#motion#clear_motion_count_cache')
+      call hellshake_yano#motion#clear_motion_count_cache()
+    endif
+
     " denops側に設定を通知
     call s:notify_denops_config()
-
-    " キャッシュをクリア
-    call s:clear_motion_count_cache()
 
     echo printf('[hellshake-yano] Motion count set to %d', a:count)
   else
@@ -168,6 +164,11 @@ function! hellshake_yano#command#set_counted_motions(keys) abort
   " 新しいマッピングを設定
   if g:hellshake_yano.enabled && exists('*hellshake_yano#setup_motion_mappings')
     call hellshake_yano#setup_motion_mappings()
+  endif
+
+  " キャッシュをクリア（counted_motionsはperKeyMotionCountに影響する可能性があるため）
+  if exists('*hellshake_yano#motion#clear_motion_count_cache')
+    call hellshake_yano#motion#clear_motion_count_cache()
   endif
 
   " denops側に設定を通知

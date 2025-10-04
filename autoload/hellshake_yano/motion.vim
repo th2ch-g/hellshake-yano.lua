@@ -29,9 +29,9 @@ endfunction
 " キーリピート設定を取得
 function! s:get_key_repeat_config() abort
   return {
-        \ 'enabled': get(g:hellshake_yano, 'suppress_on_key_repeat', v:true),
-        \ 'threshold': get(g:hellshake_yano, 'key_repeat_threshold', 50),
-        \ 'reset_delay': get(g:hellshake_yano, 'key_repeat_reset_delay', 300)
+        \ 'enabled': get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true),
+        \ 'threshold': get(g:hellshake_yano, 'keyRepeatThreshold', 50),
+        \ 'reset_delay': get(g:hellshake_yano, 'keyRepeatResetDelay', 300)
         \ }
 endfunction
 
@@ -45,10 +45,10 @@ function! s:get_motion_count_for_key(key) abort
 
   let result = 3  " デフォルト値
 
-  " per_key_motion_countに設定があるかチェック
-  if has_key(g:hellshake_yano, 'per_key_motion_count')
-        \ && type(g:hellshake_yano.per_key_motion_count) == v:t_dict
-    let per_key = get(g:hellshake_yano.per_key_motion_count, a:key, 0)
+  " perKeyMotionCountに設定があるかチェック
+  if has_key(g:hellshake_yano, 'perKeyMotionCount')
+        \ && type(g:hellshake_yano.perKeyMotionCount) == v:t_dict
+    let per_key = get(g:hellshake_yano.perKeyMotionCount, a:key, 0)
     if type(per_key) == v:t_number && per_key >= 1
       let result = per_key
       let s:motion_count_cache[a:key] = result
@@ -56,8 +56,8 @@ function! s:get_motion_count_for_key(key) abort
     endif
   endif
 
-  " default_motion_countを使用
-  let default_val = get(g:hellshake_yano, 'default_motion_count', get(g:hellshake_yano, 'motion_count', 3))
+  " defaultMotionCountを使用
+  let default_val = get(g:hellshake_yano, 'defaultMotionCount', get(g:hellshake_yano, 'motionCount', 3))
   if type(default_val) == v:t_number && default_val >= 1
     let result = default_val
   endif
@@ -250,6 +250,14 @@ function! hellshake_yano#motion#with_key_context(key) abort
 
   call s:handle_debug_display()
   return a:key
+endfunction
+
+" モーションカウントキャッシュをクリア
+function! hellshake_yano#motion#clear_motion_count_cache() abort
+  let s:motion_count_cache = {}
+  if exists('*hellshake_yano#config#clear_motion_count_cache')
+    call hellshake_yano#config#clear_motion_count_cache()
+  endif
 endfunction
 
 "=============================================================================

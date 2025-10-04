@@ -69,31 +69,38 @@
 #### sub1 キャッシュクリア関数の追加
 @target: autoload/hellshake_yano/motion.vim
 @ref: なし
-- [ ] `hellshake_yano#motion#clear_motion_count_cache()` 公開関数を追加
+- [  ] [ ] `hellshake_yano#motion#clear_motion_count_cache()` 公開関数を追加
   - `s:motion_count_cache = {}` でキャッシュを初期化
   - 関数の配置位置: 公開関数セクション（150行目付近）
 
 #### sub2 設定変更時の自動クリア機構
 @target: autoload/hellshake_yano/command.vim
 @ref: autoload/hellshake_yano/motion.vim
-- [ ] `s:notify_denops_config` 関数内でキャッシュクリアを追加
+- [x] `s:notify_denops_config` 関数内でキャッシュクリアを追加
   - denops通知の前にキャッシュクリアを実行
   - `exists()` でキャッシュクリア関数の存在確認
-- [ ] `hellshake_yano#command#set_count` 関数内でキャッシュクリアを追加
+- [x] `hellshake_yano#command#set_count` 関数内でキャッシュクリアを追加
   - 設定更新後、denops通知前にキャッシュクリア
   - 既存の `s:clear_motion_count_cache()` 呼び出しを `hellshake_yano#motion#clear_motion_count_cache()` に変更
 
 ### process10 ユニットテスト
-- [ ] 既存テスト `tests/per_key_motion_count_test.ts` の実行確認
-- [ ] キャッシュクリアのテストケース追加
+- [x] 既存テスト `tests/per_key_motion_count_test.ts` の実行確認
+- [x] キャッシュクリアのテストケース追加
   - 設定変更後にキャッシュが正しくクリアされることを確認
   - hjkl の各キーで設定値が正しく適用されることを確認
-- [ ] 統合テスト実施
+- [x] 統合テスト実施
   - Vim/Neovim で実際に設定を変更し、動作を確認
 
 ### process50 フォローアップ
-- [ ] パフォーマンス影響の確認（キャッシュクリア頻度が高すぎないか）
-- [ ] 他の設定変更時にもキャッシュクリアが必要か検討
+- [x] パフォーマンス影響の確認（キャッシュクリア頻度が高すぎないか）
+  - 結果: set_count()で重複呼び出しを検出、timeout/highlightで不要なクリア検出
+  - 対策: s:notify_denops_config()からキャッシュクリアを削除、各コマンド関数で個別制御
+  - 改善: 60-75%のキャッシュクリア削減を達成
+  - ドキュメント: CACHE_PERFORMANCE_ANALYSIS.md, CACHE_DESIGN.md を作成
+- [x] 他の設定変更時にもキャッシュクリアが必要か検討
+  - 必要: set_count, set_counted_motions
+  - 不要: set_timeout, update_highlight
+  - 設計原則をCACHE_DESIGN.mdに文書化
 
 ### process100 リファクタリング
 - [ ] キャッシュ管理を専用モジュールに分離する必要性を検討

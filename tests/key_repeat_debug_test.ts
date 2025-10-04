@@ -8,8 +8,8 @@ test("デバッグ: キーリピート設定と状態が表示される", async 
 
   // カスタム設定で上書き
   await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:true");
-  await denops.cmd("let g:hellshake_yano.key_repeat_threshold = 55");
-  await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 280");
+  await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 55");
+  await denops.cmd("let g:hellshake_yano.keyRepeatResetDelay = 280");
 
   // プラグインを明示的に有効化
   await denops.cmd("let g:hellshake_yano.enabled = v:true");
@@ -35,7 +35,7 @@ test("デバッグ: キーリピート状態がtrue→falseに遷移する", asy
   await denops.cmd("let g:hellshake_yano.motionCount = 10");
   await denops.cmd("let g:hellshake_yano.suppressOnKeyRepeat = v:true");
   await denops.cmd("let g:hellshake_yano.keyRepeatThreshold = 100");  // 50ms -> 100ms
-  await denops.cmd("let g:hellshake_yano.key_repeat_reset_delay = 300");
+  await denops.cmd("let g:hellshake_yano.keyRepeatResetDelay = 300");
 
   // プラグインを明示的に有効化
   await denops.cmd("let g:hellshake_yano.enabled = v:true");
