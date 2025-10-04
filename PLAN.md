@@ -101,100 +101,100 @@ denops.vim               30行
 #### sub1 hellshake_yano.vim のラッパー関数を削除
 @target: autoload/hellshake_yano.vim
 @ref: plugin/hellshake-yano.vim, test/**/*.vim
-- [ ] plugin/hellshake-yano.vim で直接モジュール関数を呼ぶよう変更
-- [ ] テストファイルで直接モジュール関数を呼ぶよう変更
-- [ ] hellshake_yano.vim のラッパー関数を全削除（35-252行）
-- [ ] 必要最小限の初期化コードのみ残す
+- [x] plugin/hellshake-yano.vim で直接モジュール関数を呼ぶよう変更
+- [x] テストファイルで直接モジュール関数を呼ぶよう変更
+- [x] hellshake_yano.vim のラッパー関数を全削除（35-252行）
+- [x] 必要最小限の初期化コードのみ残す
 
 #### sub2 テスト用デバッグ関数の移動
 @target: autoload/hellshake_yano/debug.vim
 @ref: autoload/hellshake_yano.vim
-- [ ] テスト用デバッグ関数（228-252行）を debug.vim に移動
-- [ ] 関数名を `hellshake_yano#debug#*` に変更
+- [x] テスト用デバッグ関数（228-252行）を debug.vim に移動
+- [x] 関数名を `hellshake_yano#debug#*` に変更
 
 ### process2 重複コード統合
 #### sub1 motion.vim の関数統合
 @target: autoload/hellshake_yano/motion.vim
-- [ ] `process()` と `with_key_context()` を単一の関数に統合
-- [ ] キーコンテキストをオプション引数として受け取る設計に変更
-- [ ] 重複するキーリピート検出処理を1つに統合
-- [ ] 重複するヘルパー関数（s:bufnr, s:get_elapsed_time）を削除し utils.vim を使用
+- [x] `process()` と `with_key_context()` を単一の関数に統合
+- [x] キーコンテキストをオプション引数として受け取る設計に変更
+- [x] 重複するキーリピート検出処理を1つに統合
+- [x] 重複するヘルパー関数（s:bufnr, s:get_elapsed_time）を削除し utils.vim を使用
 
 #### sub2 command.vim の機能移動と削除
 @target: autoload/hellshake_yano/command.vim
 @ref: autoload/hellshake_yano/config.vim, autoload/hellshake_yano/mapping.vim
-- [ ] `s:get_motion_keys()` を削除し config.vim の関数を使用
-- [ ] `s:clear_motion_mappings()` を mapping.vim に移動
-- [ ] コマンド関数を適切なモジュールに再配置
+- [x] `s:get_motion_keys()` を削除し config.vim の関数を使用
+- [x] `s:clear_motion_mappings()` を mapping.vim に移動
+- [x] コマンド関数を適切なモジュールに再配置
   - `set_count()`, `set_timeout()` → config.vim
   - `set_counted_motions()` → mapping.vim
   - `update_highlight()` → highlight.vim
-- [ ] command.vim ファイルを削除
+- [x] command.vim ファイルを削除
 
 #### sub3 highlight.vim の validation関数削除
 @target: autoload/hellshake_yano/highlight.vim
 @ref: autoload/hellshake_yano/validation.vim
-- [ ] `validate_group_name()` 関数を削除し validation.vim の関数を使用
-- [ ] `validate_color_value()` 関数を削除し validation.vim の関数を使用
-- [ ] `normalize_color_name()` 関数を削除し validation.vim の関数を使用
-- [ ] 重複する3つの関数を削除（106-183行）
+- [x] `validate_group_name()` 関数を削除し validation.vim の関数を使用
+- [x] `validate_color_value()` 関数を削除し validation.vim の関数を使用
+- [x] `normalize_color_name()` 関数を削除し validation.vim の関数を使用
+- [x] 重複する3つの関数を削除（106-183行）
 
 #### sub4 hint.vim のキーリピート検出削除
 @target: autoload/hellshake_yano/hint.vim
-- [ ] `handle_key_repeat_detection()` 関数を削除
-- [ ] motion.vim の関数を直接使用するよう変更
-- [ ] 重複コード削除（94-122行）
+- [x] `handle_key_repeat_detection()` 関数を削除
+- [x] motion.vim の関数を直接使用するよう変更
+- [x] 重複コード削除（94-122行）
 
 #### sub5 全ファイルのヘルパー関数統合
 @target: autoload/hellshake_yano/*.vim
 @ref: autoload/hellshake_yano/utils.vim
-- [ ] 各ファイルの `s:bufnr()` を削除し utils.vim の関数を使用
-- [ ] 各ファイルの `s:get_elapsed_time()` を削除し utils.vim の関数を使用
-- [ ] その他の重複ヘルパー関数を utils.vim に統合
+- [x] 各ファイルの `s:bufnr()` を削除し utils.vim の関数を使用
+- [x] 各ファイルの `s:get_elapsed_time()` を削除し utils.vim の関数を使用
+- [x] その他の重複ヘルパー関数を utils.vim に統合
 
 ### process3 定型文削減
 #### sub1 冒頭コメントブロックの簡略化
 @target: autoload/hellshake_yano/*.vim
-- [ ] 各ファイルの詳細な説明コメント（1-10行）を1-2行に簡略化
-- [ ] ライセンス情報は残す
-- [ ] モジュール構成説明は削除
+- [x] 各ファイルの詳細な説明コメント（1-10行）を1-2行に簡略化
+- [x] ライセンス情報は残す
+- [x] モジュール構成説明は削除
 
 #### sub2 cpoボイラープレート削除
 @target: autoload/hellshake_yano/*.vim
-- [ ] 各ファイルの `let s:save_cpo = &cpo` を削除
-- [ ] 各ファイルの `set cpo&vim` を削除
-- [ ] 各ファイルの `let &cpo = s:save_cpo` を削除
-- [ ] 各ファイルの `unlet s:save_cpo` を削除
+- [x] 各ファイルの `let s:save_cpo = &cpo` を削除
+- [x] 各ファイルの `set cpo&vim` を削除
+- [x] 各ファイルの `let &cpo = s:save_cpo` を削除
+- [x] 各ファイルの `unlet s:save_cpo` を削除
 
 ### process4 コメント最適化
 #### sub1 セクション区切りコメント削除
 @target: autoload/hellshake_yano/*.vim
-- [ ] `=============` で囲まれたセクション区切りを削除
-- [ ] 必要に応じて簡潔な1行コメントに置き換え
+- [x] `=============` で囲まれたセクション区切りを削除
+- [x] 必要に応じて簡潔な1行コメントに置き換え
 
 #### sub2 関数説明コメントの簡潔化
 @target: autoload/hellshake_yano/*.vim
-- [ ] 複数行の関数説明コメントを1行に簡潔化
-- [ ] パラメータ・戻り値の詳細説明は削除
-- [ ] 重要な注意事項のみ残す
+- [x] 複数行の関数説明コメントを1行に簡潔化
+- [x] パラメータ・戻り値の詳細説明は削除
+- [x] 重要な注意事項のみ残す
 
 ### process5 関数インライン化
 #### sub1 単純関数のインライン展開
 @target: autoload/hellshake_yano/*.vim
-- [ ] 1-2行の単純なラッパー関数を特定
-- [ ] 呼び出し元に直接コードを展開
-- [ ] 不要になった関数定義を削除
+- [x] 1-2行の単純なラッパー関数を特定
+- [x] 呼び出し元に直接コードを展開
+- [x] 不要になった関数定義を削除
 
 #### sub2 デバッグ関数の整理
 @target: autoload/hellshake_yano/debug.vim
-- [ ] 冗長なデバッグ情報収集を簡略化
-- [ ] 重複する情報表示を統合
+- [x] 冗長なデバッグ情報収集を簡略化
+- [x] 重複する情報表示を統合
 
 ### process10 ユニットテスト
 @target: test/**/*.vim
-- [ ] 既存のテストがすべて通過することを確認
-- [ ] 削除した内部関数の直接呼び出しを修正
-- [ ] 公開APIが変更されていないことを確認
+- [x] 既存のテストがすべて通過することを確認
+- [x] 削除した内部関数の直接呼び出しを修正
+- [x] 公開APIが変更されていないことを確認
 - [ ] パフォーマンステスト（コード量削減の確認）
 
 ### process50 フォローアップ
