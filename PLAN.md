@@ -103,8 +103,11 @@
   - 設計原則をCACHE_DESIGN.mdに文書化
 
 ### process100 リファクタリング
-- [ ] キャッシュ管理を専用モジュールに分離する必要性を検討
-- [ ] `s:clear_motion_count_cache` （command.vim内）の削除または統合
+- [x] キャッシュ管理を専用モジュールに分離する必要性を検討
+  - config.vim に統合完了（motion.vim から重複コード31行削除）
+- [x] `s:clear_motion_count_cache` （command.vim内）の削除または統合
+  - motion.vim の clear_motion_count_cache をラッパー関数に変更
+  - config.vim のキャッシュ管理機能を呼び出すように統合
 
 ### process200 ドキュメンテーション
 - [ ] README.md に `perKeyMotionCount` の設定例と注意事項を追記
