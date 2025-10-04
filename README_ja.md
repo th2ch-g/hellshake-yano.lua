@@ -8,6 +8,16 @@ hellshake-yano.vimは、単語間のシームレスなカーソル移動を可�
 
 UTF-8エンコーディングを完全にサポートし、日本語文字を適切に処理することで、日本語テキストでの単語ベースのナビゲーションを英語と同じようにスムーズにします。
 
+### デモ
+
+**通常のカーソル移動**
+
+![move-hint](https://github.com/nekowasabi/gif/blob/master/hellshake-yano/move-hint.gif?raw=true)
+
+**ビジュアルモード選択**
+
+![visual-hint](https://github.com/nekowasabi/gif/blob/master/hellshake-yano/visual-hint.gif?raw=true)
+
 ## 特徴
 
 - **シームレスなカーソル移動**: 標準的なvimモーション（h, j, k, l, w, b, e）で単語間を移動
