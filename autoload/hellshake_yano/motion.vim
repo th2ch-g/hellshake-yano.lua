@@ -35,37 +35,6 @@ function! s:get_key_repeat_config() abort
         \ }
 endfunction
 
-" キー別のmotion_count設定値を取得（最適化版）
-" Note: この関数は将来的にconfig.vimに移動する予定
-let s:motion_count_cache = {}
-function! s:get_motion_count_for_key(key) abort
-  if has_key(s:motion_count_cache, a:key)
-    return s:motion_count_cache[a:key]
-  endif
-
-  let result = 3  " デフォルト値
-
-  " perKeyMotionCountに設定があるかチェック
-  if has_key(g:hellshake_yano, 'perKeyMotionCount')
-        \ && type(g:hellshake_yano.perKeyMotionCount) == v:t_dict
-    let per_key = get(g:hellshake_yano.perKeyMotionCount, a:key, 0)
-    if type(per_key) == v:t_number && per_key >= 1
-      let result = per_key
-      let s:motion_count_cache[a:key] = result
-      return result
-    endif
-  endif
-
-  " defaultMotionCountを使用
-  let default_val = get(g:hellshake_yano, 'defaultMotionCount', get(g:hellshake_yano, 'motionCount', 3))
-  if type(default_val) == v:t_number && default_val >= 1
-    let result = default_val
-  endif
-
-  " キャッシュに保存
-  let s:motion_count_cache[a:key] = result
-  return result
-endfunction
 
 " キー別ヒント表示の必要性を判定
 " @param bufnr バッファ番号
@@ -77,7 +46,7 @@ function! s:should_trigger_hints_for_key(bufnr, key) abort
   endif
 
   let key_count = hellshake_yano#count#get_key_count(a:bufnr, a:key)
-  let threshold = s:get_motion_count_for_key(a:key)
+  let threshold = hellshake_yano#config#get_motion_count_for_key(a:key)
   return key_count >= threshold
 endfunction
 
@@ -185,7 +154,7 @@ function! hellshake_yano#motion#process(key) abort
     endif
 
     call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
+          \ 'key': a:key, 'count': hellshake_yano#config#get_motion_count_for_key(a:key) })
   else
     call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
     call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
@@ -241,7 +210,7 @@ function! hellshake_yano#motion#with_key_context(key) abort
     endif
 
     call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': s:get_motion_count_for_key(a:key) })
+          \ 'key': a:key, 'count': hellshake_yano#config#get_motion_count_for_key(a:key) })
   else
     call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
     call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
@@ -253,8 +222,8 @@ function! hellshake_yano#motion#with_key_context(key) abort
 endfunction
 
 " モーションカウントキャッシュをクリア
+" Note: config.vim のキャッシュクリア関数へのラッパー
 function! hellshake_yano#motion#clear_motion_count_cache() abort
-  let s:motion_count_cache = {}
   if exists('*hellshake_yano#config#clear_motion_count_cache')
     call hellshake_yano#config#clear_motion_count_cache()
   endif
