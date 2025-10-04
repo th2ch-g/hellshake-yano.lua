@@ -1,25 +1,20 @@
 # hellshake-yano.vim
 
-日本語テキストでのシームレスな単語ベースのカーソル移動を実現するNeovimプラグイン
+シームレスな単語ベースのカーソル移動を実現するNeovimプラグイン
 
 ## 概要
 
-hellshake-yano.vimは、日本語テキスト内の単語境界を正確に検出し、単語間のシームレスなカーソル移動を可能にするNeovimプラグインです。UTF-8エンコーディングを完全にサポートし、日本語文字（3バイト文字）を適切に処理することで、日本語テキストでの単語ベースのナビゲーションを英語と同じようにスムーズにします。
+hellshake-yano.vimは、単語間のシームレスなカーソル移動を可能にするNeovimプラグインです。
+
+UTF-8エンコーディングを完全にサポートし、日本語文字を適切に処理することで、日本語テキストでの単語ベースのナビゲーションを英語と同じようにスムーズにします。
 
 ## 特徴
 
-- **正確な単語境界検出**: 日本語テキスト内の単語境界を精密に識別
-- **シームレスなカーソル移動**: 標準的なvimモーション（w, b, e）で日本語単語間を移動
-- **混在テキストサポート**: 日本語/英語混在テキストで完璧に動作
-- **完全なUTF-8サポート**: マルチバイト日本語文字のバイト位置を正確に計算
+- **シームレスなカーソル移動**: 標準的なvimモーション（h, j, k, l, w, b, e）で単語間を移動
+- **混在テキストサポート**: 日本語/英語混在テキストで動作
 - **カスタマイズ可能な精度**: 異なるユースケースに対応する調整可能な単語検出アルゴリズム
-- **キーリピート抑制**: 高速hjklリピート中のヒント表示を抑制してスムーズなスクロールを実現
 - **ビジュアルモード最適化**: ビジュアルモードでの自然な単語選択のためのインテリジェントなヒント配置
-- **厳密なキー分離**: singleCharKeysとmultiCharKeysの完全な分離により予測可能なナビゲーション
-- **パフォーマンス最適化**: 単一文字ヒントの遅延なし即座ジャンプ
-- **スマート自動検出**: single/multi char keysが設定されている場合、ヒントグループを自動有効化
 - **辞書システム**: 日本語単語分割を改善するための組み込みおよびユーザー定義辞書
-- **ヒントパターンマッチング**: ドキュメント構造（チェックボックス、リスト、ヘッダー）のための正規表現ベースのヒント優先順位付け
 
 ## インストール
 
@@ -43,27 +38,6 @@ Plug 'username/hellshake-yano.vim'
 ## 設定
 
 プラグインは`g:hellshake_yano`辞書変数を使用して設定できます。利用可能なすべてのオプション：
-
-```vim
-let g:hellshake_yano = #{
-\   markers: split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '\zs'),
-\   motionCount: 3,
-\   motionTimeout: 2000,
-\   hintPosition: 'start',
-\   triggerOnHjkl: v:true,
-\   countedMotions: [],
-\   enabled: v:true,
-\   singleCharKeys: split('ASDFGHJKLNM0123456789', '\zs'),
-\   multiCharKeys: split('BCEIOPQRTUVWXYZ', '\zs'),
-\   useHintGroups: v:true,
-\   useNumbers: v:true,
-\   useJapanese: v:true,
-\   perKeyMinLength: {},
-\   defaultMinWordLength: 2,
-\   highlightHintMarker: 'DiffAdd',
-\   highlightHintMarkerCurrent: 'DiffText'
-\ }
-```
 
 ### 設定オプション
 
@@ -100,6 +74,40 @@ let g:hellshake_yano = #{
 
 ### 設定例
 
+標準設定:
+```vim
+let g:hellshake_yano = {
+      \ 'useJapanese': v:false,
+      \ 'useHintGroups': v:true,
+      \ 'highlightSelected': v:true,
+      \ 'useNumericMultiCharHints': v:true,
+      \ 'enableTinySegmenter': v:false,
+      \ 'singleCharKeys': 'ASDFGNM@;,.',
+      \ 'multiCharKeys': 'BCEIOPQRTUVWXYZ',
+      \ 'highlightHintMarker': {'bg': 'black', 'fg': '#57FD14'},
+      \ 'highlightHintMarkerCurrent': {'bg': 'Red', 'fg': 'White'},
+      \ 'perKeyMinLength': {
+      \   'w': 3,
+      \   'b': 3,
+      \   'e': 3,
+      \ },
+      \ 'defaultMinWordLength': 3,
+      \ 'perKeyMotionCount': {
+      \   'w': 1,
+      \   'b': 1,
+      \   'e': 1,
+      \   'h': 2,
+      \   'j': 2,
+      \   'k': 2,
+      \   'l': 2,
+      \ },
+      \ 'motionCount': 3,
+      \ 'japaneseMinWordLength': 3,
+      \ 'segmenterThreshold': 4,
+      \ 'japaneseMergeThreshold': 4,
+      \ }
+```
+
 **日本語開発に最適:**
 ```vim
 let g:hellshake_yano = #{
@@ -129,18 +137,11 @@ let g:hellshake_yano = #{
 \ }
 ```
 
-### APIドキュメント
-
-包括的な設定ドキュメントについては：
-- [設定APIリファレンス](docs/unified-config-api.md) - 完全なAPIドキュメント
-- [設定例](docs/unified-config-api.md#usage-examples) - 実際の使用パターン
-- [移行ガイド v3.0.0](MIGRATION_v3.md) - v2.xからのステップバイステップ移行
-- [型定義](docs/unified-config-api.md#type-definitions) - TypeScriptインターフェース
-- [変更履歴](CHANGELOG.md) - バージョン履歴と破壊的変更
-
 ### キーごとの最小単語長設定
 
-**拡張機能**: 移動タイプとコンテキストに基づいてヒント表示を最適化するために、異なるキーに対して異なる最小単語長を設定します。`perKeyMinLength`で定義されたキーは**自動的にマッピング**されます - `countedMotions`を手動で設定する必要はありません。
+移動タイプとコンテキストに基づいてヒント表示を最適化するために、異なるキーに対して異なる最小単語長を設定します。
+
+`perKeyMinLength`で定義されたキーは**自動的にマッピング**されます - `countedMotions`を手動で設定する必要はありません。
 
 この機能により、以下を可能にする細かい制御ができます：
 
@@ -158,7 +159,7 @@ let g:hellshake_yano = #{
 \     'V': 1,   " ビジュアルラインモード
 \     'w': 1,   " 単語前進
 \     'b': 1,   " 単語後退
-\     'h': 2,   " 左（ノイズ削減）
+\     'h': 2,   " 左
 \     'j': 2,   " 下
 \     'k': 2,   " 上
 \     'l': 2,   " 右
@@ -272,32 +273,17 @@ let g:hellshake_yano_use_builtin_dict = v:true
 let g:hellshake_yano_dictionary_merge = 'merge'  " または'override'
 ```
 
-**`countedMotions`との組み合わせ**:
-
-```vim
-let g:hellshake_yano = #{
-\   perKeyMinLength: #{
-\     'v': 1,  " 1文字最小で自動的にマッピング
-\     'h': 2   " 2文字最小で自動的にマッピング
-\   },
-\   countedMotions: ['g', 'd'],  " defaultMinWordLengthを使用する追加キー
-\   defaultMinWordLength: 3
-\ }
-" 結果: v(1), h(2), g(3), d(3)がすべて追跡される
-```
-
 ### 日本語単語分割設定
 
 hellshake-yano.vimは、TinySegmenterと助詞結合を使用した高度な日本語単語分割（分かち書き）機能を提供します。これらの設定により、日本語テキストの分析方法と単語境界の検出方法を微調整できます。
 
 #### 設定キー
 
-v3.0.0以降、プラグインは**camelCase**形式の設定キーのみをサポートします（v2.xではsnake_case形式でした）：
 
-| 機能 | 設定キー（v3.0.0+） | v2.xでの名前 | デフォルト | 説明 |
-|------|---------------------|--------------|-----------|------|
-| TinySegmenter閾値 | `segmenterThreshold` | `segmenter_threshold` | `4` | TinySegmenterを使用する最小文字数 |
-| 助詞結合閾値 | `japaneseMergeThreshold` | `japanese_merge_threshold` | `2` | 助詞結合の最大文字数 |
+| 機能 | 設定キー | デフォルト | 説明 |
+|------|---------------------|-----------|------|
+| TinySegmenter閾値 | `segmenterThreshold` | `4` | TinySegmenterを使用する最小文字数 |
+| 助詞結合閾値 | `japaneseMergeThreshold` | `2` | 助詞結合の最大文字数 |
 
 #### 基本設定例
 
@@ -315,7 +301,7 @@ let g:hellshake_yano = #{
 
 ##### segmenterThreshold（TinySegmenter閾値）
 
-**目的**: 日本語テキスト分析にTinySegmenter（形態素解析エンジン）を使用するタイミングを制御します。
+日本語テキスト分析にTinySegmenter（形態素解析エンジン）を使用するタイミングを制御します。
 
 **動作方法**:
 - 日本語テキストセグメントが**4文字以上**（デフォルト）の場合、精密な形態素解析のためにTinySegmenterが使用される
@@ -324,24 +310,19 @@ let g:hellshake_yano = #{
 - 値が低い = 分割はより正確だが、わずかに遅い
 
 **チューニングガイドライン**:
-```vim
-" 高速モード - パターンベース検出を多用
-" 速度優先 - パターンベース検出を多用
-let g:hellshake_yano = #{
-\   segmenterThreshold: 6,
-\ }
 
-" バランスモード - デフォルト設定
-" バランス型 - デフォルト設定
+```vim
+" デフォルト設定
 let g:hellshake_yano = #{
 \   segmenterThreshold: 4,
 \ }
 
-" 精度モード - 短い単語でも形態素解析を使用
 " 精度優先 - 短い単語でも形態素解析を使用
 let g:hellshake_yano = #{
 \   segmenterThreshold: 2,
 \ }
+
+
 ```
 
 **推奨値**:
@@ -362,20 +343,17 @@ let g:hellshake_yano = #{
 **チューニングガイドライン**:
 ```vim
 " 最小結合 - 助詞を主に分離
-" 最小結合 - 助詞を分離
 let g:hellshake_yano = #{
 \   japaneseMergeThreshold: 1,
 \ }
 " 例: 「私」「の」「本」（3つの別々の単語）
 
-" デフォルト結合 - 自然な読み単位
 " デフォルト結合 - 自然な読みやすさ
 let g:hellshake_yano = #{
 \   japaneseMergeThreshold: 2,
 \ }
 " 例: 「私の」「本」（2つの単語単位）
 
-" 積極的結合 - より長いコンテキスト単位
 " 積極的結合 - 長いコンテキスト単位
 let g:hellshake_yano = #{
 \   japaneseMergeThreshold: 3,
@@ -388,78 +366,6 @@ let g:hellshake_yano = #{
 - **2**: デフォルトの自然な読み単位（デフォルト・自然な読み単位）
 - **3**: フレーズを一緒に保つべきコードコメント（コメント内でフレーズを保持）
 
-#### 日本語開発の完全な設定
-
-**日本語ソフトウェア開発向け**（日本語ソフトウェア開発向け）:
-```vim
-let g:hellshake_yano = #{
-\   useJapanese: v:true,
-\   enableTinySegmenter: v:true,
-\   segmenterThreshold: 3,
-\   japaneseMergeThreshold: 2,
-\   japaneseMergeParticles: v:true,
-\   japaneseMinWordLength: 2,
-\   perKeyMinLength: #{
-\     'v': 1,
-\     'w': 2,
-\     'b': 2
-\   }
-\ }
-```
-
-**日本語文書作成向け**（日本語文書作成向け）:
-```vim
-let g:hellshake_yano = #{
-\   useJapanese: v:true,
-\   enableTinySegmenter: v:true,
-\   segmenterThreshold: 4,
-\   japaneseMergeThreshold: 2,
-\   japaneseMergeParticles: v:true,
-\   japaneseMinWordLength: 2
-\ }
-```
-
-**最大パフォーマンス重視**（最大パフォーマンス重視）:
-```vim
-let g:hellshake_yano = #{
-\   useJapanese: v:true,
-\   enableTinySegmenter: v:false,
-\   segmenterThreshold: 10,
-\   japaneseMergeThreshold: 1,
-\   japaneseMergeParticles: v:false
-\ }
-```
-
-#### 設定のテスト
-
-日本語分割設定を変更した後、さまざまなテキストパターンでテスト：
-
-```vim
-" 単語境界を確認するためにデバッグモードを有効化
-let g:hellshake_yano = #{
-\   debugMode: v:true,
-\   performanceLog: v:true
-\ }
-
-" 次に:HellshakeDebugを使用して現在の設定を検査
-:HellshakeDebug
-```
-
-#### パフォーマンスに関する考慮事項
-
-- **キャッシュ最適化**: キーごとの設定により、キーコンテキストに基づくインテリジェントなキャッシュが可能
-- **メモリ使用量**: 最小のメモリオーバーヘッド - 指定されたキーの上書きのみを格納
-- **大きなファイルの推奨設定**:
-  ```vim
-  let g:hellshake_yano = #{
-\   defaultMinWordLength: 3,
-\   perKeyMinLength: #{
-\     'v': 1,  " ビジュアルモードを精密に保つ
-\     'w': 2,  " 単語モーションをより応答的に
-\     'h': 4, 'j': 4, 'k': 4, 'l': 4  " hjklのノイズを大幅に削減
-\   }
-\ }
-  ```
 
 ### キーごとのモーション数設定
 
@@ -483,29 +389,6 @@ let g:hellshake_yano = #{
 \   motionCount: 3          " レガシーフォールバック
 \ }
 ```
-
-#### ユースケース
-
-**即座のヒント（count = 1）**
-
-- ビジュアルモード選択には正確なカーソル配置が必要
-- 単語モーション（w, b, e）はすぐにヒントを表示することで恩恵を受ける
-- 速度よりも正確性が必要な操作に有用
-
-**遅延ヒント（count = 3+）**
-
-- ノーマルモードでのhjklナビゲーションは精度が低くても構わない
-- 高速スクロール中の視覚的なノイズを減らす
-- スムーズなナビゲーション体験を維持
-
-#### 設定の優先順位
-
-プラグインは、モーション数設定に対して以下の優先順位を使用します：
-
-1. `perKeyMotionCount[key]` - キー固有の設定
-2. `defaultMotionCount` - 新しいデフォルト値
-3. `motionCount` - レガシー設定（後方互換性）
-4. `3` - ハードコードされたフォールバック
 
 #### キーごとの最小長との組み合わせ
 
@@ -542,71 +425,6 @@ let g:hellshake_yano = #{
 
 クイックコピーについては、以下の設定例を参照してください。
 
-### デバッグモード
-
-プラグインには、トラブルシューティングとパフォーマンス分析のための包括的なデバッグモードが含まれています：
-
-- 有効/無効: `g:hellshake_yano.debugMode`（デフォルト: `v:false`）
-- デバッグ情報を表示: `:HellshakeDebug`または`:HellshakeShowDebug`
-
-デバッグモードの表示内容：
-
-- 現在のプラグイン設定
-- モーション数とタイミング情報
-- キーリピート検出状態
-- バッファ固有の状態
-- パフォーマンス指標（performanceLogが有効な場合）
-
-### パフォーマンスロギング
-
-組み込みのパフォーマンスロギングでプラグインのパフォーマンスを追跡：
-
-- 有効/無効: `g:hellshake_yano.performanceLog`（デフォルト: `v:false`）
-- 主要操作の実行時間を記録
-- パフォーマンスのボトルネックを特定するのに役立つ
-- 有効時にデバッグモードで表示可能
-
-### ヒントグループ設定
-
-プラグインは、ナビゲーション効率を向上させるために、単一文字と複数文字ヒント間の**厳密な分離**を備えたインテリジェントなヒントグループ化をサポートします：
-
-- **単一文字キー**: 即座ジャンプによる即座の単一キーナビゲーションにのみ使用
-- **複数文字キー**: 2文字ヒントにのみ使用 - 単一ヒントとしては決して表示されない
-- **厳密な分離**: singleCharKeys内のキーは複数文字ヒントを生成しない（AがsingleCharKeysにある場合、AAは生成されない）
-- **自動検出**: singleCharKeysまたはmultiCharKeysを設定すると、useHintGroupsが自動的に有効になる
-- **パフォーマンス最適化**: 単一文字ヒントはハイライト遅延なしで即座にジャンプ
-- **最大単一文字ヒント**: 単一と複数文字ヒントのバランスを取るためのオプション制限
-- **記号サポート**: singleCharKeysは記号をサポート（`;`, `:`, `[`, `]`, `'`, `"`, `,`, `.`, `/`, `\`, `-`, `=`, `` ` ``）
-- **数字2文字ヒント**: 大量の単語数に対するオプションの数字ヒント（01-99, 00）
-
-#### 重要な動作変更（v2.0+）
-
-厳密な分離でヒントグループを使用する場合：
-- 'A'が`singleCharKeys`にある場合、'AA'は生成されない
-- 'B'が`multiCharKeys`のみにある場合、'B'は単一文字ヒントとして表示されない
-- 単一文字ヒントは2番目のキーを待つことなく即座にジャンプ
-- 複数文字ヒントは最初のキーが押されたときに視覚的フィードバックを表示
-
-#### ヒントキーでの記号サポート（新機能）
-
-より多くのヒントオプションのために`singleCharKeys`で記号を使用できるようになりました：
-
-**有効な記号**: `;` `:` `[` `]` `'` `"` `,` `.` `/` `\` `-` `=` `` ` ``
-
-```vim
-" 例: 追加の単一文字ヒントに記号を使用
-let g:hellshake_yano = #{
-\   singleCharKeys: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', '[', ']'],
-\   multiCharKeys: ['B', 'C', 'E', 'I', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
-\   maxSingleCharHints: 13
-\ }
-```
-
-**利点**:
-- すべてのアルファベットキーを使用せずに単一文字ヒント容量を増やす
-- 2文字の組み合わせに複数文字キーを利用可能に保つ
-- QWERTYキーボードでより人間工学的なキー配置
-
 #### 数字2文字ヒント（新機能）
 
 大量の単語を処理するための数字2文字ヒント（01-99, 00）を有効化：
@@ -625,20 +443,9 @@ let g:hellshake_yano = #{
 2. アルファベット2文字ヒント: BB, BC, BE, CB, CC...（multiCharKeysの組み合わせ）
 3. 数字2文字ヒント: 01, 02, 03, ..., 99, 00（最大100ヒント）
 
-**生成順序**:
-- 優先度1: 単一文字ヒント（最速アクセス）
-- 優先度2: アルファベット2文字ヒント（馴染みのあるパターン）
-- 優先度3: 数字2文字ヒント（大量の単語数）
-
-**使用法**:
-- `0`を入力 → 0で始まるすべてのヒントを表示（01, 02, 03, ...）
-- `01`を入力 → ヒント"01"の単語にジャンプ
-- `5`を入力 → 5で始まるすべてのヒントを表示（50-59）
-- `55`を入力 → ヒント"55"の単語にジャンプ
-
 ### 高度なハイライト設定
 
-ハイライトグループ名または色辞書のいずれかを使用してハイライトをカスタマイズできます。より詳細な例と高度な設定については、`samples/highlight_examples.vim`を参照してください。
+ハイライトグループ名または色辞書のいずれかを使用してハイライトをカスタマイズできます。
 
 ```vim
 " 既存のハイライトグループを使用
@@ -711,7 +518,6 @@ let g:hellshake_yano = #{
 - `w` - 次の単語の先頭に前進
 - `b` - 前の単語の先頭に後退
 - `e` - 現在/次の単語の末尾に前進
-- `ge` - 前の単語の末尾に後退
 
 これらのモーションは日本語の単語境界を正しく認識し、英語と同じように日本語テキスト内の単語間をジャンプできます。
 
@@ -729,7 +535,11 @@ let g:hellshake_yano = #{
 
 プルリクエストと問題報告を歓迎します。
 
+## インスピレーション
+- vim-jp slack channel
+- [POP TEAM EPIC](https://mangalifewin.takeshobo.co.jp/rensai/popute/)
+
 ## 作者
 
-[Your Name]
+nekowasabi
 
