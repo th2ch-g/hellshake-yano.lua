@@ -1,116 +1,212 @@
-# title: perKeyMotionCount が機能しない問題の修正
+# title: autoload配下のコード量50%削減
 
 ## 概要
-- `perKeyMotionCount` 設定でキー別のモーションカウント閾値を設定しても、実際には `motionCount` の値が優先されてしまう問題を修正する
+- 機能を完全に保持しながら、autoload/hellshake_yano配下のVimScriptコードを現在の1921行から約960行（50%削減）に最適化する
+- 重複コード、後方互換性ラッパー層、ボイラープレート、冗長なコメントを削減し、コードの保守性と可読性を向上させる
 
 ### goal
-- ユーザーが hjkl で 2 回、wbe で 1 回のキー入力でヒント表示をトリガーできるようにする
-- キーごとに異なる閾値を設定し、使いやすいナビゲーション体験を実現する
+- 開発者がコードを理解しやすくなり、メンテナンスコストが半減する
+- 機能は一切損なわず、既存のテストがすべて通過する
+- ファイル数を15から10程度に統合し、関数の重複を排除する
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
+- 機能を一切変更せず、既存の動作を完全に保持すること
+- プラグインの公開APIは維持すること（後方互換性は内部実装のみ削除）
 
 ## 開発のゴール
-- `perKeyMotionCount` の設定が正しく反映され、キー別のモーションカウント閾値が機能するようにする
-- 設定変更時にキャッシュが適切にクリアされ、新しい設定が即座に反映されるようにする
+- 1921行から960行への削減（約961行削除）
+- 重複コードの統合による保守性向上
+- ファイル構成の最適化によるコードナビゲーション改善
 
 ## 実装仕様
-- `s:motion_count_cache` のクリア機構を実装し、設定変更時に自動的にキャッシュをリセットする
-- `per_key_motion_count` の優先順位が正しく機能することを確認する（優先順位: per_key_motion_count > default_motion_count > motion_count）
 
-## 調査結果
+### 現状分析
+**合計行数**: 1921行
+**目標行数**: ~960行
+**削減必要**: 約961行（50%削減）
 
-### 問題の特定
-**ユーザー設定**:
-```vim
-'perKeyMotionCount': {
-  'w': 1,
-  'b': 1,
-  'e': 1,
-  'h': 2,
-  'j': 2,
-  'k': 2,
-  'l': 2,
-}
+#### ファイル別行数
+```
+hellshake_yano.vim      256行  ★ラッパー層のみ
+motion.vim              243行  ★重複コード多数
+command.vim             204行  ★機能分散
+highlight.vim           185行  ★validation重複
+debug.vim               163行
+hint.vim                125行  ★motion.vimと重複
+config.vim              113行
+validation.vim          107行
+state.vim               106行
+plugin.vim               93行
+count.vim                78行
+mapping.vim              77行
+timer.vim                73行
+utils.vim                68行
+denops.vim               30行
 ```
 
-**期待動作**: hjkl は2回の入力でヒント表示、wbe は1回でヒント表示
+### 削減可能箇所の特定
 
-**実際の動作**: `motionCount` の設定値が優先されている（perKeyMotionCount が無視されている）
+#### 1. ラッパー層の完全削除 (~200行)
+- `hellshake_yano.vim` はほぼ全体が後方互換性のためのラッパー関数
+- 各モジュールへの単純な委譲のみで実装なし
+- テスト用デバッグ関数（228-252行）も含む
 
-### 根本原因
-**Vimscript 側のロジック** (`autoload/hellshake_yano/motion.vim:41-68`):
-- ロジック自体は正しい（per_key_motion_count が最優先）
-- **キャッシュが原因**: 設定変更後に `s:motion_count_cache` がクリアされず、古い値が使われ続けている
+#### 2. 重複コードの統合 (~280行)
+- **motion.vim**: `process()` と `with_key_context()` が95%同一（~80行重複）
+- **command.vim**: `s:get_motion_keys()` が config.vim と重複（~30行）
+- **highlight.vim**: validation関数が validation.vim と完全重複（~70行）
+- **hint.vim**: キーリピート検出が motion.vim と重複（~30行）
+- 各ファイルの `s:bufnr()` などヘルパー関数重複（~70行）
 
-**コードフロー**:
-1. `s:get_motion_count_for_key` がキャッシュをチェック
-2. キャッシュにヒットした場合、古い値を返す
-3. `per_key_motion_count` の新しい設定値が反映されない
+#### 3. 定型文・ボイラープレートの削除 (~200行)
+- 各ファイルの冒頭コメントブロック（10行×15 = 150行）
+- 保存と復元のcpo処理（4行×15 = 60行）
+
+#### 4. コメント・空行の最適化 (~150行)
+- セクション区切りコメント（~50行）
+- 詳細説明コメントの簡潔化（~100行）
+
+#### 5. インライン化・簡素化 (~130行)
+- 1-2行の単純関数のインライン化
+- デバッグ関数の条件付き分離
+
+**合計削減可能**: 約960行
 
 ## 生成AIの学習用コンテキスト
 
-### Vimscript
-- autoload/hellshake_yano/motion.vim
-  - `s:get_motion_count_for_key` 関数のキャッシュロジック（41-68行目）
-  - キャッシュクリア関数の追加位置
-- autoload/hellshake_yano/command.vim
-  - `s:notify_denops_config` 関数（25-35行目）
-  - `hellshake_yano#command#set_count` 関数（93-113行目）
+### 削減対象ファイル
+- autoload/hellshake_yano.vim (256行)
+  - 後方互換性ラッパー関数を全削除
+- autoload/hellshake_yano/motion.vim (243行)
+  - 重複する2つの関数を統合
+- autoload/hellshake_yano/command.vim (204行)
+  - 機能を config.vim/mapping.vim に移動して削除
+- autoload/hellshake_yano/highlight.vim (185行)
+  - validation関数を削除
+- autoload/hellshake_yano/hint.vim (125行)
+  - キーリピート検出を削除
 
-### Tests
-- tests/per_key_motion_count_test.ts
-  - 既存のテストケース確認
-  - キャッシュクリアのテスト追加
+### 参照ファイル
+- autoload/hellshake_yano/utils.vim
+  - 共通ユーティリティ関数を集約
+- autoload/hellshake_yano/config.vim
+  - 設定管理を統合
+- autoload/hellshake_yano/validation.vim
+  - validation関数を統一利用
 
 ## Process
 
-### process1 キャッシュクリア機構の実装
-#### sub1 キャッシュクリア関数の追加
-@target: autoload/hellshake_yano/motion.vim
-@ref: なし
-- [  ] [ ] `hellshake_yano#motion#clear_motion_count_cache()` 公開関数を追加
-  - `s:motion_count_cache = {}` でキャッシュを初期化
-  - 関数の配置位置: 公開関数セクション（150行目付近）
+### process1 ラッパー層削除
+#### sub1 hellshake_yano.vim のラッパー関数を削除
+@target: autoload/hellshake_yano.vim
+@ref: plugin/hellshake-yano.vim, test/**/*.vim
+- [ ] plugin/hellshake-yano.vim で直接モジュール関数を呼ぶよう変更
+- [ ] テストファイルで直接モジュール関数を呼ぶよう変更
+- [ ] hellshake_yano.vim のラッパー関数を全削除（35-252行）
+- [ ] 必要最小限の初期化コードのみ残す
 
-#### sub2 設定変更時の自動クリア機構
+#### sub2 テスト用デバッグ関数の移動
+@target: autoload/hellshake_yano/debug.vim
+@ref: autoload/hellshake_yano.vim
+- [ ] テスト用デバッグ関数（228-252行）を debug.vim に移動
+- [ ] 関数名を `hellshake_yano#debug#*` に変更
+
+### process2 重複コード統合
+#### sub1 motion.vim の関数統合
+@target: autoload/hellshake_yano/motion.vim
+- [ ] `process()` と `with_key_context()` を単一の関数に統合
+- [ ] キーコンテキストをオプション引数として受け取る設計に変更
+- [ ] 重複するキーリピート検出処理を1つに統合
+- [ ] 重複するヘルパー関数（s:bufnr, s:get_elapsed_time）を削除し utils.vim を使用
+
+#### sub2 command.vim の機能移動と削除
 @target: autoload/hellshake_yano/command.vim
-@ref: autoload/hellshake_yano/motion.vim
-- [x] `s:notify_denops_config` 関数内でキャッシュクリアを追加
-  - denops通知の前にキャッシュクリアを実行
-  - `exists()` でキャッシュクリア関数の存在確認
-- [x] `hellshake_yano#command#set_count` 関数内でキャッシュクリアを追加
-  - 設定更新後、denops通知前にキャッシュクリア
-  - 既存の `s:clear_motion_count_cache()` 呼び出しを `hellshake_yano#motion#clear_motion_count_cache()` に変更
+@ref: autoload/hellshake_yano/config.vim, autoload/hellshake_yano/mapping.vim
+- [ ] `s:get_motion_keys()` を削除し config.vim の関数を使用
+- [ ] `s:clear_motion_mappings()` を mapping.vim に移動
+- [ ] コマンド関数を適切なモジュールに再配置
+  - `set_count()`, `set_timeout()` → config.vim
+  - `set_counted_motions()` → mapping.vim
+  - `update_highlight()` → highlight.vim
+- [ ] command.vim ファイルを削除
+
+#### sub3 highlight.vim の validation関数削除
+@target: autoload/hellshake_yano/highlight.vim
+@ref: autoload/hellshake_yano/validation.vim
+- [ ] `validate_group_name()` 関数を削除し validation.vim の関数を使用
+- [ ] `validate_color_value()` 関数を削除し validation.vim の関数を使用
+- [ ] `normalize_color_name()` 関数を削除し validation.vim の関数を使用
+- [ ] 重複する3つの関数を削除（106-183行）
+
+#### sub4 hint.vim のキーリピート検出削除
+@target: autoload/hellshake_yano/hint.vim
+- [ ] `handle_key_repeat_detection()` 関数を削除
+- [ ] motion.vim の関数を直接使用するよう変更
+- [ ] 重複コード削除（94-122行）
+
+#### sub5 全ファイルのヘルパー関数統合
+@target: autoload/hellshake_yano/*.vim
+@ref: autoload/hellshake_yano/utils.vim
+- [ ] 各ファイルの `s:bufnr()` を削除し utils.vim の関数を使用
+- [ ] 各ファイルの `s:get_elapsed_time()` を削除し utils.vim の関数を使用
+- [ ] その他の重複ヘルパー関数を utils.vim に統合
+
+### process3 定型文削減
+#### sub1 冒頭コメントブロックの簡略化
+@target: autoload/hellshake_yano/*.vim
+- [ ] 各ファイルの詳細な説明コメント（1-10行）を1-2行に簡略化
+- [ ] ライセンス情報は残す
+- [ ] モジュール構成説明は削除
+
+#### sub2 cpoボイラープレート削除
+@target: autoload/hellshake_yano/*.vim
+- [ ] 各ファイルの `let s:save_cpo = &cpo` を削除
+- [ ] 各ファイルの `set cpo&vim` を削除
+- [ ] 各ファイルの `let &cpo = s:save_cpo` を削除
+- [ ] 各ファイルの `unlet s:save_cpo` を削除
+
+### process4 コメント最適化
+#### sub1 セクション区切りコメント削除
+@target: autoload/hellshake_yano/*.vim
+- [ ] `=============` で囲まれたセクション区切りを削除
+- [ ] 必要に応じて簡潔な1行コメントに置き換え
+
+#### sub2 関数説明コメントの簡潔化
+@target: autoload/hellshake_yano/*.vim
+- [ ] 複数行の関数説明コメントを1行に簡潔化
+- [ ] パラメータ・戻り値の詳細説明は削除
+- [ ] 重要な注意事項のみ残す
+
+### process5 関数インライン化
+#### sub1 単純関数のインライン展開
+@target: autoload/hellshake_yano/*.vim
+- [ ] 1-2行の単純なラッパー関数を特定
+- [ ] 呼び出し元に直接コードを展開
+- [ ] 不要になった関数定義を削除
+
+#### sub2 デバッグ関数の整理
+@target: autoload/hellshake_yano/debug.vim
+- [ ] 冗長なデバッグ情報収集を簡略化
+- [ ] 重複する情報表示を統合
 
 ### process10 ユニットテスト
-- [x] 既存テスト `tests/per_key_motion_count_test.ts` の実行確認
-- [x] キャッシュクリアのテストケース追加
-  - 設定変更後にキャッシュが正しくクリアされることを確認
-  - hjkl の各キーで設定値が正しく適用されることを確認
-- [x] 統合テスト実施
-  - Vim/Neovim で実際に設定を変更し、動作を確認
+@target: test/**/*.vim
+- [ ] 既存のテストがすべて通過することを確認
+- [ ] 削除した内部関数の直接呼び出しを修正
+- [ ] 公開APIが変更されていないことを確認
+- [ ] パフォーマンステスト（コード量削減の確認）
 
 ### process50 フォローアップ
-- [x] パフォーマンス影響の確認（キャッシュクリア頻度が高すぎないか）
-  - 結果: set_count()で重複呼び出しを検出、timeout/highlightで不要なクリア検出
-  - 対策: s:notify_denops_config()からキャッシュクリアを削除、各コマンド関数で個別制御
-  - 改善: 60-75%のキャッシュクリア削減を達成
-  - ドキュメント: CACHE_PERFORMANCE_ANALYSIS.md, CACHE_DESIGN.md を作成
-- [x] 他の設定変更時にもキャッシュクリアが必要か検討
-  - 必要: set_count, set_counted_motions
-  - 不要: set_timeout, update_highlight
-  - 設計原則をCACHE_DESIGN.mdに文書化
+- フィードバックに基づく追加の最適化
 
 ### process100 リファクタリング
-- [x] キャッシュ管理を専用モジュールに分離する必要性を検討
-  - config.vim に統合完了（motion.vim から重複コード31行削除）
-- [x] `s:clear_motion_count_cache` （command.vim内）の削除または統合
-  - motion.vim の clear_motion_count_cache をラッパー関数に変更
-  - config.vim のキャッシュ管理機能を呼び出すように統合
+- [ ] 削減後のコードレビュー
+- [ ] さらなる最適化の余地を検討
+- [ ] コード品質の最終確認
 
 ### process200 ドキュメンテーション
-- [ ] README.md に `perKeyMotionCount` の設定例と注意事項を追記
-  - 設定変更時の反映タイミングについて説明
-  - キャッシュの仕組みについて簡単に説明
+- [ ] README.md の更新（コード量削減について）
+- [ ] CHANGELOG.md への記載
+- [ ] コミットメッセージの作成（"refactor: reduce autoload code by 50% without feature changes"）
 
