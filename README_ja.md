@@ -58,7 +58,7 @@ Plug 'username/hellshake-yano.vim'
 | `defaultMotionCount`                | number      | undefined       | 未指定キーのデフォルトモーション数                      |
 | `perKeyMotionCount`                 | dict        | {}              | キーごとのモーション数設定                              |
 | `motionTimeout`                     | number      | 2000            | モーション数タイムアウト（ミリ秒）                      |
-| `hintPosition`                      | string      | 'start'         | ヒントを表示する位置（'start'または'end'）              |
+| `hintPosition`                      | string      | 'start'         | ヒントを表示する位置（'start'、'end'、または'both'）    |
 | `triggerOnHjkl`                     | boolean     | v:true          | hjkl移動でのトリガーを有効化                            |
 | `countedMotions`                    | array       | []              | 追跡するカスタムモーションキー（triggerOnHjklを上書き） |
 | `enabled`                           | boolean     | v:true          | プラグインを有効/無効化                                 |
@@ -76,6 +76,7 @@ Plug 'username/hellshake-yano.vim'
 | `keyRepeatResetDelay`               | number      | 300             | キーリピート後のリセット遅延（ms）                      |
 | `perKeyMinLength`                   | dict        | {}              | キーごとの最小単語長を設定                              |
 | `defaultMinWordLength`              | number      | 2               | ヒントのデフォルト最小単語長                            |
+| `bothMinWordLength`                 | number      | 5               | 両端ヒントの最小単語長（hintPosition='both'時）         |
 | `segmenterThreshold`                | number      | 4               | TinySegmenterを使用する最小文字数（camelCase）          |
 | `japaneseMergeThreshold`            | number      | 2               | 助詞結合の最大文字数（camelCase）                       |
 | `debugMode`                         | boolean     | v:false         | デバッグモードを有効化                                  |
@@ -182,6 +183,64 @@ let g:hellshake_yano = #{
 " 注意: perKeyMinLength内のキーは自動的にマッピングされます！
 " countedMotionsを個別に設定する必要はありません。
 ```
+
+### ヒント位置設定
+
+`hintPosition` オプションを使用して、単語上でヒントを表示する位置を制御します。
+
+#### 利用可能なオプション
+
+- **`'start'`** (デフォルト): 単語の先頭にヒントを表示
+- **`'end'`**: 単語の末尾にヒントを表示
+- **`'both'`**: 単語の先頭と末尾の両方にヒントを表示
+
+#### 両端ヒントと単語長閾値
+
+`hintPosition: 'both'` を使用する場合、`bothMinWordLength` を使用して短い単語でのヒント重なりを防ぐことができます：
+
+- `bothMinWordLength` **以上**の長さの単語は両端にヒントを表示
+- `bothMinWordLength` **未満**の長さの単語は自動的に片側ヒント（先頭位置）へフォールバック
+
+**基本設定:**
+```vim
+let g:hellshake_yano = #{
+\   hintPosition: 'both',
+\   bothMinWordLength: 5,  " デフォルト: 5文字
+\   defaultMinWordLength: 2
+\ }
+```
+
+**動作例:**
+- `"Hello"` (5文字) → 両端にヒント: `H`ell`o`
+- `"vim"` (3文字) → 先頭のみにヒント（フォールバック）: `v`im
+- `"JavaScript"` (10文字) → 両端にヒント: `J`avaScrip`t`
+
+**応用例 - コードナビゲーション最適化:**
+```vim
+let g:hellshake_yano = #{
+\   hintPosition: 'both',
+\   bothMinWordLength: 6,      " 6文字以上の単語に両端ヒント
+\   defaultMinWordLength: 3,   " 3文字以上の単語にヒント表示
+\   perKeyMinLength: #{
+\     'w': 4,   " 単語移動 - 意味のある単語のみ
+\     'v': 2,   " ビジュアルモード - より精密なヒント
+\   },
+\   perKeyMotionCount: #{
+\     'w': 1,   " 単語移動で即座にヒント表示
+\     'v': 1    " ビジュアルモードで即座にヒント表示
+\   }
+\ }
+```
+
+**他の設定との関係:**
+
+| 設定 | 目的 | `bothMinWordLength` との相互作用 |
+|------|------|----------------------------------|
+| `defaultMinWordLength` | ヒント表示の最小単語長 | `bothMinWordLength` チェック前に適用される |
+| `perKeyMinLength` | キーごとの最小単語長 | `defaultMinWordLength` より優先される |
+| `bothMinWordLength` | 両端ヒントの閾値 | `hintPosition: 'both'` 時のみ有効 |
+
+**注意:** `bothMinWordLength` は `hintPosition` が `'both'` に設定されている場合のみ有効です。未設定の場合、デフォルト値は `5` です。
 
 ### 辞書システム
 

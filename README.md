@@ -60,7 +60,7 @@ The plugin can be configured using the `g:hellshake_yano` dictionary variable. A
 | `defaultMotionCount`            | number      | undefined       | Default motion count for unspecified keys                      |
 | `perKeyMotionCount`             | dict        | {}              | Per-key motion count settings                                  |
 | `motionTimeout`                 | number      | 2000            | Motion count timeout (milliseconds)                            |
-| `hintPosition`                  | string      | 'start'         | Position to display hints ('start' or 'end')                   |
+| `hintPosition`                  | string      | 'start'         | Position to display hints ('start', 'end', or 'both')          |
 | `triggerOnHjkl`                 | boolean     | v:true          | Enable triggering on hjkl movement                             |
 | `countedMotions`                | array       | []              | Custom motion keys to track (overrides triggerOnHjkl)          |
 | `enabled`                       | boolean     | v:true          | Enable/disable plugin                                          |
@@ -78,6 +78,7 @@ The plugin can be configured using the `g:hellshake_yano` dictionary variable. A
 | `keyRepeatResetDelay`           | number      | 300             | Reset delay after key repeat (ms)                              |
 | `perKeyMinLength`               | dict        | {}              | Set minimum word length per key                                |
 | `defaultMinWordLength`          | number      | 2               | Default minimum word length for hints                          |
+| `bothMinWordLength`             | number      | 5               | Minimum word length for both-side hints (when hintPosition='both') |
 | `segmenterThreshold`            | number      | 4               | Minimum characters to use TinySegmenter (camelCase)            |
 | `japaneseMergeThreshold`        | number      | 2               | Maximum characters for particle merging (camelCase)            |
 | `debugMode`                     | boolean     | v:false         | Enable debug mode                                              |
@@ -184,6 +185,107 @@ let g:hellshake_yano = #{
 " Note: Keys in perKeyMinLength are automatically mapped!
 " No need to set countedMotions separately.
 ```
+
+### Hint Position Settings
+
+Control where hints are displayed on words using the `hintPosition` option.
+
+#### Available Options
+
+- **`'start'`** (default): Display hints at the beginning of words
+- **`'end'`**: Display hints at the end of words
+- **`'both'`**: Display hints at both the beginning and end of words
+
+#### Both-Side Hints with Word Length Threshold
+
+When using `hintPosition: 'both'`, you can use `bothMinWordLength` to prevent hint overlap on short words:
+
+- Words **longer than or equal to** `bothMinWordLength` show hints at both ends
+- Words **shorter than** `bothMinWordLength` automatically fall back to single-side hints (start position)
+- **Default value**: `5` characters (can be customized)
+- **Fallback behavior**: Short words use start-position hints to avoid visual clutter
+
+**Basic Configuration:**
+```vim
+let g:hellshake_yano = #{
+\   hintPosition: 'both',
+\   bothMinWordLength: 5,  " Threshold for both-side hints (default: 5)
+\   defaultMinWordLength: 2
+\ }
+```
+
+**Lua Configuration (for Neovim):**
+```lua
+vim.g.hellshake_yano = {
+  hintPosition = "both",
+  bothMinWordLength = 5,  -- Threshold for both-side hints (default: 5)
+  defaultMinWordLength = 2
+}
+```
+
+**How it works:**
+- `"Hello"` (5 chars) → hints at both start and end: `H`ell`o`
+- `"vim"` (3 chars) → hint at start only (fallback): `v`im
+- `"JavaScript"` (10 chars) → hints at both ends: `J`avaScrip`t`
+- `"a"` (1 char) → hint at start only (fallback): `a`
+
+**Advanced Example - Optimized for Code Navigation:**
+```vim
+let g:hellshake_yano = #{
+\   hintPosition: 'both',
+\   bothMinWordLength: 6,      " Both-side hints for 6+ character words
+\   defaultMinWordLength: 3,   " Show hints for 3+ character words
+\   perKeyMinLength: #{
+\     'w': 4,   " Word motion - meaningful words only
+\     'v': 2,   " Visual mode - more precise hints
+\   },
+\   perKeyMotionCount: #{
+\     'w': 1,   " Show hints immediately on word motion
+\     'v': 1    " Show hints immediately in visual mode
+\   }
+\ }
+```
+
+**Lua Configuration (for Neovim):**
+```lua
+vim.g.hellshake_yano = {
+  hintPosition = "both",
+  bothMinWordLength = 6,      -- Both-side hints for 6+ character words
+  defaultMinWordLength = 3,   -- Show hints for 3+ character words
+  perKeyMinLength = {
+    w = 4,   -- Word motion - meaningful words only
+    v = 2,   -- Visual mode - more precise hints
+  },
+  perKeyMotionCount = {
+    w = 1,   -- Show hints immediately on word motion
+    v = 1    -- Show hints immediately in visual mode
+  }
+}
+```
+
+**Relationship with Other Settings:**
+
+| Setting | Purpose | Interaction with `bothMinWordLength` |
+|---------|---------|--------------------------------------|
+| `defaultMinWordLength` | Minimum length to show any hints | Applied before `bothMinWordLength` check |
+| `perKeyMinLength` | Per-key minimum word length | Takes precedence over `defaultMinWordLength` |
+| `bothMinWordLength` | Threshold for both-side hints | Only applies when `hintPosition: 'both'` |
+
+**Common Use Cases:**
+
+1. **Long variable names** (default: `bothMinWordLength: 5`)
+   - Best for codebases with descriptive naming (e.g., `getUserAccountDetails`)
+   - Both-side hints help identify long identifiers quickly
+
+2. **Short function names** (recommended: `bothMinWordLength: 3`)
+   - Suitable for terse codebases (e.g., `map`, `get`, `set`)
+   - Lower threshold provides more both-side hints
+
+3. **Mixed content** (recommended: `bothMinWordLength: 6-8`)
+   - Documentation with prose and code snippets
+   - Higher threshold reduces visual noise in narrative text
+
+**Note:** `bothMinWordLength` is only effective when `hintPosition` is set to `'both'`. If unset, defaults to `5`. When `hintPosition` is `'start'` or `'end'`, this setting is ignored.
 
 ### Dictionary System
 

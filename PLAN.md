@@ -1,74 +1,106 @@
-# title: hintPosition both 用閾値設定の導入
+# title: perKeyMotionCount が機能しない問題の修正
 
 ## 概要
-- `hintPosition: "both"` 利用時でも短い単語では片側だけにヒントを描画できる閾値設定（仮称 `bothMinWordLength`）を追加し、ヒントの重なりを防ぐ 
+- `perKeyMotionCount` 設定でキー別のモーションカウント閾値を設定しても、実際には `motionCount` の値が優先されてしまう問題を修正する
 
 ### goal
-- ユーザーが短語での視認性低下を避けながら、必要な場合のみ両端ヒントを活用できるようにする 
+- ユーザーが hjkl で 2 回、wbe で 1 回のキー入力でヒント表示をトリガーできるようにする
+- キーごとに異なる閾値を設定し、使いやすいナビゲーション体験を実現する
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 
 ## 開発のゴール
-- `both` モード時に単語長が閾値未満であれば自動的に片側（デフォルトは先頭）へフォールバックさせ、既存設定との後方互換性と拡張性を両立する
+- `perKeyMotionCount` の設定が正しく反映され、キー別のモーションカウント閾値が機能するようにする
+- 設定変更時にキャッシュが適切にクリアされ、新しい設定が即座に反映されるようにする
 
 ## 実装仕様
-- `Config.hintPosition` 型に `"both"` を正式に含め、`Config`／`DEFAULT_CONFIG`／バリデーションへオプション `bothMinWordLength?: number` を追加する
-- Vimscript 側（camelCase / snake_case）から新オプションを受け取り、Denops 経由で TypeScript に伝搬させる経路を整備する
-- `assignHintsToWords` で閾値未満の単語に対しては片側ヒントへ切り替え、閾値以上では従来通り両端ヒントを生成する
-- `createAssignmentCacheKey` などヒント関連キャッシュに新オプションの影響を反映し、設定変更時に stale cache が残らないようにする
-- 新挙動を検証するユニット／統合テストと、README / README_ja / Vimdoc の更新を行う
+- `s:motion_count_cache` のクリア機構を実装し、設定変更時に自動的にキャッシュをリセットする
+- `per_key_motion_count` の優先順位が正しく機能することを確認する（優先順位: per_key_motion_count > default_motion_count > motion_count）
+
+## 調査結果
+
+### 問題の特定
+**ユーザー設定**:
+```vim
+'perKeyMotionCount': {
+  'w': 1,
+  'b': 1,
+  'e': 1,
+  'h': 2,
+  'j': 2,
+  'k': 2,
+  'l': 2,
+}
+```
+
+**期待動作**: hjkl は2回の入力でヒント表示、wbe は1回でヒント表示
+
+**実際の動作**: `motionCount` の設定値が優先されている（perKeyMotionCount が無視されている）
+
+### 根本原因
+**Vimscript 側のロジック** (`autoload/hellshake_yano/motion.vim:41-68`):
+- ロジック自体は正しい（per_key_motion_count が最優先）
+- **キャッシュが原因**: 設定変更後に `s:motion_count_cache` がクリアされず、古い値が使われ続けている
+
+**コードフロー**:
+1. `s:get_motion_count_for_key` がキャッシュをチェック
+2. キャッシュにヒットした場合、古い値を返す
+3. `per_key_motion_count` の新しい設定値が反映されない
 
 ## 生成AIの学習用コンテキスト
-### TypeScript
-- denops/hellshake-yano/config.ts
-  - 設定スキーマ・デフォルト・バリデーションの拡張
-- denops/hellshake-yano/hint.ts
-  - `assignHintsToWords`／キャッシュキー生成の分岐追加
-- denops/hellshake-yano/core.ts
-  - 設定同期とヒント再計算フローへの新オプション反映
-- denops/hellshake-yano/display.ts
-  - 片側フォールバック後も extmark / matchadd が正しく描画されるか確認
 
 ### Vimscript
-- plugin/hellshake-yano.vim
-  - グローバル設定の初期化と Denops への受け渡し
-- autoload/hellshake_yano/config.vim
-  - ユーザー設定の正規化と camel/snake の変換
+- autoload/hellshake_yano/motion.vim
+  - `s:get_motion_count_for_key` 関数のキャッシュロジック（41-68行目）
+  - キャッシュクリア関数の追加位置
+- autoload/hellshake_yano/command.vim
+  - `s:notify_denops_config` 関数（25-35行目）
+  - `hellshake_yano#command#set_count` 関数（93-113行目）
 
 ### Tests
-- tests/hint.test.ts ほかヒント関連テスト
-  - 閾値境界・未設定時の挙動をカバーする追加ケース
+- tests/per_key_motion_count_test.ts
+  - 既存のテストケース確認
+  - キャッシュクリアのテスト追加
 
 ## Process
-### process1 両端ヒント閾値機能の実装
-#### sub1 設定スキーマと伝搬ルートの拡張
-@target: denops/hellshake-yano/config.ts
-@ref: plugin/hellshake-yano.vim
-- [ ] `Config` 型と `DEFAULT_CONFIG` に `bothMinWordLength` を追加し、`hintPosition` 型へ `"both"` を明記する
-- [ ] `validateConfig`／`validateUnifiedConfig` に数値チェックと既存 `defaultMinWordLength` との整合処理を追加する
-- [ ] Vimscript 側でDenops へ新オプションを渡す（CamelCaseのみ）
-- [ ] deno check で型エラーが出ないことを確認する
-- [ ] deno test で既存テストが通ることを確認する
 
-#### sub2 ヒント割当とキャッシュ整備
-@target: denops/hellshake-yano/hint.ts
-@ref: denops/hellshake-yano/core.ts
-- [ ] `assignHintsToWords` で閾値未満の単語を片側ヒントへフォールバックさせ、閾値以上は従来通り両端ヒントを割り当てる
-  - [ ] フォールバック先はデフォルトで先頭側
-- [ ] `createAssignmentCacheKey` など関連キャッシュに `bothMinWordLength` とフォールバック結果を織り込み、設定変更時は必要に応じてヒントキャッシュを無効化する
-- [ ] `calculateHintPosition`／描画フローへの影響を確認し、必要なら補足コメントやヘルパー関数で拡張余地を残す
+### process1 キャッシュクリア機構の実装
+#### sub1 キャッシュクリア関数の追加
+@target: autoload/hellshake_yano/motion.vim
+@ref: なし
+- [ ] `hellshake_yano#motion#clear_motion_count_cache()` 公開関数を追加
+  - `s:motion_count_cache = {}` でキャッシュを初期化
+  - 関数の配置位置: 公開関数セクション（150行目付近）
+
+#### sub2 設定変更時の自動クリア機構
+@target: autoload/hellshake_yano/command.vim
+@ref: autoload/hellshake_yano/motion.vim
+- [ ] `s:notify_denops_config` 関数内でキャッシュクリアを追加
+  - denops通知の前にキャッシュクリアを実行
+  - `exists()` でキャッシュクリア関数の存在確認
+- [ ] `hellshake_yano#command#set_count` 関数内でキャッシュクリアを追加
+  - 設定更新後、denops通知前にキャッシュクリア
+  - 既存の `s:clear_motion_count_cache()` 呼び出しを `hellshake_yano#motion#clear_motion_count_cache()` に変更
 
 ### process10 ユニットテスト
-- [ ] `hint.ts` 用ユニットテストで閾値未満／閾値以上／未設定／`both` 以外の各シナリオを網羅する
-- [ ] @denops/test ベースの統合テストで Vimscript 設定→Denops→表示までの反映を確認する
+- [ ] 既存テスト `tests/per_key_motion_count_test.ts` の実行確認
+- [ ] キャッシュクリアのテストケース追加
+  - 設定変更後にキャッシュが正しくクリアされることを確認
+  - hjkl の各キーで設定値が正しく適用されることを確認
+- [ ] 統合テスト実施
+  - Vim/Neovim で実際に設定を変更し、動作を確認
 
 ### process50 フォローアップ
-- [ ] フォールバック方向をユーザーが選択できるオプション化や、ヒント不足時の追加通知が必要か検討しチケット化する
+- [ ] パフォーマンス影響の確認（キャッシュクリア頻度が高すぎないか）
+- [ ] 他の設定変更時にもキャッシュクリアが必要か検討
 
 ### process100 リファクタリング
-- [ ] 単語長判定やヒント位置決定ロジックを共通化できる場合はユーティリティ関数へ切り出す
+- [ ] キャッシュ管理を専用モジュールに分離する必要性を検討
+- [ ] `s:clear_motion_count_cache` （command.vim内）の削除または統合
 
 ### process200 ドキュメンテーション
-- [ ] hintPosition both 用の設定例を README / README_ja / doc に追加する
-- [ ] README / README_ja / doc に `bothMinWordLength` の説明・設定例・既存設定との関係を追記する
+- [ ] README.md に `perKeyMotionCount` の設定例と注意事項を追記
+  - 設定変更時の反映タイミングについて説明
+  - キャッシュの仕組みについて簡単に説明
+
