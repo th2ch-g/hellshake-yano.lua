@@ -8,6 +8,18 @@ hellshake-yano.vim is a Neovim plugin that enables seamless cursor movement betw
 
 It fully supports UTF-8 encoding and properly handles Japanese characters, making word-based navigation in Japanese text as smooth as in English.
 
+### Demo
+
+**Cursor move**
+
+![move-hint](https://github.com/nekowasabi/gif/blob/master/hellshake-yano/move-hint.gif?raw=true)
+
+**Visual select**
+
+![visual-hint](https://github.com/nekowasabi/gif/blob/master/hellshake-yano/visual-hint.gif?raw=true)
+
+
+
 ## Features
 
 - **Seamless Cursor Movement**: Navigate between words with standard vim motions (h, j, k, l, w, b, e)
@@ -21,14 +33,14 @@ It fully supports UTF-8 encoding and properly handles Japanese characters, makin
 ### Using vim-plug
 
 ```vim
-Plug 'username/hellshake-yano.vim'
+Plug 'nekowasabi/hellshake-yano.vim'
 ```
 
 ### Using lazy.nvim
 
 ```lua
 {
-  'username/hellshake-yano.vim',
+  'nekowasabi/hellshake-yano.vim',
   config = function()
     -- Configuration here
   end
