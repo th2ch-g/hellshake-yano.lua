@@ -1004,10 +1004,10 @@ export class Core {
       const normalizedKeys = allKeys.map(k => /[a-zA-Z]/.test(k) ? k.toUpperCase() : k);
       const validKeysSet = new Set(normalizedKeys);
       if (!validKeysSet.has(inputChar)) {
-        const keysSample = normalizedKeys.slice(0, 10).join(", ");
-        const moreKeys = normalizedKeys.length > 10 ? `, ... (${normalizedKeys.length} total)` : "";
-        await this.showErrorFeedback(denops, `Please use configured hint keys: ${keysSample}${moreKeys}`);
+        // ヒント以外のキーが入力された場合、ヒントを非表示にしてキーを通常処理に送る
         await this.hideHintsOptimized(denops);
+        const originalChar = String.fromCharCode(char);
+        await denops.call("feedkeys", originalChar, "n");
         return;
       }
       const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
