@@ -1,16 +1,5 @@
-" autoload/hellshake_yano/count.vim - カウント管理関数
-" Author: hellshake-yano
 " License: MIT
 
-" 保存と復元
-let s:save_cpo = &cpo
-set cpo&vim
-
-"=============================================================================
-" カウント管理関数群
-"=============================================================================
-
-" キー別カウントの初期化（最適化版）
 function! hellshake_yano#count#init_key_count(bufnr, key) abort
   if !has_key(g:hellshake_yano_internal.motion_count, a:bufnr)
     let g:hellshake_yano_internal.motion_count[a:bufnr] = {a:key: 0}
@@ -64,16 +53,8 @@ function! hellshake_yano#count#reset_all_buffers() abort
   endfor
 endfunction
 
-" キー別モーションカウント処理
 function! hellshake_yano#count#process_motion_count_for_key(bufnr, key) abort
-  " 既存のタイマーをクリア（キー別）
   call hellshake_yano#timer#stop_and_clear_timer_for_key(a:bufnr, a:key)
-
-  " キー別カウントを増加
   call hellshake_yano#count#increment_key_count(a:bufnr, a:key)
   call hellshake_yano#state#set_last_motion_time(a:bufnr, reltime())
 endfunction
-
-" 保存と復元
-let &cpo = s:save_cpo
-unlet s:save_cpo

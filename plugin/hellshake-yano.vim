@@ -294,7 +294,7 @@ function! s:apply_custom_highlights() abort
     try
       call s:apply_highlight('HellshakeYanoMarker', l:marker_config)
     catch
-      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker: ' . string(l:marker_config))
+      call hellshake_yano#utils#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker: ' . string(l:marker_config))
     endtry
   endif
 
@@ -305,7 +305,7 @@ function! s:apply_custom_highlights() abort
     try
       call s:apply_highlight('HellshakeYanoMarkerCurrent', l:current_config)
     catch
-      call hellshake_yano#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker_current: ' . string(l:current_config))
+      call hellshake_yano#utils#show_error('[hellshake-yano] Error: Invalid highlight_hint_marker_current: ' . string(l:current_config))
     endtry
   endif
 endfunction
@@ -326,7 +326,7 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
       call s:validate_highlight_group_name(a:color_config)
       execute 'highlight default link ' . a:hlgroup_name . ' ' . a:color_config
     catch
-      call hellshake_yano#show_error(v:exception)
+      call hellshake_yano#utils#show_error(v:exception)
     endtry
     return
   endif
@@ -339,7 +339,7 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
     if has_key(a:color_config, 'fg') && !empty(a:color_config.fg)
       try
         call s:validate_color_value(a:color_config.fg)
-        let l:fg_color = hellshake_yano#normalize_color_name(a:color_config.fg)
+        let l:fg_color = hellshake_yano#validation#normalize_color_name(a:color_config.fg)
         if a:color_config.fg =~# '^#'
           " 16進数色の場合はguifgとctermfgの両方を設定
           call add(l:cmd_parts, 'guifg=' . a:color_config.fg)
@@ -350,7 +350,7 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
           call add(l:cmd_parts, 'guifg=' . l:fg_color)
         endif
       catch
-        call hellshake_yano#show_error(v:exception)
+        call hellshake_yano#utils#show_error(v:exception)
         return
       endtry
     endif
@@ -359,7 +359,7 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
     if has_key(a:color_config, 'bg') && !empty(a:color_config.bg)
       try
         call s:validate_color_value(a:color_config.bg)
-        let l:bg_color = hellshake_yano#normalize_color_name(a:color_config.bg)
+        let l:bg_color = hellshake_yano#validation#normalize_color_name(a:color_config.bg)
         if a:color_config.bg =~# '^#'
           " 16進数色の場合はguibgとctermbgの両方を設定
           call add(l:cmd_parts, 'guibg=' . a:color_config.bg)
@@ -370,7 +370,7 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
           call add(l:cmd_parts, 'guibg=' . l:bg_color)
         endif
       catch
-        call hellshake_yano#show_error(v:exception)
+        call hellshake_yano#utils#show_error(v:exception)
         return
       endtry
     endif
@@ -382,18 +382,18 @@ function! s:apply_highlight(hlgroup_name, color_config) abort
   endif
 
   " その他の型の場合はエラー
-  call hellshake_yano#show_error('[hellshake-yano] Error: Invalid color configuration type')
+  call hellshake_yano#utils#show_error('[hellshake-yano] Error: Invalid color configuration type')
 endfunction
 
 
 " ハイライトグループ名の検証関数（autoload関数のラッパー）
 function! s:validate_highlight_group_name(name) abort
-  return hellshake_yano#validate_highlight_group_name(a:name)
+  return hellshake_yano#validation#highlight_group_name(a:name)
 endfunction
 
 " 色値の検証関数（autoload関数のラッパー）
 function! s:validate_color_value(color) abort
-  return hellshake_yano#validate_color_value(a:color)
+  return hellshake_yano#validation#color_value(a:color)
 endfunction
 
 "=============================================================================
@@ -404,7 +404,7 @@ endfunction
 " denopsの初期化確認
 function! s:check_denops() abort
   if !exists('g:loaded_denops')
-    call hellshake_yano#show_error('[hellshake-yano] Error: denops.vim is not loaded. Please install denops.vim first.')
+    call hellshake_yano#utils#show_error('[hellshake-yano] Error: denops.vim is not loaded. Please install denops.vim first.')
     return 0
   endif
   return 1
@@ -439,29 +439,29 @@ endfunction
 
 " モーションキーマッピング（初期設定で有効な場合、デフォルト有効）
 if get(g:hellshake_yano, 'enabled', v:true)
-  call hellshake_yano#setup_motion_mappings()
+  call hellshake_yano#mapping#setup_motion_mappings()
 endif
 
 " コマンド定義
-command! -nargs=0 HellshakeYanoEnable call hellshake_yano#enable()
-command! -nargs=0 HellshakeYanoDisable call hellshake_yano#disable()
-command! -nargs=0 HellshakeYanoToggle call hellshake_yano#toggle()
-command! -nargs=0 HellshakeYanoShow call hellshake_yano#show()
-command! -nargs=0 HellshakeYanoHide call hellshake_yano#hide()
-command! -nargs=1 HellshakeYanoSetCount call hellshake_yano#set_count(<args>)
-command! -nargs=1 HellshakeYanoSetTimeout call hellshake_yano#set_timeout(<args>)
-command! -nargs=+ HellshakeYanoSetHighlight call hellshake_yano#update_highlight(<f-args>)
-command! -nargs=+ HellshakeYanoSetCountedMotions call hellshake_yano#set_counted_motions([<f-args>])
-command! -nargs=0 HellshakeYanoDebug call hellshake_yano#debug()
+command! -nargs=0 HellshakeYanoEnable call hellshake_yano#plugin#enable()
+command! -nargs=0 HellshakeYanoDisable call hellshake_yano#plugin#disable()
+command! -nargs=0 HellshakeYanoToggle call hellshake_yano#plugin#toggle()
+command! -nargs=0 HellshakeYanoShow call hellshake_yano#hint#show()
+command! -nargs=0 HellshakeYanoHide call hellshake_yano#hint#hide()
+command! -nargs=1 HellshakeYanoSetCount call hellshake_yano#config#set_count(<args>)
+command! -nargs=1 HellshakeYanoSetTimeout call hellshake_yano#config#set_timeout(<args>)
+command! -nargs=+ HellshakeYanoSetHighlight call hellshake_yano#highlight#update(<f-args>)
+command! -nargs=+ HellshakeYanoSetCountedMotions call hellshake_yano#mapping#set_counted_motions([<f-args>])
+command! -nargs=0 HellshakeYanoDebug call hellshake_yano#debug#display()
 
 " 自動コマンド
 augroup HellshakeYano
   autocmd!
   " モード変更時にカウントをリセット
-  autocmd ModeChanged * call hellshake_yano#reset_count()
+  autocmd ModeChanged * call hellshake_yano#count#reset_all_buffers()
   " バッファ変更時の処理
-  autocmd BufEnter * call hellshake_yano#on_buf_enter()
-  autocmd BufLeave * call hellshake_yano#on_buf_leave()
+  autocmd BufEnter * call hellshake_yano#plugin#on_buf_enter()
+  autocmd BufLeave * call hellshake_yano#plugin#on_buf_leave()
   " denopsプラグインの遅延読み込み
   autocmd User DenopsPluginPost:hellshake-yano call s:on_denops_ready()
   " カラースキーム変更時にハイライトを再適用

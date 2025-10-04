@@ -1,16 +1,5 @@
-" autoload/hellshake_yano/debug.vim - デバッグ関数
-" Author: hellshake-yano
 " License: MIT
 
-" 保存と復元
-let s:save_cpo = &cpo
-set cpo&vim
-
-"=============================================================================
-" デバッグ・テスト関数群
-"=============================================================================
-
-" デバッグ情報を取得（詳細版）
 function! hellshake_yano#debug#get_info() abort
   let bufnr = hellshake_yano#utils#bufnr()
   call hellshake_yano#state#init_buffer_state(bufnr)
@@ -59,7 +48,6 @@ function! hellshake_yano#debug#get_info() abort
   return debug_info
 endfunction
 
-" デバッグ情報を表示形式に整形
 function! hellshake_yano#debug#build_info(bufnr) abort
   call hellshake_yano#state#init_buffer_state(a:bufnr)
   let l:lines = []
@@ -70,7 +58,6 @@ function! hellshake_yano#debug#build_info(bufnr) abort
   call add(l:lines, 'Motion count threshold: ' . get(g:hellshake_yano, 'motion_count', 0))
   call add(l:lines, 'Timeout: ' . get(g:hellshake_yano, 'motion_timeout', 0) . 'ms')
   call add(l:lines, 'Current buffer: ' . a:bufnr)
-  " キー別カウント情報を表示
   let key_counts = get(g:hellshake_yano_internal.motion_count, a:bufnr, {})
   if type(key_counts) == v:t_dict && !empty(key_counts)
     call add(l:lines, 'Key counts: ' . string(key_counts))
@@ -82,13 +69,10 @@ function! hellshake_yano#debug#build_info(bufnr) abort
   call add(l:lines, 'Highlight hint marker: ' . get(g:hellshake_yano, 'highlight_hint_marker', 'DiffAdd'))
   call add(l:lines, 'Highlight hint marker current: ' . get(g:hellshake_yano, 'highlight_hint_marker_current', 'DiffText'))
   call add(l:lines, 'Counted motions: ' . string(hellshake_yano#config#get_motion_keys()))
-  " Key repeat detection debug
   call add(l:lines, 'Key repeat suppression: ' . (get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true) ? 1 : 0))
   call add(l:lines, 'Key repeat threshold: ' . get(g:hellshake_yano, 'keyRepeatThreshold', 50) . 'ms')
   call add(l:lines, 'Key repeat reset delay: ' . get(g:hellshake_yano, 'keyRepeatResetDelay', 300) . 'ms')
   call add(l:lines, 'Key repeating (current buffer): ' . (hellshake_yano#state#is_key_repeating(a:bufnr) ? 1 : 0))
-
-  " デバッグモード専用情報
   if get(g:hellshake_yano, 'debug_mode', v:false)
     call add(l:lines, '--- Debug Mode Details ---')
     call add(l:lines, 'Last key time: ' . hellshake_yano#state#get_last_key_time(a:bufnr))
@@ -97,36 +81,22 @@ function! hellshake_yano#debug#build_info(bufnr) abort
     call add(l:lines, 'Motion timer active: ' . (has_key(g:hellshake_yano_internal.timer_id, a:bufnr) ? 'YES' : 'NO'))
     call add(l:lines, 'Repeat timer active: ' . (has_key(g:hellshake_yano_internal.repeat_end_timer, a:bufnr) ? 'YES' : 'NO'))
   endif
-
   return l:lines
 endfunction
 
-" デバッグ表示関数（debug_mode がtrueの時のみ動作）
 function! hellshake_yano#debug#show() abort
   if !get(g:hellshake_yano, 'debug_mode', v:false)
     return
   endif
-
   let debug_info = hellshake_yano#debug#get_info()
-
-  " ステータスライン用の簡潔な形式（キー別カウント対応）
-  let key_count_summary = ''
-  if !empty(debug_info.key_counts)
-    let key_count_summary = string(debug_info.key_counts)
-  else
-    let key_count_summary = '(none)'
-  endif
+  let key_count_summary = !empty(debug_info.key_counts) ? string(debug_info.key_counts) : '(none)'
   let status_msg = printf('[hellshake-yano] KeyCounts:%s Repeat:%s Debug:ON',
-        \ key_count_summary,
-        \ (debug_info.key_repeat.is_repeating ? 'YES' : 'NO'))
-
-  " エコーエリアに表示
+        \ key_count_summary, (debug_info.key_repeat.is_repeating ? 'YES' : 'NO'))
   echohl WarningMsg
   echo status_msg
   echohl None
 endfunction
 
-" デバッグ情報を表示
 function! hellshake_yano#debug#display() abort
   let l:info = hellshake_yano#debug#build_info(hellshake_yano#utils#bufnr())
   for l:line in l:info
@@ -154,11 +124,6 @@ function! hellshake_yano#debug#increment_key_count(bufnr, key) abort
   call hellshake_yano#count#increment_key_count(a:bufnr, a:key)
 endfunction
 
-" テスト用: キー別のモーションカウントをリセット
 function! hellshake_yano#debug#reset_key_count(bufnr, key) abort
   call hellshake_yano#count#reset_key_count(a:bufnr, a:key)
 endfunction
-
-" 保存と復元
-let &cpo = s:save_cpo
-unlet s:save_cpo

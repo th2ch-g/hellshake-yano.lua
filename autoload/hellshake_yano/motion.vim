@@ -1,32 +1,5 @@
-" autoload/hellshake_yano/motion.vim - モーション処理
-" Author: hellshake-yano
 " License: MIT
-"
-" このモジュールはメインのモーション処理を担当します
-" - hellshake_yano#motion#process() - 通常のモーション処理
-" - hellshake_yano#motion#visual() - ビジュアルモード用のモーション処理
-" - hellshake_yano#motion#with_key_context() - キーコンテキスト付きモーション処理
 
-" 保存と復元
-let s:save_cpo = &cpo
-set cpo&vim
-
-"=============================================================================
-" 内部関数
-"=============================================================================
-
-" バッファ番号を取得
-function! s:bufnr() abort
-  return bufnr('%')
-endfunction
-
-" 経過時間をミリ秒で取得（高精度）
-function! s:get_elapsed_time() abort
-  let time_str = reltimestr(reltime())
-  return float2nr(str2float(time_str) * 1000.0)
-endfunction
-
-" キーリピート設定を取得
 function! s:get_key_repeat_config() abort
   return {
         \ 'enabled': get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true),
@@ -35,11 +8,7 @@ function! s:get_key_repeat_config() abort
         \ }
 endfunction
 
-
 " キー別ヒント表示の必要性を判定
-" @param bufnr バッファ番号
-" @param key キー文字
-" @return v:true = ヒント表示, v:false = 表示しない
 function! s:should_trigger_hints_for_key(bufnr, key) abort
   if hellshake_yano#state#is_key_repeating(a:bufnr)
     return v:false
@@ -51,10 +20,6 @@ function! s:should_trigger_hints_for_key(bufnr, key) abort
 endfunction
 
 " キーリピート検出処理
-" @param bufnr バッファ番号
-" @param current_time 現在時刻（ミリ秒）
-" @param config キーリピート設定辞書
-" @return v:true = リピート中でヒント表示をスキップ, v:false = 通常処理を継続
 function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
   " 機能が無効の場合は通常処理
   if !a:config.enabled
@@ -84,60 +49,24 @@ function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
   return v:false
 endfunction
 
-" デバッグ表示を処理
-function! s:handle_debug_display() abort
-  if get(g:hellshake_yano, 'debug_mode', v:false)
-    if exists('*hellshake_yano#show_debug')
-      call hellshake_yano#show_debug()
-    endif
-  endif
-endfunction
-
-" パフォーマンスログ関数（performance_log がtrueの時のみ動作）
-function! s:log_performance(operation, time_ms, ...) abort
-  if !get(g:hellshake_yano, 'performance_log', v:false)
-    return
-  endif
-
-  let bufnr = s:bufnr()
-  let extra_info = a:0 > 0 ? a:1 : {}
-
-  let log_entry = printf('[hellshake-yano:PERF] %s buf:%d time:%dms',
-        \ a:operation, bufnr, a:time_ms)
-
-  " 追加情報があれば付加
-  if !empty(extra_info) && type(extra_info) == v:t_dict
-    let log_entry .= ' ' . string(extra_info)
-  endif
-
-  " ログ出力
-  echomsg log_entry
-endfunction
-
-"=============================================================================
-" 公開関数
-"=============================================================================
-
-" hjkl移動時の処理（リファクタリング済み）
-" @param key キー文字
-" @return キー文字
+" モーション処理の統合関数
 function! hellshake_yano#motion#process(key) abort
-  let start_time = s:get_elapsed_time()
+  let start_time = hellshake_yano#utils#get_elapsed_time()
 
   " プラグインが無効な場合は通常の動作
   if !get(g:hellshake_yano, 'enabled', v:true)
     return a:key
   endif
 
-  let bufnr = s:bufnr()
+  let bufnr = hellshake_yano#utils#bufnr()
   call hellshake_yano#state#init_buffer_state(bufnr)
 
   " キーリピート検出処理
-  let current_time = s:get_elapsed_time()
+  let current_time = hellshake_yano#utils#get_elapsed_time()
   let config = s:get_key_repeat_config()
 
   if s:handle_key_repeat_detection(bufnr, current_time, config)
-    call s:handle_debug_display()
+    call hellshake_yano#hint#handle_debug_display()
     return a:key
   endif
 
@@ -148,96 +77,33 @@ function! hellshake_yano#motion#process(key) abort
   if s:should_trigger_hints_for_key(bufnr, a:key)
     call hellshake_yano#count#reset_key_count(bufnr, a:key)
 
-    " show_hints_with_key関数が存在するかチェック
-    if exists('*hellshake_yano#show_hints_with_key')
-      call hellshake_yano#show_hints_with_key(a:key)
-    endif
+    " キー情報付きヒント表示
+    call hellshake_yano#show_hints_with_key(a:key)
 
-    call s:log_performance('motion_with_hints', s:get_elapsed_time() - start_time, {
+    call hellshake_yano#utils#log_performance('motion_with_hints', hellshake_yano#utils#get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': hellshake_yano#config#get_motion_count_for_key(a:key) })
   else
     call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
-    call s:log_performance('motion_normal', s:get_elapsed_time() - start_time, {
+    call hellshake_yano#utils#log_performance('motion_normal', hellshake_yano#utils#get_elapsed_time() - start_time, {
           \ 'key': a:key, 'count': hellshake_yano#count#get_key_count(bufnr, a:key) })
   endif
 
-  call s:handle_debug_display()
+  call hellshake_yano#hint#handle_debug_display()
   return a:key
 endfunction
 
-" ビジュアルモード用のモーション処理
-" @param key キー文字
-" @return キー文字
 function! hellshake_yano#motion#visual(key) abort
-  " 通常のモーション処理を実行
-  " ビジュアルモードでは選択範囲を自然に拡張/縮小させるため、gvは不要
   return hellshake_yano#motion#process(a:key)
 endfunction
 
-" キーコンテキスト付きモーション処理
-" @param key キー文字
-" @return キー文字
 function! hellshake_yano#motion#with_key_context(key) abort
-  let start_time = s:get_elapsed_time()
-
-  " プラグインが無効な場合は通常の動作
-  if !get(g:hellshake_yano, 'enabled', v:true)
-    return a:key
-  endif
-
-  let bufnr = s:bufnr()
-  call hellshake_yano#state#init_buffer_state(bufnr)
-
-  " キーリピート検出処理
-  let current_time = s:get_elapsed_time()
-  let config = s:get_key_repeat_config()
-
-  if s:handle_key_repeat_detection(bufnr, current_time, config)
-    call s:handle_debug_display()
-    return a:key
-  endif
-
-  " キー別モーションカウントを処理
-  call hellshake_yano#count#process_motion_count_for_key(bufnr, a:key)
-
-  " キー別ヒント表示かタイムアウト設定を判定・実行
-  if s:should_trigger_hints_for_key(bufnr, a:key)
-    call hellshake_yano#count#reset_key_count(bufnr, a:key)
-
-    " キー情報付きでヒント表示を呼び出し
-    if exists('*hellshake_yano#show_hints_with_key')
-      call hellshake_yano#show_hints_with_key(a:key)
-    endif
-
-    call s:log_performance('motion_with_hints_and_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': hellshake_yano#config#get_motion_count_for_key(a:key) })
-  else
-    call hellshake_yano#timer#set_motion_timeout(bufnr, a:key)
-    call s:log_performance('motion_normal_with_key', s:get_elapsed_time() - start_time, {
-          \ 'key': a:key, 'count': hellshake_yano#count#get_key_count(bufnr, a:key) })
-  endif
-
-  call s:handle_debug_display()
-  return a:key
+  return hellshake_yano#motion#process(a:key)
 endfunction
 
-" モーションカウントキャッシュをクリア
-" Note: config.vim のキャッシュクリア関数へのラッパー
 function! hellshake_yano#motion#clear_motion_count_cache() abort
-  if exists('*hellshake_yano#config#clear_motion_count_cache')
-    call hellshake_yano#config#clear_motion_count_cache()
-  endif
+  call hellshake_yano#config#clear_motion_count_cache()
 endfunction
 
-"=============================================================================
-" テスト用公開関数
-"=============================================================================
-
-" テスト用: ヒント表示判定を取得
 function! hellshake_yano#motion#should_trigger_hints_for_key(bufnr, key) abort
   return s:should_trigger_hints_for_key(a:bufnr, a:key)
 endfunction
-
-" 保存と復元
-let &cpo = s:save_cpo
-unlet s:save_cpo

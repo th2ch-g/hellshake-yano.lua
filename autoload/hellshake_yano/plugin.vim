@@ -1,30 +1,4 @@
-" autoload/hellshake_yano/plugin.vim - プラグイン制御
-" Author: hellshake-yano
 " License: MIT
-"
-" このモジュールはプラグインの有効化/無効化を担当します
-" - hellshake_yano#plugin#enable() - プラグインを有効化
-" - hellshake_yano#plugin#disable() - プラグインを無効化
-" - hellshake_yano#plugin#toggle() - プラグインの有効/無効を切り替え
-" - hellshake_yano#plugin#on_buf_enter() - バッファ進入時の処理
-" - hellshake_yano#plugin#on_buf_leave() - バッファ離脱時の処理
-
-" 保存と復元
-let s:save_cpo = &cpo
-set cpo&vim
-
-"=============================================================================
-" 内部関数
-"=============================================================================
-
-" バッファ番号を取得
-function! s:bufnr() abort
-  return bufnr('%')
-endfunction
-
-"=============================================================================
-" 公開関数
-"=============================================================================
 
 " プラグインを有効化
 function! hellshake_yano#plugin#enable() abort
@@ -72,22 +46,16 @@ endfunction
 
 " バッファ進入時の処理
 function! hellshake_yano#plugin#on_buf_enter() abort
-  let bufnr = s:bufnr()
+  let bufnr = hellshake_yano#utils#bufnr()
   if exists('*hellshake_yano#state#init_buffer_state')
     call hellshake_yano#state#init_buffer_state(bufnr)
   endif
 endfunction
 
-" バッファ離脱時の処理
 function! hellshake_yano#plugin#on_buf_leave() abort
-  " ヒントが表示されていれば非表示にする
   if exists('*hellshake_yano#state#is_hints_visible') && hellshake_yano#state#is_hints_visible()
     if exists('*hellshake_yano#hide')
       call hellshake_yano#hide()
     endif
   endif
 endfunction
-
-" 保存と復元
-let &cpo = s:save_cpo
-unlet s:save_cpo

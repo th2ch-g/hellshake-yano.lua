@@ -1,14 +1,4 @@
-" autoload/hellshake_yano/hint.vim - ヒント制御関数
-" Author: hellshake-yano
 " License: MIT
-
-" 保存と復元
-let s:save_cpo = &cpo
-set cpo&vim
-
-"=============================================================================
-" ヒント表示制御関数群
-"=============================================================================
 
 " キー別ヒント表示の必要性を判定
 function! hellshake_yano#hint#should_trigger_hints_for_key(bufnr, key) abort
@@ -84,43 +74,8 @@ function! hellshake_yano#hint#detect_current_mode_from_string(mode_string) abort
   return 'normal'
 endfunction
 
-" デバッグ表示を処理
 function! hellshake_yano#hint#handle_debug_display() abort
   if get(g:hellshake_yano, 'debug_mode', v:false)
     call hellshake_yano#debug#show()
   endif
 endfunction
-
-" キーリピート検出処理
-function! hellshake_yano#hint#handle_key_repeat_detection(bufnr, current_time, config) abort
-  " 機能が無効の場合は通常処理
-  if !a:config.enabled
-    call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
-    return v:false
-  endif
-
-  " 前回のキー入力時刻との差を計算
-  let last_time = hellshake_yano#state#get_last_key_time(a:bufnr)
-  let time_diff = a:current_time - last_time
-
-  " キーリピート判定
-  if time_diff < a:config.threshold && last_time > 0
-    " リピート状態に設定
-    call hellshake_yano#state#set_key_repeating(a:bufnr, v:true)
-
-    " 既存のリピート終了タイマーをクリアして新しく設定
-    call hellshake_yano#timer#set_repeat_end_timer(a:bufnr, a:config.reset_delay)
-
-    " キー時刻更新してヒント表示をスキップ
-    call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
-    return v:true
-  endif
-
-  " 通常処理: キー時刻を更新
-  call hellshake_yano#state#set_last_key_time(a:bufnr, a:current_time)
-  return v:false
-endfunction
-
-" 保存と復元
-let &cpo = s:save_cpo
-unlet s:save_cpo

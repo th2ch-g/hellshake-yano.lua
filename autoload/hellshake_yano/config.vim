@@ -1,32 +1,13 @@
-" autoload/hellshake_yano/config.vim - 設定管理関数
-" Author: hellshake-yano
 " License: MIT
 
-" 保存と復元
-let s:save_cpo = &cpo
-set cpo&vim
+let s:motion_count_cache = {}
+let s:cache_version = 0
 
-"=============================================================================
-" 設定管理用キャッシュ
-"=============================================================================
-
-let s:motion_count_cache = {}  " 設定値のキャッシュ
-let s:cache_version = 0  " キャッシュのバージョン
-
-"=============================================================================
-" 設定管理関数群
-"=============================================================================
-
-" キー別のmotion_count設定値を取得（最適化版）
 function! hellshake_yano#config#get_motion_count_for_key(key) abort
-  " キャッシュが有効か確認
   if has_key(s:motion_count_cache, a:key)
     return s:motion_count_cache[a:key]
   endif
-
-  let result = 3  " デフォルト値
-
-  " perKeyMotionCountに設定があるかチェック
+  let result = 3
   if has_key(g:hellshake_yano, 'perKeyMotionCount')
         \ && type(g:hellshake_yano.perKeyMotionCount) == v:t_dict
     let per_key = get(g:hellshake_yano.perKeyMotionCount, a:key, 0)
@@ -36,26 +17,20 @@ function! hellshake_yano#config#get_motion_count_for_key(key) abort
       return result
     endif
   endif
-
-  " defaultMotionCountを使用
   let default_val = get(g:hellshake_yano, 'defaultMotionCount',
         \ get(g:hellshake_yano, 'motionCount', 3))
   if type(default_val) == v:t_number && default_val >= 1
     let result = default_val
   endif
-
-  " キャッシュに保存
   let s:motion_count_cache[a:key] = result
   return result
 endfunction
 
-" モーションカウント設定キャッシュをクリア
 function! hellshake_yano#config#clear_motion_count_cache() abort
   let s:motion_count_cache = {}
   let s:cache_version += 1
 endfunction
 
-" キーリピート設定を取得
 function! hellshake_yano#config#get_key_repeat_config() abort
   return {
         \ 'enabled': get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true),
@@ -63,8 +38,6 @@ function! hellshake_yano#config#get_key_repeat_config() abort
         \ 'reset_delay': get(g:hellshake_yano, 'keyRepeatResetDelay', 300)
         \ }
 endfunction
-
-" マッピング対象キーを取得
 function! hellshake_yano#config#get_motion_keys() abort
   let keys = []
 
@@ -109,6 +82,43 @@ function! hellshake_yano#config#notify_denops_config() abort
   endif
 endfunction
 
-" 保存と復元
-let &cpo = s:save_cpo
-unlet s:save_cpo
+" 移動カウント数を設定
+function! hellshake_yano#config#set_count(count) abort
+  if a:count > 0
+    let g:hellshake_yano.motion_count = a:count
+
+    " カウントをリセット
+    if exists('*hellshake_yano#count#reset_all_buffers')
+      call hellshake_yano#count#reset_all_buffers()
+    endif
+
+    " キャッシュをクリア
+    call hellshake_yano#config#clear_motion_count_cache()
+
+    " denops側に設定を通知
+    call hellshake_yano#config#notify_denops_config()
+
+    echo printf('[hellshake-yano] Motion count set to %d', a:count)
+  else
+    call hellshake_yano#utils#show_error('[hellshake-yano] Error: Count must be greater than 0')
+  endif
+endfunction
+
+" タイムアウト時間を設定
+function! hellshake_yano#config#set_timeout(timeout) abort
+  if a:timeout > 0
+    let g:hellshake_yano.motion_timeout = a:timeout
+
+    " カウントをリセット
+    if exists('*hellshake_yano#count#reset_all_buffers')
+      call hellshake_yano#count#reset_all_buffers()
+    endif
+
+    " denops側に設定を通知
+    call hellshake_yano#config#notify_denops_config()
+
+    echo printf('[hellshake-yano] Timeout set to %dms', a:timeout)
+  else
+    call hellshake_yano#utils#show_error('[hellshake-yano] Error: Timeout must be greater than 0')
+  endif
+endfunction
