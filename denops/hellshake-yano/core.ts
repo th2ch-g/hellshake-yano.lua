@@ -984,6 +984,7 @@ export class Core {
         return;
       }
       if (char < 32 && char !== 13) { // Enter(13)以外の制御文字
+        await denops.cmd(`call feedkeys(nr2char(${char}), 'm')`);
         await this.hideHintsOptimized(denops);
         return;
       }
@@ -993,7 +994,7 @@ export class Core {
       if (wasLowerCase) {
         await this.hideHintsOptimized(denops);
         const originalChar = String.fromCharCode(char);
-        await denops.call("feedkeys", originalChar, "n");
+        await denops.cmd(`call feedkeys('${originalChar}', 'm')`);
         return;
       }
       let inputChar: string;
@@ -1017,7 +1018,7 @@ export class Core {
         // ヒント以外のキーが入力された場合、ヒントを非表示にしてキーを通常処理に送る
         await this.hideHintsOptimized(denops);
         const originalChar = String.fromCharCode(char);
-        await denops.call("feedkeys", originalChar, "n");
+        await denops.cmd(`call feedkeys('${originalChar}', 'm')`);
         return;
       }
       const matchingHints = currentHints.filter((h) => h.hint.startsWith(inputChar));
@@ -1025,8 +1026,10 @@ export class Core {
       await this.highlightCandidateHintsHybrid(denops, currentHints, inputChar);
 
       if (matchingHints.length === 0) {
-        await this.showErrorFeedback(denops, "No matching hint found");
+        // ヒントが見つからない場合、キーを送り返す
         await this.hideHintsOptimized(denops);
+        const originalChar = String.fromCharCode(char);
+        await denops.cmd(`call feedkeys('${originalChar}', 'm')`);
         return;
       }
       const singleCharTarget = matchingHints.find((h) => h.hint === inputChar);
