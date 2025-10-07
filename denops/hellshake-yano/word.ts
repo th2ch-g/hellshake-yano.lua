@@ -63,6 +63,38 @@ export {
   globalWordCache,
 } from "./word/word-cache.ts";
 /**
+ * foldされている行番号のSetを取得
+ * @param denops - Denopsインスタンス
+ * @param topLine - チェック開始行
+ * @param bottomLine - チェック終了行
+ * @returns foldされている行番号のSet
+ */
+async function getFoldedLines(
+  denops: Denops,
+  topLine: number,
+  bottomLine: number,
+): Promise<Set<number>> {
+  const foldedLines = new Set<number>();
+  let currentLine = topLine;
+
+  while (currentLine <= bottomLine) {
+    const foldStart = await denops.call("foldclosed", currentLine) as number;
+    if (foldStart !== -1) {
+      const foldEnd = await denops.call("foldclosedend", currentLine) as number;
+      // foldの範囲内のすべての行を除外対象に追加
+      for (let line = foldStart; line <= foldEnd; line++) {
+        foldedLines.add(line);
+      }
+      currentLine = foldEnd + 1; // foldの次の行へスキップ
+    } else {
+      currentLine++;
+    }
+  }
+
+  return foldedLines;
+}
+
+/**
  */
 /**
  */
@@ -112,7 +144,12 @@ export async function detectWords(
     });
     filteredWords.push(...filteredLineWords);
   }
-  return filteredWords;
+
+  // foldされた行の単語を除外
+  const foldedLines = await getFoldedLines(denops, topLine, bottomLine);
+  const visibleWords = filteredWords.filter(word => !foldedLines.has(word.line));
+
+  return visibleWords;
 }
 
 export async function detectWordsWithManager(
@@ -120,6 +157,11 @@ export async function detectWordsWithManager(
   config: EnhancedWordConfig = {},
   context?: DetectionContext,
 ): Promise<WordDetectionResult> {
+  // foldされた行を取得
+  const topLine = await denops.call("line", "w0") as number;
+  const bottomLine = await denops.call("line", "w$") as number;
+  const foldedLines = await getFoldedLines(denops, topLine, bottomLine);
+
   try {
     const manager = getWordDetectionManager(config);
     const initialResult = await manager.detectWordsFromBuffer(denops, context);
@@ -138,27 +180,36 @@ export async function detectWordsWithManager(
       const derivedContext = deriveContextFromConfig(runtimeConfig);
       if (derivedContext?.minWordLength !== undefined) {
         const threshold = derivedContext.minWordLength;
-        const filteredWords = initialResult.words.filter((word) => word.text.length >= threshold);
+        const filteredWords = initialResult.words
+          .filter((word) => word.text.length >= threshold)
+          .filter((word) => !foldedLines.has(word.line)); // foldされた行を除外
         return {
           ...initialResult,
           words: filteredWords,
         };
       }
     }
-    return initialResult;
+    // foldされた行を除外
+    const visibleWords = initialResult.words.filter((word) => !foldedLines.has(word.line));
+    return {
+      ...initialResult,
+      words: visibleWords,
+    };
   } catch (error) {
     const fallbackConfig = createPartialConfig({
       useJapanese: config.useJapanese,
     });
     const fallbackWords = await detectWordsWithConfig(denops, fallbackConfig);
+    // foldされた行を除外
+    const visibleFallbackWords = fallbackWords.filter((word) => !foldedLines.has(word.line));
     return {
-      words: fallbackWords,
+      words: visibleFallbackWords,
       detector: "fallback",
       success: false,
       error: error instanceof Error ? error.message : String(error),
       performance: {
         duration: 0,
-        wordCount: fallbackWords.length,
+        wordCount: visibleFallbackWords.length,
         linesProcessed: 0,
       },
     };
@@ -202,7 +253,12 @@ export async function detectWordsWithConfig(
   };
   const manager = getWordDetectionManager(enhancedConfig);
   const result = await manager.detectWords(text, topLine, denops, context);
-  return result.words;
+
+  // foldされた行の単語を除外
+  const foldedLines = await getFoldedLines(denops, topLine, bottomLine);
+  const visibleWords = result.words.filter(word => !foldedLines.has(word.line));
+
+  return visibleWords;
 }
 /**
  */
