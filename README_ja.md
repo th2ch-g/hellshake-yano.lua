@@ -25,6 +25,7 @@ UTF-8エンコーディングを完全にサポートし、日本語文字を適
 - **カスタマイズ可能な精度**: 異なるユースケースに対応する調整可能な単語検出アルゴリズム
 - **ビジュアルモード最適化**: ビジュアルモードでの自然な単語選択のためのインテリジェントなヒント配置
 - **辞書システム**: 日本語単語分割を改善するための組み込みおよびユーザー定義辞書
+- **連続ヒントループ**: ジャンプ後にカーソルを再センタリングしながらヒントを自動再描画するオプション機能
 
 ## インストール
 
@@ -81,6 +82,9 @@ Plug 'username/hellshake-yano.vim'
 | `japaneseMergeThreshold`            | number      | 2               | 助詞結合の最大文字数（camelCase）                       |
 | `debugMode`                         | boolean     | v:false         | デバッグモードを有効化                                  |
 | `performanceLog`                    | boolean     | v:false         | パフォーマンスロギングを有効化                          |
+| `continuousHintMode`                | boolean     | v:false         | ジャンプ後に再センタリングと再描画を自動化する連続モード |
+| `recenterCommand`                   | string      | `"normal! zz"` | 連続モード中にカーソルを再センタリングするコマンド      |
+| `maxContinuousJumps`                | number      | 50              | 連続モードを強制停止するジャンプ回数の上限              |
 
 
 ### 設定例
@@ -146,6 +150,16 @@ let g:hellshake_yano = #{
 \   keyRepeatThreshold: 80,
 \   enableDebug: v:false
 \ }
+```
+
+**連続ヒントループ:**
+```vim
+let g:hellshake_yano = #{
+\   continuousHintMode: v:true,
+\   recenterCommand: 'normal! zz',
+\   maxContinuousJumps: 25
+\ }
+" 集中したバッファでは上限を小さめに設定すると安心です
 ```
 
 ### キーごとの最小単語長設定
@@ -611,4 +625,3 @@ let g:hellshake_yano = #{
 ## 作者
 
 nekowasabi
-

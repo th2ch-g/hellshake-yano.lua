@@ -260,7 +260,14 @@ export function validateConfig(c: Partial<Config>): { valid: boolean; errors: st
 export function mergeConfig(b: Config, u: Partial<Config>): Config {
   const v = validateConfig(u);
   if (!v.valid) throw new Error(`Invalid config: ${v.errors.join(", ")}`);
-  return { ...b, ...u };
+  
+  // Vim の v:true/v:false (数値 1/0) を boolean に正規化
+  const normalized = { ...u };
+  if (typeof normalized.continuousHintMode === "number") {
+    normalized.continuousHintMode = normalized.continuousHintMode !== 0;
+  }
+  
+  return { ...b, ...normalized };
 }
 export function cloneConfig(c: Config): Config { return JSON.parse(JSON.stringify(c)); }
 export function getPerKeyValue<T>(c: Config, k: string, p: Record<string, T> | undefined, d: T | undefined, f: T): T {

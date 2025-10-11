@@ -27,6 +27,7 @@ It fully supports UTF-8 encoding and properly handles Japanese characters, makin
 - **Customizable Precision**: Adjustable word detection algorithms for different use cases
 - **Visual Mode Optimization**: Intelligent hint placement for natural word selection in visual mode
 - **Dictionary System**: Built-in and user-defined dictionaries for improved Japanese word segmentation
+- **Continuous Hint Loop**: Optional mode that recenters the cursor and redraws hints automatically after each jump
 
 ## Installation
 
@@ -83,6 +84,9 @@ The plugin can be configured using the `g:hellshake_yano` dictionary variable. A
 | `japaneseMergeThreshold`        | number      | 2               | Maximum characters for particle merging (camelCase)            |
 | `debugMode`                     | boolean     | v:false         | Enable debug mode                                              |
 | `performanceLog`                | boolean     | v:false         | Enable performance logging                                     |
+| `continuousHintMode`            | boolean     | v:false         | Enable automatic recenter + redraw loop after each hint jump   |
+| `recenterCommand`               | string      | `"normal! zz"` | Command used to recenter the cursor during continuous mode     |
+| `maxContinuousJumps`            | number      | 50              | Safety cap that stops the loop after the specified jump count  |
 
 
 ### Configuration Examples
@@ -148,6 +152,16 @@ let g:hellshake_yano = #{
 \   keyRepeatThreshold: 80,
 \   enableDebug: v:false
 \ }
+```
+
+**Continuous hint loop:**
+```vim
+let g:hellshake_yano = #{
+\   continuousHintMode: v:true,
+\   recenterCommand: 'normal! zz',
+\   maxContinuousJumps: 25
+\ }
+" Optional: keep the loop short when working in focused buffers
 ```
 
 ### Per-Key Minimum Word Length Settings
@@ -656,5 +670,4 @@ Pull requests and issue reports are welcome.
 ## Author
 
 nekowasabi
-
 

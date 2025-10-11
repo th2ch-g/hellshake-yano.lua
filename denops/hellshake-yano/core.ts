@@ -4,7 +4,7 @@
 import type { Denops } from "@denops/std";
 import { LRUCache, type CacheStatistics } from "./cache.ts";
 import type { Config } from "./config.ts";
-import { getDefaultConfig } from "./config.ts";
+import { getDefaultConfig, DEFAULT_CONFIG } from "./config.ts";
 import type {
   CoreState,
   DebugInfo,
@@ -293,6 +293,12 @@ export class Core {
   private _pendingHighlightTimer: number | null = null;
   /** モーションカウンターの管理クラス */
   private motionManager: MotionManager = new MotionManager();
+  /** 連続ヒントモードが現在有効かどうか */
+  private continuousModeActive = false;
+  /** 現在の連続ジャンプ回数 */
+  private continuousJumpCount = 0;
+  /** 直近のジャンプが発生したバッファ番号 */
+  private lastJumpBufnr: number | null = null;
   private constructor(config?: Partial<Config>) {
     this.config = { ...getDefaultConfig(), ...config };
   }
@@ -412,6 +418,26 @@ export class Core {
   }
   isHintsVisible(): boolean {
     return this.isActive && this.currentHints.length > 0;
+  }
+  getContinuousJumpCount(): number {
+    return this.continuousJumpCount;
+  }
+  private resetContinuousModeState(): void {
+    this.continuousModeActive = false;
+    this.continuousJumpCount = 0;
+    this.lastJumpBufnr = null;
+  }
+  private async executeRecenterCommand(denops: Denops): Promise<void> {
+    const command = this.config.recenterCommand?.trim() || "normal! zz";
+    if (!command) {
+      return;
+    }
+    try {
+      await denops.cmd(command);
+    } catch (error) {
+      console.error("[hellshake-yano] Core: Recenter command failed", error);
+      throw error;
+    }
   }
   detectWords(context?: DetectionContext): WordDetectionResult {
     return {
@@ -947,6 +973,52 @@ export class Core {
       }
     }
   }
+  async postJumpHandler(denops: Denops, _target: HintMapping): Promise<void> {
+    if (!this.config.continuousHintMode) {
+      this.resetContinuousModeState();
+      await this.hideHintsOptimized(denops);
+      return;
+    }
+
+    const bufnr = await denops.call("bufnr", "%") as number;
+    if (this.continuousModeActive && this.lastJumpBufnr !== null && this.lastJumpBufnr !== bufnr) {
+      await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (buffer changed)' | echohl None");
+      this.resetContinuousModeState();
+      await this.hideHintsOptimized(denops);
+      return;
+    }
+
+    if (!this.continuousModeActive) {
+      this.continuousJumpCount = 0;
+    }
+    this.continuousModeActive = true;
+    this.lastJumpBufnr = bufnr;
+
+    await this.hideHintsOptimized(denops);
+
+    this.continuousJumpCount += 1;
+    const maxJumps = this.config.maxContinuousJumps > 0 ? this.config.maxContinuousJumps : DEFAULT_CONFIG.maxContinuousJumps;
+    if (this.continuousJumpCount > maxJumps) {
+      await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (max jumps reached)' | echohl None");
+      this.resetContinuousModeState();
+      return;
+    }
+
+    try {
+      await this.executeRecenterCommand(denops);
+    } catch (_error) {
+      await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Failed to recenter cursor. Continuous mode disabled.' | echohl None");
+      this.resetContinuousModeState();
+      return;
+    }
+
+    try {
+      await this.showHintsInternal(denops);
+    } catch (error) {
+      this.resetContinuousModeState();
+      throw error;
+    }
+  }
   /*   * ユーザーのヒント選択入力を待機し、選択された位置にジャンプする   * main.tsから移行された完全版実装。hideHintsOptimizedを使用して
    * 実際の表示を適切に非表示にする重要なバグ修正を含む。
    *   * @throws ユーザーがESCでキャンセルした場合
@@ -974,17 +1046,22 @@ export class Core {
           const singleCharHints = currentHints.filter(h => h.hint.length === 1);
           if (singleCharHints.length === 1) {
             await this.jumpToHintTarget(denops, singleCharHints[0], "timeout auto-select");
+            await this.postJumpHandler(denops, singleCharHints[0]);
+            return;
           }
         }
         await this.hideHintsOptimized(denops);
         return;
       }
       if (char === 27) {
+        await denops.cmd("echo 'Cancelled'");
+        this.resetContinuousModeState();
         await this.hideHintsOptimized(denops);
         return;
       }
       if (char < 32 && char !== 13) { // Enter(13)以外の制御文字
         await denops.cmd(`call feedkeys(nr2char(${char}), 'm')`);
+        this.resetContinuousModeState();
         await this.hideHintsOptimized(denops);
         return;
       }
@@ -995,6 +1072,7 @@ export class Core {
         await this.hideHintsOptimized(denops);
         const originalChar = String.fromCharCode(char);
         await denops.cmd(`call feedkeys('${originalChar}', 'm')`);
+        this.resetContinuousModeState();
         return;
       }
       let inputChar: string;
@@ -1005,6 +1083,7 @@ export class Core {
         }
       } catch (_charError) {
         await denops.cmd("echohl ErrorMsg | echo 'Invalid character input' | echohl None");
+        this.resetContinuousModeState();
         await this.hideHintsOptimized(denops);
         return;
       }
@@ -1016,6 +1095,7 @@ export class Core {
       const validKeysSet = new Set(normalizedKeys);
       if (!validKeysSet.has(inputChar)) {
         // ヒント以外のキーが入力された場合、ヒントを非表示にしてキーを通常処理に送る
+        this.resetContinuousModeState();
         await this.hideHintsOptimized(denops);
         const originalChar = String.fromCharCode(char);
         await denops.cmd(`call feedkeys('${originalChar}', 'm')`);
@@ -1027,6 +1107,7 @@ export class Core {
 
       if (matchingHints.length === 0) {
         // ヒントが見つからない場合、キーを送り返す
+        this.resetContinuousModeState();
         await this.hideHintsOptimized(denops);
         const originalChar = String.fromCharCode(char);
         await denops.cmd(`call feedkeys('${originalChar}', 'm')`);
@@ -1047,7 +1128,7 @@ export class Core {
 
         if (shouldJumpImmediately) {
           await this.jumpToHintTarget(denops, singleCharTarget, "single char hint (hint groups)");
-          await this.hideHintsOptimized(denops);
+          await this.postJumpHandler(denops, singleCharTarget);
           return;
         }
         const isMultiCharKey = multiOnlyKeys.includes(inputChar) ||
@@ -1058,7 +1139,7 @@ export class Core {
       } else {
         if (singleCharTarget) {
           await this.jumpToHintTarget(denops, singleCharTarget, "single char target (Option 3)");
-          await this.hideHintsOptimized(denops);
+          await this.postJumpHandler(denops, singleCharTarget);
           return;
         }
       }
@@ -1102,17 +1183,23 @@ export class Core {
       if (secondChar === -1) {
         if (matchingHints.length === 1) {
           await this.jumpToHintTarget(denops, matchingHints[0], "auto-select single candidate");
+          await this.postJumpHandler(denops, matchingHints[0]);
+          return;
         } else if (singleCharTarget) {
           await this.jumpToHintTarget(denops, singleCharTarget, "timeout select single char hint");
+          await this.postJumpHandler(denops, singleCharTarget);
+          return;
         } else {
           await denops.cmd(`echo 'Timeout - ${matchingHints.length} candidates available'`);
         }
         await this.hideHintsOptimized(denops);
+        this.resetContinuousModeState();
         return;
       }
       if (secondChar === 27) {
         await denops.cmd("echo 'Cancelled'");
         await this.hideHintsOptimized(denops);
+        this.resetContinuousModeState();
         return;
       }
       let secondInputChar: string;
@@ -1133,6 +1220,7 @@ export class Core {
 
       if (!secondValidPattern.test(secondInputChar)) {
         await this.showErrorFeedback(denops, secondErrorMessage, false);
+        this.resetContinuousModeState();
         await this.hideHintsOptimized(denops);
         return;
       }
@@ -1141,10 +1229,13 @@ export class Core {
 
       if (target) {
         await this.jumpToHintTarget(denops, target, `hint "${fullHint}"`);
+        await this.postJumpHandler(denops, target);
+        return;
       } else {
         await this.showErrorFeedback(denops, `Invalid hint combination: ${fullHint}`);
       }
       await this.hideHintsOptimized(denops);
+      this.resetContinuousModeState();
     } catch (error) {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -1156,6 +1247,7 @@ export class Core {
         console.error('[hellshake-yano] Core: Error feedback failed:', error);
       }
       await this.hideHintsOptimized(denops);
+      this.resetContinuousModeState();
       throw error;
     }
   }
