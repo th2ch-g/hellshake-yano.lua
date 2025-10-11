@@ -21,7 +21,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(getDefaultConfigFunction);
     });
 
-    it("should return complete ConfigType with all 32 properties", () => {
+    it("should return complete ConfigType with all 35 properties", () => {
       const config = getDefaultConfigFunction();
 
       // Core settings (6 properties)
@@ -45,6 +45,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(config.multiCharKeys);
       assertExists(config.useHintGroups);
       assertExists(config.highlightHintMarker);
+      assertEquals(typeof config.continuousHintMode, "boolean");
 
       // Word detection settings (7 properties)
       assertExists(config.highlightHintMarkerCurrent);
@@ -59,6 +60,10 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(config.japaneseMergeParticles);
       assertExists(config.japaneseMergeThreshold);
       assertExists(config.defaultMinWordLength);
+
+      // Continuous hint loop settings (3 properties)
+      assertEquals(typeof config.recenterCommand, "string");
+      assertEquals(typeof config.maxContinuousJumps, "number");
     });
 
     it("should return exactly the same values as DEFAULT_CONFIG", () => {
@@ -69,6 +74,9 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertEquals(config.motionCount, DEFAULT_CONFIG.motionCount);
       assertEquals(config.hintPosition, DEFAULT_CONFIG.hintPosition);
       assertEquals(config.useNumbers, DEFAULT_CONFIG.useNumbers);
+      assertEquals(config.continuousHintMode, DEFAULT_CONFIG.continuousHintMode);
+      assertEquals(config.recenterCommand, DEFAULT_CONFIG.recenterCommand);
+      assertEquals(config.maxContinuousJumps, DEFAULT_CONFIG.maxContinuousJumps);
     });
   });
 
@@ -101,6 +109,9 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertEquals(minimal.motionCount, 5);
       assertEquals(minimal.hintPosition, "end");
       assertEquals(minimal.useNumbers, false);
+      assertEquals(minimal.continuousHintMode, false);
+      assertEquals(minimal.recenterCommand, "normal! zz");
+      assertEquals(minimal.maxContinuousJumps, 50);
     });
 
     it("should return ConfigType type", () => {
@@ -144,6 +155,9 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       const oldConfig = getDefaultConfig();
       const newConfig = getDefaultConfigFunction();
       assertEquals(oldConfig.useNumbers, newConfig.useNumbers);
+      assertEquals(oldConfig.continuousHintMode, newConfig.continuousHintMode);
+      assertEquals(oldConfig.recenterCommand, newConfig.recenterCommand);
+      assertEquals(oldConfig.maxContinuousJumps, newConfig.maxContinuousJumps);
     });
   });
 });

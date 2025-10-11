@@ -12,6 +12,7 @@
  */
 
 import { assertEquals, assertExists } from "@std/assert";
+import { DEFAULT_CONFIG } from "../denops/hellshake-yano/config.ts";
 import type {
   Config,
   DetectionContext,
@@ -137,40 +138,13 @@ Deno.test("Process1 Sub1: HintOperationsConfig.config should accept Partial<Conf
 Deno.test("Process1 Sub2: DebugInfo.config should require full Config", () => {
   // 完全なConfigオブジェクトを要求することをテスト
   const fullConfig: Config = {
-    enabled: true,
+    ...DEFAULT_CONFIG,
     markers: ["A", "B", "C"],
-    motionCount: 3,
-    motionTimeout: 2000,
-    hintPosition: "start",
-    triggerOnHjkl: true,
-    countedMotions: [],
-    maxHints: 100,
-    debounceDelay: 50,
-    useNumbers: false,
-    highlightSelected: false,
-    debugCoordinates: false,
     singleCharKeys: [],
     multiCharKeys: [],
     useHintGroups: false,
     highlightHintMarker: "DiffAdd",
     highlightHintMarkerCurrent: "DiffText",
-    suppressOnKeyRepeat: true,
-    keyRepeatThreshold: 50,
-    useJapanese: false,
-    wordDetectionStrategy: "hybrid",
-    enableTinySegmenter: true,
-    segmenterThreshold: 4,
-    japaneseMinWordLength: 2,
-    japaneseMergeParticles: true,
-    japaneseMergeThreshold: 2,
-    defaultMinWordLength: 3,
-    defaultMotionCount: 3,
-    debugMode: false,
-    performanceLog: false,
-    motionCounterEnabled: true,
-    motionCounterThreshold: 3,
-    motionCounterTimeout: 2000,
-    showHintOnMotionThreshold: true,
   };
 
   const debugInfo: DebugInfo = {

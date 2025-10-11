@@ -153,16 +153,16 @@ interface Config {
 #### sub1 Config型とデフォルト値を更新
 @target: denops/hellshake-yano/config.ts
 @ref: denops/hellshake-yano/types.ts
-- [ ] `continuousHintMode: boolean`を追加（デフォルト: false）
-- [ ] `recenterCommand: string`を追加（デフォルト: "normal! zz"）
-- [ ] `maxContinuousJumps: number`を追加（デフォルト: 50）
+- [x] `continuousHintMode: boolean`を追加（デフォルト: false）
+- [x] `recenterCommand: string`を追加（デフォルト: "normal! zz"）
+- [x] `maxContinuousJumps: number`を追加（デフォルト: 50）
 
 #### sub2 設定検証を拡張
 @target: denops/hellshake-yano/validation.ts
 @ref: denops/hellshake-yano/config.ts
-- [ ] `continuousHintMode`: boolean型チェック
-- [ ] `recenterCommand`: 文字列型チェック、空文字列禁止
-- [ ] `maxContinuousJumps`: 正整数チェック（1以上）
+- [x] `continuousHintMode`: boolean型チェック
+- [x] `recenterCommand`: 文字列型チェック、空文字列禁止
+- [x] `maxContinuousJumps`: 正整数チェック（1以上）
 
 ### process2 Coreロジック更新
 #### sub1 連続ジャンプカウンターの追加

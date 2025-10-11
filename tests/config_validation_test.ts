@@ -199,6 +199,47 @@ Deno.test("validateConfigFunction - 複数エラーの処理", () => {
   assertEquals(result.errors.includes("markers must not be empty"), true);
 });
 
+Deno.test("validateConfigFunction - continuous hint loop settings validation", () => {
+  // continuousHintMode
+  let result = validateConfigFunction({ continuousHintMode: true });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  result = validateConfigFunction({ continuousHintMode: "yes" as unknown as boolean });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("continuousHintMode must be a boolean"), true);
+
+  // recenterCommand
+  result = validateConfigFunction({ recenterCommand: "normal! zz" });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  result = validateConfigFunction({ recenterCommand: 123 as unknown as string });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("recenterCommand must be a non-empty string"), true);
+
+  result = validateConfigFunction({ recenterCommand: "" });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("recenterCommand must be a non-empty string"), true);
+
+  // maxContinuousJumps
+  result = validateConfigFunction({ maxContinuousJumps: 50 });
+  assertEquals(result.valid, true);
+  assertEquals(result.errors.length, 0);
+
+  result = validateConfigFunction({ maxContinuousJumps: 0 });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("maxContinuousJumps must be a positive integer"), true);
+
+  result = validateConfigFunction({ maxContinuousJumps: -1 });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("maxContinuousJumps must be a positive integer"), true);
+
+  result = validateConfigFunction({ maxContinuousJumps: 1.5 });
+  assertEquals(result.valid, false);
+  assertEquals(result.errors.includes("maxContinuousJumps must be a positive integer"), true);
+});
+
 Deno.test("validateConfigFunction - 境界値テスト", () => {
   // 最小正数
   let result = validateConfigFunction({

@@ -6,7 +6,7 @@
  */
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/testing/asserts.ts";
-import type { Config } from "../denops/hellshake-yano/config.ts";
+import { DEFAULT_CONFIG, type Config } from "../denops/hellshake-yano/config.ts";
 import {
   RegexWordDetector,
   type WordDetectionConfig
@@ -15,19 +15,11 @@ import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // Mock Config for testing (flat structure as per actual Config interface)
 const mockConfig: Config = {
+  ...DEFAULT_CONFIG,
   // Core settings
-  enabled: true,
   markers: ['A', 'S', 'D', 'F'],
-  motionCount: 3,
-  motionTimeout: 2000,
-  hintPosition: "start",
 
   // Hint settings
-  triggerOnHjkl: true,
-  countedMotions: ['j', 'k'],
-  maxHints: 100,
-  debounceDelay: 50,
-  useNumbers: false,
   highlightSelected: true,
   debugCoordinates: false,
   singleCharKeys: ['A', 'S'],

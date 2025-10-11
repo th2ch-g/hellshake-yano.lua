@@ -12,6 +12,17 @@ export function validateConfig(cfg: Partial<Config>): { valid: boolean; errors: 
   if (typeof c.highlightHintMarkerCurrent === "number") errors.push("highlightHintMarkerCurrent must be a string");
   if (Array.isArray(c.highlightHintMarker)) errors.push("highlightHintMarker must be a string");
   if (Array.isArray(c.highlightHintMarkerCurrent)) errors.push("highlightHintMarkerCurrent must be a string");
+  if (c.continuousHintMode !== undefined && typeof c.continuousHintMode !== "boolean") {
+    errors.push("continuousHintMode must be a boolean");
+  }
+  if (c.recenterCommand !== undefined) {
+    if (typeof c.recenterCommand !== "string" || c.recenterCommand.trim() === "") {
+      errors.push("recenterCommand must be a non-empty string");
+    }
+  }
+  if (c.maxContinuousJumps !== undefined && (!Number.isInteger(c.maxContinuousJumps) || c.maxContinuousJumps <= 0)) {
+    errors.push("maxContinuousJumps must be a positive integer");
+  }
   if (typeof c.highlightHintMarker === "string" && c.highlightHintMarker !== "") {
     if (/^[0-9]/.test(c.highlightHintMarker)) errors.push("highlightHintMarker must start with a letter or underscore");
     else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(c.highlightHintMarker)) errors.push("highlightHintMarker must contain only alphanumeric characters and underscores");

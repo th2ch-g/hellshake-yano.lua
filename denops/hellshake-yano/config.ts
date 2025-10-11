@@ -18,6 +18,9 @@ export interface Config {
   multiCharKeys: string[];
   maxSingleCharHints?: number;
   useHintGroups: boolean;
+  continuousHintMode: boolean;
+  recenterCommand: string;
+  maxContinuousJumps: number;
   highlightHintMarker: string | HighlightColor;
   highlightHintMarkerCurrent: string | HighlightColor;
   suppressOnKeyRepeat: boolean;
@@ -62,6 +65,9 @@ export const DEFAULT_CONFIG: Config = {
   multiCharKeys: ["B","C","E","I","O","P","Q","R","T","U","V","W","X","Y","Z"],
   maxSingleCharHints: 21,
   useHintGroups: true,
+  continuousHintMode: false,
+  recenterCommand: "normal! zz",
+  maxContinuousJumps: 50,
   highlightHintMarker: "DiffAdd",
   highlightHintMarkerCurrent: "DiffText",
   suppressOnKeyRepeat: true,
@@ -124,6 +130,15 @@ function vHint(c: Partial<Config>, e: string[]): void {
   if (c.maxHints !== undefined && (!Number.isInteger(c.maxHints) || c.maxHints <= 0)) e.push("maxHints must be a positive integer");
   if (c.debounceDelay !== undefined && (!Number.isInteger(c.debounceDelay) || c.debounceDelay < 0)) e.push("debounceDelay must be a non-negative number");
   if (c.useNumbers !== undefined && typeof c.useNumbers !== "boolean") e.push("useNumbers must be a boolean");
+  if (c.continuousHintMode !== undefined && typeof c.continuousHintMode !== "boolean") e.push("continuousHintMode must be a boolean");
+  if (c.recenterCommand !== undefined) {
+    if (typeof c.recenterCommand !== "string" || c.recenterCommand.trim() === "") {
+      e.push("recenterCommand must be a non-empty string");
+    }
+  }
+  if (c.maxContinuousJumps !== undefined && (!Number.isInteger(c.maxContinuousJumps) || c.maxContinuousJumps <= 0)) {
+    e.push("maxContinuousJumps must be a positive integer");
+  }
   if (c.bothMinWordLength !== undefined && (!Number.isInteger(c.bothMinWordLength) || c.bothMinWordLength < 1)) {
     e.push("bothMinWordLength must be a positive integer");
   }
