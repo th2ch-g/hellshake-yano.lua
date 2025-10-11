@@ -89,30 +89,6 @@ if !has_key(g:hellshake_yano, 'default_motion_count')
   let g:hellshake_yano.default_motion_count = 3
 endif
 
-" 連続ヒントモード設定のスムーズな移行
-function! s:initialize_continuous_hint_settings() abort
-  if has_key(g:hellshake_yano, 'continuous_hint_mode') && !has_key(g:hellshake_yano, 'continuousHintMode')
-    let g:hellshake_yano.continuousHintMode = g:hellshake_yano.continuous_hint_mode
-  endif
-  if !has_key(g:hellshake_yano, 'continuousHintMode')
-    let g:hellshake_yano.continuousHintMode = v:false
-  endif
-  if !has_key(g:hellshake_yano, 'recenterCommand')
-    let g:hellshake_yano.recenterCommand = 'normal! zz'
-  endif
-  if !has_key(g:hellshake_yano, 'maxContinuousJumps')
-    let g:hellshake_yano.maxContinuousJumps = 50
-  endif
-endfunction
-
-call s:initialize_continuous_hint_settings()
-
-augroup hellshake_yano_sync_continuous_hint
-  autocmd!
-  autocmd OptionSet g:hellshake_yano call s:initialize_continuous_hint_settings()
-  autocmd User DenopsPluginPost:hellshake-yano call s:initialize_continuous_hint_settings()
-augroup END
-
 " bothMinWordLength 設定（camelCase / snake_case 両対応）
 if !has_key(g:hellshake_yano, 'bothMinWordLength') && has_key(g:hellshake_yano, 'both_min_word_length')
   let g:hellshake_yano.bothMinWordLength = g:hellshake_yano.both_min_word_length
@@ -130,15 +106,6 @@ function! s:validate_config() abort
     echom '[hellshake-yano] Warning: key_repeat_threshold must be positive'
     echohl None
     unlet g:hellshake_yano.key_repeat_threshold
-  endif
-
-  if has_key(g:hellshake_yano, 'continuousHintMode')
-    if type(g:hellshake_yano.continuousHintMode) != v:t_number
-      echohl WarningMsg
-      echom '[hellshake-yano] Warning: continuousHintMode must be boolean'
-      echohl None
-      unlet g:hellshake_yano.continuousHintMode
-    endif
   endif
 
   if has_key(g:hellshake_yano, 'recenterCommand')
@@ -505,6 +472,7 @@ command! -nargs=1 HellshakeYanoSetTimeout call hellshake_yano#config#set_timeout
 command! -nargs=+ HellshakeYanoSetHighlight call hellshake_yano#highlight#update(<f-args>)
 command! -nargs=+ HellshakeYanoSetCountedMotions call hellshake_yano#mapping#set_counted_motions([<f-args>])
 command! -nargs=0 HellshakeYanoDebug call hellshake_yano#debug#display()
+command! -nargs=0 HellshakeYanoDebugConfig echo denops#request('hellshake-yano', 'getConfig', [])
 
 " 自動コマンド
 augroup HellshakeYano

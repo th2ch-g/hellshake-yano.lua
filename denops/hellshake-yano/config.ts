@@ -142,27 +142,97 @@ function vHint(c: Partial<Config>, e: string[]): void {
   if (c.bothMinWordLength !== undefined && (!Number.isInteger(c.bothMinWordLength) || c.bothMinWordLength < 1)) {
     e.push("bothMinWordLength must be a positive integer");
   }
+  // singleCharKeys: 文字列または配列を許可
   if (c.singleCharKeys !== undefined) {
-    if (!Array.isArray(c.singleCharKeys)) e.push("singleCharKeys must be an array");
-    else if (c.singleCharKeys.length > 0) {
-      const vs = new Set([";",":","[","]","'",'"',",",".","/","\\","-","=","`"]);
-      for (let i = 0; i < c.singleCharKeys.length; i++) {
-        const k = c.singleCharKeys[i];
-        if (typeof k !== "string") { e.push("singleCharKeys must be an array of strings"); break; }
-        if (k === "") { e.push("singleCharKeys must not contain empty strings"); break; }
-        if (k.length !== 1) { e.push("singleCharKeys must contain only single character strings"); break; }
-        const isAn = /^[a-zA-Z0-9]$/.test(k);
-        const isVs = vs.has(k);
-        const isWs = /^\s$/.test(k);
-        const isCc = k.charCodeAt(0) < 32 || k.charCodeAt(0) === 127;
-        if (!isAn && !isVs) {
-          if (isWs) e.push("singleCharKeys must not contain whitespace characters (space, tab, newline)");
-          else if (isCc) e.push("singleCharKeys must not contain control characters");
-          else e.push(`singleCharKeys contains invalid character: '${k}'. Valid symbols are: ; : [ ] ' " , . / \\ - = \``);
-          break;
+    const r = c as Record<string, unknown>;
+    const isString = typeof r.singleCharKeys === "string";
+    const isArray = Array.isArray(r.singleCharKeys);
+
+    if (!isString && !isArray) {
+      e.push("singleCharKeys must be a string or an array");
+    } else if (isString) {
+      const str = r.singleCharKeys as string;
+      if (str === "") {
+        e.push("singleCharKeys must not be empty");
+      } else {
+        const vs = new Set([";",":","[","]","'",'"',",",".","/","\\","-","=","`","@"]);
+        for (let i = 0; i < str.length; i++) {
+          const k = str[i];
+          const isAn = /^[a-zA-Z0-9]$/.test(k);
+          const isVs = vs.has(k);
+          const isWs = /^\s$/.test(k);
+          const isCc = k.charCodeAt(0) < 32 || k.charCodeAt(0) === 127;
+          if (!isAn && !isVs) {
+            if (isWs) e.push("singleCharKeys must not contain whitespace characters (space, tab, newline)");
+            else if (isCc) e.push("singleCharKeys must not contain control characters");
+            else e.push(`singleCharKeys contains invalid character: '${k}'. Valid symbols are: ; : [ ] ' " , . / \\ - = \` @`);
+            break;
+          }
         }
+        if (new Set(str).size !== str.length) e.push("singleCharKeys must contain unique values");
       }
-      if (new Set(c.singleCharKeys).size !== c.singleCharKeys.length) e.push("singleCharKeys must contain unique values");
+    } else if (isArray) {
+      const arr = r.singleCharKeys as unknown[];
+      if (arr.length > 0) {
+        const vs = new Set([";",":","[","]","'",'"',",",".","/","\\","-","=","`","@"]);
+        for (let i = 0; i < arr.length; i++) {
+          const k = arr[i];
+          if (typeof k !== "string") { e.push("singleCharKeys must be an array of strings"); break; }
+          if (k === "") { e.push("singleCharKeys must not contain empty strings"); break; }
+          if (k.length !== 1) { e.push("singleCharKeys must contain only single character strings"); break; }
+          const isAn = /^[a-zA-Z0-9]$/.test(k);
+          const isVs = vs.has(k);
+          const isWs = /^\s$/.test(k);
+          const isCc = k.charCodeAt(0) < 32 || k.charCodeAt(0) === 127;
+          if (!isAn && !isVs) {
+            if (isWs) e.push("singleCharKeys must not contain whitespace characters (space, tab, newline)");
+            else if (isCc) e.push("singleCharKeys must not contain control characters");
+            else e.push(`singleCharKeys contains invalid character: '${k}'. Valid symbols are: ; : [ ] ' " , . / \\ - = \` @`);
+            break;
+          }
+        }
+        if (new Set(arr).size !== arr.length) e.push("singleCharKeys must contain unique values");
+      }
+    }
+  }
+
+  // multiCharKeys: 文字列または配列を許可
+  if (c.multiCharKeys !== undefined) {
+    const r = c as Record<string, unknown>;
+    const isString = typeof r.multiCharKeys === "string";
+    const isArray = Array.isArray(r.multiCharKeys);
+
+    if (!isString && !isArray) {
+      e.push("multiCharKeys must be a string or an array");
+    } else if (isString) {
+      const str = r.multiCharKeys as string;
+      if (str === "") {
+        e.push("multiCharKeys must not be empty");
+      } else {
+        for (let i = 0; i < str.length; i++) {
+          const k = str[i];
+          if (!/^[a-zA-Z0-9]$/.test(k)) {
+            e.push(`multiCharKeys must contain only alphanumeric characters, found: '${k}'`);
+            break;
+          }
+        }
+        if (new Set(str).size !== str.length) e.push("multiCharKeys must contain unique values");
+      }
+    } else if (isArray) {
+      const arr = r.multiCharKeys as unknown[];
+      if (arr.length > 0) {
+        for (let i = 0; i < arr.length; i++) {
+          const k = arr[i];
+          if (typeof k !== "string") { e.push("multiCharKeys must be an array of strings"); break; }
+          if (k === "") { e.push("multiCharKeys must not contain empty strings"); break; }
+          if (k.length !== 1) { e.push("multiCharKeys must contain only single character strings"); break; }
+          if (!/^[a-zA-Z0-9]$/.test(k)) {
+            e.push(`multiCharKeys must contain only alphanumeric characters, found: '${k}'`);
+            break;
+          }
+        }
+        if (new Set(arr).size !== arr.length) e.push("multiCharKeys must contain unique values");
+      }
     }
   }
 }
@@ -259,15 +329,32 @@ export function validateConfig(c: Partial<Config>): { valid: boolean; errors: st
 
 export function mergeConfig(b: Config, u: Partial<Config>): Config {
   const v = validateConfig(u);
-  if (!v.valid) throw new Error(`Invalid config: ${v.errors.join(", ")}`);
+  if (!v.valid) {
+    console.error("[ERROR] mergeConfig: validation failed", v.errors);
+    throw new Error(`Invalid config: ${v.errors.join(", ")}`);
+  }
   
   // Vim の v:true/v:false (数値 1/0) を boolean に正規化
   const normalized = { ...u };
+
   if (typeof normalized.continuousHintMode === "number") {
     normalized.continuousHintMode = normalized.continuousHintMode !== 0;
   }
-  
-  return { ...b, ...normalized };
+
+  // singleCharKeys: 文字列を配列に正規化
+  const r = normalized as Record<string, unknown>;
+  if (typeof r.singleCharKeys === "string") {
+    r.singleCharKeys = r.singleCharKeys.split("");
+  }
+
+  // multiCharKeys: 文字列を配列に正規化
+  if (typeof r.multiCharKeys === "string") {
+    r.multiCharKeys = r.multiCharKeys.split("");
+  }
+
+  const result = { ...b, ...normalized };
+
+  return result;
 }
 export function cloneConfig(c: Config): Config { return JSON.parse(JSON.stringify(c)); }
 export function getPerKeyValue<T>(c: Config, k: string, p: Record<string, T> | undefined, d: T | undefined, f: T): T {

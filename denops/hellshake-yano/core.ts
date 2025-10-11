@@ -4,7 +4,7 @@
 import type { Denops } from "@denops/std";
 import { LRUCache, type CacheStatistics } from "./cache.ts";
 import type { Config } from "./config.ts";
-import { getDefaultConfig, DEFAULT_CONFIG } from "./config.ts";
+import { getDefaultConfig, DEFAULT_CONFIG, mergeConfig } from "./config.ts";
 import type {
   CoreState,
   DebugInfo,
@@ -411,7 +411,9 @@ export class Core {
     if (newConfig.motionCounterTimeout !== undefined && newConfig.motionCounterTimeout <= 0) {
       throw new Error("timeout must be greater than 0");
     }
-    this.config = { ...this.config, ...newConfig };
+
+    // mergeConfig を使用して Vim の数値真偽値を正規化
+    this.config = mergeConfig(this.config, newConfig);
   }
   isEnabled(): boolean {
     return this.config.enabled;
@@ -829,12 +831,15 @@ export class Core {
       if (bufnr === -1) {
         return;
       }
+
       this.hideHints();
+
       const words = await this.detectWordsOptimized(denops, bufnr);
 
       if (words.length === 0) {
         return;
       }
+
       const cursorPos = await denops.call("getpos", ".") as [number, number, number, number] | undefined;
       const cursorLine = cursorPos ? cursorPos[1] : 1;
       const cursorCol = cursorPos ? cursorPos[2] : 1;
@@ -864,6 +869,7 @@ export class Core {
       if (hints.length === 0) {
         return;
       }
+
       const hintMappings = assignHintsToWords(
         words,
         hints,
@@ -875,9 +881,11 @@ export class Core {
           bothMinWordLength: this.config.bothMinWordLength,
         },
       );
+
       await this.displayHintsOptimized(denops, hintMappings, modeString);
       this.currentHints = hintMappings;
       this.isActive = true;
+
       await this.waitForUserInput(denops);
 
     } catch (error) {
@@ -981,6 +989,7 @@ export class Core {
     }
 
     const bufnr = await denops.call("bufnr", "%") as number;
+
     if (this.continuousModeActive && this.lastJumpBufnr !== null && this.lastJumpBufnr !== bufnr) {
       await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (buffer changed)' | echohl None");
       this.resetContinuousModeState();
@@ -998,6 +1007,7 @@ export class Core {
 
     this.continuousJumpCount += 1;
     const maxJumps = this.config.maxContinuousJumps > 0 ? this.config.maxContinuousJumps : DEFAULT_CONFIG.maxContinuousJumps;
+
     if (this.continuousJumpCount > maxJumps) {
       await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (max jumps reached)' | echohl None");
       this.resetContinuousModeState();
