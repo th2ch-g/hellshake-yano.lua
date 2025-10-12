@@ -1041,16 +1041,24 @@ export class Core {
     try {
       const inputTimeout = config.motionTimeout || 2000;
       await new Promise((resolve) => setTimeout(resolve, 50));
-      const inputPromise = denops.call("getchar") as Promise<number>;
-      const timeoutPromise = new Promise<number>((resolve) => {
+      const inputPromise = denops.call("getchar") as Promise<number | string>;
+      const timeoutPromise = new Promise<number | string>((resolve) => {
         timeoutId = setTimeout(() => resolve(-2), inputTimeout) as unknown as number; // -2 = 全体タイムアウト
       });
-      const char = await Promise.race([inputPromise, timeoutPromise]);
+      const result = await Promise.race([inputPromise, timeoutPromise]);
 
       if (timeoutId) {
         clearTimeout(timeoutId);
         timeoutId = undefined;
       }
+      // 特殊キー（文字列）の場合、静かに終了してキーを送り返す
+      if (typeof result === "string") {
+        await this.hideHintsOptimized(denops);
+        await denops.cmd(`call feedkeys(${JSON.stringify(result)}, 'm')`);
+        this.resetContinuousModeState();
+        return;
+      }
+      const char = result as number;
       if (char === -2) {
         if (config.motionCount === 1) {
           const singleCharHints = currentHints.filter(h => h.hint.length === 1);
@@ -1153,7 +1161,7 @@ export class Core {
           return;
         }
       }
-      let secondChar: number;
+      let secondResult: number | string;
       try {
         if (config.useHintGroups) {
           const multiOnlyKeys = config.multiCharKeys || DEFAULT_MULTI_KEYS;
@@ -1161,13 +1169,13 @@ export class Core {
             (config.useNumericMultiCharHints && /^\d$/.test(inputChar));
 
           if (isMultiCharKey) {
-            secondChar = await denops.call("getchar") as number;
+            secondResult = await denops.call("getchar") as number | string;
           } else {
-            const secondInputPromise = denops.call("getchar") as Promise<number>;
-            const secondTimeoutPromise = new Promise<number>((resolve) => {
+            const secondInputPromise = denops.call("getchar") as Promise<number | string>;
+            const secondTimeoutPromise = new Promise<number | string>((resolve) => {
               timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
             });
-            secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+            secondResult = await Promise.race([secondInputPromise, secondTimeoutPromise]);
 
             if (timeoutId) {
               clearTimeout(timeoutId);
@@ -1175,11 +1183,11 @@ export class Core {
             }
           }
         } else {
-          const secondInputPromise = denops.call("getchar") as Promise<number>;
-          const secondTimeoutPromise = new Promise<number>((resolve) => {
+          const secondInputPromise = denops.call("getchar") as Promise<number | string>;
+          const secondTimeoutPromise = new Promise<number | string>((resolve) => {
             timeoutId = setTimeout(() => resolve(-1), 800) as unknown as number; // 800ms後にタイムアウト
           });
-          secondChar = await Promise.race([secondInputPromise, secondTimeoutPromise]);
+          secondResult = await Promise.race([secondInputPromise, secondTimeoutPromise]);
 
           if (timeoutId) {
             clearTimeout(timeoutId);
@@ -1190,6 +1198,14 @@ export class Core {
         return; // エラー時は処理を中止
       }
 
+      // 特殊キー（文字列）の場合、静かに終了してキーを送り返す
+      if (typeof secondResult === "string") {
+        await this.hideHintsOptimized(denops);
+        await denops.cmd(`call feedkeys(${JSON.stringify(secondResult)}, 'm')`);
+        this.resetContinuousModeState();
+        return;
+      }
+      const secondChar = secondResult as number;
       if (secondChar === -1) {
         if (matchingHints.length === 1) {
           await this.jumpToHintTarget(denops, matchingHints[0], "auto-select single candidate");
@@ -1209,6 +1225,13 @@ export class Core {
       if (secondChar === 27) {
         await denops.cmd("echo 'Cancelled'");
         await this.hideHintsOptimized(denops);
+        this.resetContinuousModeState();
+        return;
+      }
+      // 制御文字や特殊キー（PgUp, Upなど）の場合、静かに終了してキーを送り返す
+      if (secondChar < 32 || secondChar > 127) {
+        await this.hideHintsOptimized(denops);
+        await denops.cmd(`call feedkeys(nr2char(${secondChar}), 'm')`);
         this.resetContinuousModeState();
         return;
       }
