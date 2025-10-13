@@ -37,13 +37,13 @@ function calculateDistance(word: Word, cursorLine: number, cursorCol: number): n
 // ===== Sub1: 距離ベースのシンプルな割り当て実装 =====
 
 Deno.test("Sub1: assignHintsToWords - カーソル近傍の単語に1文字ヒントを割り当てる", () => {
-  // テストデータ: カーソル位置(5, 5)から様々な距離の単語
+  // テストデータ: カーソル位置(5, 8)から様々な距離の単語（カーソル位置に単語なし）
   const words: Word[] = [
-    { text: "far1", line: 1, col: 1 },      // 距離: 4004
-    { text: "near1", line: 5, col: 1 },    // 距離: 4 (近い)
-    { text: "cursor", line: 5, col: 5 },   // 距離: 0 (最も近い)
-    { text: "near2", line: 5, col: 10 },   // 距離: 5
-    { text: "far2", line: 10, col: 1 },    // 距離: 5004
+    { text: "far1", line: 1, col: 1 },      // 距離: 4007
+    { text: "near1", line: 5, col: 1 },    // 距離: 7 (近い)
+    { text: "near2", line: 5, col: 10 },   // 距離: 2 (最も近い)
+    { text: "near3", line: 5, col: 20 },   // 距離: 12
+    { text: "far2", line: 10, col: 1 },    // 距離: 5007
   ];
 
   // 1文字ヒント用のキー: 3個
@@ -53,7 +53,7 @@ Deno.test("Sub1: assignHintsToWords - カーソル近傍の単語に1文字ヒ�
   const allHints = [...singleCharHints, ...multiCharHints];
 
   const cursorLine = 5;
-  const cursorCol = 5;
+  const cursorCol = 8;  // 単語間の空白位置（near1とnear2の間）
 
   // assignHintsToWordsを呼び出し
   const result = assignHintsToWords(
@@ -66,11 +66,10 @@ Deno.test("Sub1: assignHintsToWords - カーソル近傍の単語に1文字ヒ�
     { skipOverlapDetection: true } // オーバーラップ検出をスキップ
   );
 
-  // 結果の検証
+  // 結果の検証（カーソル位置に単語がないため、全5単語にヒントが割り当てられる）
   assertEquals(result.length, 5, "5つの単語すべてにヒントが割り当てられる");
 
   // カーソルに最も近い単語から順に1文字ヒントが割り当てられることを確認
-  // 期待される順序: cursor(0) → near1(4) → near2(5) → far1(4004) → far2(5004)
   const sortedWords = [...words].sort((a, b) => {
     const distA = calculateDistance(a, cursorLine, cursorCol);
     const distB = calculateDistance(b, cursorLine, cursorCol);
@@ -105,7 +104,7 @@ Deno.test("Sub1: assignHintsToWords - 1文字ヒントが不足する場合", ()
   const allHints = [...singleCharHints, ...multiCharHints];
 
   const cursorLine = 1;
-  const cursorCol = 1;
+  const cursorCol = 7;  // 単語間の位置（word0とword1の間）
 
   const result = assignHintsToWords(
     words,
@@ -578,8 +577,8 @@ Deno.test("Process1 Sub2-1: 閾値未満は片側、閾値以上は両端ヒン�
   const result = assignHintsToWords(
     words,
     hints,
-    1,
-    1,
+    2,  // 異なる行に移動（単語のない行）
+    5,
     "normal",
     { hintPosition: "both", bothMinWordLength: 5 },
     { skipOverlapDetection: true },
@@ -617,8 +616,8 @@ Deno.test("Process1 Sub2-1: bothMinWordLength 未指定時は従来通り両端"
   const result = assignHintsToWords(
     words,
     hints,
-    1,
-    1,
+    2,  // 異なる行に移動（単語のない行）
+    3,
     "normal",
     { hintPosition: "both" },
     { skipOverlapDetection: true },
@@ -642,8 +641,8 @@ Deno.test("Process1 Sub2-1: hintPosition が both 以外の場合は閾値を無
   const result = assignHintsToWords(
     words,
     hints,
-    1,
-    1,
+    2,  // 異なる行に移動（単語のない行）
+    5,
     "normal",
     { hintPosition: "start", bothMinWordLength: 5 },
     { skipOverlapDetection: true },
@@ -760,4 +759,159 @@ Deno.test("Sub9: generateHints (groups mode) - useNumericMultiCharHints優先順
   assertEquals(hints[7], "02", "3. 数字2文字");
   assertEquals(hints[8], "03", "3. 数字2文字");
   assertEquals(hints[9], "04", "3. 数字2文字");
+});
+
+// ===== カーソル位置の単語除外機能のテスト =====
+
+Deno.test("Cursor Exclusion: カーソル位置の単語にはヒントが割り当てられない", () => {
+  clearHintCache();
+
+  const words: Word[] = [
+    { text: "word1", line: 5, col: 10 },  // カーソル位置
+    { text: "word2", line: 5, col: 20 },  // カーソル位置以外
+    { text: "word3", line: 5, col: 30 },  // カーソル位置以外
+    { text: "word4", line: 6, col: 10 },  // カーソル位置以外
+  ];
+
+  const hints = ["A", "S", "D", "F"];
+  const cursorLine = 5;
+  const cursorCol = 10;  // word1の開始位置
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    cursorLine,
+    cursorCol,
+    "normal",
+    { hintPosition: "start" },
+    { skipOverlapDetection: true }
+  );
+
+  // word1にはヒントが割り当てられない
+  const word1Hints = result.filter(m => m.word.text === "word1");
+  assertEquals(word1Hints.length, 0, "カーソル位置の単語にはヒントが割り当てられない");
+
+  // 他の単語にはヒントが割り当てられる
+  assertEquals(result.length, 3, "カーソル位置以外の3単語にヒントが割り当てられる");
+  const assignedWords = result.map(m => m.word.text).sort();
+  assertEquals(assignedWords, ["word2", "word3", "word4"]);
+});
+
+Deno.test("Cursor Exclusion: カーソルが単語の中間位置にある場合も除外", () => {
+  clearHintCache();
+
+  const words: Word[] = [
+    { text: "hello", line: 5, col: 10 },   // 5文字: col 10-14
+    { text: "world", line: 5, col: 20 },   // カーソル位置以外
+  ];
+
+  const hints = ["A", "S"];
+  const cursorLine = 5;
+  const cursorCol = 12;  // "hello"の中間位置（'l'の位置）
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    cursorLine,
+    cursorCol,
+    "normal",
+    { hintPosition: "start" },
+    { skipOverlapDetection: true }
+  );
+
+  // helloにはヒントが割り当てられない
+  const helloHints = result.filter(m => m.word.text === "hello");
+  assertEquals(helloHints.length, 0, "カーソルが中間にある単語は除外される");
+
+  // worldにはヒントが割り当てられる
+  assertEquals(result.length, 1);
+  assertEquals(result[0].word.text, "world");
+});
+
+Deno.test("Cursor Exclusion: カーソルが単語の終端位置にある場合も除外", () => {
+  clearHintCache();
+
+  const words: Word[] = [
+    { text: "test", line: 5, col: 10 },    // 4文字: col 10-13
+    { text: "word", line: 5, col: 20 },    // カーソル位置以外
+  ];
+
+  const hints = ["A", "S"];
+  const cursorLine = 5;
+  const cursorCol = 13;  // "test"の終端位置
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    cursorLine,
+    cursorCol,
+    "normal",
+    { hintPosition: "start" },
+    { skipOverlapDetection: true }
+  );
+
+  // testにはヒントが割り当てられない
+  const testHints = result.filter(m => m.word.text === "test");
+  assertEquals(testHints.length, 0, "カーソルが終端にある単語は除外される");
+
+  // wordにはヒントが割り当てられる
+  assertEquals(result.length, 1);
+  assertEquals(result[0].word.text, "word");
+});
+
+Deno.test("Cursor Exclusion: 異なる行の単語は除外されない", () => {
+  clearHintCache();
+
+  const words: Word[] = [
+    { text: "same", line: 5, col: 10 },    // カーソル行の単語
+    { text: "same", line: 6, col: 10 },    // 異なる行、同じカラム位置
+  ];
+
+  const hints = ["A", "S"];
+  const cursorLine = 5;
+  const cursorCol = 10;
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    cursorLine,
+    cursorCol,
+    "normal",
+    { hintPosition: "start" },
+    { skipOverlapDetection: true }
+  );
+
+  // カーソル行の単語のみ除外される
+  assertEquals(result.length, 1);
+  assertEquals(result[0].word.line, 6, "異なる行の単語は除外されない");
+});
+
+Deno.test("Cursor Exclusion: bothモードでもカーソル位置の単語は除外", () => {
+  clearHintCache();
+
+  const words: Word[] = [
+    { text: "cursor", line: 5, col: 10 },  // カーソル位置
+    { text: "other", line: 5, col: 20 },   // カーソル位置以外
+  ];
+
+  const hints = ["A", "S", "D", "F"];
+  const cursorLine = 5;
+  const cursorCol = 10;
+
+  const result = assignHintsToWords(
+    words,
+    hints,
+    cursorLine,
+    cursorCol,
+    "normal",
+    { hintPosition: "both" },
+    { skipOverlapDetection: true }
+  );
+
+  // "cursor"には割り当てられず、"other"には両端ヒントが割り当てられる
+  const cursorHints = result.filter(m => m.word.text === "cursor");
+  assertEquals(cursorHints.length, 0, "bothモードでもカーソル位置は除外");
+
+  const otherHints = result.filter(m => m.word.text === "other");
+  assertEquals(otherHints.length, 2, "他の単語には両端ヒントが割り当てられる");
 });

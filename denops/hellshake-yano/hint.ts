@@ -224,6 +224,12 @@ export function assignHintsToWords(
     filteredWords = words.filter((word) => !wordsToSkip.has(word));
   }
   const sortedWords = sortWordsByDistanceOptimized(filteredWords, cursorLine, cursorCol);
+
+  // カーソル位置の単語を除外（カーソル位置にAヒントを作成しても入力することはまずありえないため）
+  const wordsExcludingCursor = sortedWords.filter(word =>
+    !(word.line === cursorLine && isPositionWithinWord(cursorCol, word))
+  );
+
   const mappings: HintMapping[] = [];
   if (hintPositionSetting === "both") {
     let hintIndex = 0;
@@ -232,7 +238,7 @@ export function assignHintsToWords(
       hintIndex += 1;
       return hint;
     };
-    sortedWords.forEach((word) => {
+    wordsExcludingCursor.forEach((word) => {
       const useBothHints = bothMinWordLength === undefined || word.text.length >= bothMinWordLength;
       if (useBothHints) {
         const startHint = nextHint();
@@ -245,9 +251,9 @@ export function assignHintsToWords(
       }
     });
   } else {
-    sortedWords.forEach((word, i) => mappings.push(createSingleHintMapping(word, hints[i] || "", hintPositionSetting)));
+    wordsExcludingCursor.forEach((word, i) => mappings.push(createSingleHintMapping(word, hints[i] || "", hintPositionSetting)));
   }
-  storeAssignmentCache(assignmentCache, cacheKey, sortedWords);
+  storeAssignmentCache(assignmentCache, cacheKey, wordsExcludingCursor);
   return mappings;
 }
 function sortWordsByDistanceOptimized(words: Word[], cursorLine: number, cursorCol: number): Word[] {
