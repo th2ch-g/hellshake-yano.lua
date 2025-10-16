@@ -368,14 +368,14 @@ autoload/hellshake_yano_vim/
 " 目標: 7個以上の単語に対応
 " 実装内容
 - autoload/hellshake_yano_vim/hint_generator.vim の拡張
-- aa, as, ad, af... の生成アルゴリズム
+- AA, AS, AD, AF... の生成アルゴリズム
 - autoload/hellshake_yano_vim/input.vim の複数文字対応
 - 部分マッチのハイライト
 ```
 
 #### Phase A-4: モーション連打検出
 ```vim
-" 目標: w/b/eを3回連打でヒント表示
+" 目標: w/b/eを2回連打でヒント表示
 " 実装内容
 - autoload/hellshake_yano_vim/motion.vim
 - モーションコマンドのフック
