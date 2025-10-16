@@ -1,178 +1,470 @@
-# title: Phase A-2: 画面内単語検出
+# title: Phase A-3 - 複数文字ヒント機能の実装
 
 ## 概要
-- 固定座標（カーソル行±3行）から、画面内の全単語を自動検出してヒントを割り当てる機能への移行
-- Pure VimScript実装で `\w\+` パターンを使用した単語検出を実現
-- Phase A-1（MVP）の固定座標実装から、より実用的な単語ベースのヒント表示へアップグレード
+- 7個を超える単語に対応するため、複数文字ヒント (AA, AS, AD, AF...) を実装する
+- 単一文字ヒント (A, S, D, F, J, K, L) で7個まで表示し、8個目以降は2文字ヒント (AA, AS, AD...) で表示
+- 部分マッチハイライト機能を追加し、複数文字入力時の視覚的フィードバックを提供
+- Pure VimScript実装として、Vim 8.0+とNeovimの両方で動作
 
 ### goal
-- ユーザが `:HellshakeYanoVimShow` を実行すると、画面内の単語（最大7個）に自動的にヒント（a, s, d, f, j, k, l）が表示される
-- ヒントキーを押すことで、実際の単語位置に正確にジャンプできる
-- 固定座標ではなく、実際のコード/テキストの単語に基づいてナビゲーションできる
+- ユーザーが画面内の8個以上の単語に対して、2文字のヒント入力でジャンプできるようにする
+- 入力途中でも部分マッチする候補が視覚的にわかるようにする
+- 既存の単一文字ヒント機能（Phase A-2）との互換性を保つ
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- TDD（Red-Green-Refactor）サイクルに従うこと
-- 動作確認は Vim（Neovimではない）で行うこと
+- git add, git commitの実行は、ユーザに実行の許可を得ること
+- 動作確認はneovimではなく、vimで行う
 
 ## 開発のゴール
-- 画面内（`line('w0')` ～ `line('w$')`）の単語を自動検出
-- 単語位置情報（text, lnum, col, end_col）を正確に取得
-- Phase A-1のテストカバレッジ100%を維持しながら機能拡張
-- MVP制限（最大7単語）を守りつつ、Phase A-3への拡張可能性を確保
+- 最大49個の単語にヒントを表示できるようにする（7単一文字 + 42二文字: 7 × 6 = 42）
+- 複数文字入力時の入力体験を向上させる（部分マッチハイライト）
+- テストカバレッジ100%を維持する（TDD手法）
+- Phase A-2の実装を壊さない（回帰テスト）
 
 ## 実装仕様
 
-### 単語検出アルゴリズム
-- 正規表現パターン: `\w\+` （英数字とアンダースコア）
-- 検出範囲: `line('w0')` ～ `line('w$')` （画面内のみ）
-- 使用関数: `matchstrpos(line, pattern, start_col)`
-- データ構造:
-  ```vim
-  {
-    'text': 'hello',      " 単語文字列
-    'lnum': 10,           " 行番号（1-indexed）
-    'col': 5,             " 開始列（1-indexed）
-    'end_col': 10         " 終了列（matchstrposの戻り値）
-  }
-  ```
+### アルゴリズム設計
 
-### MVP制限
-- 最大7個の単語までヒント表示（hint_chars の長さ）
-- 単一文字ヒントのみ（a, s, d, f, j, k, l）
-- 英数字のみ対応（日本語はPhase A-5で対応）
+#### ヒント生成アルゴリズム
+```vim
+" 入力: count (単語数)
+" 出力: ヒント文字列の配列
+
+" Phase 1: 単一文字ヒント (1-7個)
+" ['A', 'S', 'D', 'F', 'J', 'K', 'L']
+
+" Phase 2: 2文字ヒント (8個目以降)
+" ['AA', 'AS', 'AD', 'AF', 'AJ', 'AK', 'AL',  " Aで始まる組み合わせ (7個)
+"  'SA', 'SS', 'SD', 'SF', 'SJ', 'SK', 'SL',  " Sで始まる組み合わせ (7個)
+"  ...                                         " 以降同様
+" ]
+
+" 最大: 7 + (7 × 6) = 49個のヒント
+" ※同じ文字の組み合わせ（'AA', 'SS'等）も使用して7×7=49個に拡張可能
+```
+
+#### 部分マッチハイライトアルゴリズム
+```vim
+" 入力例: ユーザーが 'A' を入力
+" 動作:
+"   1. 'A' で始まる全てのヒント候補をハイライト
+"      例: 'A', 'AA', 'AS', 'AD', 'AF', 'AJ', 'AK', 'AL'
+"   2. 完全一致した場合（'A'）は即座にジャンプ
+"   3. 部分一致のみの場合は次の入力を待つ
+"   4. 2文字目入力で完全一致（'AA'）すればジャンプ
+
+" 視覚的フィードバック:
+"   - 完全一致: 元のハイライト
+"   - 部分一致: ハイライトを暗くするか、別の色で表示
+"   - マッチなし: ヒント非表示
+```
+
+### データ構造
+
+#### ヒント生成戦略
+```vim
+" s:hint_chars - 基本文字セット
+let s:hint_chars = ['A', 'S', 'D', 'F', 'J', 'K', 'L']
+
+" 生成ロジック:
+" count <= 7:  s:hint_chars[0:count-1]
+" count > 7:   s:hint_chars[0:6] + generate_multi_char_hints(count - 7)
+```
+
+#### 部分マッチ追跡
+```vim
+" input.vim の拡張
+let s:input_buffer = ''          " 現在の入力バッファ
+let s:partial_matches = []       " 部分マッチしているヒントのリスト
+let s:exact_match_found = v:false " 完全一致フラグ
+```
 
 ## 生成AIの学習用コンテキスト
 
-### アーキテクチャドキュメント
-- `ARCHITECTURE.md`
-  - Phase A-1 MVP実装の完了状況
-  - Phase A-2の実装計画詳細
-  - 単語検出アルゴリズムの技術仕様
-
-### 既存実装
-- `autoload/hellshake_yano_vim/core.vim`
-  - `get_fixed_positions()` の実装を参考に単語検出を実装
-  - `show()` 関数の統合処理フローを理解
+### VimScript実装ファイル
 - `autoload/hellshake_yano_vim/hint_generator.vim`
-  - ヒント生成ロジック（最大7個の制限）
-- `tests-vim/hellshake_yano_vim/test_runner.vim`
-  - テストフレームワークの使用方法
+  - 現在: 単一文字ヒントのみ生成（最大7個）
+  - 拡張: 複数文字ヒント生成機能を追加
+- `autoload/hellshake_yano_vim/input.vim`
+  - 現在: 入力バッファと部分マッチロジックの基礎は実装済み
+  - 拡張: 部分マッチハイライトを追加
+- `autoload/hellshake_yano_vim/display.vim`
+  - 拡張: 部分マッチ時のハイライト変更機能を追加
 
-### テスト実装
-- `tests-vim/hellshake_yano_vim/test_core.vim`
-  - テストケースの書き方
-  - Assert関数の使用方法
+### テストファイル
+- `tests-vim/hellshake_yano_vim/test_hint_generator.vim`
+  - 拡張: 複数文字ヒント生成のテストケースを追加
+- `tests-vim/hellshake_yano_vim/test_input.vim`
+  - 拡張: 複数文字入力とマッチングのテストケースを追加
+- `tests-vim/hellshake_yano_vim/test_integration.vim`
+  - 拡張: エンドツーエンドのテストケースを追加
+
+### ドキュメント
+- `README.md`
+  - Phase A-3の機能説明を追加
+- `ARCHITECTURE.md`
+  - Phase A-3の実装状況を更新
 
 ## Process
 
-### process1 単語検出テスト作成（RED）
-@target: `tests-vim/hellshake_yano_vim/test_word_detector.vim`
-@ref: `tests-vim/hellshake_yano_vim/test_core.vim`, `tests-vim/hellshake_yano_vim/test_runner.vim`
+### process1 ヒント生成ロジックの拡張（TDD: RED）
+#### sub1.1 複数文字ヒント生成のテストケース作成
+@target: `tests-vim/hellshake_yano_vim/test_hint_generator.vim`
+@ref: `autoload/hellshake_yano_vim/hint_generator.vim`
+- [ ] 8個の単語に対するテストケースを追加
+  - 期待結果: `['A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA']`
+- [ ] 14個の単語に対するテストケースを追加
+  - 期待結果: `['A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA', 'AS', 'AD', 'AF', 'AJ', 'AK', 'AL']`
+- [ ] 49個の単語に対するテストケースを追加（最大値）
+  - 期待結果: 7単一文字 + 42二文字ヒント
+- [ ] 50個以上の単語に対するテストケースを追加
+  - 期待結果: 49個までに制限（MVP Phase A-3の制限）
+- [ ] エッジケースのテストケースを追加
+  - count = 0: `[]`
+  - count = 1: `['A']`
+  - count = 7: `['A', 'S', 'D', 'F', 'J', 'K', 'L']`
 
-- [ ] `Test_detect_words_basic()` - 基本的な英単語検出
-  - 1行に複数の単語が含まれる場合の検出
-  - 期待値: `['hello', 'world', 'vim']` のような配列
-  - 各単語の座標データ（lnum, col, end_col）の正確性を検証
-- [ ] `Test_detect_words_multiline()` - 複数行の単語検出
-  - 3～5行のテキストから全単語を検出
-  - 行番号が正しく記録されているか検証
-- [ ] `Test_detect_words_visible_area()` - 画面内範囲の検出
-  - `line('w0')` ～ `line('w$')` の範囲のみ検出
-  - 範囲外の単語が含まれていないことを確認
-- [ ] `Test_detect_words_empty_line()` - 空行の処理
-  - 空行をスキップして次の行を処理
-  - エラーを投げずに空配列を返す
-- [ ] `Test_detect_words_position_data()` - 座標データの正確性
-  - `col` が1-indexedで正しいか
-  - `end_col` が `matchstrpos()` の戻り値と一致するか
-  - `text` が実際の単語文字列と一致するか
+#### sub1.2 テスト実行と失敗確認（RED）
+@target: Terminal
+- [ ] `:source tests-vim/hellshake_yano_vim/test_hint_generator.vim` を実行
+- [ ] 新しいテストケースが失敗することを確認
+- [ ] エラーメッセージを記録
 
-### process2 word_detector.vim実装（GREEN）
-@target: `autoload/hellshake_yano_vim/word_detector.vim`
-@ref: `autoload/hellshake_yano_vim/core.vim`
+### process2 ヒント生成ロジックの実装（TDD: GREEN）
+#### sub2.1 複数文字ヒント生成関数の実装
+@target: `autoload/hellshake_yano_vim/hint_generator.vim`
+@ref: `tests-vim/hellshake_yano_vim/test_hint_generator.vim`
+- [ ] `s:generate_multi_char_hints(count)` 関数を新規作成
+  - 引数: count (生成する2文字ヒントの数)
+  - 戻り値: 2文字ヒントの配列
+  - アルゴリズム:
+    ```vim
+    " 例: count = 8 の場合
+    " 'AA', 'AS', 'AD', 'AF', 'AJ', 'AK', 'AL', 'SA' を生成
+    let l:hints = []
+    let l:base_chars = s:hint_chars  " ['A', 'S', 'D', 'F', 'J', 'K', 'L']
+    let l:max_hints = len(l:base_chars) * len(l:base_chars)  " 49
 
-- [ ] `hellshake_yano_vim#word_detector#detect_visible()` 関数を実装
-  - 画面内範囲（`line('w0')` ～ `line('w$')`）を取得
-  - 各行で `matchstrpos()` を使用して単語を検出
-  - ループで全単語を配列に追加
-  - 単語データ構造（text, lnum, col, end_col）を返す
-- [ ] エラーハンドリング
-  - 空のバッファでも安全に動作
-  - 単語が見つからない場合は空配列を返す
-- [ ] コメントの充実
-  - 関数の目的、パラメータ、戻り値を記述
-  - アルゴリズムの説明を追加
+    for l:i in range(min([a:count, l:max_hints]))
+      let l:first_idx = l:i / len(l:base_chars)
+      let l:second_idx = l:i % len(l:base_chars)
+      let l:hint = l:base_chars[l:first_idx] . l:base_chars[l:second_idx]
+      call add(l:hints, l:hint)
+    endfor
 
-### process3 core.vim統合
-@target: `autoload/hellshake_yano_vim/core.vim`
-@ref: `autoload/hellshake_yano_vim/word_detector.vim`
+    return l:hints
+    ```
 
-- [ ] `show()` 関数を修正
-  - `get_fixed_positions()` を `word_detector#detect_visible()` に置き換え
-  - 検出された単語が7個を超える場合は最初の7個のみを使用（MVP制限）
-  - エラーハンドリング: 単語が検出できない場合の警告表示
-- [ ] `get_fixed_positions()` 関数を保持
-  - Phase A-1との互換性維持のため残しておく
-  - コメントで「Phase A-2で word_detector に置き換え済み」と記述
+#### sub2.2 メイン生成関数の拡張
+@target: `autoload/hellshake_yano_vim/hint_generator.vim`
+- [ ] `hellshake_yano_vim#hint_generator#generate(count)` を拡張
+  - count <= 7: 既存ロジック（単一文字ヒント）
+  - count > 7: 単一文字ヒント + 複数文字ヒント
+  - count > 49: 49個までに制限
+  ```vim
+  function! hellshake_yano_vim#hint_generator#generate(count) abort
+    if a:count <= 0
+      return []
+    endif
 
-### process4 統合テスト追加
+    " Phase A-3: 最大49個まで（7単一文字 + 42二文字）
+    let l:max_total = 49
+    let l:actual_count = a:count > l:max_total ? l:max_total : a:count
+
+    " 単一文字ヒント（最大7個）
+    let l:single_char_count = min([l:actual_count, len(s:hint_chars)])
+    let l:hints = s:hint_chars[0 : l:single_char_count - 1]
+
+    " 複数文字ヒント（8個目以降）
+    if l:actual_count > len(s:hint_chars)
+      let l:multi_char_count = l:actual_count - len(s:hint_chars)
+      let l:multi_char_hints = s:generate_multi_char_hints(l:multi_char_count)
+      call extend(l:hints, l:multi_char_hints)
+    endif
+
+    return l:hints
+  endfunction
+  ```
+
+#### sub2.3 テスト実行と成功確認（GREEN）
+@target: Terminal
+- [ ] `:source tests-vim/hellshake_yano_vim/test_hint_generator.vim` を実行
+- [ ] 全てのテストケースが成功することを確認
+- [ ] テスト結果を記録
+
+### process3 入力処理の部分マッチ対応（TDD: RED）
+#### sub3.1 部分マッチテストケースの作成
+@target: `tests-vim/hellshake_yano_vim/test_input.vim`
+@ref: `autoload/hellshake_yano_vim/input.vim`
+- [ ] 部分マッチ検出のテストケース
+  - ヒントマップ: `{'A': {...}, 'AA': {...}, 'AS': {...}}`
+  - 入力: 'A'
+  - 期待: 部分マッチリストに ['A', 'AA', 'AS'] が含まれる
+- [ ] 完全一致優先のテストケース
+  - ヒントマップ: `{'A': {lnum: 1, col: 1}, 'AA': {lnum: 2, col: 1}}`
+  - 入力: 'A'
+  - 期待: lnum=1にジャンプ（完全一致優先）
+- [ ] 2文字入力のテストケース
+  - ヒントマップ: `{'A': {...}, 'AA': {lnum: 2, col: 1}, 'AS': {...}}`
+  - 入力: 'AA'
+  - 期待: lnum=2にジャンプ
+- [ ] マッチなしのテストケース
+  - ヒントマップ: `{'A': {...}, 'AA': {...}}`
+  - 入力: 'X'
+  - 期待: ヒント非表示、入力処理停止
+
+#### sub3.2 テスト実行と失敗確認（RED）
+@target: Terminal
+- [ ] テストを実行
+- [ ] 失敗を確認
+
+### process4 入力処理の実装（TDD: GREEN）
+#### sub4.1 部分マッチロジックの実装
+@target: `autoload/hellshake_yano_vim/input.vim`
+@ref: `tests-vim/hellshake_yano_vim/test_input.vim`
+- [ ] `s:get_partial_matches(input_buffer, hint_map)` 関数を実装
+  ```vim
+  " 部分マッチするヒントのリストを取得
+  function! s:get_partial_matches(input_buffer, hint_map) abort
+    let l:matches = []
+
+    for l:hint in keys(a:hint_map)
+      " 前方一致チェック
+      if stridx(l:hint, a:input_buffer) == 0
+        call add(l:matches, l:hint)
+      endif
+    endfor
+
+    return l:matches
+  endfunction
+  ```
+
+#### sub4.2 入力チェックロジックの拡張
+@target: `autoload/hellshake_yano_vim/input.vim`
+- [ ] `s:check_input(timer)` 関数を拡張
+  ```vim
+  function! s:check_input(timer) abort
+    let l:char_code = getchar(1)
+    if l:char_code == 0
+      return
+    endif
+
+    let l:input_char = nr2char(l:char_code)
+    let s:input_buffer .= l:input_char
+
+    " 完全一致チェック（優先）
+    if has_key(s:hint_map, s:input_buffer)
+      " ジャンプ実行
+      let l:target = s:hint_map[s:input_buffer]
+      call hellshake_yano_vim#jump#to(l:target.lnum, l:target.col)
+      call hellshake_yano_vim#display#hide_all()
+      call hellshake_yano_vim#input#stop()
+      return
+    endif
+
+    " 部分マッチチェック
+    let l:partial_matches = s:get_partial_matches(s:input_buffer, s:hint_map)
+
+    if len(l:partial_matches) > 0
+      " 部分マッチあり: ハイライト更新
+      call hellshake_yano_vim#display#highlight_partial_matches(l:partial_matches)
+    else
+      " マッチなし: クリーンアップ
+      call hellshake_yano_vim#display#hide_all()
+      call hellshake_yano_vim#input#stop()
+    endif
+  endfunction
+  ```
+
+#### sub4.3 テスト実行と成功確認（GREEN）
+@target: Terminal
+- [ ] テストを実行
+- [ ] 全てのテストケースが成功することを確認
+
+### process5 部分マッチハイライト機能の実装（TDD: RED）
+#### sub5.1 ハイライト機能のテストケース作成
+@target: `tests-vim/hellshake_yano_vim/test_display.vim`
+@ref: `autoload/hellshake_yano_vim/display.vim`
+- [ ] 部分マッチハイライトのテストケース
+  - 全ヒント: ['A', 'AA', 'AS', 'S', 'SA']
+  - 部分マッチ: ['A', 'AA', 'AS']
+  - 期待: 'A', 'AA', 'AS' のポップアップが異なるハイライトで表示
+- [ ] ハイライト解除のテストケース
+  - 部分マッチ解除時に元のハイライトに戻る
+
+#### sub5.2 テスト実行と失敗確認（RED）
+@target: Terminal
+- [ ] テストを実行
+- [ ] 失敗を確認
+
+### process6 部分マッチハイライト機能の実装（TDD: GREEN）
+#### sub6.1 ハイライト関数の実装
+@target: `autoload/hellshake_yano_vim/display.vim`
+@ref: `tests-vim/hellshake_yano_vim/test_display.vim`
+- [ ] `hellshake_yano_vim#display#highlight_partial_matches(matches)` 関数を実装
+  ```vim
+  " 部分マッチしたヒントのハイライトを更新
+  function! hellshake_yano_vim#display#highlight_partial_matches(matches) abort
+    " スクリプトローカル変数 s:popup_ids に格納されたポップアップIDを参照
+    " matches に含まれないヒントのポップアップを暗くする
+
+    for l:popup_info in s:popup_ids
+      let l:hint = l:popup_info.hint
+      let l:popup_id = l:popup_info.id
+
+      if index(a:matches, l:hint) >= 0
+        " 部分マッチ: 元のハイライトを維持
+        " (何もしない)
+      else
+        " マッチしない: ハイライトを暗くする
+        if has('nvim')
+          " Neovim: extmark のハイライトを変更
+          " (実装省略: 簡易版ではポップアップを非表示にする)
+          call nvim_buf_del_extmark(0, s:namespace_id, l:popup_id)
+        else
+          " Vim: ポップアップを非表示
+          call popup_close(l:popup_id)
+        endif
+      endif
+    endfor
+  endfunction
+  ```
+
+#### sub6.2 ポップアップ管理の拡張
+@target: `autoload/hellshake_yano_vim/display.vim`
+- [ ] `s:popup_ids` の構造を拡張
+  ```vim
+  " 既存: [popup_id1, popup_id2, ...]
+  " 拡張: [{'id': popup_id1, 'hint': 'A'}, {'id': popup_id2, 'hint': 'AA'}, ...]
+  ```
+- [ ] `hellshake_yano_vim#display#show_hints()` を拡張
+  - ポップアップ作成時にヒント文字も保存
+
+#### sub6.3 テスト実行と成功確認（GREEN）
+@target: Terminal
+- [ ] テストを実行
+- [ ] 全てのテストケースが成功することを確認
+
+### process7 統合テストとエンドツーエンドテスト（TDD: RED → GREEN）
+#### sub7.1 統合テストケースの作成
 @target: `tests-vim/hellshake_yano_vim/test_integration.vim`
-@ref: `autoload/hellshake_yano_vim/core.vim`
+- [ ] 8個以上の単語がある画面での統合テスト
+  - 単語: ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape', 'honeydew']
+  - ヒント: ['A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA']
+  - 入力: 'AA'
+  - 期待: 'honeydew' にジャンプ
+- [ ] 部分マッチの統合テスト
+  - 単語: 同上
+  - 入力: 'A' → 部分マッチハイライト表示 → 'A' → 'apple' にジャンプ
+- [ ] 最大49個の単語の統合テスト
+  - 49個の単語を配置
+  - 最後のヒント（'LL'）を入力してジャンプ
 
-- [ ] `Test_show_with_word_detection()` を追加
-  - テストバッファに単語を含む複数行を作成
-  - `core#show()` を実行
-  - ヒントが単語位置に表示されることを検証
-  - `state.words` に正しい単語データが格納されていることを確認
-- [ ] `Test_show_with_more_than_7_words()` を追加
-  - 10個以上の単語を含むバッファを作成
-  - 最大7個のヒントのみが表示されることを検証
+#### sub7.2 統合テスト実行
+@target: Terminal
+- [ ] 統合テストを実行
+- [ ] 全てのシナリオが成功することを確認
 
-### process10 ユニットテスト統合
-@target: `plugin/hellshake-yano-vim.vim`
-@ref: `tests-vim/hellshake_yano_vim/test_word_detector.vim`
+#### sub7.3 実際のVimでの手動テスト
+@target: Vim
+- [ ] 実際のVimで `:HellshakeYanoVimShow` を実行
+- [ ] 8個以上の単語がある画面で複数文字ヒントが表示されることを確認
+- [ ] 複数文字入力でジャンプできることを確認
+- [ ] 部分マッチハイライトが動作することを確認
 
-- [ ] `s:run_all_tests()` 関数に `test_word_detector.vim` を追加
-  - `l:test_files` 配列に追加
-- [ ] 全テストを実行して GREEN を確認
-  - `:HellshakeYanoVimTest` で全テスト通過を確認
+### process8 回帰テストの実行
+#### sub8.1 Phase A-1, A-2のテスト実行
+@target: Terminal
+- [ ] 全ての既存テストを実行
+  - `:HellshakeYanoVimTest`
+- [ ] 既存機能が壊れていないことを確認
+  - Phase A-1: 固定座標ヒント
+  - Phase A-2: 画面内単語検出（7個まで）
 
-### process50 フォローアップ
+#### sub8.2 エッジケースの確認
+@target: Terminal
+- [ ] 単語が7個以下の場合、Phase A-2と同じ動作をすることを確認
+- [ ] 単語が0個の場合、エラーが発生しないことを確認
+- [ ] 空バッファでのテスト
 
-#### sub1 カーソル位置の単語除外機能（オプション）
-@target: `autoload/hellshake_yano_vim/word_detector.vim`
+### process10 ユニットテスト
+#### sub10.1 テストカバレッジの確認
+@target: Terminal
+- [ ] 全てのテストケースを実行
+- [ ] カバレッジレポートを確認（手動）
+  - hint_generator.vim: 100%
+  - input.vim: 部分マッチロジック 100%
+  - display.vim: ハイライトロジック 100%
 
-- [ ] カーソル位置の単語を検出結果から除外するオプションを検討
-  - Phase A-4のモーション連打検出で必要になる可能性
-  - 現時点では実装しない（将来の拡張として記録）
+#### sub10.2 テストドキュメントの更新
+@target: `tests-vim/README.md`（存在しない場合は作成）
+- [ ] Phase A-3のテスト項目を記載
+- [ ] テスト実行方法を記載
 
 ### process100 リファクタリング
-@target: `autoload/hellshake_yano_vim/word_detector.vim`, `autoload/hellshake_yano_vim/core.vim`
+#### sub100.1 コードの重複排除
+@target: `autoload/hellshake_yano_vim/hint_generator.vim`
+- [ ] 複数文字ヒント生成ロジックの最適化
+- [ ] 不要なコメントの削除
+- [ ] 関数の責務を明確化
 
-- [ ] コードの重複排除
-  - 座標データ構造の生成ロジックを共通化
-- [ ] コメントの充実化
-  - 各関数の目的、使用例、エラーハンドリングを詳細に記述
-- [ ] パフォーマンス最適化の検討
-  - `matchstrpos()` の呼び出し回数を最小化
-  - 大きなバッファでのベンチマークテスト
-- [ ] エラーハンドリングの統一
-  - 警告メッセージのフォーマットを統一（`s:show_warning()` 使用）
+#### sub100.2 パフォーマンスの最適化
+@target: `autoload/hellshake_yano_vim/input.vim`
+- [ ] 部分マッチ検索の最適化
+  - 辞書のキーを配列に変換するコストを削減
+  - キャッシュの活用
+
+#### sub100.3 エラーハンドリングの統一
+@target: 全モジュール
+- [ ] エラーメッセージの統一
+- [ ] try-catch の適切な配置
 
 ### process200 ドキュメンテーション
-@target: `ARCHITECTURE.md`, `README.md`
+#### sub200.1 README.mdの更新
+@target: `README.md`
+- [ ] Phase A-3の機能説明を追加
+  - 複数文字ヒント（AA, AS, AD...）の説明
+  - 最大49個の単語に対応
+  - 部分マッチハイライトの説明
+- [ ] 使用例を追加
+  ```markdown
+  **Phase A-3 (Multi-character hints)** ✅:
+  1. Open a file with 10+ words visible
+  2. Execute `:HellshakeYanoVimShow`
+  3. Hints appear: 'A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA', 'AS', 'AD'
+  4. Type 'AA' to jump to the 8th word
+  5. Type 'A' then 'S' to jump to the 9th word (partial match highlight)
+  ```
+- [ ] Current Limitations を更新
+  - ~~Single-character hints only (maximum 7 hints)~~ → **Multi-character hints (maximum 49 hints)** ✅
 
-- [ ] `ARCHITECTURE.md` の更新
-  - Phase A-2の実装状況を「完了」に更新
-  - 単語検出アルゴリズムの詳細を追記
-  - Phase A-3への移行準備完了を記述
-- [ ] `README.md` の更新
-  - Current Limitationsセクションを更新
-    - ~~"Fixed positions only"~~ → "Word detection within visible area"
-  - Phase A-2の機能説明を追加
-  - 使用例を更新（単語検出の動作例）
-- [ ] コード内コメントの最終確認
-  - 全ての公開関数にドキュメントコメントがあることを確認
-  - テストコードのコメントも充実させる
+#### sub200.2 ARCHITECTURE.mdの更新
+@target: `ARCHITECTURE.md`
+- [ ] Phase A-3の実装状況を更新
+  ```markdown
+  #### Phase A-3: 複数文字ヒント ✅ **完了**
+
+  **実装状況**: Phase A-3 (複数文字ヒント) の実装は完了しました。
+
+  **達成した機能**:
+  - ✅ 複数文字ヒント生成（AA, AS, AD, AF...）
+  - ✅ 最大49個の単語に対応（7単一文字 + 42二文字）
+  - ✅ 部分マッチハイライト機能
+  - ✅ TDD による包括的なテストカバレッジ
+  - ✅ Phase A-1, A-2との後方互換性維持
+  ```
+- [ ] 技術仕様セクションに複数文字ヒントのアルゴリズムを追加
+
+#### sub200.3 コード内コメントの充実
+@target: 全モジュール
+- [ ] 各関数の目的、パラメータ、戻り値を詳細に記述
+- [ ] アルゴリズムの説明を追加
+- [ ] 使用例を追加
+
+#### sub200.4 PLAN.mdの更新
+@target: `PLAN.md`（このファイル）
+- [ ] 実装完了後、全チェックボックスを確認
+- [ ] 完了日時を記録
+- [ ] 次のフェーズ（Phase A-4）への移行準備を記載
 
