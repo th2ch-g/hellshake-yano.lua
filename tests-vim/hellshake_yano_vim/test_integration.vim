@@ -251,6 +251,49 @@ function! s:test_integration_three_words() abort
 endfunction
 
 " ========================================
+" Phase A-4: モーション連打統合テスト
+" ========================================
+
+function! s:test_integration_core_init_with_motion() abort
+  " テストケース: core#init() がmotion#init()を呼び出すことを確認
+  " 期待: motion状態が初期化されること
+
+  " core#init() を呼び出し
+  call hellshake_yano_vim#core#init()
+
+  " motion状態が初期化されていることを確認
+  let l:motion_state = hellshake_yano_vim#motion#get_state()
+
+  call s:assert_equal('', l:motion_state.last_motion,
+    \ 'motion state should be initialized (last_motion)')
+  call s:assert_equal(0, l:motion_state.motion_count,
+    \ 'motion state should be initialized (motion_count)')
+  call s:assert_equal(2, l:motion_state.threshold,
+    \ 'motion state should have default threshold')
+  call s:assert_equal(2000, l:motion_state.timeout_ms,
+    \ 'motion state should have default timeout')
+endfunction
+
+function! s:test_integration_config_motion_settings() abort
+  " テストケース: config経由でmotion設定を取得できることを確認
+  " 期待: デフォルト設定が取得できること
+
+  let l:motion_enabled = hellshake_yano_vim#config#get('motion_enabled')
+  let l:motion_threshold = hellshake_yano_vim#config#get('motion_threshold')
+  let l:motion_timeout = hellshake_yano_vim#config#get('motion_timeout_ms')
+  let l:motion_keys = hellshake_yano_vim#config#get('motion_keys')
+
+  call s:assert_equal(v:true, l:motion_enabled,
+    \ 'motion_enabled should be true by default')
+  call s:assert_equal(2, l:motion_threshold,
+    \ 'motion_threshold should be 2 by default')
+  call s:assert_equal(2000, l:motion_timeout,
+    \ 'motion_timeout_ms should be 2000 by default')
+  call s:assert_equal(['w', 'b', 'e'], l:motion_keys,
+    \ 'motion_keys should be [w, b, e] by default')
+endfunction
+
+" ========================================
 " エッジケースのテスト
 " ========================================
 
@@ -319,6 +362,12 @@ function! s:run_all_tests() abort
   echo '--- Phase A-2 compatibility (regression) ---'
   call s:test_integration_seven_words()
   call s:test_integration_three_words()
+  echo ''
+
+  " Phase A-4: モーション連打統合テスト
+  echo '--- Phase A-4: Motion detection integration ---'
+  call s:test_integration_core_init_with_motion()
+  call s:test_integration_config_motion_settings()
   echo ''
 
   " エッジケースのテスト

@@ -73,6 +73,18 @@ Plug 'nekowasabi/hellshake-yano.vim'
 - **Up to 7 words**: Display hints for maximum 7 words (MVP limitation)
 - **Performance optimized**: Fast detection even in large buffers (only scans visible area)
 
+**Phase A-3 (Multi-Character Hints) ✅**:
+- **Multi-character hints**: Generate hints like AA, AS, AD, AF... for up to 49 words
+- **Partial match highlighting**: Visual feedback during multi-character input
+- **Blocking input method**: Reliable input capture before Vim's normal key bindings
+
+**Phase A-4 (Motion Repeat Detection) ✅**:
+- **Automatic hint trigger**: Press w/b/e twice quickly to show hints automatically
+- **Configurable threshold**: Default 2 presses, customizable (e.g., 3 presses)
+- **Timeout feature**: Reset counter after 2 seconds (configurable)
+- **Different motion reset**: Counter resets when switching between w/b/e
+- **Customizable keys**: Choose which motion keys to track
+
 ### Requirements
 
 - Vim 8.0+ or Neovim
@@ -107,10 +119,34 @@ Plug 'nekowasabi/hellshake-yano.vim'
 6. Cursor jumps to the exact word position (beginning of the word)
 7. Hints automatically disappear after jump
 
+**Phase A-3 (Multi-Character Hints)** ✅:
+1. Open a file with many words
+2. Execute `:HellshakeYanoVimShow`
+3. Hints appear: Single-char (A-L) for first 7, then multi-char (AA, AS, AD...)
+4. Type hint characters (e.g., 'AS') to jump
+5. Partial matches are highlighted as you type
+6. Jump happens on complete match
+
+**Phase A-4 (Motion Repeat Detection)** ✅:
+1. Open any file with code or text
+2. Press `w` key twice quickly (within 2 seconds)
+3. Hints automatically appear at word positions
+4. Type hint character to jump (e.g., 'A')
+5. Cursor jumps to the target word
+6. Hints disappear after jump
+
+**Motion Repeat Examples**:
+- `w` + `w` (quick) → Hints appear automatically
+- `b` + `b` (quick) → Hints appear for backward motion
+- `e` + `e` (quick) → Hints appear for word-end motion
+- `w` + (wait 3 seconds) + `w` → No hints (timeout)
+- `w` + `b` → No hints (different motion)
+
 **Current Behavior**:
 - Detects English words using `\w+` pattern (alphanumeric + underscore)
-- Maximum 7 hints displayed (MVP limitation)
+- Maximum 49 hints displayed (7 single-char + 42 multi-char)
 - Only scans visible area (fast performance)
+- Motion repeat detection enabled by default
 
 ### Architecture
 
@@ -136,20 +172,67 @@ autoload/hellshake_yano_vim/
 :call RunAllTests()
 ```
 
-### Current Limitations (Phase A-2)
+### Configuration (Pure VimScript MVP)
+
+**Basic Configuration**:
+```vim
+" .vimrc
+let g:hellshake_yano_vim_config = {
+      \ 'enabled': v:true,
+      \ 'hint_chars': 'ASDFJKL',
+      \ 'motion_enabled': v:true,
+      \ 'motion_threshold': 2,
+      \ 'motion_timeout_ms': 2000,
+      \ 'motion_keys': ['w', 'b', 'e']
+      \ }
+```
+
+**Configuration Options**:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | Boolean | `v:true` | Enable/disable the plugin |
+| `hint_chars` | String | `'ASDFJKL'` | Characters used for hints |
+| `motion_enabled` | Boolean | `v:true` | Enable motion repeat detection |
+| `motion_threshold` | Number | `2` | Number of repeats to trigger hints |
+| `motion_timeout_ms` | Number | `2000` | Timeout in milliseconds (2 seconds) |
+| `motion_keys` | List | `['w', 'b', 'e']` | Motion keys to track |
+
+**Configuration Examples**:
+
+```vim
+" Example 1: Trigger after 3 presses
+let g:hellshake_yano_vim_config = {'motion_threshold': 3}
+
+" Example 2: Shorter timeout (1.5 seconds)
+let g:hellshake_yano_vim_config = {'motion_timeout_ms': 1500}
+
+" Example 3: Track only 'w' key
+let g:hellshake_yano_vim_config = {'motion_keys': ['w']}
+
+" Example 4: Disable default mappings and use custom
+let g:hellshake_yano_vim_config = {'motion_enabled': v:false}
+nmap <Leader>w <Plug>(hellshake-yano-vim-w)
+nmap <Leader>b <Plug>(hellshake-yano-vim-b)
+nmap <Leader>e <Plug>(hellshake-yano-vim-e)
+```
+
+### Current Limitations
 
 - ✅ ~~Fixed positions only~~ → **Word detection within visible area** (Phase A-2 完了)
-- Single-character hints only (maximum 7 hints)
+- ✅ ~~Single-character hints only~~ → **Multi-character hints** (Phase A-3 完了)
+- ✅ ~~No motion detection~~ → **Motion repeat detection** (Phase A-4 完了)
 - English words only (`\w+` pattern) - Japanese support planned for Phase A-5
-- No motion detection (planned for Phase A-4)
 
 ### Roadmap
 
-- **Phase A-1**: MVP (Fixed positions) ✅ **完了**
-- **Phase A-2**: Word detection within visible area ✅ **完了**
-- **Phase A-3**: Multi-character hints (aa, as, ad, ...) - Next
-- **Phase A-4**: Motion-triggered hints (w/b/e key repeat detection)
-- **Phase A-5**: Japanese support, caching, customization
+- **Phase A-1**: MVP (Fixed positions) ✅ **完了** (2025-10)
+- **Phase A-2**: Word detection within visible area ✅ **完了** (2025-10)
+- **Phase A-3**: Multi-character hints (AA, AS, AD, ...) ✅ **完了** (2025-10)
+- **Phase A-4**: Motion-triggered hints (w/b/e key repeat detection) ✅ **完了** (2025-10)
+- **Phase A-5**: Japanese support, caching, customization 🔜 Next
+- **Phase B**: Denops implementation (TypeScript, performance optimization) 📝 Planned
+- **Phase C**: Integration (unified API, auto-selection) 📝 Planned
 
 ---
 

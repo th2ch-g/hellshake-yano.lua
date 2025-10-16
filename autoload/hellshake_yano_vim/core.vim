@@ -30,6 +30,8 @@ let s:state = {
 " 目的:
 "   - s:state を初期値にリセット
 "   - プラグインの起動時や再初期化時に呼び出される
+"   - Phase A-4: motion#init() を呼び出してモーション状態を初期化
+"   - Phase A-4: config#get() で設定値を取得してmotion設定を適用
 "
 " @return なし
 function! hellshake_yano_vim#core#init() abort
@@ -42,6 +44,16 @@ function! hellshake_yano_vim#core#init() abort
     \ 'popup_ids': [],
     \ 'input_timer': 0
   \ }
+
+  " Phase A-4: モーション連打検出の初期化
+  call hellshake_yano_vim#motion#init()
+
+  " Phase A-4: 設定値を取得してmotion設定を適用
+  let l:motion_threshold = hellshake_yano_vim#config#get('motion_threshold')
+  let l:motion_timeout_ms = hellshake_yano_vim#config#get('motion_timeout_ms')
+
+  call hellshake_yano_vim#motion#set_threshold(l:motion_threshold)
+  call hellshake_yano_vim#motion#set_timeout(l:motion_timeout_ms)
 endfunction
 
 " hellshake_yano_vim#core#get_state() - 状態変数の取得（テスト用）

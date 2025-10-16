@@ -144,6 +144,60 @@ function! s:hide_hints() abort
 endfunction
 
 "=============================================================================
+" Motion Key Mappings (Phase A-4)
+"=============================================================================
+"
+" モーション連打検出機能のキーマッピング
+" w/b/e キーを連続で押下（連打）したときにヒント表示を自動的にトリガーします。
+"
+" カスタマイズ方法:
+"   以下の例のように、<Plug>マッピングを使用して独自のキーにマッピングできます。
+"
+"   例: デフォルトのマッピングを無効化して、独自のキーにマッピング
+"     let g:hellshake_yano_vim_config = {'motion_enabled': v:false}
+"     nmap <Leader>w <Plug>(hellshake-yano-vim-w)
+"     nmap <Leader>b <Plug>(hellshake-yano-vim-b)
+"     nmap <Leader>e <Plug>(hellshake-yano-vim-e)
+"
+"   例: 対象キーを変更（デフォルト: ['w', 'b', 'e']）
+"     let g:hellshake_yano_vim_config = {'motion_keys': ['w', 'b']}
+"
+
+" <Plug>マッピングの定義（常に定義）
+nnoremap <silent> <Plug>(hellshake-yano-vim-w)
+      \ :<C-u>call hellshake_yano_vim#motion#handle('w')<CR>
+nnoremap <silent> <Plug>(hellshake-yano-vim-b)
+      \ :<C-u>call hellshake_yano_vim#motion#handle('b')<CR>
+nnoremap <silent> <Plug>(hellshake-yano-vim-e)
+      \ :<C-u>call hellshake_yano_vim#motion#handle('e')<CR>
+
+" デフォルトマッピングの設定（motion_enabled が true の場合のみ）
+if !exists('g:hellshake_yano_vim_config')
+  let g:hellshake_yano_vim_config = {}
+endif
+
+" config#get() を使用して motion_enabled と motion_keys を取得
+" 初期化前なので、直接グローバル変数またはデフォルト値をチェック
+let s:motion_enabled = get(g:hellshake_yano_vim_config, 'motion_enabled', v:true)
+let s:motion_keys = get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e'])
+
+if s:motion_enabled
+  " 対象キーをループしてマッピング
+  for s:key in s:motion_keys
+    " execute を使って動的にマッピングを生成
+    execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle(%s)<CR>',
+          \ s:key, string(s:key))
+  endfor
+endif
+
+" 一時変数のクリーンアップ
+unlet s:motion_enabled
+unlet s:motion_keys
+if exists('s:key')
+  unlet s:key
+endif
+
+"=============================================================================
 " Restore cpoptions
 "=============================================================================
 
