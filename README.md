@@ -59,28 +59,36 @@ Plug 'nekowasabi/hellshake-yano.vim'
 
 ## Pure VimScript MVP (Vim 8.0+)
 
-### Features (MVP)
+### Features (Pure VimScript Implementation)
 
+**Phase A-1 (MVP) ✅**:
 - **Simple hint display**: Show hints (a, s, d) at three fixed positions around the cursor
 - **Keyboard-driven jump**: Jump to hint positions by pressing hint keys
 - **Vim 8.0+ compatible**: Works with both Vim and Neovim using popup/extmark
 - **TDD approach**: Thoroughly tested with VimScript unit tests
+
+**Phase A-2 (Word Detection) ✅**:
+- **Automatic word detection**: Detect words within visible area using `\w+` pattern
+- **Smart hint placement**: Hints are placed at actual word positions (not fixed coordinates)
+- **Up to 7 words**: Display hints for maximum 7 words (MVP limitation)
+- **Performance optimized**: Fast detection even in large buffers (only scans visible area)
 
 ### Requirements
 
 - Vim 8.0+ or Neovim
 - No external dependencies required
 
-### MVP Commands
+### Commands
 
 | Command | Description |
 |---------|-------------|
-| `:HellshakeYanoVimShow` | Display hints at fixed positions |
+| `:HellshakeYanoVimShow` | Display hints at word positions (Phase A-2) or fixed positions (Phase A-1) |
 | `:HellshakeYanoVimHide` | Hide all displayed hints |
 | `:HellshakeYanoVimTest` | Run unit tests |
 
-### MVP Usage Example
+### Usage Example
 
+**Phase A-1 (Fixed Positions)**:
 1. Open any file with Vim
 2. Move cursor to line 10 (for example)
 3. Execute `:HellshakeYanoVimShow`
@@ -88,12 +96,29 @@ Plug 'nekowasabi/hellshake-yano.vim'
 5. Press 'a' to jump to line 7
 6. Hints automatically disappear after jump
 
-### MVP Architecture
+**Phase A-2 (Word Detection)** ✅:
+1. Open any file with code or text (e.g., JavaScript, Python, etc.)
+2. Position cursor in the middle of the visible area
+3. Execute `:HellshakeYanoVimShow`
+4. Hints ('a', 's', 'd', 'f', 'j', 'k', 'l') appear at actual word positions
+   - Example: `function calculateTotal(price, tax) {`
+   - Hints appear at: `f`unction, `c`alculateTotal, `p`rice, `t`ax, etc.
+5. Press hint key (e.g., 'f') to jump to that word
+6. Cursor jumps to the exact word position (beginning of the word)
+7. Hints automatically disappear after jump
+
+**Current Behavior**:
+- Detects English words using `\w+` pattern (alphanumeric + underscore)
+- Maximum 7 hints displayed (MVP limitation)
+- Only scans visible area (fast performance)
+
+### Architecture
 
 ```
 plugin/hellshake-yano-vim.vim    # Entry point
 autoload/hellshake_yano_vim/
 ├── core.vim                      # State management & integration
+├── word_detector.vim             # Word detection (Phase A-2) ✅
 ├── hint_generator.vim            # Hint generation
 ├── display.vim                   # Popup/Extmark display
 ├── input.vim                     # Input processing
@@ -111,17 +136,18 @@ autoload/hellshake_yano_vim/
 :call RunAllTests()
 ```
 
-### Current Limitations (Phase A-1 MVP)
+### Current Limitations (Phase A-2)
 
-- Fixed positions only (3 positions: -3, 0, +3 lines from cursor)
+- ✅ ~~Fixed positions only~~ → **Word detection within visible area** (Phase A-2 完了)
 - Single-character hints only (maximum 7 hints)
-- No word detection (planned for Phase A-2)
+- English words only (`\w+` pattern) - Japanese support planned for Phase A-5
 - No motion detection (planned for Phase A-4)
 
 ### Roadmap
 
-- **Phase A-2**: Word detection within visible area
-- **Phase A-3**: Multi-character hints (aa, as, ad, ...)
+- **Phase A-1**: MVP (Fixed positions) ✅ **完了**
+- **Phase A-2**: Word detection within visible area ✅ **完了**
+- **Phase A-3**: Multi-character hints (aa, as, ad, ...) - Next
 - **Phase A-4**: Motion-triggered hints (w/b/e key repeat detection)
 - **Phase A-5**: Japanese support, caching, customization
 

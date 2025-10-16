@@ -90,6 +90,7 @@ function! s:run_all_tests() abort
           \ 'test_display.vim',
           \ 'test_jump.vim',
           \ 'test_input.vim',
+          \ 'test_word_detector.vim',
           \ 'test_integration.vim'
           \ ]
 

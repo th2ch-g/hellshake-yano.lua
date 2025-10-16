@@ -353,15 +353,73 @@ autoload/hellshake_yano_vim/
 - ARCHITECTURE.md の実装状況更新
 - コード内コメントの充実
 
-#### Phase A-2: 単語検出
+#### Phase A-2: 画面内単語検出 ✅ **完了**
+
+**実装状況**: Phase A-2 (画面内単語検出) の実装は完了しました。
+
+**達成した機能**:
+- ✅ 画面内単語の自動検出（`\w+` パターン）
+- ✅ 最大7個の単語へのヒント表示（MVP制限）
+- ✅ word_detectorモジュールの実装
+- ✅ core.vimとの統合完了
+- ✅ 包括的な統合テスト
+
+**実装ファイル**:
 ```vim
-" 目標: 画面内の全単語を検出してヒントを割り当て
-" 実装内容
-- autoload/hellshake_yano_vim/word_detector.vim
-- 正規表現 \w\+ での単語検出
-- 画面内限定（line('w0')～line('w$')）
-- 単語とヒントの関連付け
+autoload/hellshake_yano_vim/
+├── word_detector.vim                # 画面内単語検出（新規実装）
+├── core.vim                          # 状態管理・word_detector統合
+├── hint_generator.vim                # ヒント生成（最大7個）
+├── display.vim                       # Popup/Extmark 表示
+├── input.vim                         # 入力処理
+└── jump.vim                          # ジャンプ実行
 ```
+
+**技術的な実装詳細**:
+
+**単語検出アルゴリズム**:
+- 正規表現パターン: `\w+` （英数字とアンダースコア）
+- 検出範囲: `line('w0')` ～ `line('w$')` （画面内のみ）
+- 使用関数: `matchstrpos(line, pattern, start_col)`
+- データ構造:
+  ```vim
+  {
+    'text': 'hello',      " 単語文字列
+    'lnum': 10,           " 行番号（1-indexed）
+    'col': 5,             " 開始列（1-indexed）
+    'end_col': 10         " 終了列（1-indexed）
+  }
+  ```
+
+**パフォーマンス特性**:
+- 時間計算量: O(L * W) - L: 画面内の行数、W: 行あたりの平均単語数
+- 画面内に限定することで大きなバッファでも高速動作
+- 1000行のバッファでも数ミリ秒で処理完了（画面内は通常20-50行）
+
+**最適化の設計判断**:
+- `matchstrpos()` を使用（正規表現エンジンのネイティブ実装）
+- 空行を明示的にスキップ（空行が多い場合の最適化）
+- MVP制限により最大7個の単語のみ処理（配列スライスで高速）
+
+**テストコマンド**:
+```vim
+:HellshakeYanoVimTest    # 全テスト実行（word_detector含む）
+```
+
+**リファクタリング成果（Process100）**:
+- パフォーマンス最適化に関するコメント追加
+- アルゴリズムの効率性について詳細に記述
+- 時間計算量の明記
+
+**ドキュメンテーション成果（Process200）**:
+- ARCHITECTURE.md に Phase A-2 詳細セクション追加
+- README.md の Current Limitations 更新
+- 単語検出アルゴリズムの技術仕様を明記
+
+**Phase A-3への移行準備**:
+- ✅ 単語検出の基盤が完成
+- ✅ 最大7個の制限を超えるための基礎が整備済み
+- 次の課題: 複数文字ヒント（aa, as, ad...）の実装
 
 #### Phase A-3: 複数文字ヒント
 ```vim

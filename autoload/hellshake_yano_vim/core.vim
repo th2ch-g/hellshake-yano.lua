@@ -2,11 +2,12 @@
 " Author: hellshake-yano
 " License: MIT
 "
-" TDD Phase: REFACTOR
-" Process2: 固定座標データ構造の実装
+" TDD Phase: GREEN
+" Process3: core.vim統合 - word_detector との統合完了
 "
-" このモジュールは hellshake-yano.vim の中核となる状態管理と座標計算を担当します。
-" Phase A-1 (Pure VimScript MVP) の基礎実装を提供し、Vim 8.0+ と Neovim の両方で動作します。
+" このモジュールは hellshake-yano.vim の中核となる状態管理と単語検出統合を担当します。
+" Phase A-2: 固定座標から画面内単語検出への移行が完了しました。
+" Vim 8.0+ と Neovim の両方で動作します。
 
 " スクリプトローカル変数の定義
 let s:save_cpo = &cpo
@@ -76,7 +77,8 @@ endfunction
 "   - col: 列番号（常に1 = 行頭）
 "
 " 注意事項:
-"   - Phase A-2 では単語検出機能に置き換えられる予定
+"   - Phase A-2 で word_detector#detect_visible() に置き換え済み
+"   - この関数は Phase A-1 との互換性維持のために残されています
 "   - 現在は固定オフセット [-3, 0, 3] を使用
 function! hellshake_yano_vim#core#get_fixed_positions() abort
   " カーソルの現在行を取得
@@ -113,20 +115,27 @@ endfunction
 " hellshake_yano_vim#core#show() - 統合実行関数（ヒント表示）
 "
 " 目的:
-"   - 固定座標取得、ヒント生成、ヒント表示、ヒントマップ作成、入力処理開始の
+"   - 画面内単語検出、ヒント生成、ヒント表示、ヒントマップ作成、入力処理開始の
 "     一連の流れを統合実行
 "   - Process7 統合テストで検証される全体フロー
 "
 " 処理フロー:
-"   1. 固定座標取得（get_fixed_positions）
-"   2. ヒント生成（hint_generator#generate）
-"   3. ヒント表示（display#show_hint）
-"   4. ヒントマップ作成（ヒントと位置の対応付け）
-"   5. 入力処理開始（input#start）
-"   6. 状態の更新（hints_visible = true）
+"   1. 画面内単語検出（word_detector#detect_visible）
+"   2. MVP制限: 最大7個まで
+"   3. ヒント生成（hint_generator#generate）
+"   4. ヒント表示（display#show_hint）
+"   5. ヒントマップ作成（ヒントと位置の対応付け）
+"   6. 入力処理開始（input#start）
+"   7. 状態の更新（hints_visible = true）
+"
+" パフォーマンス最適化:
+"   - 単語検出は画面内のみ（line('w0') ～ line('w$')）に限定
+"   - MVP制限により最大7個の単語のみ処理（配列スライスで高速）
+"   - 座標データ変換は単純なループで実装（オーバーヘッド最小化）
+"   - 状態更新は一括で実行（複数回の代入を避ける）
 "
 " エラーハンドリング:
-"   - 座標が取得できない場合は処理を中断
+"   - 単語が検出できない場合は処理を中断
 "   - ヒント生成に失敗した場合は処理を中断
 "
 " @return なし
@@ -135,11 +144,22 @@ endfunction
 "   :call hellshake_yano_vim#core#show()
 "
 " 注意事項:
-"   - MVP版では3つの固定座標にヒント（a, s, d）を表示
-"   - Phase A-2 で単語検出機能に置き換えられる予定
+"   - Phase A-2: 画面内の単語を自動検出してヒントを表示
+"   - MVP版では最大7個の単語にヒント（a, s, d, f, j, k, l）を表示
 function! hellshake_yano_vim#core#show() abort
-  " 1. 固定座標取得
-  let l:positions = hellshake_yano_vim#core#get_fixed_positions()
+  " 1. 画面内の単語を検出
+  let l:detected_words = hellshake_yano_vim#word_detector#detect_visible()
+
+  " MVP制限: 最大7個まで
+  if len(l:detected_words) > 7
+    let l:detected_words = l:detected_words[0:6]
+  endif
+
+  " 単語データから座標データに変換
+  let l:positions = []
+  for l:word in l:detected_words
+    call add(l:positions, {'lnum': l:word.lnum, 'col': l:word.col})
+  endfor
 
   " エラーチェック: 座標が取得できない場合は中断
   if empty(l:positions)
