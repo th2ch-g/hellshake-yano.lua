@@ -1,324 +1,462 @@
-# title: Phase A-4: モーション連打検出機能の実装
+# title: Phase A-5: 高度な機能の実装
 
-**ステータス**: ✅ **完了** (2025-10-16)
+**ステータス**: 📝 **計画中** (2025-10-16)
 
 ## 概要
-- w/b/eキーを連続で押下（連打）したときにヒント表示を自動的にトリガーする機能を実装
-- ユーザーは明示的なコマンド呼び出しなしに、自然なモーション操作の延長でヒントジャンプ機能を利用可能になる
+- ビジュアルモード対応により、ビジュアル選択範囲内でヒント表示機能を実現
+- 日本語単語検出により、日本語混在テキストでの基本的な単語境界認識を実現
+- 設定システム拡張により、より柔軟なカスタマイズを実現
+- パフォーマンス最適化により、キャッシュなしでも快適な動作を実現
 
 ### goal
-- ユーザーが `w` キーを2回連続で押すと、自動的に画面内の単語にヒント（A, S, D, F...）が表示され、ヒント文字を入力することで目的の単語にジャンプできる
-- 同様に `b`（後方移動）、`e`（単語末尾移動）でも同じ動作を実現
-- タイムアウト（デフォルト2秒）内に連打しないとカウントがリセットされる
+- ユーザーがビジュアルモード（v/V/Ctrl-v）でテキストを選択中に、選択範囲内の単語にヒントが表示され、ヒント文字を入力することで目的の単語にジャンプできる
+- 日本語混在テキスト（例: 「このファイルを開く」や「ファイル操作API」）で、文字種の切り替わりを境界として単語が検出され、ヒント表示できる
+- 設定により最小単語長（min_word_length）や最大ヒント数（max_hints）を調整し、表示をカスタマイズできる
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 - 動作確認はneovimではなく、vimで行う
 - ヒントジャンプはブロッキング方式で行う（Phase A-3で確立した方式を継承）
 - git add, git commitの実行は、ユーザに実行の許可を得ること
+- キャッシュシステムは実装しない（Denops版で実装予定）
 
 ## 開発のゴール
-- モーション連打検出機能を実装し、hellshake-yano-vimを実用的なプラグインとして完成させる
-- Phase A-1～A-3で構築した基盤（単語検出、ヒント生成、入力処理）を活用
-- 設定可能なパラメータ（連打回数の閾値、タイムアウト時間、対象キー）を提供
-- vim-searchxの実装パターンを参考にしつつ、hellshake-yano独自の設計を維持
+- Pure VimScriptでビジュアルモード対応を実装し、実用性を向上させる
+- 日本語単語の基本的な境界検出を実装し、日本語環境での使用を可能にする
+- 設定システムを拡張し、ユーザーが細かくカスタマイズできるようにする
+- キャッシュなしでもパフォーマンスを最適化し、快適な動作を実現する
+- Phase A-1～A-4で構築した基盤を維持しつつ、機能を拡張する
 
 ## 実装仕様
 
 ### データ構造
 
-#### モーション状態管理
+#### ビジュアルモード状態
 ```vim
-let s:motion_state = {
-  \ 'last_motion': '',           " 最後に実行されたモーション（'w', 'b', 'e'）
-  \ 'last_motion_time': 0,       " 最後のモーション実行時刻（reltime()）
-  \ 'motion_count': 0,           " 連続実行カウント
-  \ 'timeout_ms': 2000,          " タイムアウト時間（デフォルト2秒）
-  \ 'threshold': 2               " ヒント表示トリガーの閾値（デフォルト2回）
+" visual.vim 内部状態
+let s:visual_state = {
+  \ 'active': v:false,           " ビジュアルモードが有効か
+  \ 'mode': '',                  " ビジュアルモードタイプ（v, V, Ctrl-v）
+  \ 'start_line': 0,             " 選択開始行
+  \ 'start_col': 0,              " 選択開始列
+  \ 'end_line': 0,               " 選択終了行
+  \ 'end_col': 0                 " 選択終了列
 \ }
 ```
 
-#### 設定データ構造
+#### 日本語文字種
+```vim
+" 文字種の定義
+" - 'hiragana': ひらがな（U+3040-U+309F）
+" - 'katakana': カタカナ（U+30A0-U+30FF）
+" - 'kanji': 漢字（U+4E00-U+9FAF）
+" - 'alphanumeric': 英数字（\w）
+" - 'other': その他
+```
+
+#### 拡張設定データ構造
 ```vim
 let s:default_config = {
+  \ " Phase A-1～A-4 の既存設定
   \ 'enabled': v:true,
   \ 'hint_chars': 'ASDFJKL',
   \ 'motion_enabled': v:true,
   \ 'motion_threshold': 2,
   \ 'motion_timeout_ms': 2000,
-  \ 'motion_keys': ['w', 'b', 'e']
+  \ 'motion_keys': ['w', 'b', 'e'],
+  \
+  \ " Phase A-5 新規追加
+  \ 'use_japanese': v:false,         " 日本語検出有効化（デフォルト無効）
+  \ 'min_word_length': 1,            " 最小単語長（文字数）
+  \ 'visual_mode_enabled': v:true,   " ビジュアルモード対応
+  \ 'max_hints': 49,                 " 最大ヒント数
+  \ 'exclude_numbers': v:false,      " 数字のみの単語を除外
+  \ 'debug_mode': v:false            " デバッグモード
 \ }
 ```
 
 ### アルゴリズム
 
-#### モーション連打検出フロー
+#### ビジュアルモード検出フロー
 ```
-1. モーションキー（w/b/e）がマッピングされた関数を呼び出す
-2. 前回のモーションとの時間差をチェック
-   - タイムアウト内 && 同じモーション → カウント++
-   - タイムアウト外 || 異なるモーション → カウント=1にリセット
-3. カウントが閾値以上 → ヒント表示トリガー
-4. ヒント表示後はカウントリセット（連続表示を防ぐ）
-5. 通常モーション実行（ヒント表示しない場合）
-6. 現在時刻と現在モーションを記録
+1. ビジュアルモードでユーザーがトリガーキーを押す
+2. mode() 関数で現在のモードを取得（v, V, Ctrl-v）
+3. getpos("'<") と getpos("'>") で選択範囲を取得
+4. 選択範囲内の行を走査し、単語を検出
+5. 検出した単語にヒントを生成
+6. ヒント表示（既存のdisplay#show を利用）
+7. 入力処理（既存のinput#wait_for_input を利用）
+8. ジャンプ実行後、ビジュアル選択を解除
+```
+
+#### 日本語単語境界検出フロー
+```
+1. 行テキストを1文字ずつ走査
+2. 各文字の文字種を判定（s:get_char_type）
+   - char2nr() でUnicodeコードポイント取得
+   - コードポイント範囲で文字種判定
+3. 文字種が切り替わったら境界と判定
+4. 境界ごとに単語データを作成
+   - text: 単語文字列
+   - lnum: 行番号
+   - col: 開始列
+   - end_col: 終了列
+5. 最小単語長フィルタリング適用
+6. 単語リストを返す
+```
+
+#### パフォーマンス最適化フロー
+```
+1. 設定から min_word_length, max_hints を取得
+2. 画面内の行を走査開始
+3. 各行で以下をチェック:
+   - 早期リターン: 空行はスキップ
+   - 早期リターン: max_hints に達したらループ終了
+4. 単語検出後、フィルタリング:
+   - 最小単語長チェック（strchars() < min_length）
+   - 数字のみ除外（exclude_numbers が true の場合）
+5. フィルタリング通過した単語のみ追加
+6. 最終的な単語リストを返す
 ```
 
 ### ファイル構造
 ```
 autoload/hellshake_yano_vim/
-├── motion.vim                 # 新規作成: モーション連打検出
-├── config.vim                 # 新規作成: 設定管理
-├── core.vim                   # 既存: motion統合のための軽微な変更
-├── word_detector.vim          # 既存: Phase A-2で実装済み
+├── visual.vim                 # 新規作成: ビジュアルモード対応
+├── word_detector.vim          # 既存: 日本語検出機能追加
+├── config.vim                 # 既存: 新規設定項目追加
+├── core.vim                   # 既存: visual統合のための軽微な変更
 ├── hint_generator.vim         # 既存: Phase A-3で実装済み
 ├── display.vim                # 既存: Phase A-1で実装済み
 ├── input.vim                  # 既存: Phase A-3で実装済み
-└── jump.vim                   # 既存: Phase A-1で実装済み
+├── jump.vim                   # 既存: Phase A-1で実装済み
+└── motion.vim                 # 既存: Phase A-4で実装済み
 
-plugin/hellshake-yano-vim.vim  # 既存: キーマッピング追加
+plugin/hellshake-yano-vim.vim  # 既存: ビジュアルモードマッピング追加
 
 tests-vim/hellshake_yano_vim/
-└── test_motion.vim            # 新規作成: モーション検出のテスト
+├── test_visual.vim            # 新規作成: ビジュアルモードのテスト
+├── test_word_detector.vim     # 既存: 日本語検出テスト追加
+└── test_config.vim            # 既存: 新規設定のテスト追加
 ```
 
-### キーマッピング仕様
+### パフォーマンス特性
+- 時間計算量: O(L * C) - L: 画面内の行数、C: 行あたりの平均文字数
+- 日本語検出は文字ごとの走査が必要（英数字検出より低速）
+- 早期リターンとフィルタリングにより不要な処理を削減
+- キャッシュなしでも1000行ファイルで200ms以内を目標
+
+### ビジュアルモード仕様
 
 #### デフォルトマッピング
 ```vim
-" motion_enabled が true の場合、自動的にマッピング
-nnoremap <silent> w :<C-u>call hellshake_yano_vim#motion#handle('w')<CR>
-nnoremap <silent> b :<C-u>call hellshake_yano_vim#motion#handle('b')<CR>
-nnoremap <silent> e :<C-u>call hellshake_yano_vim#motion#handle('e')<CR>
+" visual_mode_enabled が true の場合、自動的にマッピング
+xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>
 ```
 
 #### カスタマイズ可能な<Plug>マッピング
 ```vim
 " ユーザーが独自のキーにマッピングできる
-nnoremap <silent> <Plug>(hellshake-yano-vim-w)
-      \ :<C-u>call hellshake_yano_vim#motion#handle('w')<CR>
-nnoremap <silent> <Plug>(hellshake-yano-vim-b)
-      \ :<C-u>call hellshake_yano_vim#motion#handle('b')<CR>
-nnoremap <silent> <Plug>(hellshake-yano-vim-e)
-      \ :<C-u>call hellshake_yano_vim#motion#handle('e')<CR>
+xnoremap <silent> <Plug>(hellshake-yano-vim-visual)
+      \ :<C-u>call hellshake_yano_vim#visual#show()<CR>
 ```
 
-### パフォーマンス特性
-- 時間計算: `reltime()` と `reltimefloat()` を使用（ミリ秒精度）
-- 状態管理: スクリプトローカル変数で効率的に管理
-- モーション実行: `execute 'normal! ' . a:motion_key` で通常のVimモーションを実行
+### 日本語検出仕様
+
+#### 文字種判定
+- **ひらがな**: U+3040-U+309F (12352-12447)
+- **カタカナ**: U+30A0-U+30FF (12448-12543)
+- **漢字**: U+4E00-U+9FAF (19968-40879)
+- **英数字**: `\w` パターン
+
+#### 境界検出ルール
+1. 文字種が切り替わった時点を境界とする
+2. 記号・空白は単語に含めない
+3. 最小単語長未満の単語は除外
+
+#### 制約
+- TinySegmenter（形態素解析）は使用しない
+- 助詞の結合などの高度な処理は Phase B（Denops版）で実装
+- 精度より実装の簡潔さを優先
 
 ## 生成AIの学習用コンテキスト
 
 ### 既存実装ファイル
 - /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/core.vim
-  - Phase A-3までの実装が完了している
+  - Phase A-1～A-4の実装が完了している
   - show()関数でヒント表示の統合処理を提供
-  - 状態管理のパターンを参考にする
+  - visual.vim から呼び出すパターンを参考にする
+
+- /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/word_detector.vim
+  - Phase A-2で実装済み
+  - detect_visible()関数で画面内単語検出を提供
+  - 日本語検出機能を追加する
+
+- /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/config.vim
+  - Phase A-4で実装済み
+  - get/set 関数で設定管理を提供
+  - 新規設定項目を追加する
 
 - /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/input.vim
   - ブロッキング入力方式の実装を参考にする
   - wait_for_input()関数のパターンを理解する
 
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano-vim.vim
-  - エントリーポイントの構造を理解
-  - キーマッピングの追加箇所を把握
-
 ### アーキテクチャドキュメント
 - /home/takets/.config/nvim/plugged/hellshake-yano.vim/ARCHITECTURE.md
-  - Phase A-1～A-3の実装状況
-  - Phase A-4の位置づけと目標
+  - Phase A-1～A-4の実装状況
+  - Phase A-5の位置づけと目標
   - 技術仕様とデータ構造
 
-### 参考実装
-- vim-searchx
-  - タイマーベースの入力処理
-  - v:count1を活用したカウント検出
-  - reltime()による時間管理
+### Denops版参考実装
+- /home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts
+  - 日本語検出のアルゴリズムを参考にする（VimScriptに移植）
+  - extractWords関数の実装パターン
 
 ## Process
 
-### process1 motion.vim の実装
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/motion.vim
+### process1 visual.vim の実装
+@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/visual.vim
 @ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/core.vim
 
-- [x] スクリプトローカル変数 s:motion_state の定義
-  - last_motion, last_motion_time, motion_count, timeout_ms, threshold
-- [x] hellshake_yano_vim#motion#init() 関数の実装
+- [ ] スクリプトローカル変数 s:visual_state の定義
+  - active, mode, start_line, start_col, end_line, end_col
+- [ ] hellshake_yano_vim#visual#show() 関数の実装
+  - mode() でビジュアルモードタイプ取得
+  - getpos("'<") と getpos("'>") で選択範囲取得
+  - 選択範囲内の単語検出
+  - core#show() を呼び出してヒント表示
+- [ ] hellshake_yano_vim#visual#init() 関数の実装
   - 状態変数の初期化処理
-- [x] hellshake_yano_vim#motion#handle(motion_key) 関数の実装
-  - 時間差チェック（reltime()使用）
-  - カウント更新ロジック（タイムアウトチェック、同一モーションチェック）
-  - 閾値チェックとヒント表示トリガー
-  - 通常モーション実行（execute 'normal!'）
-  - 状態記録（last_motion, last_motion_time更新）
-- [x] hellshake_yano_vim#motion#set_threshold(count) 関数の実装
-  - 閾値設定のセッター
-- [x] hellshake_yano_vim#motion#set_timeout(ms) 関数の実装
-  - タイムアウト設定のセッター
-- [x] hellshake_yano_vim#motion#get_state() 関数の実装
+- [ ] hellshake_yano_vim#visual#get_state() 関数の実装
   - テスト用の状態取得関数（deepcopy()で返す）
-- [x] エラーハンドリングの追加
-  - 不正なmotion_keyの処理
-  - reltime()のエラー処理
+- [ ] s:detect_words_in_range(start_line, end_line) 内部関数の実装
+  - 範囲内の行を走査
+  - word_detector#detect_visible() を利用
+  - 選択範囲外の単語を除外
+- [ ] エラーハンドリングの追加
+  - 不正な選択範囲の処理
+  - ビジュアルモード以外での呼び出し防止
 
-### process2 config.vim の実装
+### process2 word_detector.vim 日本語検出追加
+@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/word_detector.vim
+@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts
+
+- [ ] s:get_char_type(char) 関数の実装
+  - char2nr() でUnicodeコードポイント取得
+  - ひらがな判定（U+3040-U+309F）
+  - カタカナ判定（U+30A0-U+30FF）
+  - 漢字判定（U+4E00-U+9FAF）
+  - 英数字判定（\w パターン）
+  - その他の判定
+- [ ] s:detect_japanese_words(line, lnum) 関数の実装
+  - 行を1文字ずつ走査
+  - 文字種の切り替わりで境界判定
+  - 単語データの作成（text, lnum, col, end_col）
+  - 最小単語長フィルタリング
+- [ ] s:detect_alphanumeric_words(line, lnum) 関数の実装
+  - 既存の英数字検出ロジックを関数化
+  - matchstrpos() を使用
+- [ ] hellshake_yano_vim#word_detector#detect_visible() の更新
+  - use_japanese 設定チェック
+  - 日本語検出 or 英数字検出の分岐
+  - min_word_length フィルタリング追加
+  - exclude_numbers フィルタリング追加
+  - max_hints 制限の適用
+- [ ] エラーハンドリングの追加
+  - 不正な文字列の処理
+  - Unicode範囲外の文字対応
+
+### process3 config.vim 設定システム拡張
 @target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/config.vim
 
-- [x] デフォルト設定 s:default_config の定義
-  - enabled, hint_chars, motion_enabled, motion_threshold, motion_timeout_ms, motion_keys
-- [x] グローバル変数 g:hellshake_yano_vim_config のマージ処理
-  - extend()でユーザー設定とデフォルト設定をマージ
-- [x] hellshake_yano_vim#config#get(key) 関数の実装
-  - 設定値取得のゲッター
-  - グローバル変数を優先、デフォルト値をフォールバック
-- [x] hellshake_yano_vim#config#set(key, value) 関数の実装
-  - 設定値変更のセッター
-  - グローバル変数を動的に更新
-- [x] ドキュメントコメントの追加
+- [ ] デフォルト設定 s:default_config の更新
+  - use_japanese, min_word_length, visual_mode_enabled, max_hints, exclude_numbers, debug_mode の追加
+- [ ] hellshake_yano_vim#config#validate(config) 関数の実装
+  - min_word_length のバリデーション（>= 1）
+  - max_hints のバリデーション（1～100）
+  - 型チェック（Boolean, Number）
+- [ ] hellshake_yano_vim#config#get(key) の動作確認
+  - 新規設定項目の取得テスト
+- [ ] hellshake_yano_vim#config#set(key, value) の動作確認
+  - バリデーション統合
+  - 不正な値の拒否
+- [ ] ドキュメントコメントの追加
   - 各設定項目の説明
   - 使用例の記載
 
-### process3 キーマッピングの追加
+### process4 パフォーマンス最適化
+@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/word_detector.vim
+
+- [ ] 早期リターン最適化
+  - 空バッファチェック
+  - 空行スキップ
+  - max_hints 到達時のループ終了
+- [ ] フィルタリング最適化
+  - min_word_length で早期除外
+  - strchars() による文字数計算
+  - exclude_numbers による数字除外
+- [ ] 単語検出の効率化
+  - 不要な再計算を削減
+  - ループの最適化
+- [ ] ベンチマーク測定
+  - 1000行ファイルでの処理時間測定
+  - 日本語テキストでの性能確認
+  - 目標: 200ms以内
+
+### process5 キーマッピングの追加
 @target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano-vim.vim
 @ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/config.vim
 
-- [x] モーション連打検出セクションの追加
-  - "Motion Key Mappings (Phase A-4)" コメント
-- [x] motion_enabled チェックの実装
-  - config#get('motion_enabled')で有効化判定
-- [x] 対象キーのループマッピング
-  - config#get('motion_keys')からキーリスト取得
-  - execute でnnoremap を動的に生成
-- [x] <Plug>マッピングの提供
-  - <Plug>(hellshake-yano-vim-w)
-  - <Plug>(hellshake-yano-vim-b)
-  - <Plug>(hellshake-yano-vim-e)
-- [x] ドキュメントコメントの追加
+- [ ] ビジュアルモードマッピングセクションの追加
+  - "Visual Mode Mappings (Phase A-5)" コメント
+- [ ] visual_mode_enabled チェックの実装
+  - config#get('visual_mode_enabled')で有効化判定
+- [ ] デフォルトマッピングの追加
+  - xnoremap <Leader>h でヒント表示
+- [ ] <Plug>マッピングの提供
+  - <Plug>(hellshake-yano-vim-visual)
+- [ ] ドキュメントコメントの追加
   - マッピングのカスタマイズ方法を記載
 
-### process4 core.vim の統合
+### process6 core.vim の統合
 @target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/core.vim
-@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/motion.vim
+@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/visual.vim
 
-- [x] hellshake_yano_vim#core#init() の更新
-  - motion#init()の呼び出しを追加
-  - config#get()で設定値を取得
-  - motion#set_threshold()とmotion#set_timeout()の呼び出し
-- [x] コメントの更新
-  - Phase A-4対応を明記
+- [ ] hellshake_yano_vim#core#init() の更新
+  - visual#init()の呼び出しを追加
+  - 新規設定値の初期化確認
+- [ ] hellshake_yano_vim#core#show() の更新確認
+  - visual.vim から呼び出せることを確認
+  - 既存機能との互換性維持
+- [ ] コメントの更新
+  - Phase A-5対応を明記
 
 ### process10 ユニットテスト
 
-#### sub10.1 test_motion.vim の実装
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_motion.vim
+#### sub10.1 test_visual.vim の実装
+@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_visual.vim
 @ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_core.vim
 
-- [x] Test_motion_init() の実装
+- [ ] Test_visual_init() の実装
   - 初期化後の状態確認
-  - last_motion='', motion_count=0, threshold=2
-- [x] Test_motion_single_press() の実装
-  - 1回だけモーションを実行
-  - カウント=1、last_motion='w'を確認
-- [x] Test_motion_double_press_triggers_hint() の実装
-  - 2回連続でモーション実行
-  - ヒント表示のトリガー確認
-  - core#get_state().hints_visible == v:true
-- [x] Test_motion_timeout_reset() の実装
-  - タイムアウト設定を短く（100ms）
-  - 1回実行→200ms待機→2回目実行
-  - カウントがリセットされることを確認
-- [x] Test_motion_different_key_reset() の実装
-  - wキー実行→bキー実行
-  - カウントがリセットされることを確認
-  - last_motion='b', motion_count=1
-- [x] Test_motion_set_threshold() の実装
-  - 閾値を3に設定
-  - 2回連打では表示されず、3回で表示されることを確認
-- [x] Test_motion_set_timeout() の実装
-  - タイムアウトを500msに設定
-  - 動作確認
+  - active=v:false, mode='', start_line=0
+- [ ] Test_visual_character_mode() の実装
+  - 文字単位ビジュアルモード（v）での動作確認
+  - 選択範囲内の単語検出確認
+- [ ] Test_visual_line_mode() の実装
+  - 行単位ビジュアルモード（V）での動作確認
+  - 複数行選択時の単語検出確認
+- [ ] Test_visual_block_mode() の実装
+  - ブロック単位ビジュアルモード（Ctrl-v）での動作確認
+- [ ] Test_visual_range_detection() の実装
+  - getpos("'<"), getpos("'>") の動作確認
+  - 範囲外の単語が除外されることを確認
 
-#### sub10.2 test_config.vim の実装
+#### sub10.2 test_word_detector.vim 日本語検出テスト追加
+@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_word_detector.vim
+
+- [ ] Test_japanese_char_type_hiragana() の実装
+  - ひらがな文字種判定のテスト
+- [ ] Test_japanese_char_type_katakana() の実装
+  - カタカナ文字種判定のテスト
+- [ ] Test_japanese_char_type_kanji() の実装
+  - 漢字文字種判定のテスト
+- [ ] Test_japanese_word_boundary() の実装
+  - 日本語単語境界検出のテスト
+  - 例: 「このファイル」→「この」「ファイル」
+- [ ] Test_mixed_text_detection() の実装
+  - 日本語・英語混在テキストのテスト
+  - 例: 「ファイル操作API」→「ファイル」「操作」「API」
+- [ ] Test_min_word_length_filter() の実装
+  - 最小単語長フィルタリングのテスト
+- [ ] Test_exclude_numbers_filter() の実装
+  - 数字除外フィルタリングのテスト
+
+#### sub10.3 test_config.vim 新規設定テスト追加
 @target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_config.vim
 
-- [x] Test_config_get_default() の実装
-  - デフォルト設定値の取得確認
-- [x] Test_config_set_and_get() の実装
-  - 設定値の変更と取得を確認
-- [x] Test_config_user_override() の実装
-  - グローバル変数でのオーバーライドを確認
-
-#### sub10.3 統合テストの追加
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_integration.vim
-
-- [x] Test_integration_motion_to_hint_to_jump() の実装
-  - モーション連打→ヒント表示→入力→ジャンプの全フロー確認
-  - テストバッファ準備
-  - 2回w連打→ヒント表示確認
-  - ヒント入力（モック）→ジャンプ確認
+- [ ] Test_config_use_japanese() の実装
+  - use_japanese 設定の取得・変更確認
+- [ ] Test_config_min_word_length() の実装
+  - min_word_length 設定の取得・変更確認
+- [ ] Test_config_visual_mode_enabled() の実装
+  - visual_mode_enabled 設定の取得・変更確認
+- [ ] Test_config_max_hints() の実装
+  - max_hints 設定の取得・変更確認
+- [ ] Test_config_validation() の実装
+  - バリデーション関数のテスト
+  - 不正な値の拒否確認
 
 #### sub10.4 テストランナーの更新
 @target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano-vim.vim
 
-- [x] s:run_all_tests() にtest_motion.vimを追加
-- [x] s:run_all_tests() にtest_config.vimを追加
+- [ ] s:run_all_tests() にtest_visual.vimを追加
+- [ ] 日本語テストの実行確認
 
 ### process50 フォローアップ
 
 #### sub50.1 vim での動作確認
-- [x] Vimで実際にモーション連打を試す
-  - wキー2回連打→ヒント表示確認
-  - bキー2回連打→ヒント表示確認
-  - eキー2回連打→ヒント表示確認
-- [x] タイムアウト動作の確認
-  - ゆっくり押すとリセットされることを確認
-- [x] 異なるモーションでのリセット確認
+- [ ] Vimでビジュアルモードテスト
+  - vモードでヒント表示確認
+  - Vモードでヒント表示確認
+  - Ctrl-vモードでヒント表示確認
+- [ ] 日本語テキストでの動作確認
+  - 日本語混在テキストで単語検出確認
+  - 文字種境界の検出確認
+- [ ] 新規設定のカスタマイズテスト
+  - min_word_length を変更して動作確認
+  - use_japanese を有効化して動作確認
+  - max_hints を変更して動作確認
 
-#### sub50.2 設定のカスタマイズテスト
-- [x] .vimrcで設定を変更して動作確認
-  - motion_threshold: 3 に変更
-  - motion_timeout_ms: 1500 に変更
-  - motion_keys: ['w', 'b'] のみに変更
+#### sub50.2 パフォーマンス確認
+- [ ] 1000行ファイルでのベンチマーク
+  - 英数字テキスト: 処理時間測定
+  - 日本語テキスト: 処理時間測定
+  - 目標: 200ms以内
 
 #### sub50.3 エッジケースの確認
-- [x] 空バッファでの動作確認
-- [x] 1行だけのバッファでの動作確認
-- [x] 画面外への移動時の動作確認
+- [ ] 空のビジュアル選択での動作確認
+- [ ] 全角記号を含む日本語テキストでの動作確認
+- [ ] 非常に長い単語（50文字以上）での動作確認
 
 ### process100 リファクタリング
 
-- [x] コードの重複排除
+- [ ] コードの重複排除
   - 共通処理の関数化
-- [x] 関数の責務明確化
+  - 日本語・英数字検出ロジックの統合
+- [ ] 関数の責務明確化
   - 各モジュールの役割を明確に
-- [x] スクリプトローカル変数の適切な管理
+  - visual.vim のインターフェース整理
+- [ ] スクリプトローカル変数の適切な管理
   - 不要なグローバル変数の削除
-- [x] コメントの整備
+- [ ] コメントの整備
   - 目的、使用例、エラーハンドリングを記述
-- [x] パフォーマンス最適化
+  - 日本語検出ロジックの詳細説明
+- [ ] パフォーマンス最適化の確認
   - 不要な処理の削減
-  - 時間計算の効率化
+  - 早期リターンの活用
 
 ### process200 ドキュメンテーション
 
-- [x] ARCHITECTURE.md の更新
-  - Phase A-4 セクションの追加
+- [ ] ARCHITECTURE.md の更新
+  - Phase A-5 セクションの追加
   - 実装状況を「完了」に更新
   - 技術的な実装詳細を記録
-  - モーション連打検出アルゴリズムの説明
+  - ビジュアルモード対応の説明
+  - 日本語検出アルゴリズムの説明
   - データ構造の詳細
   - パフォーマンス特性の記載
-- [x] README.md の更新
-  - Phase A-4 の機能説明を追加
-  - 使用例の追加（モーション連打の例）
+- [ ] README.md の更新
+  - Phase A-5 の機能説明を追加
+  - 使用例の追加（ビジュアルモード、日本語テキスト）
   - 設定方法の説明
   - カスタマイズ例の追加
-- [x] コード内コメントの充実
+- [ ] コード内コメントの充実
   - 各関数の目的、パラメータ、戻り値を詳細に記述
   - アルゴリズムの説明を追加
   - エッジケースの処理説明
-- [x] CHANGELOG.md の作成
-  - Phase A-4 の変更内容を記録
+- [ ] CHANGELOG.md の更新
+  - Phase A-5 の変更内容を記録
   - 新機能の説明
   - 破壊的変更の有無
+
