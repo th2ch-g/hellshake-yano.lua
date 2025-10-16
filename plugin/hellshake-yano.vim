@@ -2,6 +2,11 @@
 " Author: hellshake-yano
 " License: MIT
 
+" Neovim専用 - Vimの場合はPure VimScript実装(hellshake-yano-vim.vim)を使用
+if !has('nvim')
+  finish
+endif
+
 " ロードガード
 if exists('g:loaded_hellshake_yano')
   finish

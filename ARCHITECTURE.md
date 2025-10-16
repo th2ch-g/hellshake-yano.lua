@@ -306,19 +306,52 @@ endfunction
 
 ### 各フェーズの詳細
 
-#### Phase A-1: MVP（最小実装）
-```vim
-" 目標: 3つの固定位置にヒントを表示し、キー入力でジャンプ
-" テストコマンド
-:HellshakeYanoVimTest
+#### Phase A-1: MVP（最小実装）✅ **完了**
 
-" 実装内容
-- plugin/hellshake-yano-vim.vim （エントリーポイント）
-- autoload/hellshake_yano_vim/core.vim （基本機能）
-- autoload/hellshake_yano_vim/display.vim （popup表示）
-- 固定座標へのヒント表示
-- 単一キー入力でのジャンプ
+**実装状況**: Phase A-1 (Pure VimScript MVP) の実装は完了しました。
+
+**達成した機能**:
+- ✅ 固定座標へのヒント表示（カーソル行から±3行）
+- ✅ 単一文字ヒント（a, s, d）の生成と表示
+- ✅ popup/extmark を使用した両エディタ対応
+- ✅ キーボード入力によるジャンプ機能
+- ✅ TDD による包括的なテストカバレッジ
+- ✅ エラーハンドリングの統一
+- ✅ コードの責務分離とリファクタリング完了
+
+**実装ファイル**:
+```vim
+plugin/hellshake-yano-vim.vim    # エントリーポイント
+autoload/hellshake_yano_vim/
+├── core.vim                      # 状態管理・統合処理
+├── hint_generator.vim            # ヒント生成（最大7個、ホームポジション優先）
+├── display.vim                   # Popup/Extmark 表示（Vim/Neovim 両対応）
+├── input.vim                     # 入力処理（ブロッキング方式）
+└── jump.vim                      # ジャンプ実行（範囲チェック付き）
 ```
+
+**テストコマンド**:
+```vim
+:HellshakeYanoVimTest    # 全テスト実行
+```
+
+**技術的な特徴**:
+- **Vim 8.0+ 完全対応**: `popup_create()` 使用
+- **Neovim 完全対応**: `nvim_buf_set_extmark()` 使用
+- **エラーハンドリング**: 統一されたエラーメッセージフォーマット
+- **コメント充実**: 各関数の目的、パラメータ、戻り値を詳細に記述
+- **テスト駆動開発**: RED → GREEN → REFACTOR サイクルに従った実装
+
+**リファクタリング成果（Process100）**:
+- コードの重複排除（エラーハンドリング関数の統一）
+- 関数の責務明確化（各モジュールの役割を明確に記述）
+- スクリプトローカル変数の適切な管理
+- コメントの整備（目的、使用例、エラーハンドリング）
+
+**ドキュメンテーション成果（Process200）**:
+- README.md に MVP セクション追加
+- ARCHITECTURE.md の実装状況更新
+- コード内コメントの充実
 
 #### Phase A-2: 単語検出
 ```vim

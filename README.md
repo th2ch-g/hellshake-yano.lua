@@ -1,12 +1,19 @@
 # hellshake-yano.vim
 
-A Neovim plugin for seamless word-based cursor movement
+A Neovim/Vim plugin for seamless word-based cursor movement
 
 ## Overview
 
-hellshake-yano.vim is a Neovim plugin that enables seamless cursor movement between words.
+hellshake-yano.vim is a Neovim/Vim plugin that enables seamless cursor movement between words.
 
 It fully supports UTF-8 encoding and properly handles Japanese characters, making word-based navigation in Japanese text as smooth as in English.
+
+### Two Implementations
+
+This plugin offers two implementations to suit different environments:
+
+1. **Pure VimScript MVP** (Vim 8.0+): Lightweight implementation using only VimScript
+2. **Denops版** (Neovim + Denops): Full-featured implementation with TypeScript
 
 ### Demo
 
@@ -47,6 +54,80 @@ Plug 'nekowasabi/hellshake-yano.vim'
   end
 }
 ```
+
+---
+
+## Pure VimScript MVP (Vim 8.0+)
+
+### Features (MVP)
+
+- **Simple hint display**: Show hints (a, s, d) at three fixed positions around the cursor
+- **Keyboard-driven jump**: Jump to hint positions by pressing hint keys
+- **Vim 8.0+ compatible**: Works with both Vim and Neovim using popup/extmark
+- **TDD approach**: Thoroughly tested with VimScript unit tests
+
+### Requirements
+
+- Vim 8.0+ or Neovim
+- No external dependencies required
+
+### MVP Commands
+
+| Command | Description |
+|---------|-------------|
+| `:HellshakeYanoVimShow` | Display hints at fixed positions |
+| `:HellshakeYanoVimHide` | Hide all displayed hints |
+| `:HellshakeYanoVimTest` | Run unit tests |
+
+### MVP Usage Example
+
+1. Open any file with Vim
+2. Move cursor to line 10 (for example)
+3. Execute `:HellshakeYanoVimShow`
+4. Hints ('a', 's', 'd') appear at lines 7, 10, and 13
+5. Press 'a' to jump to line 7
+6. Hints automatically disappear after jump
+
+### MVP Architecture
+
+```
+plugin/hellshake-yano-vim.vim    # Entry point
+autoload/hellshake_yano_vim/
+├── core.vim                      # State management & integration
+├── hint_generator.vim            # Hint generation
+├── display.vim                   # Popup/Extmark display
+├── input.vim                     # Input processing
+└── jump.vim                      # Jump execution
+```
+
+### Testing
+
+```vim
+" Run all tests
+:HellshakeYanoVimTest
+
+" Or run tests directly
+:source tests-vim/hellshake_yano_vim/test_runner.vim
+:call RunAllTests()
+```
+
+### Current Limitations (Phase A-1 MVP)
+
+- Fixed positions only (3 positions: -3, 0, +3 lines from cursor)
+- Single-character hints only (maximum 7 hints)
+- No word detection (planned for Phase A-2)
+- No motion detection (planned for Phase A-4)
+
+### Roadmap
+
+- **Phase A-2**: Word detection within visible area
+- **Phase A-3**: Multi-character hints (aa, as, ad, ...)
+- **Phase A-4**: Motion-triggered hints (w/b/e key repeat detection)
+- **Phase A-5**: Japanese support, caching, customization
+
+---
+
+## Denops版 (Full-Featured Implementation)
 
 ## Configuration
 

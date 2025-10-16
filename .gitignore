@@ -63,3 +63,12 @@ tests/integration_multi_char_test.ts
 # AI
 .code
 .serena
+
+# VimScript MVP Test Files (temporary)
+run_*.vim
+test_*.vim
+test_*.txt
+manual_*.vim
+verify_*.vim
+*_output.txt
+run_*.sh
