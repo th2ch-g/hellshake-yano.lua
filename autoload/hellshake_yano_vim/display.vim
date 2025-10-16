@@ -13,6 +13,8 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 " popup/extmark ID の配列（クリーンアップ用）
+" Phase A-3: ヒント文字も保存する拡張版
+" 形式: [{'id': popup_id, 'hint': 'a'}, {'id': popup_id, 'hint': 'aa'}, ...]
 let s:popup_ids = []
 
 " Neovim の namespace ID（Neovim の場合のみ使用）
@@ -83,8 +85,8 @@ function! s:show_hint_vim(lnum, col, hint) abort
     \ 'wrap': 0
   \ })
 
-  " popup ID を保存（クリーンアップ用）
-  call add(s:popup_ids, l:popup_id)
+  " popup ID とヒント文字を保存（クリーンアップ用、Phase A-3拡張）
+  call add(s:popup_ids, {'id': l:popup_id, 'hint': a:hint})
 
   return l:popup_id
 endfunction
@@ -117,8 +119,8 @@ function! s:show_hint_neovim(lnum, col, hint) abort
     \ 'priority': 1000
   \ })
 
-  " extmark ID を保存（クリーンアップ用）
-  call add(s:popup_ids, l:extmark_id)
+  " extmark ID とヒント文字を保存（クリーンアップ用、Phase A-3拡張）
+  call add(s:popup_ids, {'id': l:extmark_id, 'hint': a:hint})
 
   return l:extmark_id
 endfunction
@@ -148,15 +150,76 @@ function! hellshake_yano_vim#display#hide_all() abort
     endif
   else
     " Vim の場合: 各 popup を個別に閉じる
-    for l:popup_id in s:popup_ids
+    for l:popup_info in s:popup_ids
       if exists('*popup_close')
-        call popup_close(l:popup_id)
+        call popup_close(l:popup_info.id)
       endif
     endfor
   endif
 
   " popup_ids 配列をクリア
   let s:popup_ids = []
+endfunction
+
+" hellshake_yano_vim#display#highlight_partial_matches(matches) - 部分マッチハイライトの更新
+"
+" 目的:
+"   - 部分マッチしたヒントのみを表示し、マッチしないヒントを非表示にする
+"   - Phase A-3: 複数文字ヒント入力時の視覚的フィードバック機能
+"
+" @param a:matches (List<String>): 部分マッチするヒントのリスト
+" @return void
+"
+" アルゴリズム:
+"   1. s:popup_ids に格納された全ポップアップをループ
+"   2. matches に含まれないヒントのポップアップを非表示
+"   3. matches に含まれるヒントはそのまま表示を維持
+"
+" 使用例:
+"   " 'a', 'aa', 'as' のみ表示し、's', 'sa' を非表示にする
+"   call hellshake_yano_vim#display#highlight_partial_matches(['a', 'aa', 'as'])
+"
+" 注意事項:
+"   - Vim では popup_close() を使用
+"   - Neovim では nvim_buf_del_extmark() を使用
+"   - 非表示にしたポップアップは s:popup_ids から削除される
+function! hellshake_yano_vim#display#highlight_partial_matches(matches) abort
+  " 新しい popup_ids リスト（マッチしたヒントのみ保持）
+  let l:new_popup_ids = []
+
+  for l:popup_info in s:popup_ids
+    let l:hint = l:popup_info.hint
+    let l:popup_id = l:popup_info.id
+
+    if index(a:matches, l:hint) >= 0
+      " 部分マッチ: ポップアップを維持
+      call add(l:new_popup_ids, l:popup_info)
+    else
+      " マッチしない: ポップアップを非表示
+      if has('nvim')
+        " Neovim: extmark を削除
+        if s:ns_id != -1
+          try
+            call nvim_buf_del_extmark(0, s:ns_id, l:popup_id)
+          catch
+            " extmark が既に削除されている場合はスキップ
+          endtry
+        endif
+      else
+        " Vim: popup を閉じる
+        if exists('*popup_close')
+          try
+            call popup_close(l:popup_id)
+          catch
+            " popup が既に閉じられている場合はスキップ
+          endtry
+        endif
+      endif
+    endif
+  endfor
+
+  " popup_ids を更新（マッチしたヒントのみ）
+  let s:popup_ids = l:new_popup_ids
 endfunction
 
 " hellshake_yano_vim#display#get_popup_count() - 表示中の popup/extmark 数を取得（テスト用）

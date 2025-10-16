@@ -85,6 +85,36 @@ function! hellshake_yano_vim#input#stop() abort
   let s:hint_map = {}
 endfunction
 
+" s:get_partial_matches: 部分マッチするヒントのリストを取得
+"
+" @param a:input_buffer (String): 現在の入力バッファ
+" @param a:hint_map (Dictionary): ヒントマップ
+" @return List<String>: 部分マッチするヒントのリスト
+"
+" 機能:
+"   - input_buffer で始まる全てのヒントを返す（前方一致）
+"
+" アルゴリズム:
+"   - ヒントマップの全キーをループ
+"   - stridx(hint, input_buffer) == 0 で前方一致チェック
+"   - マッチしたヒントをリストに追加
+"
+" 使用例:
+"   let matches = s:get_partial_matches('a', {'a': {...}, 'aa': {...}, 'as': {...}})
+"   " => ['a', 'aa', 'as']
+function! s:get_partial_matches(input_buffer, hint_map) abort
+  let l:matches = []
+
+  for l:hint in keys(a:hint_map)
+    " 前方一致チェック
+    if stridx(l:hint, a:input_buffer) == 0
+      call add(l:matches, l:hint)
+    endif
+  endfor
+
+  return l:matches
+endfunction
+
 " s:check_input: タイマーコールバック関数（非ブロッキング入力チェック）
 "
 " @param a:timer (Number): タイマーID（timer_start から渡される）
@@ -96,15 +126,16 @@ endfunction
 "      - 入力がない場合: 0 を返す
 "   2. 入力文字をヒントマップと照合
 "      - 完全一致: ジャンプ実行 → タイマー停止 → ヒント非表示
+"      - 部分一致: ハイライト更新
 "      - マッチなし: タイマー停止 → ヒント非表示
 "   3. エラーハンドリング
 "
 " アルゴリズム:
 "   - getchar(1) で入力をチェック（非ブロッキング）
 "   - 入力があれば nr2char() で文字に変換
-"   - ヒントマップに存在するか確認
-"     - 存在する: jump#to() でジャンプ → display#hide_all() でヒント非表示 → タイマー停止
-"     - 存在しない: display#hide_all() → タイマー停止
+"   - 完全一致をチェック（優先）
+"   - 部分一致をチェック
+"   - ハイライトを更新
 "
 " 注意:
 "   - スクリプトローカル関数（外部から呼び出し不可）
@@ -123,10 +154,10 @@ function! s:check_input(timer) abort
   " nr2char(code): 文字コードを文字列に変換
   let l:input_char = nr2char(l:char_code)
 
-  " 入力バッファに追加（MVP版では単一文字のみだが、将来の拡張を考慮）
+  " 入力バッファに追加（複数文字対応）
   let s:input_buffer .= l:input_char
 
-  " ヒントマップとマッチングチェック
+  " 完全一致チェック（優先）
   if has_key(s:hint_map, s:input_buffer)
     " 完全一致: ジャンプ実行
     let l:target_word = s:hint_map[s:input_buffer]
@@ -147,69 +178,78 @@ function! s:check_input(timer) abort
       call hellshake_yano_vim#display#hide_all()
       call hellshake_yano_vim#input#stop()
     endtry
+    return
+  endif
+
+  " 部分マッチチェック
+  let l:partial_matches = s:get_partial_matches(s:input_buffer, s:hint_map)
+
+  if len(l:partial_matches) > 0
+    " 部分マッチあり: ハイライト更新
+    call hellshake_yano_vim#display#highlight_partial_matches(l:partial_matches)
   else
-    " マッチしないキーが入力された場合
-    " ヒントマップに存在しない文字が入力されたら中断
-    let l:is_potential_match = v:false
-
-    " 現在の入力がヒントの前方一致になる可能性があるかチェック
-    " （MVP版では単一文字なので、この分岐は将来の拡張用）
-    for l:hint in keys(s:hint_map)
-      if stridx(l:hint, s:input_buffer) == 0
-        let l:is_potential_match = v:true
-        break
-      endif
-    endfor
-
-    " 前方一致の可能性がない場合はクリーンアップ
-    if !l:is_potential_match
-      " ヒント非表示
-      call hellshake_yano_vim#display#hide_all()
-
-      " 入力処理を停止
-      call hellshake_yano_vim#input#stop()
-    endif
+    " マッチなし: クリーンアップ
+    call hellshake_yano_vim#display#hide_all()
+    call hellshake_yano_vim#input#stop()
   endif
 endfunction
 
-" hellshake_yano_vim#input#wait_for_input: ブロッキング入力処理
+" hellshake_yano_vim#input#wait_for_input: ブロッキング入力処理（複数文字対応）
 "
 " @param a:hint_map (Dictionary): ヒント文字と座標のマッピング
-"   形式: {'a': {'lnum': 10, 'col': 5}, 's': {'lnum': 15, 'col': 3}}
+"   形式: {'a': {'lnum': 10, 'col': 5}, 'aa': {'lnum': 15, 'col': 3}}
 " @return void
 "
 " 機能:
 "   - getchar() でユーザー入力を待機（ブロッキング）
-"   - 入力文字がヒントマップに存在する場合、ジャンプ実行
-"   - ジャンプ後、ヒントを非表示にする
+"   - 複数文字入力に対応（Phase A-3: Process50）
+"   - 入力ループで部分マッチチェックとハイライト更新を実装
+"   - 完全一致時にジャンプ実行、部分マッチ時は次の入力待ち、マッチなしで終了
 "
 " 使用例:
-"   let l:hint_map = {'a': {'lnum': 10, 'col': 5}, 's': {'lnum': 15, 'col': 3}}
+"   let l:hint_map = {'a': {'lnum': 10, 'col': 5}, 'aa': {'lnum': 15, 'col': 3}}
 "   call hellshake_yano_vim#input#wait_for_input(l:hint_map)
 "
 " 注意:
 "   - この関数はブロッキングするため、入力があるまで処理が止まります
 "   - タイマー方式と異なり、確実にユーザー入力を受け取れます
+"   - Phase A-3: 複数文字ヒント対応のためループで入力を処理します
 function! hellshake_yano_vim#input#wait_for_input(hint_map) abort
+  let l:input_buffer = ''
+
   try
-    " 画面を再描画してヒントが表示されるようにする
     redraw
 
-    " ブロッキングでユーザー入力を待つ
-    let l:char_code = getchar()
-    let l:input_char = nr2char(l:char_code)
+    " 入力ループ（複数文字対応）
+    while 1
+      " ブロッキングで1文字取得
+      let l:char_code = getchar()
+      let l:input_char = nr2char(l:char_code)
+      let l:input_buffer .= l:input_char
 
-    " ヒントマップとマッチングチェック
-    if has_key(a:hint_map, l:input_char)
-      " 完全一致: ジャンプ実行
-      let l:target = a:hint_map[l:input_char]
-      call hellshake_yano_vim#jump#to(l:target.lnum, l:target.col)
-    endif
+      " 完全一致チェック（優先）
+      if has_key(a:hint_map, l:input_buffer)
+        let l:target = a:hint_map[l:input_buffer]
+        call hellshake_yano_vim#jump#to(l:target.lnum, l:target.col)
+        break
+      endif
+
+      " 部分マッチチェック
+      let l:partial_matches = s:get_partial_matches(l:input_buffer, a:hint_map)
+
+      if len(l:partial_matches) > 0
+        " 部分マッチあり: ハイライト更新して次の入力待ち
+        call hellshake_yano_vim#display#highlight_partial_matches(l:partial_matches)
+        redraw
+        continue
+      else
+        " マッチなし: 終了
+        break
+      endif
+    endwhile
   catch
-    " エラーが発生した場合も、ヒントは確実に非表示にする
     call s:show_error('input processing failed: ' . v:exception)
   finally
-    " 入力処理後は必ずヒントを非表示
     call hellshake_yano_vim#display#hide_all()
   endtry
 endfunction
@@ -253,6 +293,19 @@ function! hellshake_yano_vim#input#get_state() abort
     \ 'hint_map': deepcopy(s:hint_map),
     \ 'timer_id': s:timer_id
   \ }
+endfunction
+
+" hellshake_yano_vim#input#get_partial_matches: 部分マッチリストの取得（テスト用）
+"
+" @param a:input_buffer (String): 入力バッファ
+" @param a:hint_map (Dictionary): ヒントマップ
+" @return List<String>: 部分マッチするヒントのリスト
+"
+" 目的:
+"   - ユニットテストで部分マッチロジックを検証するために使用
+"   - 本番環境では使用しない（スクリプトローカル関数 s:get_partial_matches のラッパー）
+function! hellshake_yano_vim#input#get_partial_matches(input_buffer, hint_map) abort
+  return s:get_partial_matches(a:input_buffer, a:hint_map)
 endfunction
 
 " スクリプトスコープのリストア

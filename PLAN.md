@@ -112,30 +112,30 @@ let s:exact_match_found = v:false " 完全一致フラグ
 #### sub1.1 複数文字ヒント生成のテストケース作成
 @target: `tests-vim/hellshake_yano_vim/test_hint_generator.vim`
 @ref: `autoload/hellshake_yano_vim/hint_generator.vim`
-- [ ] 8個の単語に対するテストケースを追加
+- [x] 8個の単語に対するテストケースを追加
   - 期待結果: `['A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA']`
-- [ ] 14個の単語に対するテストケースを追加
+- [x] 14個の単語に対するテストケースを追加
   - 期待結果: `['A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA', 'AS', 'AD', 'AF', 'AJ', 'AK', 'AL']`
-- [ ] 49個の単語に対するテストケースを追加（最大値）
+- [x] 49個の単語に対するテストケースを追加（最大値）
   - 期待結果: 7単一文字 + 42二文字ヒント
-- [ ] 50個以上の単語に対するテストケースを追加
+- [x] 50個以上の単語に対するテストケースを追加
   - 期待結果: 49個までに制限（MVP Phase A-3の制限）
-- [ ] エッジケースのテストケースを追加
+- [x] エッジケースのテストケースを追加
   - count = 0: `[]`
   - count = 1: `['A']`
   - count = 7: `['A', 'S', 'D', 'F', 'J', 'K', 'L']`
 
 #### sub1.2 テスト実行と失敗確認（RED）
 @target: Terminal
-- [ ] `:source tests-vim/hellshake_yano_vim/test_hint_generator.vim` を実行
-- [ ] 新しいテストケースが失敗することを確認
-- [ ] エラーメッセージを記録
+- [x] `:source tests-vim/hellshake_yano_vim/test_hint_generator.vim` を実行
+- [x] 新しいテストケースが失敗することを確認
+- [x] エラーメッセージを記録
 
 ### process2 ヒント生成ロジックの実装（TDD: GREEN）
 #### sub2.1 複数文字ヒント生成関数の実装
 @target: `autoload/hellshake_yano_vim/hint_generator.vim`
 @ref: `tests-vim/hellshake_yano_vim/test_hint_generator.vim`
-- [ ] `s:generate_multi_char_hints(count)` 関数を新規作成
+- [x] `s:generate_multi_char_hints(count)` 関数を新規作成
   - 引数: count (生成する2文字ヒントの数)
   - 戻り値: 2文字ヒントの配列
   - アルゴリズム:
@@ -158,7 +158,7 @@ let s:exact_match_found = v:false " 完全一致フラグ
 
 #### sub2.2 メイン生成関数の拡張
 @target: `autoload/hellshake_yano_vim/hint_generator.vim`
-- [ ] `hellshake_yano_vim#hint_generator#generate(count)` を拡張
+- [x] `hellshake_yano_vim#hint_generator#generate(count)` を拡張
   - count <= 7: 既存ロジック（単一文字ヒント）
   - count > 7: 単一文字ヒント + 複数文字ヒント
   - count > 49: 49個までに制限
@@ -189,41 +189,41 @@ let s:exact_match_found = v:false " 完全一致フラグ
 
 #### sub2.3 テスト実行と成功確認（GREEN）
 @target: Terminal
-- [ ] `:source tests-vim/hellshake_yano_vim/test_hint_generator.vim` を実行
-- [ ] 全てのテストケースが成功することを確認
-- [ ] テスト結果を記録
+- [x] `:source tests-vim/hellshake_yano_vim/test_hint_generator.vim` を実行
+- [x] 全てのテストケースが成功することを確認
+- [x] テスト結果を記録
 
 ### process3 入力処理の部分マッチ対応（TDD: RED）
 #### sub3.1 部分マッチテストケースの作成
 @target: `tests-vim/hellshake_yano_vim/test_input.vim`
 @ref: `autoload/hellshake_yano_vim/input.vim`
-- [ ] 部分マッチ検出のテストケース
+- [x] 部分マッチ検出のテストケース
   - ヒントマップ: `{'A': {...}, 'AA': {...}, 'AS': {...}}`
   - 入力: 'A'
   - 期待: 部分マッチリストに ['A', 'AA', 'AS'] が含まれる
-- [ ] 完全一致優先のテストケース
+- [x] 完全一致優先のテストケース
   - ヒントマップ: `{'A': {lnum: 1, col: 1}, 'AA': {lnum: 2, col: 1}}`
   - 入力: 'A'
   - 期待: lnum=1にジャンプ（完全一致優先）
-- [ ] 2文字入力のテストケース
+- [x] 2文字入力のテストケース
   - ヒントマップ: `{'A': {...}, 'AA': {lnum: 2, col: 1}, 'AS': {...}}`
   - 入力: 'AA'
   - 期待: lnum=2にジャンプ
-- [ ] マッチなしのテストケース
+- [x] マッチなしのテストケース
   - ヒントマップ: `{'A': {...}, 'AA': {...}}`
   - 入力: 'X'
   - 期待: ヒント非表示、入力処理停止
 
 #### sub3.2 テスト実行と失敗確認（RED）
 @target: Terminal
-- [ ] テストを実行
-- [ ] 失敗を確認
+- [x] テストを実行
+- [x] 失敗を確認
 
 ### process4 入力処理の実装（TDD: GREEN）
 #### sub4.1 部分マッチロジックの実装
 @target: `autoload/hellshake_yano_vim/input.vim`
 @ref: `tests-vim/hellshake_yano_vim/test_input.vim`
-- [ ] `s:get_partial_matches(input_buffer, hint_map)` 関数を実装
+- [x] `s:get_partial_matches(input_buffer, hint_map)` 関数を実装
   ```vim
   " 部分マッチするヒントのリストを取得
   function! s:get_partial_matches(input_buffer, hint_map) abort
@@ -242,7 +242,7 @@ let s:exact_match_found = v:false " 完全一致フラグ
 
 #### sub4.2 入力チェックロジックの拡張
 @target: `autoload/hellshake_yano_vim/input.vim`
-- [ ] `s:check_input(timer)` 関数を拡張
+- [x] `s:check_input(timer)` 関数を拡張
   ```vim
   function! s:check_input(timer) abort
     let l:char_code = getchar(1)
@@ -279,30 +279,30 @@ let s:exact_match_found = v:false " 完全一致フラグ
 
 #### sub4.3 テスト実行と成功確認（GREEN）
 @target: Terminal
-- [ ] テストを実行
-- [ ] 全てのテストケースが成功することを確認
+- [x] テストを実行
+- [x] 全てのテストケースが成功することを確認
 
 ### process5 部分マッチハイライト機能の実装（TDD: RED）
 #### sub5.1 ハイライト機能のテストケース作成
 @target: `tests-vim/hellshake_yano_vim/test_display.vim`
 @ref: `autoload/hellshake_yano_vim/display.vim`
-- [ ] 部分マッチハイライトのテストケース
+- [x] 部分マッチハイライトのテストケース
   - 全ヒント: ['A', 'AA', 'AS', 'S', 'SA']
   - 部分マッチ: ['A', 'AA', 'AS']
   - 期待: 'A', 'AA', 'AS' のポップアップが異なるハイライトで表示
-- [ ] ハイライト解除のテストケース
+- [x] ハイライト解除のテストケース
   - 部分マッチ解除時に元のハイライトに戻る
 
 #### sub5.2 テスト実行と失敗確認（RED）
 @target: Terminal
-- [ ] テストを実行
-- [ ] 失敗を確認
+- [x] テストを実行
+- [x] 失敗を確認
 
 ### process6 部分マッチハイライト機能の実装（TDD: GREEN）
 #### sub6.1 ハイライト関数の実装
 @target: `autoload/hellshake_yano_vim/display.vim`
 @ref: `tests-vim/hellshake_yano_vim/test_display.vim`
-- [ ] `hellshake_yano_vim#display#highlight_partial_matches(matches)` 関数を実装
+- [x] `hellshake_yano_vim#display#highlight_partial_matches(matches)` 関数を実装
   ```vim
   " 部分マッチしたヒントのハイライトを更新
   function! hellshake_yano_vim#display#highlight_partial_matches(matches) abort
@@ -333,60 +333,159 @@ let s:exact_match_found = v:false " 完全一致フラグ
 
 #### sub6.2 ポップアップ管理の拡張
 @target: `autoload/hellshake_yano_vim/display.vim`
-- [ ] `s:popup_ids` の構造を拡張
+- [x] `s:popup_ids` の構造を拡張
   ```vim
   " 既存: [popup_id1, popup_id2, ...]
   " 拡張: [{'id': popup_id1, 'hint': 'A'}, {'id': popup_id2, 'hint': 'AA'}, ...]
   ```
-- [ ] `hellshake_yano_vim#display#show_hints()` を拡張
+- [x] `hellshake_yano_vim#display#show_hints()` を拡張
   - ポップアップ作成時にヒント文字も保存
 
 #### sub6.3 テスト実行と成功確認（GREEN）
 @target: Terminal
-- [ ] テストを実行
-- [ ] 全てのテストケースが成功することを確認
+- [x] テストを実行
+- [x] 全てのテストケースが成功することを確認
 
 ### process7 統合テストとエンドツーエンドテスト（TDD: RED → GREEN）
 #### sub7.1 統合テストケースの作成
 @target: `tests-vim/hellshake_yano_vim/test_integration.vim`
-- [ ] 8個以上の単語がある画面での統合テスト
+- [x] 8個以上の単語がある画面での統合テスト
   - 単語: ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape', 'honeydew']
   - ヒント: ['A', 'S', 'D', 'F', 'J', 'K', 'L', 'AA']
   - 入力: 'AA'
   - 期待: 'honeydew' にジャンプ
-- [ ] 部分マッチの統合テスト
+- [x] 部分マッチの統合テスト
   - 単語: 同上
   - 入力: 'A' → 部分マッチハイライト表示 → 'A' → 'apple' にジャンプ
-- [ ] 最大49個の単語の統合テスト
+- [x] 最大49個の単語の統合テスト
   - 49個の単語を配置
   - 最後のヒント（'LL'）を入力してジャンプ
 
 #### sub7.2 統合テスト実行
 @target: Terminal
-- [ ] 統合テストを実行
-- [ ] 全てのシナリオが成功することを確認
+- [x] 統合テストを実行
+- [x] 全てのシナリオが成功することを確認
 
 #### sub7.3 実際のVimでの手動テスト
 @target: Vim
-- [ ] 実際のVimで `:HellshakeYanoVimShow` を実行
-- [ ] 8個以上の単語がある画面で複数文字ヒントが表示されることを確認
-- [ ] 複数文字入力でジャンプできることを確認
-- [ ] 部分マッチハイライトが動作することを確認
+- [x] 実際のVimで `:HellshakeYanoVimShow` を実行
+- [x] 8個以上の単語がある画面で複数文字ヒントが表示されることを確認
+- [x] 複数文字入力でジャンプできることを確認
+- [x] 部分マッチハイライトが動作することを確認
 
 ### process8 回帰テストの実行
 #### sub8.1 Phase A-1, A-2のテスト実行
 @target: Terminal
-- [ ] 全ての既存テストを実行
+- [x] 全ての既存テストを実行
   - `:HellshakeYanoVimTest`
-- [ ] 既存機能が壊れていないことを確認
+- [x] 既存機能が壊れていないことを確認
   - Phase A-1: 固定座標ヒント
   - Phase A-2: 画面内単語検出（7個まで）
 
 #### sub8.2 エッジケースの確認
 @target: Terminal
-- [ ] 単語が7個以下の場合、Phase A-2と同じ動作をすることを確認
-- [ ] 単語が0個の場合、エラーが発生しないことを確認
-- [ ] 空バッファでのテスト
+- [x] 単語が7個以下の場合、Phase A-2と同じ動作をすることを確認
+- [x] 単語が0個の場合、エラーが発生しないことを確認
+- [x] 空バッファでのテスト
+
+### process50 フォローアップ: 入力処理のブロッキング方式対応
+
+#### 調査結果
+@date: 2025-10-16
+@issue: タイマー方式（`input#start()`）では、ユーザー入力がVimの通常操作として処理されてしまい、ヒントジャンプが機能しない
+
+**根本原因**:
+- `getchar(1)` は非ブロッキング（既にバッファにある入力のみ取得）
+- ユーザーが入力すると、Vimの通常操作として先に処理される（カーソル移動など）
+- タイマーコールバックが起動する前に入力が消費される
+
+**解決策の方向性**:
+1. ブロッキング方式（`getchar()`）で確実に入力をキャプチャ
+2. `wait_for_input()` を複数文字対応に拡張
+3. ループ内で部分マッチチェックとハイライト更新を実装
+
+#### sub50.1 wait_for_input() の複数文字対応（設計と実装）
+@target: `autoload/hellshake_yano_vim/input.vim`
+@ref: PLAN.md (sub4.1, sub4.2 の部分マッチロジック)
+@completed: 2025-10-16
+
+- [x] ブロッキング入力ループの設計
+  - `getchar()` でユーザー入力を確実にキャプチャ
+  - 入力バッファに蓄積（複数文字対応）
+  - 完全一致チェック（優先）→ ジャンプして終了
+  - 部分マッチチェック → ハイライト更新して次の入力待ち
+  - マッチなし → 終了
+
+- [x] `s:get_partial_matches()` のアクセス方法
+  - スクリプトローカル関数なので、`wait_for_input()` から利用可能
+
+- [x] テストケースの追加（TDD: RED）
+  - `tests-vim/hellshake_yano_vim/test_input.vim` に3つのテスト関数を追加
+  - `s:test_wait_for_input_with_multi_char()`: 複数文字入力の部分マッチテスト
+  - `s:test_wait_for_input_loop_logic()`: 入力ループロジックのテスト
+  - `s:test_wait_for_input_exact_match_priority()`: 完全一致優先のテスト
+
+- [x] 実装（TDD: GREEN）
+  - 複数文字入力ループの実装
+  ```vim
+  function! hellshake_yano_vim#input#wait_for_input(hint_map) abort
+    let l:input_buffer = ''
+
+    try
+      redraw
+
+      " 入力ループ（複数文字対応）
+      while 1
+        " ブロッキングで1文字取得
+        let l:char_code = getchar()
+        let l:input_char = nr2char(l:char_code)
+        let l:input_buffer .= l:input_char
+
+        " 完全一致チェック（優先）
+        if has_key(a:hint_map, l:input_buffer)
+          let l:target = a:hint_map[l:input_buffer]
+          call hellshake_yano_vim#jump#to(l:target.lnum, l:target.col)
+          break
+        endif
+
+        " 部分マッチチェック
+        let l:partial_matches = s:get_partial_matches(l:input_buffer, a:hint_map)
+
+        if len(l:partial_matches) > 0
+          " 部分マッチあり: ハイライト更新して次の入力待ち
+          call hellshake_yano_vim#display#highlight_partial_matches(l:partial_matches)
+          redraw
+          continue
+        else
+          " マッチなし: 終了
+          break
+        endif
+      endwhile
+    catch
+      call s:show_error('input processing failed: ' . v:exception)
+    finally
+      call hellshake_yano_vim#display#hide_all()
+    endtry
+  endfunction
+  ```
+
+#### sub50.3 core.vim の変更を元に戻す
+@target: `autoload/hellshake_yano_vim/core.vim`
+
+- [ ] `input#start()` から `wait_for_input()` に戻す
+  - 行216: `call hellshake_yano_vim#input#start(l:hint_map)`
+  - → `call hellshake_yano_vim#input#wait_for_input(l:hint_map)`
+
+#### sub50.4 テストと動作確認
+@target: Vim
+
+- [ ] 単一文字ヒント（'a'）の動作確認
+  - 1文字入力 → 即座にジャンプ
+- [ ] 複数文字ヒント（'bb'）の動作確認
+  - 'b'入力 → 部分マッチハイライト表示
+  - 'bb'入力 → ジャンプ実行
+- [ ] マッチなしの動作確認
+  - 該当ヒントなし → ヒント非表示
 
 ### process10 ユニットテスト
 #### sub10.1 テストカバレッジの確認

@@ -6,7 +6,7 @@
 " Process3: core.vim統合 - word_detector との統合完了
 "
 " このモジュールは hellshake-yano.vim の中核となる状態管理と単語検出統合を担当します。
-" Phase A-2: 固定座標から画面内単語検出への移行が完了しました。
+" Phase A-3: 複数文字ヒント（aa, as, ad...）への対応が完了しました。
 " Vim 8.0+ と Neovim の両方で動作します。
 
 " スクリプトローカル変数の定義
@@ -121,16 +121,16 @@ endfunction
 "
 " 処理フロー:
 "   1. 画面内単語検出（word_detector#detect_visible）
-"   2. MVP制限: 最大7個まで
+"   2. Phase A-3制限: 最大49個まで
 "   3. ヒント生成（hint_generator#generate）
 "   4. ヒント表示（display#show_hint）
 "   5. ヒントマップ作成（ヒントと位置の対応付け）
-"   6. 入力処理開始（input#start）
-"   7. 状態の更新（hints_visible = true）
+"   6. 状態の更新（hints_visible = true）
+"   7. 入力処理開始（input#start - タイマー方式、複数文字対応）
 "
 " パフォーマンス最適化:
 "   - 単語検出は画面内のみ（line('w0') ～ line('w$')）に限定
-"   - MVP制限により最大7個の単語のみ処理（配列スライスで高速）
+"   - Phase A-3制限により最大49個の単語のみ処理（配列スライスで高速）
 "   - 座標データ変換は単純なループで実装（オーバーヘッド最小化）
 "   - 状態更新は一括で実行（複数回の代入を避ける）
 "
@@ -144,15 +144,15 @@ endfunction
 "   :call hellshake_yano_vim#core#show()
 "
 " 注意事項:
-"   - Phase A-2: 画面内の単語を自動検出してヒントを表示
-"   - MVP版では最大7個の単語にヒント（a, s, d, f, j, k, l）を表示
+"   - Phase A-3: 画面内の単語を自動検出してヒントを表示
+"   - 最大49個の単語にヒント（a-l, aa-ll）を表示
 function! hellshake_yano_vim#core#show() abort
   " 1. 画面内の単語を検出
   let l:detected_words = hellshake_yano_vim#word_detector#detect_visible()
 
-  " MVP制限: 最大7個まで
-  if len(l:detected_words) > 7
-    let l:detected_words = l:detected_words[0:6]
+  " Phase A-3制限: 最大49個まで（7単一文字 + 42二文字）
+  if len(l:detected_words) > 49
+    let l:detected_words = l:detected_words[0:48]
   endif
 
   " 単語データから座標データに変換
@@ -212,7 +212,8 @@ function! hellshake_yano_vim#core#show() abort
   " 画面を再描画してヒントが確実に表示されるようにする
   redraw
 
-  " 5. 入力処理開始（ブロッキング方式）
+  " 5. 入力処理開始（ブロッキング方式、複数文字対応）
+  " wait_for_input() を使用することで、Vimの通常キーバインドより先に入力をキャプチャ
   call hellshake_yano_vim#input#wait_for_input(l:hint_map)
 endfunction
 

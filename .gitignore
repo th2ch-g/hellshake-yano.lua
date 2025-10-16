@@ -67,6 +67,7 @@ tests/integration_multi_char_test.ts
 # VimScript MVP Test Files (temporary)
 run_*.vim
 test_*.vim
+!tests-vim/**/test_*.vim
 test_*.txt
 manual_*.vim
 verify_*.vim
