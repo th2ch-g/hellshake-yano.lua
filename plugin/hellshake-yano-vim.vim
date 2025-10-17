@@ -91,6 +91,8 @@ function! s:run_all_tests() abort
           \ 'test_jump.vim',
           \ 'test_input.vim',
           \ 'test_word_detector.vim',
+          \ 'test_config.vim',
+          \ 'test_visual.vim',
           \ 'test_integration.vim'
           \ ]
 
@@ -196,6 +198,38 @@ unlet s:motion_keys
 if exists('s:key')
   unlet s:key
 endif
+
+"=============================================================================
+" Visual Mode Mappings (Phase A-5)
+"=============================================================================
+"
+" ビジュアルモード対応のキーマッピング
+" ビジュアルモードで選択範囲内の単語にヒント表示を行います。
+"
+" カスタマイズ方法:
+"   以下の例のように、<Plug>マッピングを使用して独自のキーにマッピングできます。
+"
+"   例: デフォルトのマッピングを無効化して、独自のキーにマッピング
+"     let g:hellshake_yano_vim_config = {'visual_mode_enabled': v:false}
+"     xmap <Leader>j <Plug>(hellshake-yano-vim-visual)
+"
+"   例: ビジュアルモード対応を無効化
+"     let g:hellshake_yano_vim_config = {'visual_mode_enabled': v:false}
+"
+
+" <Plug>マッピングの定義（常に定義）
+xnoremap <silent> <Plug>(hellshake-yano-vim-visual)
+      \ :<C-u>call hellshake_yano_vim#visual#show()<CR>
+
+" デフォルトマッピングの設定（visual_mode_enabled が true の場合のみ）
+let s:visual_mode_enabled = get(g:hellshake_yano_vim_config, 'visual_mode_enabled', v:true)
+
+if s:visual_mode_enabled
+  xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>
+endif
+
+" 一時変数のクリーンアップ
+unlet s:visual_mode_enabled
 
 "=============================================================================
 " Restore cpoptions

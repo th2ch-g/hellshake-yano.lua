@@ -178,6 +178,64 @@ function! s:test_config_partial_override() abort
 endfunction
 
 " ========================================
+" Phase A-5: 新規設定項目のテスト
+" ========================================
+
+function! s:test_config_phase_a5_defaults() abort
+  " グローバル変数をクリア
+  if exists('g:hellshake_yano_vim_config')
+    unlet g:hellshake_yano_vim_config
+  endif
+
+  " Phase A-5の新規設定項目のデフォルト値を取得
+  let l:use_japanese = hellshake_yano_vim#config#get('use_japanese')
+  let l:min_word_length = hellshake_yano_vim#config#get('min_word_length')
+  let l:visual_mode_enabled = hellshake_yano_vim#config#get('visual_mode_enabled')
+  let l:max_hints = hellshake_yano_vim#config#get('max_hints')
+  let l:exclude_numbers = hellshake_yano_vim#config#get('exclude_numbers')
+  let l:debug_mode = hellshake_yano_vim#config#get('debug_mode')
+
+  " デフォルト値を確認
+  call s:assert_false(l:use_japanese, 'default use_japanese should be false')
+  call s:assert_equal(1, l:min_word_length, 'default min_word_length should be 1')
+  call s:assert_true(l:visual_mode_enabled, 'default visual_mode_enabled should be true')
+  call s:assert_equal(49, l:max_hints, 'default max_hints should be 49')
+  call s:assert_false(l:exclude_numbers, 'default exclude_numbers should be false')
+  call s:assert_false(l:debug_mode, 'default debug_mode should be false')
+endfunction
+
+function! s:test_config_phase_a5_custom() abort
+  " Phase A-5の新規設定をカスタマイズ
+  let g:hellshake_yano_vim_config = {
+    \ 'use_japanese': v:true,
+    \ 'min_word_length': 2,
+    \ 'visual_mode_enabled': v:false,
+    \ 'max_hints': 30,
+    \ 'exclude_numbers': v:true,
+    \ 'debug_mode': v:true
+  \ }
+
+  " カスタム値を取得
+  let l:use_japanese = hellshake_yano_vim#config#get('use_japanese')
+  let l:min_word_length = hellshake_yano_vim#config#get('min_word_length')
+  let l:visual_mode_enabled = hellshake_yano_vim#config#get('visual_mode_enabled')
+  let l:max_hints = hellshake_yano_vim#config#get('max_hints')
+  let l:exclude_numbers = hellshake_yano_vim#config#get('exclude_numbers')
+  let l:debug_mode = hellshake_yano_vim#config#get('debug_mode')
+
+  " カスタム値が反映されていることを確認
+  call s:assert_true(l:use_japanese, 'custom use_japanese should be true')
+  call s:assert_equal(2, l:min_word_length, 'custom min_word_length should be 2')
+  call s:assert_false(l:visual_mode_enabled, 'custom visual_mode_enabled should be false')
+  call s:assert_equal(30, l:max_hints, 'custom max_hints should be 30')
+  call s:assert_true(l:exclude_numbers, 'custom exclude_numbers should be true')
+  call s:assert_true(l:debug_mode, 'custom debug_mode should be true')
+
+  " クリーンアップ
+  unlet g:hellshake_yano_vim_config
+endfunction
+
+" ========================================
 " テストスイート実行
 " ========================================
 
@@ -206,6 +264,12 @@ function! s:run_all_tests() abort
   echo '--- Edge Cases ---'
   call s:test_config_get_nonexistent_key()
   call s:test_config_partial_override()
+  echo ''
+
+  " Phase A-5: 新規設定項目のテスト
+  echo '--- Phase A-5: New Configuration Items ---'
+  call s:test_config_phase_a5_defaults()
+  call s:test_config_phase_a5_custom()
   echo ''
 
   " 結果サマリー

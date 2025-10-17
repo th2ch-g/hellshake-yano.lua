@@ -31,6 +31,7 @@ let s:state = {
 "   - s:state を初期値にリセット
 "   - プラグインの起動時や再初期化時に呼び出される
 "   - Phase A-4: motion#init() を呼び出してモーション状態を初期化
+"   - Phase A-5: visual#init() を呼び出してビジュアルモード状態を初期化
 "   - Phase A-4: config#get() で設定値を取得してmotion設定を適用
 "
 " @return なし
@@ -47,6 +48,9 @@ function! hellshake_yano_vim#core#init() abort
 
   " Phase A-4: モーション連打検出の初期化
   call hellshake_yano_vim#motion#init()
+
+  " Phase A-5: ビジュアルモード対応の初期化
+  call hellshake_yano_vim#visual#init()
 
   " Phase A-4: 設定値を取得してmotion設定を適用
   let l:motion_threshold = hellshake_yano_vim#config#get('motion_threshold')

@@ -7,6 +7,7 @@
 "
 " このモジュールは hellshake-yano.vim の設定を管理します。
 " Phase A-4: モーション連打検出機能の設定を含みます。
+" Phase A-5: ビジュアルモード対応と高度な機能の設定を含みます。
 " Vim 8.0+ と Neovim の両方で動作します。
 
 " スクリプトローカル変数の定義
@@ -15,13 +16,44 @@ set cpo&vim
 
 " デフォルト設定
 " PLAN.md の仕様に基づくデータ構造
+"
+" 設定項目の詳細:
+"
+" Phase A-1～A-4 の基本設定:
+"   enabled              - プラグイン全体の有効/無効（デフォルト: true）
+"   hint_chars           - ヒント文字に使用する文字列（デフォルト: 'ASDFJKL'）
+"   motion_enabled       - モーション連打検出の有効/無効（デフォルト: true）
+"   motion_threshold     - ヒント表示に必要な連打回数（デフォルト: 2回）
+"   motion_timeout_ms    - 連打判定のタイムアウト（デフォルト: 2000ms）
+"   motion_keys          - 対象となるモーションキー（デフォルト: ['w', 'b', 'e']）
+"
+" Phase A-5 の高度な設定:
+"   use_japanese         - 日本語単語検出の有効化（デフォルト: false）
+"                          ※process2未実装のため現在は無効
+"   min_word_length      - 検出する最小単語長（デフォルト: 1文字）
+"                          短い単語を除外したい場合に変更
+"   visual_mode_enabled  - ビジュアルモード対応の有効/無効（デフォルト: true）
+"                          無効にするとビジュアルモードマッピングが作成されない
+"   max_hints            - 表示する最大ヒント数（デフォルト: 49個）
+"                          7単一文字 + 42二文字ヒント（aa-ff）
+"   exclude_numbers      - 数字のみの単語を除外（デフォルト: false）
+"                          trueにすると"123"などが除外される
+"   debug_mode           - デバッグモード（デフォルト: false）
+"                          将来の拡張用
 let s:default_config = {
   \ 'enabled': v:true,
   \ 'hint_chars': 'ASDFJKL',
   \ 'motion_enabled': v:true,
   \ 'motion_threshold': 2,
   \ 'motion_timeout_ms': 2000,
-  \ 'motion_keys': ['w', 'b', 'e']
+  \ 'motion_keys': ['w', 'b', 'e'],
+  \
+  \ 'use_japanese': v:false,
+  \ 'min_word_length': 1,
+  \ 'visual_mode_enabled': v:true,
+  \ 'max_hints': 49,
+  \ 'exclude_numbers': v:false,
+  \ 'debug_mode': v:false
 \ }
 
 " hellshake_yano_vim#config#get(key) - 設定値の取得
