@@ -1,148 +1,203 @@
-" hellshake-yano-unified.vim - Unified entry point for hellshake-yano plugin
-" Phase B-1: 統合基盤構築
+" hellshake-yano-unified.vim - 統合エントリーポイント
 " Author: hellshake-yano
 " License: MIT
 "
-" このファイルは、Denops版とPure VimScript版を統合するエントリーポイントです。
-" 環境に応じて最適な実装を自動選択します。
-"
-" 実装選択ロジック:
-" 1. Neovim + Denops利用可能 → Denops版 (hellshake-yano.vim)
-" 2. Vim + Denops利用可能 → Phase B-1統合版 (Denops経由でVimScript版を活用)
-" 3. Denops利用不可 → Pure VimScript版 (hellshake-yano-vim.vim)
+" Phase B-4: process4 - キーマッピング統合
+" 統合版とVimScript版を環境に応じて自動選択するエントリーポイント
 
-"=============================================================================
-" Load Guard
-"=============================================================================
-
+" ロードガード
 if exists('g:loaded_hellshake_yano_unified')
   finish
 endif
 let g:loaded_hellshake_yano_unified = 1
 
-" Save and restore cpoptions
+" 保存と復元
 let s:save_cpo = &cpo
 set cpo&vim
 
 "=============================================================================
-" Version Check
+" 実装選択ロジック
 "=============================================================================
 
-" Require Vim 8.0+ or Neovim
-if !has('patch-8.0.0') && !has('nvim')
-  echohl ErrorMsg
-  echomsg 'hellshake-yano requires Vim 8.0 or later, or Neovim'
-  echohl None
-  finish
-endif
-
-"=============================================================================
-" Implementation Selection Logic
-"=============================================================================
-
-" ステップ1: Denopsの利用可能性を判定
-function! s:IsDenopsAvailable() abort
-  " Denopsがロード済みか確認
-  if !exists('*denops#server#status')
-    return v:false
+" s:select_implementation() - 実装の自動選択
+"
+" 環境に応じて最適な実装を選択:
+" 1. Denopsが利用可能な場合は統合版を使用
+" 2. Denopsが無い場合はPure VimScript版にフォールバック
+"
+" @return String 選択された実装 ('denops-unified' または 'vimscript-pure')
+function! s:select_implementation() abort
+  " 1. Denopsが利用可能な場合は統合版を使用
+  if exists('g:loaded_denops') && denops#server#status() !=# 'stopped'
+    " Vim環境でもDenops実装を使用
+    return 'denops-unified'
   endif
 
-  " Denopsサーバーが起動しているか確認
-  try
-    let l:status = denops#server#status()
-    return l:status ==# 'running'
-  catch
-    return v:false
-  endtry
-endfunction
-
-" ステップ2: 設定マイグレーションの確認と警告
-function! s:CheckConfigMigration() abort
-  " 旧VimScript設定 (g:hellshake_yano_vim_config) が存在するか確認
-  if exists('g:hellshake_yano_vim_config')
-    " 新統合設定 (g:hellshake_yano) が未設定の場合のみ警告
-    if !exists('g:hellshake_yano') || empty(g:hellshake_yano)
-      echohl WarningMsg
-      echo '[hellshake-yano] VimScript設定が検出されました'
-      echo '  統合設定 (g:hellshake_yano) への移行を推奨します'
-      echohl None
-
-      " ConfigMigratorが利用可能な場合は、マイグレーションガイドを表示
-      if s:IsDenopsAvailable() && exists('*denops#request')
-        " TODO: ConfigMigratorのshowMigrationGuide()を呼び出し
-      endif
-    endif
-  endif
-endfunction
-
-" ステップ3: 実装選択と初期化
-function! s:SelectAndInitialize() abort
-  let l:denops_available = s:IsDenopsAvailable()
-
+  " 2. Denopsが無い場合はPure VimScript版にフォールバック
   if has('nvim')
-    " Neovim環境
-    if l:denops_available
-      " Denops版を使用
-      runtime plugin/hellshake-yano.vim
-      let g:hellshake_yano_implementation = 'denops'
-    else
-      " Denopsが利用不可の場合はエラー
-      echohl ErrorMsg
-      echomsg '[hellshake-yano] Neovim requires denops.vim plugin'
-      echomsg '  Please install: https://github.com/vim-denops/denops.vim'
-      echohl None
-      let g:hellshake_yano_implementation = 'none'
-    endif
-  else
-    " Vim環境
-    if l:denops_available
-      " Phase B-1統合版を使用（Denops経由）
-      " TODO: Phase B-1統合版の初期化処理を実装
-      runtime plugin/hellshake-yano.vim
-      let g:hellshake_yano_implementation = 'denops-unified'
-    else
-      " Pure VimScript版にフォールバック
-      runtime plugin/hellshake-yano-vim.vim
-      let g:hellshake_yano_implementation = 'vimscript'
+    " NeovimでDenopsが無い場合は警告
+    echohl WarningMsg
+    echo '[hellshake-yano] Denops is not available. Some features may be limited.'
+    echohl None
+  endif
 
-      " VimScript版使用時の通知
-      if get(g:, 'hellshake_yano_show_fallback_notice', 1)
-        echohl WarningMsg
-        echo '[hellshake-yano] Using Pure VimScript implementation'
-        echo '  For better performance, install denops.vim'
-        echohl None
+  return 'vimscript-pure'
+endfunction
+
+"=============================================================================
+" 初期化関数
+"=============================================================================
+
+" s:initialize() - プラグインの初期化
+"
+" 選択された実装に基づいてプラグインを初期化
+function! s:initialize() abort
+  let l:impl = s:select_implementation()
+
+  if l:impl ==# 'denops-unified'
+    " 統合版の初期化
+    call s:initialize_unified()
+  else
+    " Pure VimScript版の初期化
+    call hellshake_yano_vim#core#init()
+    call s:setup_vimscript_mappings()
+  endif
+
+  " 設定マイグレーション
+  call s:migrate_config()
+endfunction
+
+" s:initialize_unified() - 統合版の初期化
+"
+" Denopsを使用した統合版の初期化処理
+function! s:initialize_unified() abort
+  " 設定の統一
+  call denops#notify('hellshake-yano', 'unifyConfig', [
+    \ get(g:, 'hellshake_yano_vim_config', {}),
+    \ get(g:, 'hellshake_yano', {})
+  \ ])
+
+  " コマンド定義
+  command! -nargs=0 HellshakeYanoShow
+    \ call denops#notify('hellshake-yano', 'showHints', [])
+  command! -nargs=0 HellshakeYanoHide
+    \ call denops#notify('hellshake-yano', 'hideHints', [])
+  command! -nargs=0 HellshakeYanoToggle
+    \ call denops#notify('hellshake-yano', 'toggle', [])
+
+  " キーマッピング
+  call s:setup_unified_mappings()
+endfunction
+
+"=============================================================================
+" 設定マイグレーション
+"=============================================================================
+
+" s:migrate_config() - 設定のマイグレーション
+"
+" 旧設定（g:hellshake_yano_vim_config）を新設定（g:hellshake_yano）に自動変換
+function! s:migrate_config() abort
+  " g:hellshake_yano_vim_config が存在し、g:hellshake_yano が存在しない場合
+  if exists('g:hellshake_yano_vim_config') && !exists('g:hellshake_yano')
+    let g:hellshake_yano = {}
+
+    " 設定の変換
+    for [old_key, new_key] in [
+      \ ['hint_chars', 'markers'],
+      \ ['motion_threshold', 'motionCount'],
+      \ ['motion_timeout_ms', 'motionTimeout'],
+      \ ['motion_keys', 'countedMotions'],
+      \ ['motion_enabled', 'motionCounterEnabled'],
+      \ ['visual_mode_enabled', 'visualModeEnabled'],
+      \ ['max_hints', 'maxHints'],
+      \ ['min_word_length', 'defaultMinWordLength'],
+      \ ['use_japanese', 'useJapanese'],
+      \ ['debug_mode', 'debugMode'],
+    \ ]
+      if has_key(g:hellshake_yano_vim_config, old_key)
+        let g:hellshake_yano[new_key] = g:hellshake_yano_vim_config[old_key]
       endif
-    endif
+    endfor
+
+    " 廃止予定警告
+    echohl WarningMsg
+    echo '[hellshake-yano] Note: g:hellshake_yano_vim_config is deprecated.'
+    echo 'Your settings have been migrated to g:hellshake_yano.'
+    echo 'Please update your configuration to use g:hellshake_yano directly.'
+    echohl None
   endif
 endfunction
 
 "=============================================================================
-" Initialization
+" マッピング設定関数
 "=============================================================================
 
-" グローバル設定変数の早期初期化
-if !exists('g:hellshake_yano')
-  let g:hellshake_yano = {}
-endif
-
-" 設定マイグレーション確認
-call s:CheckConfigMigration()
-
-" 実装選択と初期化
-call s:SelectAndInitialize()
-
-" 選択された実装を記録
-if exists('g:hellshake_yano_implementation')
-  if get(g:, 'hellshake_yano_debug', 0)
-    echomsg '[hellshake-yano] Using implementation: ' . g:hellshake_yano_implementation
+" s:setup_unified_mappings() - 統合版のマッピング設定
+"
+" モーション検出マッピングとビジュアルモードマッピングを設定
+function! s:setup_unified_mappings() abort
+  " モーション検出マッピング
+  if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
+    for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
+      execute printf('nnoremap <silent> %s :<C-u>call <SID>handle_motion("%s")<CR>',
+        \ key, key)
+    endfor
   endif
-endif
+
+  " ビジュアルモード対応
+  if get(g:hellshake_yano, 'visualModeEnabled', v:true)
+    xnoremap <silent> <Leader>h :<C-u>call <SID>show_hints_visual()<CR>
+  endif
+endfunction
+
+" s:setup_vimscript_mappings() - VimScript版のマッピング設定
+"
+" Pure VimScript版のマッピング設定（フォールバック）
+function! s:setup_vimscript_mappings() abort
+  " モーション検出マッピング
+  if get(g:hellshake_yano_vim_config, 'motion_enabled', v:true)
+    for key in get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e'])
+      execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle("%s")<CR>',
+        \ key, key)
+    endfor
+  endif
+
+  " ビジュアルモード対応
+  if get(g:hellshake_yano_vim_config, 'visual_mode_enabled', v:true)
+    xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>
+  endif
+endfunction
+
+" s:handle_motion(key) - モーションハンドラー
+"
+" モーションキーの処理をDenopsに委譲
+"
+" @param a:key モーションキー（'w', 'b', 'e'など）
+function! s:handle_motion(key) abort
+  " Denopsに処理を委譲
+  call denops#notify('hellshake-yano', 'handleMotion', [a:key])
+
+  " 通常のモーションも実行
+  execute 'normal! ' . a:key
+endfunction
+
+" s:show_hints_visual() - ビジュアルモード用ヒント表示
+"
+" ビジュアルモードでヒント表示を呼び出し
+function! s:show_hints_visual() abort
+  call denops#notify('hellshake-yano', 'showHints', [])
+endfunction
 
 "=============================================================================
-" Cleanup
+" 自動ロード設定
 "=============================================================================
 
+augroup HellshakeYanoUnified
+  autocmd!
+  " VimEnter時の自動初期化
+  autocmd VimEnter * ++once call s:initialize()
+augroup END
+
+" 保存と復元
 let &cpo = s:save_cpo
 unlet s:save_cpo
-
-" vim:set et sw=2 ts=2:

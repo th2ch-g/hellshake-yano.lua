@@ -108,9 +108,9 @@ export class EnvironmentDetector {
       if (isNeovim) {
         // Neovimの場合、nvim_versionからより正確なバージョンを取得
         try {
-          const nvimVersion = await this.denops.eval("nvim_get_current_buf") as any; // 存在チェック
+          // deno-lint-ignore no-explicit-any
           const versionInfo = await this.denops.eval("api_info().version") as any;
-          
+
           if (versionInfo && versionInfo.major !== undefined) {
             version = `${versionInfo.major}.${versionInfo.minor}.${versionInfo.patch || 0}`;
           } else {

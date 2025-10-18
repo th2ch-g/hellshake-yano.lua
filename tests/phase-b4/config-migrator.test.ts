@@ -70,7 +70,10 @@ describe("ConfigMigrator", () => {
       assertEquals(result.oldConfigExists, true);
       assertEquals(result.newConfigExists, true);
       assertEquals(result.warnings.length, 1);
-      assertEquals(result.warnings[0], "Both old and new configurations exist. Using new configuration.");
+      assertEquals(
+        result.warnings[0],
+        "Both old and new configurations exist. Using new configuration.",
+      );
     });
 
     it("should skip migration when only new config exists", async () => {

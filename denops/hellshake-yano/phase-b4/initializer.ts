@@ -77,7 +77,7 @@ export class Initializer {
       try {
         const migrationResult = await this.migrator.migrate();
         migrated = migrationResult.status === "migrated";
-        
+
         if (migrationResult.warnings.length > 0) {
           warnings.push(...migrationResult.warnings);
         }
@@ -85,9 +85,7 @@ export class Initializer {
         // マイグレーション失敗は致命的ではない
         // エラーを記録して継続
         errors.push(
-          `Config migration failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`
+          `Config migration failed: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
 
@@ -111,7 +109,7 @@ export class Initializer {
         errors.push(
           `Implementation selection failed: ${
             error instanceof Error ? error.message : String(error)
-          }`
+          }`,
         );
         implementation = "vimscript-pure";
       }
@@ -127,11 +125,9 @@ export class Initializer {
         }
       } catch (error) {
         errors.push(
-          `Command registration failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`
+          `Command registration failed: ${error instanceof Error ? error.message : String(error)}`,
         );
-        
+
         // コマンド登録失敗時のリカバリー
         try {
           await this.registry.registerVimScriptCommands({ force: true });
@@ -139,10 +135,8 @@ export class Initializer {
         } catch (fallbackError) {
           errors.push(
             `Fallback command registration failed: ${
-              fallbackError instanceof Error
-                ? fallbackError.message
-                : String(fallbackError)
-            }`
+              fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+            }`,
           );
         }
       }
@@ -160,9 +154,7 @@ export class Initializer {
       // ========================================
       // 環境判定失敗など、初期化の最初の段階で失敗した場合
       errors.push(
-        `Initialization failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `Initialization failed: ${error instanceof Error ? error.message : String(error)}`,
       );
 
       // VimScript版コマンドの登録を試行

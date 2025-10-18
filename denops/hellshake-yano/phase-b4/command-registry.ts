@@ -84,12 +84,12 @@ export class CommandRegistry {
    * Denops経由でTypeScript実装を呼び出すコマンド
    */
   async registerUnifiedCommands(
-    options: CommandRegistrationOptions = {}
+    options: CommandRegistrationOptions = {},
   ): Promise<void> {
     await this.registerCommands(
       CommandRegistry.UNIFIED_COMMANDS,
       "unified",
-      options
+      options,
     );
   }
 
@@ -99,12 +99,12 @@ export class CommandRegistry {
    * autoload関数を呼び出すコマンド（Denops不在時のフォールバック）
    */
   async registerVimScriptCommands(
-    options: CommandRegistrationOptions = {}
+    options: CommandRegistrationOptions = {},
   ): Promise<void> {
     await this.registerCommands(
       CommandRegistry.VIMSCRIPT_COMMANDS,
       "vimscript",
-      options
+      options,
     );
   }
 
@@ -114,7 +114,7 @@ export class CommandRegistry {
   private async registerCommands(
     commands: CommandDefinition[],
     type: "unified" | "vimscript",
-    options: CommandRegistrationOptions
+    options: CommandRegistrationOptions,
   ): Promise<void> {
     // エラーハンドリング強化
     if (this.registeredCommands.size > 0 && !options.force) {
@@ -123,9 +123,7 @@ export class CommandRegistry {
 
     try {
       for (const cmd of commands) {
-        const cmdStr = `command! ${cmd.options || ""} ${cmd.name} call ${
-          cmd.impl
-        }`;
+        const cmdStr = `command! ${cmd.options || ""} ${cmd.name} call ${cmd.impl}`;
         await this.denops.cmd(cmdStr);
         this.registeredCommands.add(cmd.name);
       }
@@ -135,7 +133,7 @@ export class CommandRegistry {
       throw new Error(
         `Failed to register ${type} commands: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     }
   }

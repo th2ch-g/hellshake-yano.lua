@@ -16,6 +16,7 @@ export interface VimScriptConfig {
   min_word_length?: number;
   use_japanese?: boolean;
   debug_mode?: boolean;
+  // deno-lint-ignore no-explicit-any
   [key: string]: any; // Unknown keys are allowed but will be ignored
 }
 
@@ -31,12 +32,14 @@ export interface MappedConfig {
   defaultMinWordLength?: number;
   useJapanese?: boolean;
   debugMode?: boolean;
+  // deno-lint-ignore no-explicit-any
   [key: string]: any;
 }
 
 /** 変換マッピング定義 */
 interface ConfigMapping {
   key: string;
+  // deno-lint-ignore no-explicit-any
   transform?: (value: any) => any;
 }
 
@@ -49,43 +52,43 @@ export class ConfigMapper {
   private readonly CONFIG_MAP: Record<string, ConfigMapping> = {
     "hint_chars": {
       key: "markers",
-      transform: (v: string) => v ? v.split("") : undefined
+      transform: (v: string) => v ? v.split("") : undefined,
     },
     "motion_threshold": {
       key: "motionCount",
-      transform: (v: number) => v
+      transform: (v: number) => v,
     },
     "motion_timeout_ms": {
       key: "motionTimeout",
-      transform: (v: number) => v
+      transform: (v: number) => v,
     },
     "motion_keys": {
       key: "countedMotions",
-      transform: (v: string[]) => v
+      transform: (v: string[]) => v,
     },
     "motion_enabled": {
       key: "motionCounterEnabled",
-      transform: (v: boolean) => v
+      transform: (v: boolean) => v,
     },
     "visual_mode_enabled": {
       key: "visualModeEnabled",
-      transform: (v: boolean) => v
+      transform: (v: boolean) => v,
     },
     "max_hints": {
       key: "maxHints",
-      transform: (v: number) => v
+      transform: (v: number) => v,
     },
     "min_word_length": {
       key: "defaultMinWordLength",
-      transform: (v: number) => v
+      transform: (v: number) => v,
     },
     "use_japanese": {
       key: "useJapanese",
-      transform: (v: boolean) => v
+      transform: (v: boolean) => v,
     },
     "debug_mode": {
       key: "debugMode",
-      transform: (v: boolean) => v
+      transform: (v: boolean) => v,
     },
   };
 
@@ -127,6 +130,7 @@ export class ConfigMapper {
    * @param value 変換する値
    * @returns 変換後の値
    */
+  // deno-lint-ignore no-explicit-any
   transformValue(key: string, value: any): any {
     const mapping = this.CONFIG_MAP[key];
     if (!mapping) {
@@ -142,6 +146,7 @@ export class ConfigMapper {
    * @param value 値
    * @returns 変換後のキーと値のペア、または undefined
    */
+  // deno-lint-ignore no-explicit-any
   private transformEntry(oldKey: string, value: any): { key: string; value: any } | undefined {
     const mapping = this.CONFIG_MAP[oldKey];
     if (!mapping) {
@@ -151,7 +156,7 @@ export class ConfigMapper {
     }
 
     const transformedValue = mapping.transform ? mapping.transform(value) : value;
-    
+
     // 変換後の値がundefinedの場合はエントリをスキップ
     if (transformedValue === undefined) {
       return undefined;
@@ -168,6 +173,7 @@ export class ConfigMapper {
    * @param value チェックする値
    * @returns nullまたはundefinedの場合true
    */
+  // deno-lint-ignore no-explicit-any
   private isNullOrUndefined(value: any): boolean {
     return value === null || value === undefined;
   }

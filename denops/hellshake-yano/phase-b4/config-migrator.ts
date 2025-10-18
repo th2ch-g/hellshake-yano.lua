@@ -4,15 +4,15 @@
  * GREENフェーズ: テストを通すための最小実装
  */
 import type { Denops } from "jsr:@denops/std@7.4.0";
-import { ConfigMapper, type VimScriptConfig, type MappedConfig } from "./config-mapper.ts";
+import { ConfigMapper, type MappedConfig, type VimScriptConfig } from "./config-mapper.ts";
 
 /** マイグレーション状態 */
 export type MigrationStatus =
-  | "migrated"      // 旧設定から新設定へマイグレーション成功
-  | "both_exist"    // 両方の設定が存在（新設定を優先）
-  | "new_only"      // 新設定のみ存在（マイグレーション不要）
-  | "none"          // 設定なし
-  | "error";        // エラー発生
+  | "migrated" // 旧設定から新設定へマイグレーション成功
+  | "both_exist" // 両方の設定が存在（新設定を優先）
+  | "new_only" // 新設定のみ存在（マイグレーション不要）
+  | "none" // 設定なし
+  | "error"; // エラー発生
 
 /** マイグレーション結果 */
 export interface MigrationResult {
@@ -81,7 +81,7 @@ export class ConfigMigrator {
           await this.setNewConfig(migratedConfig);
 
           warnings.push(
-            `Configuration migrated successfully from ${ConfigMigrator.OLD_CONFIG_VAR} to ${ConfigMigrator.NEW_CONFIG_VAR}`
+            `Configuration migrated successfully from ${ConfigMigrator.OLD_CONFIG_VAR} to ${ConfigMigrator.NEW_CONFIG_VAR}`,
           );
 
           // マイグレーション統計をログ出力
@@ -101,7 +101,7 @@ export class ConfigMigrator {
         false,
         warnings,
         undefined,
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
@@ -172,26 +172,27 @@ export class ConfigMigrator {
    * @param value 変換する値
    * @returns Vim形式の文字列
    */
+  // deno-lint-ignore no-explicit-any
   private toVimValue(value: any): string {
     if (Array.isArray(value)) {
-      const items = value.map(v => this.toVimValue(v));
+      const items = value.map((v) => this.toVimValue(v));
       return `[${items.join(", ")}]`;
     }
-    
+
     if (typeof value === "string") {
       // シングルクォートのエスケープ
       const escaped = value.replace(/'/g, "''");
       return `'${escaped}'`;
     }
-    
+
     if (typeof value === "boolean") {
       return value ? "1" : "0";
     }
-    
+
     if (value === null || value === undefined) {
       return "v:null";
     }
-    
+
     // 数値など
     return String(value);
   }
@@ -233,7 +234,7 @@ export class ConfigMigrator {
     newConfigExists: boolean,
     warnings: string[],
     migratedConfig?: MappedConfig,
-    error?: string
+    error?: string,
   ): MigrationResult {
     return {
       status,
@@ -248,7 +249,7 @@ export class ConfigMigrator {
   /**
    * マイグレーション統計をログ出力
    */
-  private logMigrationStats(oldConfig: VimScriptConfig, migratedConfig: MappedConfig): void {
+  private logMigrationStats(oldConfig: VimScriptConfig, _migratedConfig: MappedConfig): void {
     const stats = this.mapper.getMappingStatistics(oldConfig);
     console.log("[ConfigMigrator] Migration Statistics:");
     console.log(`  - Total keys: ${stats.totalKeys}`);

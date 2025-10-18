@@ -83,9 +83,7 @@ describe("Initializer", () => {
       const initializer = new Initializer(mockDenops);
       await initializer.initialize();
 
-      const hasUnifiedCommands = commands.some((cmd) =>
-        cmd.includes("denops#request")
-      );
+      const hasUnifiedCommands = commands.some((cmd) => cmd.includes("denops#request"));
       assertEquals(hasUnifiedCommands, true);
     });
   });
@@ -126,9 +124,7 @@ describe("Initializer", () => {
       const initializer = new Initializer(mockDenops);
       await initializer.initialize();
 
-      const hasVimScriptCommands = commands.some((cmd) =>
-        cmd.includes("hellshake_yano_vim#")
-      );
+      const hasVimScriptCommands = commands.some((cmd) => cmd.includes("hellshake_yano_vim#"));
       assertEquals(hasVimScriptCommands, true);
     });
 

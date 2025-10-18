@@ -31,7 +31,7 @@ export interface SelectionResult {
  */
 export class ImplementationSelector {
   private denops: Denops;
-  private static readonly DENOPS_RECOMMENDATION = 
+  private static readonly DENOPS_RECOMMENDATION =
     "Neovim detected but Denops is not available. Consider installing Denops for better performance.";
 
   constructor(denops: Denops) {
@@ -43,7 +43,7 @@ export class ImplementationSelector {
    * @param criteria 選択基準
    * @returns 選択結果
    */
-  async select(criteria: SelectionCriteria): Promise<SelectionResult> {
+  select(criteria: SelectionCriteria): SelectionResult {
     const { environment, userPreference } = criteria;
     const warnings: string[] = [];
 
@@ -52,7 +52,7 @@ export class ImplementationSelector {
       return this.createResult(
         "vimscript-pure",
         "User preference: legacy mode",
-        warnings
+        warnings,
       );
     }
 
@@ -61,7 +61,7 @@ export class ImplementationSelector {
       return this.createResult(
         "denops-unified",
         "Denops is available and running",
-        warnings
+        warnings,
       );
     }
 
@@ -90,15 +90,15 @@ export class ImplementationSelector {
    *
    * @param denopsAvailable Denopsが利用可能か
    * @param denopsRunning Denopsが実行中か
-   * @param editorType エディタの種類
+   * @param _editorType エディタの種類（ドキュメンテーション用、現在未使用）
    * @param userPreference ユーザー設定
    * @returns 選択される実装
    */
   getImplementationMatrix(
     denopsAvailable: boolean,
     denopsRunning: boolean,
-    editorType: "vim" | "neovim",
-    userPreference?: UserPreference
+    _editorType: "vim" | "neovim",
+    userPreference?: UserPreference,
   ): ImplementationType {
     // ユーザーがlegacyを指定した場合は常にvimscript-pure
     if (userPreference === "legacy") {
@@ -124,7 +124,7 @@ export class ImplementationSelector {
   private createResult(
     implementation: ImplementationType,
     reason: string,
-    warnings: string[]
+    warnings: string[],
   ): SelectionResult {
     return {
       implementation,
@@ -159,9 +159,9 @@ export class ImplementationSelector {
   logSelection(result: SelectionResult): void {
     console.log(`[ImplementationSelector] Selected: ${result.implementation}`);
     console.log(`[ImplementationSelector] Reason: ${result.reason}`);
-    
+
     if (result.warnings.length > 0) {
-      result.warnings.forEach(warning => {
+      result.warnings.forEach((warning) => {
         console.warn(`[ImplementationSelector] Warning: ${warning}`);
       });
     }

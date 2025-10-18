@@ -8,8 +8,8 @@ import { describe, it } from "jsr:@std/testing@1.0.7/bdd";
 // これから実装するConfigMapperをインポート
 import {
   ConfigMapper,
-  VimScriptConfig,
   MappedConfig,
+  VimScriptConfig,
 } from "../../denops/hellshake-yano/phase-b4/config-mapper.ts";
 
 describe("ConfigMapper", () => {

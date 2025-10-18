@@ -46,9 +46,7 @@ describe("CommandRegistry", () => {
       await registry.registerUnifiedCommands();
 
       // denops#request形式でコマンドが登録されているか確認
-      const hasRequestFormat = commands.some((cmd) =>
-        cmd.includes("denops#request")
-      );
+      const hasRequestFormat = commands.some((cmd) => cmd.includes("denops#request"));
       assertEquals(hasRequestFormat, true);
     });
 
@@ -98,9 +96,7 @@ describe("CommandRegistry", () => {
       await registry.registerVimScriptCommands();
 
       // autoload関数呼び出しが含まれているか確認
-      const hasAutoloadCall = commands.some((cmd) =>
-        cmd.includes("hellshake_yano_vim#")
-      );
+      const hasAutoloadCall = commands.some((cmd) => cmd.includes("hellshake_yano_vim#"));
       assertEquals(hasAutoloadCall, true);
     });
 
@@ -137,7 +133,7 @@ describe("CommandRegistry", () => {
           await registry.registerUnifiedCommands();
         },
         Error,
-        "already registered"
+        "already registered",
       );
     });
 

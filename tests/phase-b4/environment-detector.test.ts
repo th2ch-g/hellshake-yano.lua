@@ -21,7 +21,7 @@ describe("EnvironmentDetector", () => {
             return "running";
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
@@ -44,7 +44,7 @@ describe("EnvironmentDetector", () => {
             return "stopped";
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
@@ -64,7 +64,7 @@ describe("EnvironmentDetector", () => {
             return 0; // Denopsがロードされていない
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
@@ -89,7 +89,7 @@ describe("EnvironmentDetector", () => {
             return 900; // Vim 9.0
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
@@ -112,7 +112,7 @@ describe("EnvironmentDetector", () => {
             return 800; // NVIM v0.8.0相当
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
@@ -143,7 +143,7 @@ describe("EnvironmentDetector", () => {
             return 802;
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
@@ -174,7 +174,7 @@ describe("EnvironmentDetector", () => {
             return 802;
           }
           return undefined;
-        }
+        },
       } as Denops;
 
       const detector = new EnvironmentDetector(mockDenops);
