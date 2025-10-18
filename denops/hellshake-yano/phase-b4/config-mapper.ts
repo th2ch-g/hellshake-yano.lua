@@ -1,8 +1,9 @@
 /**
  * Config Mapper - Phase B-4
  * 設定変換マッパー: 旧VimScript形式から新形式への変換
- * GREENフェーズ: テストを通すための最小実装
+ * REFACTORフェーズ: 共通処理を活用して改善
  */
+import { logMessage, handleError } from "./common-base.ts";
 
 /** VimScript側の旧設定形式 */
 export interface VimScriptConfig {

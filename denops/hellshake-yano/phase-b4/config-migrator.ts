@@ -1,10 +1,11 @@
 /**
  * Config Migrator - Phase B-4
  * 設定マイグレーター: 旧設定から新設定への自動移行
- * GREENフェーズ: テストを通すための最小実装
+ * REFACTORフェーズ: 共通処理を活用して改善
  */
 import type { Denops } from "jsr:@denops/std@7.4.0";
 import { ConfigMapper, type MappedConfig, type VimScriptConfig } from "./config-mapper.ts";
+import { logMessage, handleError } from "./common-base.ts";
 
 /** マイグレーション状態 */
 export type MigrationStatus =

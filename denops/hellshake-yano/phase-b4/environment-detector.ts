@@ -1,9 +1,10 @@
 /**
  * Environment Detector - Phase B-4
  * 環境判定モジュール: Denopsの利用可能性とエディタ情報を検出
- * GREENフェーズ: テストを通すための最小実装
+ * REFACTORフェーズ: 共通処理を活用して改善
  */
 import type { Denops } from "jsr:@denops/std@7.4.0";
+import { handleError, logMessage, withFallback } from "./common-base.ts";
 
 /** Denopsの利用可能性情報 */
 export interface DenopsAvailability {
@@ -42,52 +43,54 @@ export class EnvironmentDetector {
    * @returns Denopsの状態情報
    */
   async isDenopsAvailable(): Promise<DenopsAvailability> {
-    try {
-      // g:loaded_denopsの存在確認
-      const loaded = await this.denops.eval("exists('g:loaded_denops')") as number;
+    return await withFallback(
+      async () => {
+        // g:loaded_denopsの存在確認
+        const loaded = await this.denops.eval("exists('g:loaded_denops')") as number;
 
-      if (loaded === 0) {
+        if (loaded === 0) {
+          return {
+            available: false,
+            running: false,
+            version: undefined,
+          };
+        }
+
+        // Denopsサーバーのステータス確認
+        const running = await withFallback(
+          async () => {
+            const status = await this.denops.eval("denops#server#status()") as string;
+            return status === "running";
+          },
+          true,
+          "EnvironmentDetector.statusCheck",
+        );
+
+        // バージョン取得（実際のDenopsバージョン）
+        const version = await withFallback(
+          async () => {
+            const denopsVersion = await this.denops.eval(
+              "get(g:, 'denops_version', '')",
+            ) as string;
+            return denopsVersion || "7.4.0";
+          },
+          "7.4.0",
+          "EnvironmentDetector.versionCheck",
+        );
+
         return {
-          available: false,
-          running: false,
-          version: undefined,
+          available: true,
+          running,
+          version,
         };
-      }
-
-      // Denopsサーバーのステータス確認
-      let running = false;
-      try {
-        const status = await this.denops.eval("denops#server#status()") as string;
-        running = status === "running";
-      } catch {
-        // denops#server#status()が存在しない場合は実行中とみなす
-        running = true;
-      }
-
-      // バージョン取得（実際のDenopsバージョン）
-      let version: string | undefined;
-      try {
-        // Denopsプラグインのバージョンを取得
-        const denopsVersion = await this.denops.eval("get(g:, 'denops_version', '')") as string;
-        version = denopsVersion || "7.4.0"; // デフォルト値
-      } catch {
-        version = "7.4.0"; // フォールバック
-      }
-
-      return {
-        available: true,
-        running,
-        version,
-      };
-    } catch (error) {
-      // エラーが発生した場合は利用不可と判定
-      console.error("[EnvironmentDetector] Failed to check Denops availability:", error);
-      return {
+      },
+      {
         available: false,
         running: false,
         version: undefined,
-      };
-    }
+      },
+      "EnvironmentDetector.isDenopsAvailable",
+    );
   }
 
   /**
@@ -95,56 +98,70 @@ export class EnvironmentDetector {
    * @returns エディタの種類とバージョン
    */
   async getEditorInfo(): Promise<EditorInfo> {
-    try {
-      // Neovimかどうかを判定
-      const hasNvim = await this.denops.eval("has('nvim')") as number;
-      const isNeovim = hasNvim === 1;
+    return await withFallback(
+      async () => {
+        // Neovimかどうかを判定
+        const hasNvim = await this.denops.eval("has('nvim')") as number;
+        const isNeovim = hasNvim === 1;
 
-      // バージョン番号を取得
-      const versionNum = await this.denops.eval("v:version") as number;
+        // バージョン番号を取得
+        const versionNum = await this.denops.eval("v:version") as number;
 
-      // バージョン文字列を生成
-      let version: string;
-      if (isNeovim) {
-        // Neovimの場合、nvim_versionからより正確なバージョンを取得
-        try {
-          // deno-lint-ignore no-explicit-any
-          const versionInfo = await this.denops.eval("api_info().version") as any;
+        // バージョン文字列を生成
+        const version = isNeovim
+          ? await this.getNeovimVersion(versionNum)
+          : await this.getVimVersion(versionNum);
 
-          if (versionInfo && versionInfo.major !== undefined) {
-            version = `${versionInfo.major}.${versionInfo.minor}.${versionInfo.patch || 0}`;
-          } else {
-            // フォールバック: v:versionから推定
-            const major = Math.floor(versionNum / 10000);
-            const minor = Math.floor((versionNum % 10000) / 100);
-            const patch = versionNum % 100;
-            version = `${major}.${minor}.${patch}`;
-          }
-        } catch {
-          // エラー時のフォールバック
-          version = "0.8.0";
-        }
-      } else {
-        // Vimの場合
-        const major = Math.floor(versionNum / 100);
-        const minor = versionNum % 100;
-        version = `${major}.${minor}`;
-      }
-
-      return {
-        type: isNeovim ? "neovim" : "vim",
-        version,
-        hasNvim: isNeovim,
-      };
-    } catch (error) {
-      // エラー時のデフォルト値
-      console.error("[EnvironmentDetector] Failed to get editor info:", error);
-      return {
-        type: "vim",
+        return {
+          type: isNeovim ? "neovim" : "vim",
+          version,
+          hasNvim: isNeovim,
+        };
+      },
+      {
+        type: "vim" as const,
         version: "8.0",
         hasNvim: false,
-      };
-    }
+      },
+      "EnvironmentDetector.getEditorInfo",
+    );
+  }
+
+  /**
+   * Neovim バージョンを取得
+   * @param versionNum - v:versionの値
+   * @returns バージョン文字列
+   */
+  private async getNeovimVersion(versionNum: number): Promise<string> {
+    return await withFallback(
+      async () => {
+        // deno-lint-ignore no-explicit-any
+        const versionInfo = await this.denops.eval("api_info().version") as any;
+
+        if (versionInfo && versionInfo.major !== undefined) {
+          return `${versionInfo.major}.${versionInfo.minor}.${versionInfo.patch || 0}`;
+        }
+
+        // フォールバック: v:versionから推定
+        const major = Math.floor(versionNum / 10000);
+        const minor = Math.floor((versionNum % 10000) / 100);
+        const patch = versionNum % 100;
+        return `${major}.${minor}.${patch}`;
+      },
+      "0.8.0",
+      "EnvironmentDetector.getNeovimVersion",
+    );
+  }
+
+  /**
+   * Vim バージョンを取得
+   * @param versionNum - v:versionの値
+   * @returns バージョン文字列
+   */
+  private async getVimVersion(versionNum: number): Promise<string> {
+    const major = Math.floor(versionNum / 100);
+    const minor = versionNum % 100;
+    return `${major}.${minor}`;
   }
 
   /**

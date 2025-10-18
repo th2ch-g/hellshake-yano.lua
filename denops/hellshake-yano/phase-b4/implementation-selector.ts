@@ -1,10 +1,11 @@
 /**
  * Implementation Selector - Phase B-4
  * 実装選択ロジック: 環境に応じて最適な実装を選択
- * GREENフェーズ: テストを通すための最小実装
+ * REFACTORフェーズ: 共通処理を活用して改善
  */
 import type { Denops } from "jsr:@denops/std@7.4.0";
 import type { EnvironmentDetails } from "./environment-detector.ts";
+import { logMessage, validateInList } from "./common-base.ts";
 
 /** 実装タイプ */
 export type ImplementationType = "denops-unified" | "vimscript-pure";
@@ -47,34 +48,63 @@ export class ImplementationSelector {
     const { environment, userPreference } = criteria;
     const warnings: string[] = [];
 
+    logMessage(
+      "DEBUG",
+      "ImplementationSelector",
+      `Selecting implementation: denops=${environment.denops.available}, running=${environment.denops.running}, editor=${environment.editor.type}, user=${userPreference || "default"}`,
+    );
+
     // ユーザーがlegacyモードを強制している場合
     if (userPreference === "legacy") {
-      return this.createResult(
+      const result = this.createResult(
         "vimscript-pure",
         "User preference: legacy mode",
         warnings,
       );
+      logMessage(
+        "INFO",
+        "ImplementationSelector",
+        `Selected: ${result.implementation} (user override)`,
+      );
+      return result;
     }
 
     // Denopsが利用可能で実行中の場合
     if (environment.denops.available && environment.denops.running) {
-      return this.createResult(
+      const result = this.createResult(
         "denops-unified",
         "Denops is available and running",
         warnings,
       );
+      logMessage(
+        "INFO",
+        "ImplementationSelector",
+        `Selected: ${result.implementation}`,
+      );
+      return result;
     }
 
     // Denopsが利用不可の場合はVimScriptにフォールバック
     // Neovimの場合は警告を追加
     if (environment.editor.hasNvim) {
       warnings.push(ImplementationSelector.DENOPS_RECOMMENDATION);
+      logMessage(
+        "WARN",
+        "ImplementationSelector",
+        ImplementationSelector.DENOPS_RECOMMENDATION,
+      );
     }
 
     // Denopsが停止している場合の詳細メッセージ
     const reason = this.getDenopsUnavailableReason(environment.denops);
+    const result = this.createResult("vimscript-pure", reason, warnings);
 
-    return this.createResult("vimscript-pure", reason, warnings);
+    logMessage(
+      "INFO",
+      "ImplementationSelector",
+      `Selected: ${result.implementation} (fallback)`,
+    );
+    return result;
   }
 
   /**
