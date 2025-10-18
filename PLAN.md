@@ -1,241 +1,333 @@
-# title: Phase B-1: 統合基盤構築（TDD実装）
+# title: Phase B-2: コア機能の移植（TDD）
 
 ## 概要
-- VimScript版とDenops版を統合する基盤を構築し、Vim環境でもDenopsを通じて高機能なhit-a-hint機能を提供する
-- TDD（テスト駆動開発）により、VimScript版との100%の互換性を保証しながら実装
+- VimScript版の4つのコアモジュール（word_detector.vim、jump.vim、input.vim、hint_generator.vim）をDenops版TypeScriptに移植
+- VimScript版の動作を**完全再現**し、座標計算・エラーメッセージ・動作タイミングを100%一致させる
+- TDDアプローチで各モジュールの品質を保証し、VimScript互換性テストで動作検証
 
 ### goal
-- Vim/Neovim両環境で統一された設定（`g:hellshake_yano`）を使用してhit-a-hint機能を利用できる
-- VimScript版の動作を完全に再現しつつ、Denopsの高速処理を活用
+- Vim環境でもDenopsの高速TypeScript処理を利用可能にする
+- VimScript版との100%動作互換性を実現し、既存ユーザーに影響を与えない
+- Phase B-1で構築した統合基盤を活用し、環境別処理を完全分離
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 必ず `ARCHITECTURE_B.md` の実装基本ルールを厳守すること
-  - VimScript版の動作が絶対的な基準
-  - ヒント表示位置とジャンプ機能はピクセル単位で完全一致
-  - 環境別処理の完全分離
+- **ARCHITECTURE_B.md の基本ルールを厳守**:
+  - VimScript実装が正規実装（改善よりも一致性優先）
+  - 環境別処理の完全分離（Vim/Neovim）
   - 既存実装の副作用チェック
 
 ## 開発のゴール
-- VimScript版（`autoload/hellshake_yano_vim/`）の動作を100%再現
-- Vim/Neovim環境の処理を完全に分離
-- TDDにより各機能の動作保証
-- 型安全性とテストカバレッジ90%以上を達成
+- VimScript版の4モジュールをTypeScriptで完全再現（1行単位の正確な移植）
+- TDDサイクル（RED → GREEN → REFACTOR → VimScript互換性テスト）の徹底
+- 全60個以上のテストケースで品質保証
+- テストカバレッジ90%以上、VimScript互換テスト100%パス
 
 ## 実装仕様
 
-### テスト駆動開発のサイクル
-1. RED: テストを先に書く（失敗する）
-2. GREEN: 最小限の実装でテストを通す
-3. REFACTOR: コードを改善（テストは通ったまま）
+### 移植対象モジュール
 
-### 型チェックとテスト実行
-- 各プロセスの実装前後で必ず実行:
-  - `deno check`: TypeScript型チェック
-  - `deno test`: 自動テスト実行
-  - `deno fmt`: コードフォーマット
-  - `deno lint`: リンターチェック
+1. **word_detector.vim → unified-word-detector.ts**
+   - 画面内（line('w0')～line('w$')）の単語検出
+   - matchstrpos()の動作を正規表現で再現
+   - 0-indexed → 1-indexed変換の正確な実装
+
+2. **jump.vim → unified-jump.ts**
+   - cursor(lnum, col)のDenops API再現
+   - 範囲チェック（1 <= lnum <= line('$'), 1 <= col）の完全移植
+   - エラーメッセージの完全一致
+
+3. **hint_generator.vim → unified-hint-generator.ts**
+   - 単一文字ヒント（7個: asdfgnm）
+   - 複数文字ヒント（42個: bb, bc, be, ...）
+   - 最大49個の制限
+
+4. **input.vim → unified-input.ts**
+   - ブロッキング入力処理（getchar()の再現）
+   - 部分マッチ判定（stridx()ロジックの移植）
+   - 完全一致時のジャンプ実行
+
+### VimScript互換性の保証方法
+
+- **座標計算**: VimScript版のpopup_create()/extmark座標と完全一致
+- **エラーメッセージ**: printf()フォーマットを含めて完全再現
+- **動作タイミング**: ブロッキング処理のタイミングを一致
+- **テストによる検証**: 各モジュールでVimScript版と結果比較テストを実施
 
 ## 生成AIの学習用コンテキスト
 
-### VimScript実装
-- `autoload/hellshake_yano_vim/core.vim`
-  - 状態管理と統合処理の基準実装
-- `autoload/hellshake_yano_vim/config.vim`
-  - 設定管理の基準実装
-- `autoload/hellshake_yano_vim/display.vim`
-  - 表示制御の基準実装（popup_create/extmark）
-- `autoload/hellshake_yano_vim/input.vim`
-  - 入力処理の基準実装（ブロッキング処理）
+### VimScript実装（移植元）
+- `autoload/hellshake_yano_vim/word_detector.vim`
+  - detect_visible()関数: 画面内単語検出のアルゴリズム
+  - matchstrpos()の使用方法
 - `autoload/hellshake_yano_vim/jump.vim`
-  - ジャンプ機能の基準実装
+  - to()関数: カーソル移動と範囲チェック
+- `autoload/hellshake_yano_vim/input.vim`
+  - wait_for_input()関数: ブロッキング入力処理
+  - get_partial_matches()関数: 部分マッチ判定
+- `autoload/hellshake_yano_vim/hint_generator.vim`
+  - generate()関数: ヒント文字列生成
 
-### 既存Denops実装
-- `denops/hellshake-yano/main.ts`
-  - 既存のエントリーポイント（副作用チェック必要）
-- `denops/hellshake-yano/config.ts`
-  - Config型定義と既存設定構造
-- `denops/hellshake-yano/word/word-segmenter.ts`
-  - TinySegmenter実装（日本語対応で活用）
+### Denops既存実装（参考）
+- `denops/hellshake-yano/types.ts`
+  - Word型定義（line, col, text）
+- `denops/hellshake-yano/word.ts`
+  - 既存の単語検出実装（TinySegmenter含む）
+- `denops/hellshake-yano/hint.ts`
+  - 既存のヒント生成実装
 
-### テストインフラ
-- `tests/testRunner.ts`
-  - 既存のテストランナー（Vim/Neovim両対応）
-- `deno.jsonc`
-  - TypeScript設定（strict: true）
+### Phase B-1実装（基盤）
+- `denops/hellshake-yano/phase-b1/vim-bridge.ts`
+  - 環境判定ロジック（isVimEnvironment）
+- `denops/hellshake-yano/phase-b1/config-unifier.ts`
+  - 設定統合メカニズム
+- `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
+  - 副作用管理機構
+
+### アーキテクチャドキュメント
+- `ARCHITECTURE_B.md`
+  - Phase B-2実装計画（522-741行）
+  - 実装の基本ルール（14-177行）
 
 ## Process
 
-### process1 テストインフラ構築
-#### sub1.1 VimScript互換性テスト基盤
-@target: `tests/phase-b1/vimscript-compat.test.ts`
-@ref: `tests/testRunner.ts`, `autoload/hellshake_yano_vim/core.vim`
-- [ ] VimScript版の動作を検証するテストヘルパー作成
-- [ ] 座標・位置の完全一致を確認するアサーション追加
-- [ ] 型チェック: `deno check tests/phase-b1/vimscript-compat.test.ts`
-- [ ] テスト実行: `deno test tests/phase-b1/vimscript-compat.test.ts` (RED)
+### process1: 型定義の統一（0.5日）
+@target: `denops/hellshake-yano/phase-b2/vimscript-types.ts`
+@ref: `autoload/hellshake_yano_vim/word_detector.vim`, `denops/hellshake-yano/types.ts`
 
-#### sub1.2 環境分離テストヘルパー
-@target: `tests/phase-b1/env-helper.ts`
-- [ ] Vim環境専用のテスト実行ヘルパー
-- [ ] Neovim環境専用のテスト実行ヘルパー
-- [ ] 環境切り替えのモック機能
-- [ ] 型チェック: `deno check tests/phase-b1/env-helper.ts`
+- [ ] VimScriptWord型の定義（text, lnum, col, end_col）
+  - lnum, col, end_colは全て1-indexed
+- [ ] DenopsWord型への変換関数（toDecodeopsWord）
+  - lnum → line, col → col
+- [ ] VimScript型への逆変換関数（toVimScriptWord）
+  - line → lnum, col → col
+- [ ] 型変換テストの作成
+  - 変換の正確性テスト
+  - 逆変換後の一致性テスト
 
-### process2 Denopsブリッジレイヤー実装
-#### sub2.1 VimBridge基本構造（TDD）
-@target: `denops/hellshake-yano/phase-b1/vim-bridge.ts`
-@ref: `autoload/hellshake_yano_vim/core.vim`, `autoload/hellshake_yano_vim/word_detector.vim`
+### process2: unified-word-detector.ts（1.5日）
+@target: `denops/hellshake-yano/phase-b2/unified-word-detector.ts`
+@ref: `autoload/hellshake_yano_vim/word_detector.vim`
 
-**TDD Step 1: RED**
-- [ ] テスト作成: `tests/phase-b1/vim-bridge.test.ts`
-- [ ] 単語検出の一致テスト記述
-- [ ] `deno test tests/phase-b1/vim-bridge.test.ts` (FAIL)
+#### sub1: テストファイル作成（RED）
+@target: `tests/phase-b2/unified-word-detector.test.ts`
 
-**TDD Step 2: GREEN**
-- [ ] VimBridgeクラスの最小実装
-- [ ] detectWords()メソッド実装
-- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/vim-bridge.ts`
-- [ ] `deno test tests/phase-b1/vim-bridge.test.ts` (PASS)
+- [ ] 基本機能テスト（4件）
+  - 空のバッファで空配列を返す
+  - 単一行の単語を正しく検出
+  - 複数行の単語を検出
+  - 空行を正しくスキップ
+- [ ] VimScript完全互換テスト（3件）
+  - VimScript版と同一の単語リストを返す
+  - matchstrpos()と同じ位置情報
+  - line('w0')とline('w$')の範囲制限
+- [ ] エッジケーステスト（3件）
+  - 日本語を含む行（Phase B-3で対応）
+  - 特殊文字のみの行
+  - 最大単語数の制限
 
-**TDD Step 3: REFACTOR**
-- [ ] detectWordsForVim()とdetectWordsForNeovim()に分離
-- [ ] 環境判定ロジックの追加
-- [ ] `deno fmt denops/hellshake-yano/phase-b1/`
-- [ ] `deno lint denops/hellshake-yano/phase-b1/`
+#### sub2: 実装（GREEN）
+- [ ] UnifiedWordDetectorクラスの作成
+- [ ] detectVisible()メソッド
+  - getVisibleRange(): line('w0'), line('w$')取得
+  - getLines(): 範囲内の行取得
+  - detectByRegex(): 正規表現ベース単語検出
+  - filterWords(): config基づくフィルタリング
+- [ ] matchstrpos()の再現
+  - 正規表現 /\w+/g で単語検出
+  - 0-indexed → 1-indexed変換
+- [ ] VimScript版のアルゴリズム完全移植
+  - 空バッファチェック（l:w0 < 1 || l:wlast < 1）
+  - 空行スキップ（empty(l:line)）
+  - 無限ループ防止チェック
 
-#### sub2.2 副作用チェック機構
-@target: `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
-@ref: `ARCHITECTURE_B.md#副作用の分類と対処法`
-- [ ] SideEffectCheckerクラス作成
-- [ ] カーソル位置の保存・復元テスト
-- [ ] グローバル変数の保存・復元テスト
-- [ ] バッファ状態の保存・復元テスト
-- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/side-effect-checker.ts`
-- [ ] テスト: `deno test tests/phase-b1/side-effect-checker.test.ts`
+#### sub3: リファクタリング（REFACTOR）
+- [ ] コードの可読性向上
+- [ ] 型安全性の確認
+- [ ] パフォーマンス最適化
 
-### process3 設定統合システム
-#### sub3.1 ConfigUnifier実装（TDD）
-@target: `denops/hellshake-yano/phase-b1/config-unifier.ts`
-@ref: `autoload/hellshake_yano_vim/config.vim`, `denops/hellshake-yano/config.ts`
+### process3: unified-jump.ts（0.5日）
+@target: `denops/hellshake-yano/phase-b2/unified-jump.ts`
+@ref: `autoload/hellshake_yano_vim/jump.vim`
 
-**TDD実装**
-- [ ] テスト作成: `tests/phase-b1/config-unifier.test.ts`
-- [ ] VimScript設定からTypeScript設定への変換テスト
-- [ ] ConfigUnifierクラス実装
-- [ ] CONFIG_MAPの定義（hint_chars → markers等）
-- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/config-unifier.ts`
-- [ ] テスト: `deno test tests/phase-b1/config-unifier.test.ts`
+#### sub1: テストファイル作成（RED）
+@target: `tests/phase-b2/unified-jump.test.ts`
 
-#### sub3.2 自動マイグレーション機能
-@target: `denops/hellshake-yano/phase-b1/config-migrator.ts`
-- [ ] ConfigMigratorクラス作成
-- [ ] 既存設定の検出ロジック
-- [ ] 自動変換と警告表示
-- [ ] マイグレーションテスト作成
-- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/config-migrator.ts`
+- [ ] 基本機能テスト（3件）
+  - 有効な座標にジャンプ
+  - バッファ先頭にジャンプ（1, 1）
+  - バッファ末尾にジャンプ（line('$'), 1）
+- [ ] 範囲チェックテスト（3件）
+  - 行番号が1未満でエラー
+  - 行番号が最終行超過でエラー
+  - 列番号が1未満でエラー
+- [ ] VimScript互換性テスト（3件）
+  - VimScript版と同じエラーメッセージ
+  - cursor()関数と同じ動作
+  - 型チェック（lnum, colが数値）
 
-### process4 統合表示システム（環境別分離）
-#### sub4.1 UnifiedDisplay実装
-@target: `denops/hellshake-yano/phase-b1/unified-display.ts`
-@ref: `autoload/hellshake_yano_vim/display.vim`
+#### sub2: 実装（GREEN）
+- [ ] UnifiedJumpクラスの作成
+- [ ] jumpTo(lnum, col)メソッド
+  - 型チェック（type(a:lnum) != v:t_number）の再現
+  - 範囲チェック（1 <= lnum <= line('$'), 1 <= col）
+  - cursor()関数のDenops API再現
+- [ ] エラーメッセージの完全一致
+  - 'lnum and col must be numbers'
+  - 'invalid line number %d (must be >= 1)'
+  - 'invalid line number %d (must be <= %d)'
+  - 'invalid column number %d (must be >= 1)'
+  - 'failed to move cursor to (%d, %d)'
 
-**Vim環境専用処理**
-- [ ] showHintsForVim()メソッド実装
-- [ ] hideHintsForVim()メソッド実装
-- [ ] popup_create()の完全再現
+### process4: unified-hint-generator.ts（1日）
+@target: `denops/hellshake-yano/phase-b2/unified-hint-generator.ts`
+@ref: `autoload/hellshake_yano_vim/hint_generator.vim`
 
-**Neovim環境専用処理**
-- [ ] showHintsForNeovim()メソッド実装
-- [ ] hideHintsForNeovim()メソッド実装
-- [ ] nvim_buf_set_extmark()の完全再現
+#### sub1: テストファイル作成（RED）
+@target: `tests/phase-b2/unified-hint-generator.test.ts`
 
-**テストと検証**
-- [ ] 座標計算の一致テスト
-- [ ] オプション値の一致テスト
-- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/unified-display.ts`
-- [ ] テスト: `deno test tests/phase-b1/unified-display.test.ts`
+- [ ] 単一文字ヒントテスト（2件）
+  - 7個以下で単一文字のみ（['a', 's', 'd', ...]）
+  - カスタムキー設定に対応
+- [ ] 複数文字ヒントテスト（3件）
+  - 8個以上で複数文字を含む（['a', ..., 'm', 'bb']）
+  - 2文字ヒントの生成順序（'bb', 'bc', 'be', ...）
+  - 最大49個の制限
+- [ ] VimScript互換性テスト（3件）
+  - VimScript版と同じヒント順序
+  - 単一文字キーと複数文字キーの分離
+  - グローバル変数カスタマイズ対応
 
-### process5 統合エントリーポイント
-@target: `plugin/hellshake-yano-unified.vim`
-- [ ] 実装選択ロジック（Denops有無判定）
-- [ ] 統合版の初期化処理
-- [ ] Pure VimScript版へのフォールバック
-- [ ] 設定マイグレーション呼び出し
+#### sub2: 実装（GREEN）
+- [ ] UnifiedHintGeneratorクラスの作成
+- [ ] generate(count)メソッド
+  - count <= 0で空配列
+  - count <= 7で単一文字ヒント
+  - count > 7で単一+複数文字ヒント
+  - 最大49個の制限
+- [ ] generateMultiCharHints(count)メソッド
+  - 2文字ヒント生成（bb, bc, be, ...）
+  - インデックス計算（first_idx = i / len, second_idx = i % len）
+- [ ] キーセット管理
+  - singleCharKeys: 'asdfgnm'
+  - multiCharKeys: 'bceiopqrtuvwxyz'
 
-### process10 ユニットテスト
+### process5: unified-input.ts（1.5日）
+@target: `denops/hellshake-yano/phase-b2/unified-input.ts`
+@ref: `autoload/hellshake_yano_vim/input.vim`
 
-#### sub10.1 互換性テストスイート
-@target: `tests/phase-b1/compatibility-suite.test.ts`
-- [ ] VimScript版との完全互換テスト
-- [ ] 全機能の動作一致確認
-- [ ] エッジケースの検証
-- [ ] `deno test tests/phase-b1/compatibility-suite.test.ts`
+#### sub1: テストファイル作成（RED）
+@target: `tests/phase-b2/unified-input.test.ts`
 
-#### sub10.2 パフォーマンステスト
-@target: `tests/phase-b1/performance.test.ts`
-- [ ] 1000単語の処理時間測定
-- [ ] VimScript版との速度比較
-- [ ] メモリ使用量の測定
-- [ ] `deno test tests/phase-b1/performance.test.ts`
+- [ ] ブロッキング入力テスト（3件）
+  - 単一文字入力でジャンプ
+  - 複数文字入力でジャンプ
+  - ESCでキャンセル
+- [ ] 部分マッチテスト（2件）
+  - 部分マッチ時にハイライト更新
+  - マッチなしで終了
+- [ ] VimScript互換性テスト（4件）
+  - getPartialMatches()と同じ結果
+  - wait_for_input()と同じタイミング
+  - stridx()ロジックの完全移植
+  - エラー時のクリーンアップ
 
-#### sub10.3 E2Eテスト
-@target: `tests/phase-b1/e2e.test.ts`
-- [ ] ヒント表示からジャンプまでの全フロー
-- [ ] Vim環境での完全動作確認
-- [ ] Neovim環境での完全動作確認
-- [ ] `deno test tests/phase-b1/e2e.test.ts`
+#### sub2: 実装（GREEN）
+- [ ] UnifiedInputクラスの作成
+- [ ] waitForInput(hintMap)メソッド
+  - getchar()のブロッキング処理再現
+  - 入力ループ（while 1）
+  - 完全一致チェック（has_key(a:hint_map, l:input_buffer)）
+  - 部分マッチチェック
+- [ ] getPartialMatches()メソッド
+  - stridx(hint, input_buffer) == 0の再現
+  - 前方一致判定
+- [ ] エラーハンドリング
+  - try-catch-finally構造
+  - ヒント非表示のクリーンアップ
 
-### process50 フォローアップ
+### process6: 統合テスト（0.5日）
+@target: `tests/phase-b2/phase-b2-e2e.test.ts`
 
-#### sub50.1 型定義の完全性チェック
-- [ ] 全ファイルの型チェック: `deno check denops/hellshake-yano/phase-b1/**/*.ts`
-- [ ] strictモードでの検証
-- [ ] 型エラーの修正
+- [ ] End-to-Endテストシナリオ
+  - 単語検出 → ヒント生成 → ヒント表示 → 入力処理 → ジャンプ実行
+- [ ] VimScript版との完全動作比較
+  - 全モジュールの統合で動作一致確認
+  - 座標・エラーメッセージ・タイミングの完全一致
+- [ ] パフォーマンステスト
+  - 処理時間がVimScript版と同等以下
+  - メモリ使用量の確認
 
-#### sub50.2 テストカバレッジ確認
-- [ ] カバレッジ測定: `deno test --coverage=coverage tests/phase-b1/`
-- [ ] カバレッジレポート生成: `deno coverage coverage/`
-- [ ] 90%以上のカバレッジ達成確認
-- [ ] 未カバー部分のテスト追加
+### process10: ユニットテスト
+各processで実装したテストの総合確認
 
-### process100 リファクタリング
+- [ ] 全テストケース数: 60個以上
+- [ ] テストカバレッジ: 90%以上
+- [ ] VimScript互換テスト: 100%パス
+- [ ] 型チェック: deno check 100%パス
+- [ ] リンター: deno lint パス
+- [ ] フォーマット: deno fmt 準拠
 
-#### sub100.1 コード品質向上
-- [ ] 重複コードの削除
-- [ ] 関数の責務明確化
+### process50: フォローアップ
+実装後の仕様変更・追加要件
+
+- [ ] Phase B-3への準備
+  - TinySegmenter統合のインターフェース確認
+  - 日本語単語検出の拡張ポイント特定
+- [ ] パフォーマンス最適化の検討
+  - キャッシュ戦略の詳細設計
+  - バッチ処理の活用ポイント
+
+### process100: リファクタリング
+コード品質向上
+
+- [ ] 共通処理の抽出
+- [ ] 型定義の最適化
 - [ ] エラーハンドリングの統一
-- [ ] `deno fmt --check denops/hellshake-yano/phase-b1/`
+- [ ] コメント・ドキュメントの充実
 
-#### sub100.2 パフォーマンス最適化
-- [ ] キャッシュ戦略の見直し
-- [ ] バッチ処理の活用
-- [ ] 非同期処理の最適化
+### process200: ドキュメンテーション
 
-### process200 ドキュメンテーション
+- [ ] ARCHITECTURE_B.md の更新
+  - Phase B-2完了レポートの追加
+  - 実装進捗状況テーブルの更新
+- [ ] README.md の更新（必要に応じて）
+- [ ] テストドキュメントの作成
+  - テストケース一覧
+  - VimScript互換性検証結果
 
-- [ ] ARCHITECTURE_B.mdのPhase B-1セクション更新
-- [ ] README.mdへのPhase B-1機能説明追加
-- [ ] 設定マイグレーションガイドの作成
-- [ ] TypeDocコメントの追加
-- [ ] CHANGELOG.mdへの変更記録
-
-## CI/CD設定
-
-### GitHub Actions
-@target: `.github/workflows/phase-b1-test.yml`
-- [ ] 自動型チェック
-- [ ] 自動テスト実行
-- [ ] カバレッジレポート
-- [ ] リンターチェック
+---
 
 ## 成功基準
 
-1. **型安全性**: すべてのファイルが`deno check`をパス
-2. **テスト合格率**: 100%のテストがパス
-3. **VimScript互換**: VimScript版と100%同じ動作
-4. **カバレッジ**: 90%以上のコードカバレッジ
-5. **パフォーマンス**: VimScript版と同等以上の速度
-6. **環境分離**: Vim/Neovim処理が完全に独立
-7. **副作用管理**: 既存コードの副作用が適切に制御される
+### 定量指標
+- 全テストケース: **60個以上**
+- テストカバレッジ: **90%以上**
+- VimScript互換テスト: **100%パス**
+- 型チェック: **deno check 100%**
 
+### 定性指標
+- VimScript版と**座標完全一致**
+- エラーメッセージ**完全一致**
+- 動作タイミング**一致**
+- ブロッキング処理の**同一動作**
+
+## スケジュール
+
+| Process | ステップ | 所要時間 | 累計 |
+|---------|---------|---------|------|
+| process1 | 型定義の統一 | 0.5日 | 0.5日 |
+| process2 | unified-word-detector | 1.5日 | 2.0日 |
+| process3 | unified-jump | 0.5日 | 2.5日 |
+| process4 | unified-hint-generator | 1.0日 | 3.5日 |
+| process5 | unified-input | 1.5日 | 5.0日 |
+| process6 | 統合テスト | 0.5日 | 5.5日 |
+
+**合計**: 5.5日
+
+## 次フェーズへの引き継ぎ
+
+Phase B-2完了後、Phase B-3（高度な機能の統合）で以下を実装：
+- TinySegmenterの統合（日本語対応）
+- モーション検出の統合
+- キャッシュ機構の統合

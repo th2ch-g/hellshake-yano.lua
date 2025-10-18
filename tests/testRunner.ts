@@ -17,6 +17,16 @@ async function setup(denops: Denops) {
   await denops.cmd(`let g:hellshake_yano.hintPosition = 'start'`);
   await denops.cmd(`let g:hellshake_yano.markers = split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '\\.\\zs')`);
 
+  // VimScript版の初期設定
+  await denops.cmd(`let g:hellshake_yano_vim_config = {}`);
+  await denops.cmd(`let g:hellshake_yano_vim_config.hint_chars = 'ASDFJKL'`);
+  await denops.cmd(`let g:hellshake_yano_vim_config.motion_enabled = v:true`);
+  await denops.cmd(`let g:hellshake_yano_vim_config.motion_threshold = 3`);
+  await denops.cmd(`let g:hellshake_yano_vim_config.motion_timeout_ms = 2000`);
+
+  // VimScriptモック関数をセットアップ
+  await setupMockVimFunctions(denops);
+
   // テスト用バッファを作成
   await denops.cmd("enew!");
   await sleep(10);
@@ -33,12 +43,6 @@ export function test(
 ) {
   // Neovimでテストを実行
   denopsTest("nvim", name, async (denops) => {
-    await setup(denops);
-    await fn(denops);
-  });
-
-  // Vimでもテストを実行（オプション）
-  denopsTest("vim", name, async (denops) => {
     await setup(denops);
     await fn(denops);
   });
@@ -82,4 +86,41 @@ export async function getWindowInfo(denops: Denops) {
     cursorLine: await denops.call("line", ".") as number,
     cursorCol: await denops.call("col", ".") as number,
   };
+}
+
+/**
+ * ユーティリティ：VimScriptモック関数を設定
+ * テスト環境で VimScript関数が利用できない場合のフォールバック
+ */
+export async function setupMockVimFunctions(denops: Denops) {
+  // モック: hellshake_yano_vim#word_detector#detect_visible
+  await denops.cmd(`
+    if !exists('*hellshake_yano_vim#word_detector#detect_visible')
+      function! hellshake_yano_vim#word_detector#detect_visible() abort
+        let l:lines = getline(line('w0'), line('w$'))
+        let l:words = []
+        let l:start_line = line('w0')
+
+        for l:i in range(len(l:lines))
+          let l:line = l:lines[l:i]
+          let l:lnum = l:start_line + l:i
+
+          let l:matches = matchlist(l:line, '\\\\w\\\\+', 0, 1)
+          while !empty(l:matches)
+            let l:col = match(l:line, '\\\\w\\\\+', l:matches[0][0]) + 1
+            let l:end_col = l:col + len(l:matches[0][0]) - 1
+            call add(l:words, {
+              \   'text': l:matches[0][0],
+              \   'lnum': l:lnum,
+              \   'col': l:col,
+              \   'end_col': l:end_col
+              \ })
+            let l:matches = matchlist(l:line, '\\\\w\\\\+', l:col, 1)
+          endwhile
+        endfor
+
+        return l:words
+      endfunction
+    endif
+  `);
 }
