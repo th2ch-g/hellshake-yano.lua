@@ -146,21 +146,21 @@ tests/phase-b3/
 @target: `denops/hellshake-yano/phase-b3/unified-japanese-support.ts`
 @ref: `denops/hellshake-yano/word/word-segmenter.ts`, `denops/hellshake-yano/phase-b2/vimscript-types.ts`
 
-- [ ] UnifiedJapaneseSupportクラスの作成
+- [x] UnifiedJapaneseSupportクラスの作成
   - TinySegmenterのインスタンス管理（getInstance()）
   - Denopsインスタンスの保持
-- [ ] segmentLine()メソッドの実装
+- [x] segmentLine()メソッドの実装
   - hasJapanese()による日本語判定
   - 日本語対応フラグチェック（useJapanese, enableTinySegmenter）
   - TinySegmenterによるセグメント化
   - セグメントのWord型変換（convertSegmentsToWords）
-- [ ] convertSegmentsToWords()メソッドの実装
+- [x] convertSegmentsToWords()メソッドの実装
   - 各セグメントの元行での位置検索（indexOf）
   - 最小単語長フィルタリング（japaneseMinWordLength）
   - Word型オブジェクト生成（1-indexed座標）
-- [ ] isEnabled()メソッドの実装
+- [x] isEnabled()メソッドの実装
   - useJapanese && enableTinySegmenterのチェック
-- [ ] キャッシュ管理メソッド
+- [x] キャッシュ管理メソッド
   - getCacheStats(): キャッシュ統計取得
   - clearCache(): キャッシュクリア
 
@@ -168,9 +168,9 @@ tests/phase-b3/
 @target: `denops/hellshake-yano/phase-b2/unified-word-detector.ts`
 @ref: `denops/hellshake-yano/phase-b3/unified-japanese-support.ts`
 
-- [ ] UnifiedJapaneseSupportのインスタンス追加
+- [x] UnifiedJapaneseSupportのインスタンス追加
   - constructorでの初期化
-- [ ] detectVisible()メソッドの拡張
+- [x] detectVisible()メソッドの拡張
   - 日本語対応が有効な場合の分岐追加
   - japaneseSupport.segmentLine()の呼び出し
   - 日本語単語と通常単語のマージ
@@ -178,21 +178,21 @@ tests/phase-b3/
 #### sub3: テスト作成（15-20 steps）
 @target: `tests/phase-b3/unified-japanese-support.test.ts`
 
-- [ ] Process 1: 日本語検出テスト（3-5 steps）
+- [x] Process 1: 日本語検出テスト（3-5 steps）
   - ひらがな、カタカナ、漢字の検出
   - 英語のみの行の判定
   - 混在テキストの処理
-- [ ] Process 2: セグメント化テスト（3-5 steps）
+- [x] Process 2: セグメント化テスト（3-5 steps）
   - 「私の名前は田中です」等のサンプル
   - セグメント数の確認
   - 各単語の座標チェック（1-indexed）
-- [ ] Process 3: 助詞結合テスト（2-3 steps）
+- [x] Process 3: 助詞結合テスト（2-3 steps）
   - japaneseMergeParticles=trueでの結合確認
   - 「の」「は」等の助詞を含む単語の検出
-- [ ] Process 4: フィルタリングテスト（2-3 steps）
+- [x] Process 4: フィルタリングテスト（2-3 steps）
   - japaneseMinWordLengthによる最小単語長チェック
   - 空白のみのセグメントのスキップ
-- [ ] Process 5: キャッシュテスト（2-3 steps）
+- [x] Process 5: キャッシュテスト（2-3 steps）
   - 同じテキストでのキャッシュヒット確認
   - キャッシュ統計の確認
 
@@ -202,10 +202,10 @@ tests/phase-b3/
 @target: `denops/hellshake-yano/phase-b3/unified-motion-detector.ts`
 @ref: `autoload/hellshake_yano_vim/motion.vim`
 
-- [ ] UnifiedMotionDetectorクラスの作成
+- [x] UnifiedMotionDetectorクラスの作成
   - 状態変数: lastMotion, lastMotionTime, motionCount
   - 設定: timeoutMs, threshold
-- [ ] handleMotion(key)メソッドの実装（VimScript版と同一アルゴリズム）
+- [x] handleMotion(key)メソッドの実装（VimScript版と同一アルゴリズム）
   - 不正なモーションキーのチェック（w/b/e以外はエラー）
   - 現在時刻の取得（Date.now()でミリ秒精度）
   - 前回のモーションとの時間差チェック
@@ -214,41 +214,41 @@ tests/phase-b3/
   - カウントの更新（shouldReset判定）
   - 閾値チェックとヒント表示トリガー（motionCount >= threshold）
   - エラーハンドリング（VimScript版と同一）
-- [ ] getThreshold(key)メソッドの実装
+- [x] getThreshold(key)メソッドの実装
   - perKeyMotionCountでのキー別閾値サポート
   - デフォルト閾値の返却
-- [ ] init()メソッドの実装
+- [x] init()メソッドの実装
   - 状態変数の初期化
-- [ ] setThreshold(count)メソッドの実装
+- [x] setThreshold(count)メソッドの実装
   - 閾値の設定
-- [ ] setTimeout(ms)メソッドの実装
+- [x] setTimeout(ms)メソッドの実装
   - タイムアウトの設定
-- [ ] getState()メソッドの実装
+- [x] getState()メソッドの実装
   - 状態変数の取得（テスト用）
 
 #### sub2: テスト作成（20-25 steps）
 @target: `tests/phase-b3/unified-motion-detector.test.ts`
 
-- [ ] Process 1: 状態初期化テスト（2-3 steps）
+- [x] Process 1: 状態初期化テスト（2-3 steps）
   - init()による初期化確認
   - デフォルト値の確認（timeout=2000, threshold=2）
-- [ ] Process 2: 単一モーション処理テスト（3-4 steps）
+- [x] Process 2: 単一モーション処理テスト（3-4 steps）
   - 1回目のモーションでカウント=1
   - shouldTrigger=falseの確認
   - lastMotionの記録確認
-- [ ] Process 3: 連続モーション検出テスト（3-4 steps）
+- [x] Process 3: 連続モーション検出テスト（3-4 steps）
   - 2回目でshouldTrigger=trueの確認
   - カウントリセットの確認（motionCount=0）
-- [ ] Process 4: タイムアウト処理テスト（3-4 steps）
+- [x] Process 4: タイムアウト処理テスト（3-4 steps）
   - setTimeout(100)での短いタイムアウト設定
   - 待機後のカウントリセット確認
-- [ ] Process 5: 異なるモーション処理テスト（2-3 steps）
+- [x] Process 5: 異なるモーション処理テスト（2-3 steps）
   - w→bでのカウントリセット確認
   - lastMotionの更新確認
-- [ ] Process 6: キー別閾値テスト（2-3 steps）
+- [x] Process 6: キー別閾値テスト（2-3 steps）
   - perKeyMotionCount={w: 3}での動作確認
   - 3回目でトリガー確認
-- [ ] Process 7: エラーハンドリングテスト（2-3 steps）
+- [x] Process 7: エラーハンドリングテスト（2-3 steps）
   - 不正なモーションキー（x）でのエラー確認
   - エラーメッセージのVimScript互換性確認
 
@@ -258,84 +258,84 @@ tests/phase-b3/
 @target: `denops/hellshake-yano/phase-b3/unified-visual-mode.ts`
 @ref: `autoload/hellshake_yano_vim/visual.vim`
 
-- [ ] UnifiedVisualModeクラスの作成
+- [x] UnifiedVisualModeクラスの作成
   - 状態変数: visualState（active, mode, startLine, startCol, endLine, endCol）
-- [ ] show()メソッドの実装（VimScript版と同一フロー）
+- [x] show()メソッドの実装（VimScript版と同一フロー）
   - mode()でビジュアルモードタイプを取得
   - ビジュアルモードチェック（v/V/\x16）
   - getpos("'<"), getpos("'>")で選択範囲を取得
   - 選択範囲の妥当性チェック（startLine <= endLine, lineNum != 0）
   - 状態変数に選択範囲を保存
   - エラー時の警告メッセージ表示
-- [ ] filterWordsInRange(words)メソッドの実装
+- [x] filterWordsInRange(words)メソッドの実装
   - ビジュアルモードでない場合は全単語を返す
   - 範囲内の単語のみをフィルタリング（lnum >= startLine && lnum <= endLine）
-- [ ] init()メソッドの実装
+- [x] init()メソッドの実装
   - 状態変数の初期化
-- [ ] getState()メソッドの実装
+- [x] getState()メソッドの実装
   - 状態変数の取得（テスト用）
-- [ ] clearAfterJump()メソッドの実装
+- [x] clearAfterJump()メソッドの実装
   - ジャンプ後の状態クリア
-- [ ] showWarning(message)メソッドの実装
+- [x] showWarning(message)メソッドの実装
   - 警告メッセージ表示（VimScript版と同一フォーマット）
 
 #### sub2: テスト作成（15-20 steps）
 @target: `tests/phase-b3/unified-visual-mode.test.ts`
 
-- [ ] Process 1: 状態初期化テスト（2 steps）
+- [x] Process 1: 状態初期化テスト（2 steps）
   - init()による初期化確認
   - デフォルト値の確認（active=false, mode=""）
-- [ ] Process 2: モードチェックテスト（4-5 steps）
+- [x] Process 2: モードチェックテスト（4-5 steps）
   - ノーマルモード（n）での拒否確認
   - ビジュアルモード（v）での受け入れ確認
   - ビジュアルラインモード（V）での受け入れ確認
   - ビジュアルブロックモード（Ctrl-v）での受け入れ確認
-- [ ] Process 3: 選択範囲取得テスト（2-3 steps）
+- [x] Process 3: 選択範囲取得テスト（2-3 steps）
   - getpos()による範囲取得の確認
   - 状態変数への保存確認
-- [ ] Process 4: 妥当性チェックテスト（2-3 steps）
+- [x] Process 4: 妥当性チェックテスト（2-3 steps）
   - 不正な範囲（start > end）での拒否確認
   - 行番号0での拒否確認
-- [ ] Process 5: 範囲内フィルタリングテスト（2-3 steps）
+- [x] Process 5: 範囲内フィルタリングテスト（2-3 steps）
   - 3-5行目の選択範囲でのフィルタリング確認
   - 範囲外の単語が除外されることの確認
-- [ ] Process 6: 状態クリアテスト（2 steps）
+- [x] Process 6: 状態クリアテスト（2 steps）
   - clearAfterJump()でのactive=false確認
 
 ### process4: E2E統合テスト（0.5日）
 @target: `tests/phase-b3/e2e-integration.test.ts`
 
-- [ ] Scenario 1: 日本語単語検出 + ヒント表示（3-4 steps）
+- [x] Scenario 1: 日本語単語検出 + ヒント表示（3-4 steps）
   - バッファに日本語テキストを設定
   - UnifiedWordDetectorによる単語検出
   - 日本語単語が正しく検出されることの確認
-- [ ] Scenario 2: モーション連打 + ヒント表示（3-4 steps）
+- [x] Scenario 2: モーション連打 + ヒント表示（3-4 steps）
   - UnifiedMotionDetectorによるモーション処理
   - 閾値到達でのトリガー確認
   - カウントリセット確認
-- [ ] Scenario 3: ビジュアルモード + 範囲内フィルタリング（3-4 steps）
+- [x] Scenario 3: ビジュアルモード + 範囲内フィルタリング（3-4 steps）
   - ビジュアルモードで2-3行目を選択
   - UnifiedVisualModeによる範囲内フィルタリング
   - 範囲内の単語のみが残ることの確認
-- [ ] Scenario 4: 日本語 + モーション連打 + ビジュアルモード（2-3 steps）
+- [x] Scenario 4: 日本語 + モーション連打 + ビジュアルモード（2-3 steps）
   - 全機能を組み合わせた統合テスト
   - 日本語単語の検出と範囲内フィルタリングの確認
 
 ### process10: ユニットテスト
 各processで実装したテストの総合確認
 
-- [ ] 全テストケース数: 60個以上達成（目標60個）
+- [x] 全テストケース数: 60個以上達成（目標60個）
   - 日本語対応: 15-20 steps
   - モーション検出: 20-25 steps
   - ビジュアルモード: 15-20 steps
   - E2E統合: 10-15 steps
-- [ ] テストカバレッジ: 90%以上
-- [ ] VimScript互換テスト: 100%パス
+- [x] テストカバレッジ: 90%以上
+- [x] VimScript互換テスト: 100%パス
   - motion.vimとの動作一致
   - visual.vimとの動作一致
-- [ ] 型チェック: deno check 100%パス
-- [ ] リンター: deno lint パス
-- [ ] フォーマット: deno fmt 準拠
+- [x] 型チェック: deno check 100%パス
+- [x] リンター: deno lint パス
+- [x] フォーマット: deno fmt 準拠
 
 ### process50: フォローアップ
 実装後の仕様変更・追加要件
@@ -352,32 +352,32 @@ tests/phase-b3/
 ### process100: リファクタリング
 コード品質向上
 
-- [ ] 共通処理の抽出
-  - エラーメッセージ表示の統一
-  - 状態管理ロジックの共通化
-- [ ] 型定義の最適化
-  - VisualState型の明示的定義
-  - MotionState型の定義
-- [ ] エラーハンドリングの統一
-  - try-catch-finallyパターンの統一
-- [ ] コメント・ドキュメントの充実
-  - 各メソッドの詳細な説明
-  - VimScript版との対応関係の明記
+- [x] 共通処理の抽出
+  - [x] エラーメッセージ表示の統一
+  - [x] 状態管理ロジックの共通化
+- [x] 型定義の最適化
+  - [x] VisualState型の明示的定義
+  - [x] MotionState型の定義
+- [x] エラーハンドリングの統一
+  - [x] try-catch-finallyパターンの統一
+- [x] コメント・ドキュメントの充実
+  - [x] 各メソッドの詳細な説明
+  - [x] VimScript版との対応関係の明記
 
 ### process200: ドキュメンテーション
 
-- [ ] ARCHITECTURE_B.md の更新
-  - Phase B-3完了レポートの追加
-  - 実装進捗状況テーブルの更新（B-3を✅に変更）
-  - 成功基準の達成状況記録
+- [x] ARCHITECTURE_B.md の更新
+  - [x] Phase B-3完了レポートの追加
+  - [x] 実装進捗状況テーブルの更新（B-3を✅に変更）
+  - [x] 成功基準の達成状況記録
 - [ ] README.md の更新
   - 日本語対応の説明追加
   - モーション検出機能の説明
   - ビジュアルモード対応の説明
-- [ ] テストドキュメントの作成
-  - テストケース一覧
-  - VimScript互換性検証結果
-  - カバレッジレポート
+- [x] テストドキュメントの作成
+  - [x] テストケース一覧
+  - [x] VimScript互換性検証結果
+  - [x] カバレッジレポート
 
 ---
 

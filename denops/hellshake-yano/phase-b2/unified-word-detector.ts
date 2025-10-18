@@ -24,19 +24,24 @@
 
 import type { Denops } from "@denops/std";
 import type { DenopsWord } from "./vimscript-types.ts";
+import type { UnifiedJapaneseSupportConfig } from "../phase-b3/unified-japanese-support.ts";
+import { unifiedJapaneseSupport } from "../phase-b3/unified-japanese-support.ts";
 
 /**
  * UnifiedWordDetector - 画面内の単語検出クラス
  *
  * VimScript版のhellshake_yano_vim#word_detector#detect_visible()を完全移植
+ * Phase B-3: 日本語対応統合版
  */
 export class UnifiedWordDetector {
   private denops: Denops;
   // 注意: gフラグは使わない（matchメソッドで毎回新しいマッチを取得するため）
   private wordPattern = /\w+/;
+  private japaneseSupport = unifiedJapaneseSupport;
 
   constructor(denops: Denops) {
     this.denops = denops;
+    this.japaneseSupport.setDenops(denops);
   }
 
   /**
@@ -219,15 +224,60 @@ export class UnifiedWordDetector {
   /**
    * 単語検出を実行（configベースのフィルタリング付き）
    *
-   * Phase B-2では未実装、Phase B-3で拡張予定
+   * Phase B-2: 基本実装
+   * Phase B-3: 日本語対応統合
    *
-   * @param config - 検出設定（minWordLengthなど）
+   * @param config - 検出設定（minWordLength、日本語対応フラグなど）
    * @returns 検出した単語のリスト
    */
   async detectVisibleWithConfig(config?: {
     minWordLength?: number;
+    useJapanese?: boolean;
+    enableTinySegmenter?: boolean;
+    japaneseMinWordLength?: number;
+    japaneseMergeParticles?: boolean;
   }): Promise<DenopsWord[]> {
     const words = await this.detectVisible();
+
+    // 日本語対応が有効な場合は日本語単語を追加
+    if (
+      config?.useJapanese === true &&
+      config?.enableTinySegmenter === true
+    ) {
+      // 画面内の行範囲を取得
+      const visibleRange = await this.getVisibleRange();
+
+      if (visibleRange.w0 >= 1 && visibleRange.wlast >= 1) {
+        // 各行をセグメント化
+        for (let lnum = visibleRange.w0; lnum <= visibleRange.wlast; lnum++) {
+          const line = await this.getLine(lnum);
+
+          if (line.trim().length === 0) {
+            continue;
+          }
+
+          // 日本語セグメント化を実行
+          const japaneseWords = await this.japaneseSupport.segmentLine(
+            line,
+            lnum,
+            config as UnifiedJapaneseSupportConfig,
+          );
+
+          // 既存の単語と重複しないかチェック
+          for (const jword of japaneseWords) {
+            // 同じ位置に既に単語がある場合はスキップ
+            const exists = words.some(
+              (w) =>
+                w.line === jword.line && w.col === jword.col &&
+                w.text === jword.text,
+            );
+            if (!exists) {
+              words.push(jword);
+            }
+          }
+        }
+      }
+    }
 
     // configが指定されている場合はフィルタリング
     if (config?.minWordLength !== undefined) {
