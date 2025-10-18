@@ -1,477 +1,241 @@
-# title: Phase A-5: 高度な機能の実装
-
-**ステータス**: ✅ **部分完了（70%）** (2025-10-17)
-**注記**: process2（日本語検出）を除く全ての実装・テスト・ドキュメント完了
+# title: Phase B-1: 統合基盤構築（TDD実装）
 
 ## 概要
-- ビジュアルモード対応により、ビジュアル選択範囲内でヒント表示機能を実現
-- 日本語単語検出により、日本語混在テキストでの基本的な単語境界認識を実現
-- 設定システム拡張により、より柔軟なカスタマイズを実現
-- パフォーマンス最適化により、キャッシュなしでも快適な動作を実現
+- VimScript版とDenops版を統合する基盤を構築し、Vim環境でもDenopsを通じて高機能なhit-a-hint機能を提供する
+- TDD（テスト駆動開発）により、VimScript版との100%の互換性を保証しながら実装
 
 ### goal
-- ユーザーがビジュアルモード（v/V/Ctrl-v）でテキストを選択中に、選択範囲内の単語にヒントが表示され、ヒント文字を入力することで目的の単語にジャンプできる
-- 日本語混在テキスト（例: 「このファイルを開く」や「ファイル操作API」）で、文字種の切り替わりを境界として単語が検出され、ヒント表示できる
-- 設定により最小単語長（min_word_length）や最大ヒント数（max_hints）を調整し、表示をカスタマイズできる
+- Vim/Neovim両環境で統一された設定（`g:hellshake_yano`）を使用してhit-a-hint機能を利用できる
+- VimScript版の動作を完全に再現しつつ、Denopsの高速処理を活用
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- 動作確認はneovimではなく、vimで行う
-- ヒントジャンプはブロッキング方式で行う（Phase A-3で確立した方式を継承）
-- git add, git commitの実行は、ユーザに実行の許可を得ること
-- キャッシュシステムは実装しない（Denops版で実装予定）
+- 必ず `ARCHITECTURE_B.md` の実装基本ルールを厳守すること
+  - VimScript版の動作が絶対的な基準
+  - ヒント表示位置とジャンプ機能はピクセル単位で完全一致
+  - 環境別処理の完全分離
+  - 既存実装の副作用チェック
 
 ## 開発のゴール
-- Pure VimScriptでビジュアルモード対応を実装し、実用性を向上させる
-- 日本語単語の基本的な境界検出を実装し、日本語環境での使用を可能にする
-- 設定システムを拡張し、ユーザーが細かくカスタマイズできるようにする
-- キャッシュなしでもパフォーマンスを最適化し、快適な動作を実現する
-- Phase A-1～A-4で構築した基盤を維持しつつ、機能を拡張する
+- VimScript版（`autoload/hellshake_yano_vim/`）の動作を100%再現
+- Vim/Neovim環境の処理を完全に分離
+- TDDにより各機能の動作保証
+- 型安全性とテストカバレッジ90%以上を達成
 
 ## 実装仕様
 
-### データ構造
+### テスト駆動開発のサイクル
+1. RED: テストを先に書く（失敗する）
+2. GREEN: 最小限の実装でテストを通す
+3. REFACTOR: コードを改善（テストは通ったまま）
 
-#### ビジュアルモード状態
-```vim
-" visual.vim 内部状態
-let s:visual_state = {
-  \ 'active': v:false,           " ビジュアルモードが有効か
-  \ 'mode': '',                  " ビジュアルモードタイプ（v, V, Ctrl-v）
-  \ 'start_line': 0,             " 選択開始行
-  \ 'start_col': 0,              " 選択開始列
-  \ 'end_line': 0,               " 選択終了行
-  \ 'end_col': 0                 " 選択終了列
-\ }
-```
-
-#### 日本語文字種
-```vim
-" 文字種の定義
-" - 'hiragana': ひらがな（U+3040-U+309F）
-" - 'katakana': カタカナ（U+30A0-U+30FF）
-" - 'kanji': 漢字（U+4E00-U+9FAF）
-" - 'alphanumeric': 英数字（\w）
-" - 'other': その他
-```
-
-#### 拡張設定データ構造
-```vim
-let s:default_config = {
-  \ " Phase A-1～A-4 の既存設定
-  \ 'enabled': v:true,
-  \ 'hint_chars': 'ASDFJKL',
-  \ 'motion_enabled': v:true,
-  \ 'motion_threshold': 2,
-  \ 'motion_timeout_ms': 2000,
-  \ 'motion_keys': ['w', 'b', 'e'],
-  \
-  \ " Phase A-5 新規追加
-  \ 'use_japanese': v:false,         " 日本語検出有効化（デフォルト無効）
-  \ 'min_word_length': 1,            " 最小単語長（文字数）
-  \ 'visual_mode_enabled': v:true,   " ビジュアルモード対応
-  \ 'max_hints': 49,                 " 最大ヒント数
-  \ 'exclude_numbers': v:false,      " 数字のみの単語を除外
-  \ 'debug_mode': v:false            " デバッグモード
-\ }
-```
-
-### アルゴリズム
-
-#### ビジュアルモード検出フロー
-```
-1. ビジュアルモードでユーザーがトリガーキーを押す
-2. mode() 関数で現在のモードを取得（v, V, Ctrl-v）
-3. getpos("'<") と getpos("'>") で選択範囲を取得
-4. 選択範囲内の行を走査し、単語を検出
-5. 検出した単語にヒントを生成
-6. ヒント表示（既存のdisplay#show を利用）
-7. 入力処理（既存のinput#wait_for_input を利用）
-8. ジャンプ実行後、ビジュアル選択を解除
-```
-
-#### 日本語単語境界検出フロー
-```
-1. 行テキストを1文字ずつ走査
-2. 各文字の文字種を判定（s:get_char_type）
-   - char2nr() でUnicodeコードポイント取得
-   - コードポイント範囲で文字種判定
-3. 文字種が切り替わったら境界と判定
-4. 境界ごとに単語データを作成
-   - text: 単語文字列
-   - lnum: 行番号
-   - col: 開始列
-   - end_col: 終了列
-5. 最小単語長フィルタリング適用
-6. 単語リストを返す
-```
-
-#### パフォーマンス最適化フロー
-```
-1. 設定から min_word_length, max_hints を取得
-2. 画面内の行を走査開始
-3. 各行で以下をチェック:
-   - 早期リターン: 空行はスキップ
-   - 早期リターン: max_hints に達したらループ終了
-4. 単語検出後、フィルタリング:
-   - 最小単語長チェック（strchars() < min_length）
-   - 数字のみ除外（exclude_numbers が true の場合）
-5. フィルタリング通過した単語のみ追加
-6. 最終的な単語リストを返す
-```
-
-### ファイル構造
-```
-autoload/hellshake_yano_vim/
-├── visual.vim                 # 新規作成: ビジュアルモード対応
-├── word_detector.vim          # 既存: 日本語検出機能追加
-├── config.vim                 # 既存: 新規設定項目追加
-├── core.vim                   # 既存: visual統合のための軽微な変更
-├── hint_generator.vim         # 既存: Phase A-3で実装済み
-├── display.vim                # 既存: Phase A-1で実装済み
-├── input.vim                  # 既存: Phase A-3で実装済み
-├── jump.vim                   # 既存: Phase A-1で実装済み
-└── motion.vim                 # 既存: Phase A-4で実装済み
-
-plugin/hellshake-yano-vim.vim  # 既存: ビジュアルモードマッピング追加
-
-tests-vim/hellshake_yano_vim/
-├── test_visual.vim            # 新規作成: ビジュアルモードのテスト
-├── test_word_detector.vim     # 既存: 日本語検出テスト追加
-└── test_config.vim            # 既存: 新規設定のテスト追加
-```
-
-### パフォーマンス特性
-- 時間計算量: O(L * C) - L: 画面内の行数、C: 行あたりの平均文字数
-- 日本語検出は文字ごとの走査が必要（英数字検出より低速）
-- 早期リターンとフィルタリングにより不要な処理を削減
-- キャッシュなしでも1000行ファイルで200ms以内を目標
-
-### ビジュアルモード仕様
-
-#### デフォルトマッピング
-```vim
-" visual_mode_enabled が true の場合、自動的にマッピング
-xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>
-```
-
-#### カスタマイズ可能な<Plug>マッピング
-```vim
-" ユーザーが独自のキーにマッピングできる
-xnoremap <silent> <Plug>(hellshake-yano-vim-visual)
-      \ :<C-u>call hellshake_yano_vim#visual#show()<CR>
-```
-
-### 日本語検出仕様
-
-#### 文字種判定
-- **ひらがな**: U+3040-U+309F (12352-12447)
-- **カタカナ**: U+30A0-U+30FF (12448-12543)
-- **漢字**: U+4E00-U+9FAF (19968-40879)
-- **英数字**: `\w` パターン
-
-#### 境界検出ルール
-1. 文字種が切り替わった時点を境界とする
-2. 記号・空白は単語に含めない
-3. 最小単語長未満の単語は除外
-
-#### 制約
-- TinySegmenter（形態素解析）は使用しない
-- 助詞の結合などの高度な処理は Phase B（Denops版）で実装
-- 精度より実装の簡潔さを優先
+### 型チェックとテスト実行
+- 各プロセスの実装前後で必ず実行:
+  - `deno check`: TypeScript型チェック
+  - `deno test`: 自動テスト実行
+  - `deno fmt`: コードフォーマット
+  - `deno lint`: リンターチェック
 
 ## 生成AIの学習用コンテキスト
 
-### 既存実装ファイル
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/core.vim
-  - Phase A-1～A-4の実装が完了している
-  - show()関数でヒント表示の統合処理を提供
-  - visual.vim から呼び出すパターンを参考にする
+### VimScript実装
+- `autoload/hellshake_yano_vim/core.vim`
+  - 状態管理と統合処理の基準実装
+- `autoload/hellshake_yano_vim/config.vim`
+  - 設定管理の基準実装
+- `autoload/hellshake_yano_vim/display.vim`
+  - 表示制御の基準実装（popup_create/extmark）
+- `autoload/hellshake_yano_vim/input.vim`
+  - 入力処理の基準実装（ブロッキング処理）
+- `autoload/hellshake_yano_vim/jump.vim`
+  - ジャンプ機能の基準実装
 
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/word_detector.vim
-  - Phase A-2で実装済み
-  - detect_visible()関数で画面内単語検出を提供
-  - 日本語検出機能を追加する
+### 既存Denops実装
+- `denops/hellshake-yano/main.ts`
+  - 既存のエントリーポイント（副作用チェック必要）
+- `denops/hellshake-yano/config.ts`
+  - Config型定義と既存設定構造
+- `denops/hellshake-yano/word/word-segmenter.ts`
+  - TinySegmenter実装（日本語対応で活用）
 
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/config.vim
-  - Phase A-4で実装済み
-  - get/set 関数で設定管理を提供
-  - 新規設定項目を追加する
-
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/input.vim
-  - ブロッキング入力方式の実装を参考にする
-  - wait_for_input()関数のパターンを理解する
-
-### アーキテクチャドキュメント
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/ARCHITECTURE.md
-  - Phase A-1～A-4の実装状況
-  - Phase A-5の位置づけと目標
-  - 技術仕様とデータ構造
-
-### Denops版参考実装
-- /home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts
-  - 日本語検出のアルゴリズムを参考にする（VimScriptに移植）
-  - extractWords関数の実装パターン
+### テストインフラ
+- `tests/testRunner.ts`
+  - 既存のテストランナー（Vim/Neovim両対応）
+- `deno.jsonc`
+  - TypeScript設定（strict: true）
 
 ## Process
 
-### process1 visual.vim の実装
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/visual.vim
-@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/core.vim
+### process1 テストインフラ構築
+#### sub1.1 VimScript互換性テスト基盤
+@target: `tests/phase-b1/vimscript-compat.test.ts`
+@ref: `tests/testRunner.ts`, `autoload/hellshake_yano_vim/core.vim`
+- [ ] VimScript版の動作を検証するテストヘルパー作成
+- [ ] 座標・位置の完全一致を確認するアサーション追加
+- [ ] 型チェック: `deno check tests/phase-b1/vimscript-compat.test.ts`
+- [ ] テスト実行: `deno test tests/phase-b1/vimscript-compat.test.ts` (RED)
 
-- [x] スクリプトローカル変数 s:visual_state の定義
-  - active, mode, start_line, start_col, end_line, end_col
-- [x] hellshake_yano_vim#visual#show() 関数の実装
-  - mode() でビジュアルモードタイプ取得
-  - getpos("'<") と getpos("'>") で選択範囲取得
-  - 選択範囲内の単語検出
-  - core#show() を呼び出してヒント表示
-- [x] hellshake_yano_vim#visual#init() 関数の実装
-  - 状態変数の初期化処理
-- [x] hellshake_yano_vim#visual#get_state() 関数の実装
-  - テスト用の状態取得関数（deepcopy()で返す）
-- [x] s:detect_words_in_range(start_line, end_line) 内部関数の実装
-  - 範囲内の行を走査
-  - word_detector#detect_visible() を利用
-  - 選択範囲外の単語を除外
-- [x] エラーハンドリングの追加
-  - 不正な選択範囲の処理
-  - ビジュアルモード以外での呼び出し防止
+#### sub1.2 環境分離テストヘルパー
+@target: `tests/phase-b1/env-helper.ts`
+- [ ] Vim環境専用のテスト実行ヘルパー
+- [ ] Neovim環境専用のテスト実行ヘルパー
+- [ ] 環境切り替えのモック機能
+- [ ] 型チェック: `deno check tests/phase-b1/env-helper.ts`
 
-### process2 word_detector.vim 日本語検出追加
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/word_detector.vim
-@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/denops/hellshake-yano/word.ts
+### process2 Denopsブリッジレイヤー実装
+#### sub2.1 VimBridge基本構造（TDD）
+@target: `denops/hellshake-yano/phase-b1/vim-bridge.ts`
+@ref: `autoload/hellshake_yano_vim/core.vim`, `autoload/hellshake_yano_vim/word_detector.vim`
 
-- [ ] s:get_char_type(char) 関数の実装
-  - char2nr() でUnicodeコードポイント取得
-  - ひらがな判定（U+3040-U+309F）
-  - カタカナ判定（U+30A0-U+30FF）
-  - 漢字判定（U+4E00-U+9FAF）
-  - 英数字判定（\w パターン）
-  - その他の判定
-- [ ] s:detect_japanese_words(line, lnum) 関数の実装
-  - 行を1文字ずつ走査
-  - 文字種の切り替わりで境界判定
-  - 単語データの作成（text, lnum, col, end_col）
-  - 最小単語長フィルタリング
-- [ ] s:detect_alphanumeric_words(line, lnum) 関数の実装
-  - 既存の英数字検出ロジックを関数化
-  - matchstrpos() を使用
-- [ ] hellshake_yano_vim#word_detector#detect_visible() の更新
-  - use_japanese 設定チェック
-  - 日本語検出 or 英数字検出の分岐
-  - min_word_length フィルタリング追加
-  - exclude_numbers フィルタリング追加
-  - max_hints 制限の適用
-- [ ] エラーハンドリングの追加
-  - 不正な文字列の処理
-  - Unicode範囲外の文字対応
+**TDD Step 1: RED**
+- [ ] テスト作成: `tests/phase-b1/vim-bridge.test.ts`
+- [ ] 単語検出の一致テスト記述
+- [ ] `deno test tests/phase-b1/vim-bridge.test.ts` (FAIL)
 
-### process3 config.vim 設定システム拡張
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/config.vim
+**TDD Step 2: GREEN**
+- [ ] VimBridgeクラスの最小実装
+- [ ] detectWords()メソッド実装
+- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/vim-bridge.ts`
+- [ ] `deno test tests/phase-b1/vim-bridge.test.ts` (PASS)
 
-- [x] デフォルト設定 s:default_config の更新
-  - use_japanese, min_word_length, visual_mode_enabled, max_hints, exclude_numbers, debug_mode の追加
-- [ ] hellshake_yano_vim#config#validate(config) 関数の実装
-  - min_word_length のバリデーション（>= 1）
-  - max_hints のバリデーション（1～100）
-  - 型チェック（Boolean, Number）
-  - ※既存のget/set関数で対応可能なため実装スキップ
-- [x] hellshake_yano_vim#config#get(key) の動作確認
-  - 新規設定項目の取得テスト
-- [x] hellshake_yano_vim#config#set(key, value) の動作確認
-  - バリデーション統合
-  - 不正な値の拒否
-- [x] ドキュメントコメントの追加
-  - 各設定項目の説明
-  - 使用例の記載
+**TDD Step 3: REFACTOR**
+- [ ] detectWordsForVim()とdetectWordsForNeovim()に分離
+- [ ] 環境判定ロジックの追加
+- [ ] `deno fmt denops/hellshake-yano/phase-b1/`
+- [ ] `deno lint denops/hellshake-yano/phase-b1/`
 
-### process4 パフォーマンス最適化
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/word_detector.vim
+#### sub2.2 副作用チェック機構
+@target: `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
+@ref: `ARCHITECTURE_B.md#副作用の分類と対処法`
+- [ ] SideEffectCheckerクラス作成
+- [ ] カーソル位置の保存・復元テスト
+- [ ] グローバル変数の保存・復元テスト
+- [ ] バッファ状態の保存・復元テスト
+- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/side-effect-checker.ts`
+- [ ] テスト: `deno test tests/phase-b1/side-effect-checker.test.ts`
 
-- [x] 早期リターン最適化
-  - 空バッファチェック
-  - 空行スキップ
-  - max_hints 到達時のループ終了
-  - ※設定項目（max_hints）の準備完了、実装はprocess2で実施
-- [x] フィルタリング最適化
-  - min_word_length で早期除外
-  - strchars() による文字数計算
-  - exclude_numbers による数字除外
-  - ※設定項目（min_word_length, exclude_numbers）の準備完了
-- [x] 単語検出の効率化
-  - 不要な再計算を削減
-  - ループの最適化
-  - ※process2で実装予定
-- [ ] ベンチマーク測定
-  - 1000行ファイルでの処理時間測定
-  - 日本語テキストでの性能確認
-  - 目標: 200ms以内
-  - ※process2完了後に実施
+### process3 設定統合システム
+#### sub3.1 ConfigUnifier実装（TDD）
+@target: `denops/hellshake-yano/phase-b1/config-unifier.ts`
+@ref: `autoload/hellshake_yano_vim/config.vim`, `denops/hellshake-yano/config.ts`
 
-### process5 キーマッピングの追加
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano-vim.vim
-@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/config.vim
+**TDD実装**
+- [ ] テスト作成: `tests/phase-b1/config-unifier.test.ts`
+- [ ] VimScript設定からTypeScript設定への変換テスト
+- [ ] ConfigUnifierクラス実装
+- [ ] CONFIG_MAPの定義（hint_chars → markers等）
+- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/config-unifier.ts`
+- [ ] テスト: `deno test tests/phase-b1/config-unifier.test.ts`
 
-- [x] ビジュアルモードマッピングセクションの追加
-  - "Visual Mode Mappings (Phase A-5)" コメント
-- [x] visual_mode_enabled チェックの実装
-  - config#get('visual_mode_enabled')で有効化判定
-- [x] デフォルトマッピングの追加
-  - xnoremap <Leader>h でヒント表示
-- [x] <Plug>マッピングの提供
-  - <Plug>(hellshake-yano-vim-visual)
-- [x] ドキュメントコメントの追加
-  - マッピングのカスタマイズ方法を記載
+#### sub3.2 自動マイグレーション機能
+@target: `denops/hellshake-yano/phase-b1/config-migrator.ts`
+- [ ] ConfigMigratorクラス作成
+- [ ] 既存設定の検出ロジック
+- [ ] 自動変換と警告表示
+- [ ] マイグレーションテスト作成
+- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/config-migrator.ts`
 
-### process6 core.vim の統合
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/core.vim
-@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/autoload/hellshake_yano_vim/visual.vim
+### process4 統合表示システム（環境別分離）
+#### sub4.1 UnifiedDisplay実装
+@target: `denops/hellshake-yano/phase-b1/unified-display.ts`
+@ref: `autoload/hellshake_yano_vim/display.vim`
 
-- [x] hellshake_yano_vim#core#init() の更新
-  - visual#init()の呼び出しを追加
-  - 新規設定値の初期化確認
-- [x] hellshake_yano_vim#core#show() の更新確認
-  - visual.vim から呼び出せることを確認
-  - 既存機能との互換性維持
-- [x] コメントの更新
-  - Phase A-5対応を明記
+**Vim環境専用処理**
+- [ ] showHintsForVim()メソッド実装
+- [ ] hideHintsForVim()メソッド実装
+- [ ] popup_create()の完全再現
+
+**Neovim環境専用処理**
+- [ ] showHintsForNeovim()メソッド実装
+- [ ] hideHintsForNeovim()メソッド実装
+- [ ] nvim_buf_set_extmark()の完全再現
+
+**テストと検証**
+- [ ] 座標計算の一致テスト
+- [ ] オプション値の一致テスト
+- [ ] 型チェック: `deno check denops/hellshake-yano/phase-b1/unified-display.ts`
+- [ ] テスト: `deno test tests/phase-b1/unified-display.test.ts`
+
+### process5 統合エントリーポイント
+@target: `plugin/hellshake-yano-unified.vim`
+- [ ] 実装選択ロジック（Denops有無判定）
+- [ ] 統合版の初期化処理
+- [ ] Pure VimScript版へのフォールバック
+- [ ] 設定マイグレーション呼び出し
 
 ### process10 ユニットテスト
 
-#### sub10.1 test_visual.vim の実装
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_visual.vim
-@ref: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_core.vim
+#### sub10.1 互換性テストスイート
+@target: `tests/phase-b1/compatibility-suite.test.ts`
+- [ ] VimScript版との完全互換テスト
+- [ ] 全機能の動作一致確認
+- [ ] エッジケースの検証
+- [ ] `deno test tests/phase-b1/compatibility-suite.test.ts`
 
-- [x] Test_visual_init() の実装
-  - 初期化後の状態確認
-  - active=v:false, mode='', start_line=0
-- [x] Test_visual_character_mode() の実装
-  - 文字単位ビジュアルモード（v）での動作確認
-  - 選択範囲内の単語検出確認
-- [x] Test_visual_line_mode() の実装
-  - 行単位ビジュアルモード（V）での動作確認
-  - 複数行選択時の単語検出確認
-- [x] Test_visual_block_mode() の実装
-  - ブロック単位ビジュアルモード（Ctrl-v）での動作確認
-- [x] Test_visual_range_detection() の実装
-  - getpos("'<"), getpos("'>") の動作確認
-  - 範囲外の単語が除外されることを確認
+#### sub10.2 パフォーマンステスト
+@target: `tests/phase-b1/performance.test.ts`
+- [ ] 1000単語の処理時間測定
+- [ ] VimScript版との速度比較
+- [ ] メモリ使用量の測定
+- [ ] `deno test tests/phase-b1/performance.test.ts`
 
-#### sub10.2 test_word_detector.vim 日本語検出テスト追加
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_word_detector.vim
+#### sub10.3 E2Eテスト
+@target: `tests/phase-b1/e2e.test.ts`
+- [ ] ヒント表示からジャンプまでの全フロー
+- [ ] Vim環境での完全動作確認
+- [ ] Neovim環境での完全動作確認
+- [ ] `deno test tests/phase-b1/e2e.test.ts`
 
-- [ ] Test_japanese_char_type_hiragana() の実装
-  - ひらがな文字種判定のテスト
-- [ ] Test_japanese_char_type_katakana() の実装
-  - カタカナ文字種判定のテスト
-- [ ] Test_japanese_char_type_kanji() の実装
-  - 漢字文字種判定のテスト
-- [ ] Test_japanese_word_boundary() の実装
-  - 日本語単語境界検出のテスト
-  - 例: 「このファイル」→「この」「ファイル」
-- [ ] Test_mixed_text_detection() の実装
-  - 日本語・英語混在テキストのテスト
-  - 例: 「ファイル操作API」→「ファイル」「操作」「API」
-- [ ] Test_min_word_length_filter() の実装
-  - 最小単語長フィルタリングのテスト
-- [ ] Test_exclude_numbers_filter() の実装
-  - 数字除外フィルタリングのテスト
+### process50 フォローアップ
 
-#### sub10.3 test_config.vim 新規設定テスト追加
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/tests-vim/hellshake_yano_vim/test_config.vim
+#### sub50.1 型定義の完全性チェック
+- [ ] 全ファイルの型チェック: `deno check denops/hellshake-yano/phase-b1/**/*.ts`
+- [ ] strictモードでの検証
+- [ ] 型エラーの修正
 
-- [x] Test_config_use_japanese() の実装
-  - use_japanese 設定の取得・変更確認
-  - ※test_config_phase_a5_defaults/customで実装済み
-- [x] Test_config_min_word_length() の実装
-  - min_word_length 設定の取得・変更確認
-  - ※test_config_phase_a5_defaults/customで実装済み
-- [x] Test_config_visual_mode_enabled() の実装
-  - visual_mode_enabled 設定の取得・変更確認
-  - ※test_config_phase_a5_defaults/customで実装済み
-- [x] Test_config_max_hints() の実装
-  - max_hints 設定の取得・変更確認
-  - ※test_config_phase_a5_defaults/customで実装済み
-- [ ] Test_config_validation() の実装
-  - バリデーション関数のテスト
-  - 不正な値の拒否確認
-  - ※バリデーション関数未実装のためスキップ
+#### sub50.2 テストカバレッジ確認
+- [ ] カバレッジ測定: `deno test --coverage=coverage tests/phase-b1/`
+- [ ] カバレッジレポート生成: `deno coverage coverage/`
+- [ ] 90%以上のカバレッジ達成確認
+- [ ] 未カバー部分のテスト追加
 
-#### sub10.4 テストランナーの更新
-@target: /home/takets/.config/nvim/plugged/hellshake-yano.vim/plugin/hellshake-yano-vim.vim
+### process100 リファクタリング
 
-- [x] s:run_all_tests() にtest_visual.vimを追加
-- [x] test_config.vimを追加
-- [ ] 日本語テストの実行確認（process2未実装のためスキップ）
+#### sub100.1 コード品質向上
+- [ ] 重複コードの削除
+- [ ] 関数の責務明確化
+- [ ] エラーハンドリングの統一
+- [ ] `deno fmt --check denops/hellshake-yano/phase-b1/`
 
-### process50 フォローアップ ✅ **完了**
+#### sub100.2 パフォーマンス最適化
+- [ ] キャッシュ戦略の見直し
+- [ ] バッチ処理の活用
+- [ ] 非同期処理の最適化
 
-#### sub50.1 vim での動作確認
-- [x] 既存実装の動作確認テスト実行（simple_test.vim作成）
-  - config.vim: デフォルト値テスト
-  - config.vim: カスタム値テスト
-  - visual.vim: 初期化テスト
-  - core.vim: 統合テスト
-  - word_detector: 基本動作テスト
-- [x] ビジュアルモードのユニットテスト実行（test_visual.vim）
-- [ ] Vimでビジュアルモードの手動テスト（実装完了、手動確認は省略）
-- [ ] 日本語テキストでの動作確認（process2未実装のためスキップ）
-- [x] 新規設定のカスタマイズテスト（test_config.vimで実施済み）
+### process200 ドキュメンテーション
 
-#### sub50.2 パフォーマンス確認
-- [ ] 1000行ファイルでのベンチマーク（process2未実装のためスキップ）
+- [ ] ARCHITECTURE_B.mdのPhase B-1セクション更新
+- [ ] README.mdへのPhase B-1機能説明追加
+- [ ] 設定マイグレーションガイドの作成
+- [ ] TypeDocコメントの追加
+- [ ] CHANGELOG.mdへの変更記録
 
-#### sub50.3 エッジケースの確認
-- [x] visual.vimでエラーハンドリング実装済み
-  - 空のビジュアル選択のチェック（line number is 0）
-  - 不正な範囲のチェック（start_line > end_line）
-  - ビジュアルモード外での呼び出し防止
-- [ ] 全角記号を含む日本語テキストでの動作確認（process2未実装のためスキップ）
-- [ ] 非常に長い単語での動作確認（実装完了、手動確認は省略）
+## CI/CD設定
 
-### process100 リファクタリング ✅ **完了**
+### GitHub Actions
+@target: `.github/workflows/phase-b1-test.yml`
+- [ ] 自動型チェック
+- [ ] 自動テスト実行
+- [ ] カバレッジレポート
+- [ ] リンターチェック
 
-- [x] コードの重複排除
-  - visual.vimの初期状態定義を共通化（s:initial_visual_state）
-  - 重複していたデータ構造定義を削除
-- [x] 関数の責務明確化
-  - 既存コードは適切に設計済み
-  - visual.vimのコメント更新（アルゴリズムと使用例追加）
-- [x] スクリプトローカル変数の適切な管理
-  - 既存コードで適切に管理されている
-  - s:プレフィックスの使用が統一されている
-- [x] コメントの整備
-  - config.vimに各設定項目の詳細説明を追加
-  - Phase A-1～A-4の基本設定の説明
-  - Phase A-5の高度な設定の詳細説明
-- [x] パフォーマンス最適化の確認
-  - 既存コードは最適化済み
-  - 設定項目（max_hints, min_word_length, exclude_numbers）準備完了
+## 成功基準
 
-### process200 ドキュメンテーション ✅ **完了**
-
-- [x] ARCHITECTURE.md の更新
-  - Phase A-5 セクションの更新（実装状況を「部分完了70%」に変更）
-  - 完了したプロセス（1,3,4,5,6,50,100,200）の記録
-  - リファクタリング成果の記載
-  - 動作確認成果の記載
-  - ビジュアルモード対応の技術仕様追加
-  - データ構造の詳細追加
-  - パフォーマンス特性の記載
-- [x] PLAN.md の更新
-  - ステータスを「部分完了70%」に更新
-  - process50, 100, 200のチェックボックス更新
-  - 完了した実装項目の明記
-- [x] コード内コメントの充実
-  - config.vimに設定項目の詳細説明追加
-  - visual.vimのアルゴリズムとエラーハンドリング説明
-  - 各関数の目的、使用例を記述
-- [ ] README.md の更新（次のステップ）
-  - Phase A-5 の機能説明を追加
-  - ビジュアルモードの使用例
-  - 設定方法の説明
-- [ ] CHANGELOG.md の更新（次のステップ）
-  - Phase A-5 の変更内容を記録
-  - 新機能の説明
+1. **型安全性**: すべてのファイルが`deno check`をパス
+2. **テスト合格率**: 100%のテストがパス
+3. **VimScript互換**: VimScript版と100%同じ動作
+4. **カバレッジ**: 90%以上のコードカバレッジ
+5. **パフォーマンス**: VimScript版と同等以上の速度
+6. **環境分離**: Vim/Neovim処理が完全に独立
+7. **副作用管理**: 既存コードの副作用が適切に制御される
 
