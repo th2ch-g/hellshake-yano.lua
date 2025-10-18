@@ -1,15 +1,14 @@
-# title: Phase B-3: 高度な機能の統合
+# title: Phase B-4: 統合エントリーポイント
 
 ## 概要
-- Phase B-2で完了したコア機能の移植に、VimScript版の高度な機能（モーション検出、ビジュアルモード）を統合
-- 既存Denops実装のTinySegmenter（日本語単語検出）を安全に統合
-- **VimScript版motion.vim、visual.vimの動作を100%再現**することが最優先
-- 環境別処理（Vim/Neovim）の完全分離を徹底
+- Denops版とVimScript版を統合し、環境に応じて最適な実装を自動選択する仕組みを構築
+- 設定の自動マイグレーション機能により、既存ユーザーの設定を新形式に移行
+- 統一されたコマンドとキーマッピングで、両実装を透過的に利用可能にする
 
 ### goal
-- VimScript版motion.vimの連打検出機能を完全再現（reltime()のミリ秒精度をDate.now()で再現）
-- VimScript版visual.vimのビジュアルモード対応を完全再現（getpos()による選択範囲取得）
-- 日本語テキストでも高精度な単語検出を実現（TinySegmenterによる形態素解析）
+- ユーザーが環境（Denops有無）を意識せずにプラグインを利用できる
+- 既存の設定（g:hellshake_yano_vim_config）が自動的に新形式（g:hellshake_yano）に移行される
+- VimでもNeovimでも同じコマンド・キーマッピングで動作する
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
@@ -17,410 +16,406 @@
   - VimScript実装が正規実装（改善よりも一致性優先）
   - 環境別処理の完全分離（Vim/Neovim）
   - 既存実装の副作用チェック
-- **VimScript版の動作を完全に再現**:
-  - motion.vim: reltime()による時間計測、タイムアウト処理、閾値管理
-  - visual.vim: モードチェック、選択範囲取得、妥当性チェック
+- **TDD開発の徹底**:
+  - RED→GREEN→REFACTORサイクルを厳守
+  - テストファースト（テストを書いてから実装）
+  - 最小限の実装から段階的に機能追加
 
 ## 開発のゴール
-- VimScript版motion.vimとvisual.vimの動作を1行単位で正確に移植
-- 既存のDenops実装（TinySegmenter）を安全に統合（副作用なし）
-- TDDサイクル（RED → GREEN → REFACTOR）の徹底
-- テストケース60個以上、VimScript互換性テスト100%パス
+- Denops環境では高機能版（TypeScript実装）を使用
+- Denops不在時は自動的にPure VimScript版にフォールバック
+- 既存ユーザーの設定を壊さない完全な後方互換性
+- テストケース80個以上、カバレッジ90%以上
 
 ## 実装仕様
 
 ### 実装範囲
 
 ```
-denops/hellshake-yano/phase-b3/
-├── unified-japanese-support.ts      # TinySegmenter統合
-├── unified-motion-detector.ts       # モーション連打検出
-└── unified-visual-mode.ts           # ビジュアルモード対応
+denops/hellshake-yano/phase-b4/
+├── environment-detector.ts          # 環境判定モジュール
+├── implementation-selector.ts       # 実装選択ロジック
+├── config-mapper.ts                 # 設定変換マッパー
+├── config-migrator.ts              # 設定マイグレーター
+├── command-registry.ts             # コマンド登録システム
+├── mapping-manager.ts              # キーマッピング管理
+└── initializer.ts                  # 初期化オーケストレーター
 
-tests/phase-b3/
-├── unified-japanese-support.test.ts # 日本語対応テスト（15-20 steps）
-├── unified-motion-detector.test.ts  # モーション検出テスト（20-25 steps）
-├── unified-visual-mode.test.ts      # ビジュアルモードテスト（15-20 steps）
-└── e2e-integration.test.ts          # E2E統合テスト（10-15 steps）
+plugin/
+└── hellshake-yano-unified.vim      # 統合エントリーポイント
+
+tests/phase-b4/
+├── environment-detector.test.ts     # 環境判定テスト（8-10 steps）
+├── implementation-selector.test.ts  # 実装選択テスト（6-8 steps）
+├── config-mapper.test.ts           # 設定変換テスト（10-12 steps）
+├── config-migrator.test.ts         # マイグレーションテスト（8-10 steps）
+├── command-registry.test.ts        # コマンド登録テスト（8-10 steps）
+├── mapping-manager.test.ts         # マッピングテスト（10-12 steps）
+├── initializer.test.ts             # 初期化テスト（10-12 steps）
+├── integration.test.ts             # 統合テスト（10-15 steps）
+└── e2e.test.ts                     # E2Eテスト（10-15 steps）
 ```
 
-### 1. 日本語対応統合（B-3.1）
+### 環境判定と実装選択の仕様
 
-**設計方針**:
-- 既存の`word-segmenter.ts`（TinySegmenter）を`UnifiedJapaneseSupport`経由で統合
-- `UnifiedWordDetector`に日本語検出モードを追加
-- 座標計算は1-indexed（VimScript互換）を維持
-- VimScript版にはない新機能だが、既存Denops実装の動作は完全維持
+**環境判定ロジック**:
+1. `exists('g:loaded_denops')` でDenops存在チェック
+2. `denops#server#status()` で実行状態確認
+3. `has('nvim')` でエディタ種別判定
+4. ユーザー設定（`g:hellshake_yano_use_legacy`）による強制切り替え
 
-**主要メソッド**:
-- `segmentLine(line, lineNum, config)`: 日本語を含む行をセグメント化
-- `convertSegmentsToWords(segments, line, lineNum, config)`: セグメントをWord型に変換
-- `isEnabled(config)`: 日本語対応が有効かチェック
+**実装選択マトリクス**:
+| Denops状態 | エディタ | ユーザー設定 | 選択される実装 |
+|-----------|---------|-------------|--------------|
+| 利用可能   | Vim/Neovim | - | denops-unified |
+| 利用可能   | Vim/Neovim | legacy=true | vimscript-pure |
+| 停止/不在  | Vim | - | vimscript-pure |
+| 停止/不在  | Neovim | - | vimscript-pure（警告表示） |
 
-**設定フラグ**:
-- `config.useJapanese`: 日本語対応の有効化
-- `config.enableTinySegmenter`: TinySegmenterの有効化
-- `config.japaneseMinWordLength`: 日本語最小単語長（デフォルト2）
-- `config.japaneseMergeParticles`: 助詞結合（デフォルトtrue）
+### 設定マイグレーションの仕様
 
-### 2. モーション検出統合（B-3.2）
-
-**設計方針**:
-- VimScript版`motion.vim`のアルゴリズムを完全移植
-- `UnifiedMotionDetector`として実装
-- **reltime()のミリ秒精度を`Date.now()`で再現**
-- エラーメッセージもVimScript版と完全一致
-
-**主要メソッド**:
-- `handleMotion(key)`: モーション処理のメインロジック（VimScript版と同一アルゴリズム）
-- `getThreshold(key)`: キー別の閾値を取得（perKeyMotionCount対応）
-- `init()`: 状態変数の初期化
-- `getState()`: 状態変数の取得（テスト用）
-
-**動作仕様（VimScript版と同一）**:
-- w/b/eキーの連打を検出
-- タイムアウト: デフォルト2000ms
-- 閾値: デフォルト2回
-- 状態管理: lastMotion, lastMotionTime, motionCount
-
-### 3. ビジュアルモード統合（B-3.3）
-
-**設計方針**:
-- VimScript版`visual.vim`のアルゴリズムを完全移植
-- `UnifiedVisualMode`として実装
-- **getpos("'<"), getpos("'>")による選択範囲取得を正確に再現**
-- v/V/Ctrl-vの3つのモードをサポート
-
-**主要メソッド**:
-- `show()`: ビジュアルモードでヒント表示（VimScript版と同一フロー）
-- `filterWordsInRange(words)`: 選択範囲内の単語をフィルタリング
-- `init()`: 状態変数の初期化
-- `getState()`: 状態変数の取得（テスト用）
-
-**動作仕様（VimScript版と同一）**:
-- mode()でビジュアルモードタイプを取得
-- ビジュアルモード以外で呼ばれた場合はエラー
-- 選択範囲の妥当性チェック（start_line <= end_line）
-- 選択範囲を状態変数に保存
+**変換マッピング**:
+```typescript
+const CONFIG_MAP = {
+  'hint_chars': { key: 'markers', transform: (v: string) => v.split("") },
+  'motion_threshold': { key: 'motionCount', transform: (v: number) => v },
+  'motion_timeout_ms': { key: 'motionTimeout', transform: (v: number) => v },
+  'motion_keys': { key: 'countedMotions', transform: (v: string[]) => v },
+  'motion_enabled': { key: 'motionCounterEnabled', transform: (v: boolean) => v },
+  'visual_mode_enabled': { key: 'visualModeEnabled', transform: (v: boolean) => v },
+  'max_hints': { key: 'maxHints', transform: (v: number) => v },
+  'min_word_length': { key: 'defaultMinWordLength', transform: (v: number) => v },
+  'use_japanese': { key: 'useJapanese', transform: (v: boolean) => v },
+  'debug_mode': { key: 'debugMode', transform: (v: boolean) => v },
+}
+```
 
 ## 生成AIの学習用コンテキスト
 
-### VimScript実装（移植元）
-- `autoload/hellshake_yano_vim/motion.vim`
-  - handle()関数: モーション処理のアルゴリズム
-  - reltime()使用の時間計測ロジック
-  - init()関数: 状態初期化
-  - set_threshold()関数: 閾値設定
-  - set_timeout()関数: タイムアウト設定
-- `autoload/hellshake_yano_vim/visual.vim`
-  - show()関数: ビジュアルモードでヒント表示
-  - s:detect_words_in_range()関数: 範囲内の単語検出
-  - モードチェックロジック（v/V/Ctrl-v）
+### Phase B-3実装（統合基盤）
+- `denops/hellshake-yano/phase-b1/vim-bridge.ts`
+  - VimBridgeクラス: Denopsブリッジの基本実装
+- `denops/hellshake-yano/phase-b1/config-unifier.ts`
+  - ConfigUnifierクラス: 設定統合の既存実装
+- `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
+  - SideEffectCheckerクラス: 副作用管理
 
-### 既存Denops実装（統合元）
-- `denops/hellshake-yano/word/word-segmenter.ts`
-  - TinySegmenterクラス: 日本語分割の実装
-  - postProcessSegments(): 助詞結合ロジック
-  - hasJapanese(): 日本語判定
-  - segment(): セグメント化メソッド
+### VimScript側実装（参考）
+- `autoload/hellshake_yano_vim/core.vim`
+  - init()関数: VimScript版の初期化ロジック
+- `autoload/hellshake_yano/denops.vim`
+  - call_function(): Denops呼び出しパターン
+- `plugin/hellshake-yano.vim`
+  - 既存のプラグインエントリーポイント
 
-### Phase B-2実装（統合先）
-- `denops/hellshake-yano/phase-b2/unified-word-detector.ts`
-  - 単語検出の基本実装
-  - detectVisible()メソッド
-- `denops/hellshake-yano/phase-b2/vimscript-types.ts`
-  - VimScriptWord型定義（1-indexed）
-  - DenopsWord型への変換関数
-
-### 実装計画書
-- `ai/plans/active/2025-10-18-phase-b3-implementation.md`
-  - 詳細な実装設計（クラス構造、メソッド仕様、完全なコード例）
-  - テスト計画（60ステップ以上の詳細なテストケース）
-  - 成功基準とスケジュール
+### 設定ファイル
+- `denops/hellshake-yano/config.ts`
+  - Config型定義とDEFAULT_CONFIG
 
 ## Process
 
-### process1: 日本語対応統合（1日）
+### process1: 環境判定と実装選択システム（2日）
 
-#### sub1: unified-japanese-support.ts の実装（RED → GREEN）
-@target: `denops/hellshake-yano/phase-b3/unified-japanese-support.ts`
-@ref: `denops/hellshake-yano/word/word-segmenter.ts`, `denops/hellshake-yano/phase-b2/vimscript-types.ts`
+#### sub1: environment-detector.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/environment-detector.ts`
+@ref: `denops/hellshake-yano/phase-b1/vim-bridge.ts`
 
-- [x] UnifiedJapaneseSupportクラスの作成
-  - TinySegmenterのインスタンス管理（getInstance()）
-  - Denopsインスタンスの保持
-- [x] segmentLine()メソッドの実装
-  - hasJapanese()による日本語判定
-  - 日本語対応フラグチェック（useJapanese, enableTinySegmenter）
-  - TinySegmenterによるセグメント化
-  - セグメントのWord型変換（convertSegmentsToWords）
-- [x] convertSegmentsToWords()メソッドの実装
-  - 各セグメントの元行での位置検索（indexOf）
-  - 最小単語長フィルタリング（japaneseMinWordLength）
-  - Word型オブジェクト生成（1-indexed座標）
-- [x] isEnabled()メソッドの実装
-  - useJapanese && enableTinySegmenterのチェック
-- [x] キャッシュ管理メソッド
-  - getCacheStats(): キャッシュ統計取得
-  - clearCache(): キャッシュクリア
+- [ ] REDフェーズ: テストファースト実装
+  - Denops利用可能判定テスト（3ケース）
+  - エディタ種別判定テスト（2ケース）
+  - バージョン情報取得テスト（2ケース）
+- [ ] GREENフェーズ: 最小実装
+  - EnvironmentDetectorクラスの作成
+  - isDenopsAvailable()メソッド
+  - getEditorInfo()メソッド
+- [ ] REFACTORフェーズ: 最適化
+  - エラーハンドリングの改善
+  - キャッシュ機構の追加
 
-#### sub2: unified-word-detectorへの統合
-@target: `denops/hellshake-yano/phase-b2/unified-word-detector.ts`
-@ref: `denops/hellshake-yano/phase-b3/unified-japanese-support.ts`
+#### sub2: implementation-selector.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/implementation-selector.ts`
 
-- [x] UnifiedJapaneseSupportのインスタンス追加
-  - constructorでの初期化
-- [x] detectVisible()メソッドの拡張
-  - 日本語対応が有効な場合の分岐追加
-  - japaneseSupport.segmentLine()の呼び出し
-  - 日本語単語と通常単語のマージ
+- [ ] REDフェーズ: テストファースト実装
+  - 実装選択ロジックテスト（4ケース）
+  - ユーザー設定優先度テスト（2ケース）
+- [ ] GREENフェーズ: 最小実装
+  - ImplementationSelectorクラスの作成
+  - select()メソッド（選択マトリクス実装）
+- [ ] REFACTORフェーズ: 最適化
+  - 選択ロジックの明確化
+  - 警告メッセージの統一
 
-#### sub3: テスト作成（15-20 steps）
-@target: `tests/phase-b3/unified-japanese-support.test.ts`
+### process2: 設定マイグレーションシステム（2日）
 
-- [x] Process 1: 日本語検出テスト（3-5 steps）
-  - ひらがな、カタカナ、漢字の検出
-  - 英語のみの行の判定
-  - 混在テキストの処理
-- [x] Process 2: セグメント化テスト（3-5 steps）
-  - 「私の名前は田中です」等のサンプル
-  - セグメント数の確認
-  - 各単語の座標チェック（1-indexed）
-- [x] Process 3: 助詞結合テスト（2-3 steps）
-  - japaneseMergeParticles=trueでの結合確認
-  - 「の」「は」等の助詞を含む単語の検出
-- [x] Process 4: フィルタリングテスト（2-3 steps）
-  - japaneseMinWordLengthによる最小単語長チェック
-  - 空白のみのセグメントのスキップ
-- [x] Process 5: キャッシュテスト（2-3 steps）
-  - 同じテキストでのキャッシュヒット確認
-  - キャッシュ統計の確認
+#### sub1: config-mapper.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/config-mapper.ts`
+@ref: `denops/hellshake-yano/phase-b1/config-unifier.ts`
 
-### process2: モーション検出統合（1日）
+- [ ] REDフェーズ: テストファースト実装
+  - 基本的な設定変換テスト（5ケース）
+  - 特殊な値の変換テスト（3ケース）
+  - 不明なキーの処理テスト（2ケース）
+- [ ] GREENフェーズ: 最小実装
+  - ConfigMapperクラスの作成
+  - mapFromVimScript()メソッド
+  - 変換テーブル（MAPPING_TABLE）の実装
+- [ ] REFACTORフェーズ: 最適化
+  - 型安全性の向上
+  - 変換ロジックの汎用化
 
-#### sub1: unified-motion-detector.ts の実装（RED → GREEN）
-@target: `denops/hellshake-yano/phase-b3/unified-motion-detector.ts`
+#### sub2: config-migrator.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/config-migrator.ts`
+@ref: `denops/hellshake-yano/phase-b1/config-migrator.ts`
+
+- [ ] REDフェーズ: テストファースト実装
+  - 旧設定のみ存在する場合のテスト（2ケース）
+  - 両設定が存在する場合のテスト（2ケース）
+  - 新設定のみ存在する場合のテスト（2ケース）
+  - エラーハンドリングテスト（2ケース）
+- [ ] GREENフェーズ: 最小実装
+  - ConfigMigratorクラスの作成
+  - migrate()メソッド
+  - 警告メッセージ表示機能
+- [ ] REFACTORフェーズ: 最適化
+  - 設定検出ロジックの改善
+  - バックアップ機能の追加
+
+### process3: コマンドと初期化システム（2日）
+
+#### sub1: command-registry.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/command-registry.ts`
+@ref: `autoload/hellshake_yano/denops.vim`
+
+- [ ] REDフェーズ: テストファースト実装
+  - 統合版コマンド登録テスト（3ケース）
+  - VimScript版コマンド登録テスト（3ケース）
+  - コマンド重複チェックテスト（2ケース）
+- [ ] GREENフェーズ: 最小実装
+  - CommandRegistryクラスの作成
+  - registerUnifiedCommands()メソッド
+  - registerVimScriptCommands()メソッド
+  - getRegisteredCommands()メソッド
+- [ ] REFACTORフェーズ: 最適化
+  - コマンド定義の外部化
+  - エラーハンドリングの強化
+
+#### sub2: initializer.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/initializer.ts`
+
+- [ ] REDフェーズ: テストファースト実装
+  - Denops環境での初期化テスト（3ケース）
+  - VimScript環境での初期化テスト（3ケース）
+  - エラー時のフォールバックテスト（4ケース）
+- [ ] GREENフェーズ: 最小実装
+  - Initializerクラスの作成
+  - initialize()メソッド（初期化フロー）
+  - 各ステップの実装（環境判定→設定移行→実装選択→登録）
+- [ ] REFACTORフェーズ: 最適化
+  - 初期化フローの最適化
+  - ステップ間の依存関係整理
+
+### process4: キーマッピング統合（1日）
+
+#### sub1: mapping-manager.ts のTDD実装
+@target: `denops/hellshake-yano/phase-b4/mapping-manager.ts`
 @ref: `autoload/hellshake_yano_vim/motion.vim`
 
-- [x] UnifiedMotionDetectorクラスの作成
-  - 状態変数: lastMotion, lastMotionTime, motionCount
-  - 設定: timeoutMs, threshold
-- [x] handleMotion(key)メソッドの実装（VimScript版と同一アルゴリズム）
-  - 不正なモーションキーのチェック（w/b/e以外はエラー）
-  - 現在時刻の取得（Date.now()でミリ秒精度）
-  - 前回のモーションとの時間差チェック
-  - タイムアウトチェック（timeDiffMs > timeoutMs）
-  - 異なるモーションの場合もリセット
-  - カウントの更新（shouldReset判定）
-  - 閾値チェックとヒント表示トリガー（motionCount >= threshold）
-  - エラーハンドリング（VimScript版と同一）
-- [x] getThreshold(key)メソッドの実装
-  - perKeyMotionCountでのキー別閾値サポート
-  - デフォルト閾値の返却
-- [x] init()メソッドの実装
-  - 状態変数の初期化
-- [x] setThreshold(count)メソッドの実装
-  - 閾値の設定
-- [x] setTimeout(ms)メソッドの実装
-  - タイムアウトの設定
-- [x] getState()メソッドの実装
-  - 状態変数の取得（テスト用）
+- [ ] REDフェーズ: テストファースト実装
+  - モーション検出マッピングテスト（4ケース）
+  - ビジュアルモードマッピングテスト（3ケース）
+  - マッピング衝突検出テスト（3ケース）
+- [ ] GREENフェーズ: 最小実装
+  - MappingManagerクラスの作成
+  - setupMotionMappings()メソッド
+  - setupVisualMappings()メソッド
+  - getActiveMappings()メソッド
+- [ ] REFACTORフェーズ: 最適化
+  - マッピング定義の外部化
+  - 既存マッピングの保存・復元
 
-#### sub2: テスト作成（20-25 steps）
-@target: `tests/phase-b3/unified-motion-detector.test.ts`
+#### sub2: hellshake-yano-unified.vim の実装
+@target: `plugin/hellshake-yano-unified.vim`
+@ref: `plugin/hellshake-yano.vim`
 
-- [x] Process 1: 状態初期化テスト（2-3 steps）
-  - init()による初期化確認
-  - デフォルト値の確認（timeout=2000, threshold=2）
-- [x] Process 2: 単一モーション処理テスト（3-4 steps）
-  - 1回目のモーションでカウント=1
-  - shouldTrigger=falseの確認
-  - lastMotionの記録確認
-- [x] Process 3: 連続モーション検出テスト（3-4 steps）
-  - 2回目でshouldTrigger=trueの確認
-  - カウントリセットの確認（motionCount=0）
-- [x] Process 4: タイムアウト処理テスト（3-4 steps）
-  - setTimeout(100)での短いタイムアウト設定
-  - 待機後のカウントリセット確認
-- [x] Process 5: 異なるモーション処理テスト（2-3 steps）
-  - w→bでのカウントリセット確認
-  - lastMotionの更新確認
-- [x] Process 6: キー別閾値テスト（2-3 steps）
-  - perKeyMotionCount={w: 3}での動作確認
-  - 3回目でトリガー確認
-- [x] Process 7: エラーハンドリングテスト（2-3 steps）
-  - 不正なモーションキー（x）でのエラー確認
-  - エラーメッセージのVimScript互換性確認
+- [ ] VimScript側のエントリーポイント実装
+  - s:select_implementation()関数（実装選択）
+  - s:initialize()関数（初期化）
+  - s:initialize_unified()関数（統合版初期化）
+  - s:migrate_config()関数（設定マイグレーション）
+- [ ] マッピング設定関数
+  - s:setup_unified_mappings()関数
+  - s:handle_motion()関数（モーションハンドラー）
+- [ ] 自動ロード設定
+  - augroup定義
+  - VimEnter時の自動初期化
 
-### process3: ビジュアルモード統合（1日）
+### process5: 統合テストとE2E（2日）
 
-#### sub1: unified-visual-mode.ts の実装（RED → GREEN）
-@target: `denops/hellshake-yano/phase-b3/unified-visual-mode.ts`
-@ref: `autoload/hellshake_yano_vim/visual.vim`
+#### sub1: integration.test.ts の実装
+@target: `tests/phase-b4/integration.test.ts`
 
-- [x] UnifiedVisualModeクラスの作成
-  - 状態変数: visualState（active, mode, startLine, startCol, endLine, endCol）
-- [x] show()メソッドの実装（VimScript版と同一フロー）
-  - mode()でビジュアルモードタイプを取得
-  - ビジュアルモードチェック（v/V/\x16）
-  - getpos("'<"), getpos("'>")で選択範囲を取得
-  - 選択範囲の妥当性チェック（startLine <= endLine, lineNum != 0）
-  - 状態変数に選択範囲を保存
-  - エラー時の警告メッセージ表示
-- [x] filterWordsInRange(words)メソッドの実装
-  - ビジュアルモードでない場合は全単語を返す
-  - 範囲内の単語のみをフィルタリング（lnum >= startLine && lnum <= endLine）
-- [x] init()メソッドの実装
-  - 状態変数の初期化
-- [x] getState()メソッドの実装
-  - 状態変数の取得（テスト用）
-- [x] clearAfterJump()メソッドの実装
-  - ジャンプ後の状態クリア
-- [x] showWarning(message)メソッドの実装
-  - 警告メッセージ表示（VimScript版と同一フォーマット）
+- [ ] 完全な初期化フロー（Denops環境）テスト（5ステップ）
+  - 環境判定
+  - 設定マイグレーション
+  - 実装選択
+  - コマンド登録
+  - マッピング設定
+- [ ] フォールバックフロー（Denops不可）テスト（5ステップ）
+  - 環境判定
+  - VimScript版へのフォールバック
+  - 警告メッセージ確認
+- [ ] エラーリカバリーテスト（5ステップ）
+  - 部分的な初期化失敗時の動作
 
-#### sub2: テスト作成（15-20 steps）
-@target: `tests/phase-b3/unified-visual-mode.test.ts`
+#### sub2: e2e.test.ts の実装
+@target: `tests/phase-b4/e2e.test.ts`
 
-- [x] Process 1: 状態初期化テスト（2 steps）
-  - init()による初期化確認
-  - デフォルト値の確認（active=false, mode=""）
-- [x] Process 2: モードチェックテスト（4-5 steps）
-  - ノーマルモード（n）での拒否確認
-  - ビジュアルモード（v）での受け入れ確認
-  - ビジュアルラインモード（V）での受け入れ確認
-  - ビジュアルブロックモード（Ctrl-v）での受け入れ確認
-- [x] Process 3: 選択範囲取得テスト（2-3 steps）
-  - getpos()による範囲取得の確認
-  - 状態変数への保存確認
-- [x] Process 4: 妥当性チェックテスト（2-3 steps）
-  - 不正な範囲（start > end）での拒否確認
-  - 行番号0での拒否確認
-- [x] Process 5: 範囲内フィルタリングテスト（2-3 steps）
-  - 3-5行目の選択範囲でのフィルタリング確認
-  - 範囲外の単語が除外されることの確認
-- [x] Process 6: 状態クリアテスト（2 steps）
-  - clearAfterJump()でのactive=false確認
-
-### process4: E2E統合テスト（0.5日）
-@target: `tests/phase-b3/e2e-integration.test.ts`
-
-- [x] Scenario 1: 日本語単語検出 + ヒント表示（3-4 steps）
-  - バッファに日本語テキストを設定
-  - UnifiedWordDetectorによる単語検出
-  - 日本語単語が正しく検出されることの確認
-- [x] Scenario 2: モーション連打 + ヒント表示（3-4 steps）
-  - UnifiedMotionDetectorによるモーション処理
-  - 閾値到達でのトリガー確認
-  - カウントリセット確認
-- [x] Scenario 3: ビジュアルモード + 範囲内フィルタリング（3-4 steps）
-  - ビジュアルモードで2-3行目を選択
-  - UnifiedVisualModeによる範囲内フィルタリング
-  - 範囲内の単語のみが残ることの確認
-- [x] Scenario 4: 日本語 + モーション連打 + ビジュアルモード（2-3 steps）
-  - 全機能を組み合わせた統合テスト
-  - 日本語単語の検出と範囲内フィルタリングの確認
+- [ ] 新規ユーザーの初回起動シナリオ（5ステップ）
+  - プラグインロード
+  - 自動初期化
+  - コマンド実行
+  - ヒント表示確認
+- [ ] 既存ユーザーの設定移行シナリオ（5ステップ）
+  - 旧設定の読み込み
+  - 自動マイグレーション
+  - 新設定の確認
+  - 機能動作確認
+- [ ] Denops停止時のフォールバックシナリオ（5ステップ）
+  - Denops停止検出
+  - VimScript版への切り替え
+  - 機能の継続動作確認
 
 ### process10: ユニットテスト
 各processで実装したテストの総合確認
 
-- [x] 全テストケース数: 60個以上達成（目標60個）
-  - 日本語対応: 15-20 steps
-  - モーション検出: 20-25 steps
-  - ビジュアルモード: 15-20 steps
-  - E2E統合: 10-15 steps
-- [x] テストカバレッジ: 90%以上
-- [x] VimScript互換テスト: 100%パス
-  - motion.vimとの動作一致
-  - visual.vimとの動作一致
-- [x] 型チェック: deno check 100%パス
-- [x] リンター: deno lint パス
-- [x] フォーマット: deno fmt 準拠
+- [ ] 全テストケース数: 80個以上達成
+  - environment-detector: 8-10 steps
+  - implementation-selector: 6-8 steps
+  - config-mapper: 10-12 steps
+  - config-migrator: 8-10 steps
+  - command-registry: 8-10 steps
+  - mapping-manager: 10-12 steps
+  - initializer: 10-12 steps
+  - integration: 10-15 steps
+  - e2e: 10-15 steps
+- [ ] テストカバレッジ: 90%以上
+- [ ] 型チェック: deno check 100%パス
+- [ ] リンター: deno lint パス
+- [ ] フォーマット: deno fmt 準拠
 
 ### process50: フォローアップ
 実装後の仕様変更・追加要件
 
-- [ ] TinySegmenter統合の最適化
-  - キャッシュヒット率の向上
-  - セグメント化のパフォーマンスチューニング
-- [ ] モーション検出の詳細設定
-  - perKeyMotionCountの拡張
-  - タイムアウトの動的調整
-- [ ] ビジュアルモードの拡張
-  - 列範囲でのフィルタリング（Phase A-5では未実装）
+- [ ] パフォーマンス最適化
+  - 初期化時間の短縮（遅延ロード）
+  - キャッシュ機構の追加
+- [ ] エラーリカバリーの強化
+  - 部分的な機能停止時の対応
+  - 自動リトライ機能
+- [ ] デバッグ機能の追加
+  - 実装選択理由の表示
+  - 設定マイグレーションログ
 
 ### process100: リファクタリング
-コード品質向上
 
-- [x] 共通処理の抽出
-  - [x] エラーメッセージ表示の統一
-  - [x] 状態管理ロジックの共通化
-- [x] 型定義の最適化
-  - [x] VisualState型の明示的定義
-  - [x] MotionState型の定義
-- [x] エラーハンドリングの統一
-  - [x] try-catch-finallyパターンの統一
-- [x] コメント・ドキュメントの充実
-  - [x] 各メソッドの詳細な説明
-  - [x] VimScript版との対応関係の明記
+- [ ] コード品質向上
+  - 共通処理の抽出
+  - エラーハンドリングの統一
+  - 型定義の最適化
+- [ ] モジュール構造の見直し
+  - 依存関係の整理
+  - インターフェースの明確化
+- [ ] テスタビリティの向上
+  - モック化の容易性改善
+  - テストヘルパーの充実
 
 ### process200: ドキュメンテーション
 
-- [x] ARCHITECTURE_B.md の更新
-  - [x] Phase B-3完了レポートの追加
-  - [x] 実装進捗状況テーブルの更新（B-3を✅に変更）
-  - [x] 成功基準の達成状況記録
+- [ ] ARCHITECTURE_B.md の更新
+  - Phase B-4完了レポートの追加
+  - 実装進捗状況テーブルの更新（B-4を✅に変更）
+  - 成功基準の達成状況記録
 - [ ] README.md の更新
-  - 日本語対応の説明追加
-  - モーション検出機能の説明
-  - ビジュアルモード対応の説明
-- [x] テストドキュメントの作成
-  - [x] テストケース一覧
-  - [x] VimScript互換性検証結果
-  - [x] カバレッジレポート
+  - インストール手順の更新
+  - 設定マイグレーションガイド
+  - トラブルシューティング追加
+- [ ] ユーザーガイドの作成
+  - 環境別セットアップ手順
+  - 設定項目の説明
+  - よくある質問（FAQ）
+- [ ] 開発者ドキュメント
+  - アーキテクチャ図の作成
+  - 拡張ポイントの説明
+  - コントリビューションガイド
 
 ---
 
 ## 成功基準
 
 ### 定量指標
-- テストケース: **60個以上達成**
+- テストケース: **80個以上**
 - テストカバレッジ: **90%以上**
-- VimScript互換テスト: **100%パス**
-  - motion.vimとの動作一致100%
-  - visual.vimとの動作一致100%
 - 型チェック: **deno check 100%パス**
+- リンター警告: **0個**
+- VimScript互換: **100%動作**
+- 設定マイグレーション: **成功率100%**
 - パフォーマンス:
-  - TinySegmenterキャッシュヒット率 > 80%
-  - モーション検出レイテンシ < 10ms
-  - ビジュアルモードフィルタリング < 50ms
+  - 初期化時間 < 100ms
+  - コマンド実行レイテンシ < 50ms
+  - メモリ使用量 < 10MB増
 
 ### 定性指標
-- VimScript版との**アルゴリズム完全一致**
-  - motion.vim: reltime()のミリ秒精度再現
-  - visual.vim: getpos()による選択範囲取得の正確な再現
-- 環境別処理の**完全分離**
-  - Vim/Neovim処理を独立したメソッドに分離
-- **既存動作への影響なし**（後方互換性100%）
-  - VimScript版ユーザーへの影響なし
-  - 既存Denops実装の副作用なし
+- **完全な後方互換性**: 既存ユーザーの設定が壊れない
+- **透過的な実装切り替え**: ユーザーが実装の違いを意識しない
+- **エラーリカバリー**: 部分的な失敗でも最大限の機能を提供
+- **明確な警告メッセージ**: 問題発生時にユーザーが対処方法を理解できる
+- **保守性の高さ**: 新機能追加が容易な構造
 
 ## スケジュール
 
-| Process | 内容 | 所要時間 | 累計 | 状態 |
-|---------|------|---------|------|------|
-| process1 | 日本語対応統合 | 1.0日 | 1.0日 | 🔄 |
-| process2 | モーション検出統合 | 1.0日 | 2.0日 | 🔄 |
-| process3 | ビジュアルモード統合 | 1.0日 | 3.0日 | 🔄 |
-| process4 | E2E統合テスト | 0.5日 | 3.5日 | 🔄 |
+| Process | 内容 | 所要時間 | 累計 | 優先度 |
+|---------|------|---------|------|--------|
+| process1 | 環境判定と実装選択 | 2.0日 | 2.0日 | 高 |
+| process2 | 設定マイグレーション | 2.0日 | 4.0日 | 高 |
+| process3 | コマンドと初期化 | 2.0日 | 6.0日 | 高 |
+| process4 | キーマッピング統合 | 1.0日 | 7.0日 | 中 |
+| process5 | 統合テストとE2E | 2.0日 | 9.0日 | 高 |
 
-**合計**: 3.5日（詳細計画: `ai/plans/active/2025-10-18-phase-b3-implementation.md`）
+**合計**: 9日（TDDによる品質重視の開発）
+
+## リスク管理
+
+### 技術的リスク
+1. **VimScript側のテスト困難性**
+   - 対策: TypeScript側で完全にモック化してテスト
+   - VimScript部分は最小限に留める
+
+2. **環境依存の問題**
+   - 対策: 環境判定ロジックを独立させて徹底的にテスト
+   - フォールバック機構を確実に実装
+
+3. **設定マイグレーションの複雑性**
+   - 対策: 変換ロジックを単純化
+   - 段階的な移行を可能にする
+
+### 運用リスク
+1. **既存ユーザーへの影響**
+   - 対策: 設定のバックアップ機能
+   - ロールバック手順の提供
+
+2. **パフォーマンス劣化**
+   - 対策: 遅延初期化の実装
+   - 不要な処理のスキップ
 
 ## 次フェーズへの引き継ぎ
 
-Phase B-3完了後、Phase B-4（統合エントリーポイント）で以下を実装：
-- 統一プラグインファイルの作成（`plugin/hellshake-yano-unified.vim`）
-- Denops/VimScript版の自動切り替え
-- 設定マイグレーション（`g:hellshake_yano_vim_config` → `g:hellshake_yano`）
-- コマンド定義（`:HellshakeYanoShow`, `:HellshakeYanoHide`, `:HellshakeYanoToggle`）
-- キーマッピング設定（モーション検出、ビジュアルモード）
+Phase B-4完了により、Phase B全体が完成：
+- 統一されたプラグイン体験の実現
+- VimとNeovimの両環境での最適な動作
+- 日本語対応を含む高度な機能の提供
+- 完全な後方互換性の維持
+
+今後の拡張ポイント：
+- Phase C: 追加機能の実装（カスタムヒント、プラグイン連携等）
+- Phase D: パフォーマンス最適化とスケーラビリティ向上
+- Phase E: コミュニティ機能（テーマ、拡張API等）
