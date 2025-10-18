@@ -120,28 +120,28 @@ const CONFIG_MAP = {
 @target: `denops/hellshake-yano/phase-b4/environment-detector.ts`
 @ref: `denops/hellshake-yano/phase-b1/vim-bridge.ts`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - Denops利用可能判定テスト（3ケース）
   - エディタ種別判定テスト（2ケース）
   - バージョン情報取得テスト（2ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - EnvironmentDetectorクラスの作成
   - isDenopsAvailable()メソッド
   - getEditorInfo()メソッド
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - エラーハンドリングの改善
   - キャッシュ機構の追加
 
 #### sub2: implementation-selector.ts のTDD実装
 @target: `denops/hellshake-yano/phase-b4/implementation-selector.ts`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - 実装選択ロジックテスト（4ケース）
   - ユーザー設定優先度テスト（2ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - ImplementationSelectorクラスの作成
   - select()メソッド（選択マトリクス実装）
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - 選択ロジックの明確化
   - 警告メッセージの統一
 
@@ -151,15 +151,15 @@ const CONFIG_MAP = {
 @target: `denops/hellshake-yano/phase-b4/config-mapper.ts`
 @ref: `denops/hellshake-yano/phase-b1/config-unifier.ts`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - 基本的な設定変換テスト（5ケース）
   - 特殊な値の変換テスト（3ケース）
   - 不明なキーの処理テスト（2ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - ConfigMapperクラスの作成
   - mapFromVimScript()メソッド
   - 変換テーブル（MAPPING_TABLE）の実装
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - 型安全性の向上
   - 変換ロジックの汎用化
 
@@ -167,16 +167,16 @@ const CONFIG_MAP = {
 @target: `denops/hellshake-yano/phase-b4/config-migrator.ts`
 @ref: `denops/hellshake-yano/phase-b1/config-migrator.ts`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - 旧設定のみ存在する場合のテスト（2ケース）
   - 両設定が存在する場合のテスト（2ケース）
   - 新設定のみ存在する場合のテスト（2ケース）
   - エラーハンドリングテスト（2ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - ConfigMigratorクラスの作成
   - migrate()メソッド
   - 警告メッセージ表示機能
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - 設定検出ロジックの改善
   - バックアップ機能の追加
 
@@ -186,31 +186,31 @@ const CONFIG_MAP = {
 @target: `denops/hellshake-yano/phase-b4/command-registry.ts`
 @ref: `autoload/hellshake_yano/denops.vim`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - 統合版コマンド登録テスト（3ケース）
   - VimScript版コマンド登録テスト（3ケース）
   - コマンド重複チェックテスト（2ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - CommandRegistryクラスの作成
   - registerUnifiedCommands()メソッド
   - registerVimScriptCommands()メソッド
   - getRegisteredCommands()メソッド
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - コマンド定義の外部化
   - エラーハンドリングの強化
 
 #### sub2: initializer.ts のTDD実装
 @target: `denops/hellshake-yano/phase-b4/initializer.ts`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - Denops環境での初期化テスト（3ケース）
   - VimScript環境での初期化テスト（3ケース）
   - エラー時のフォールバックテスト（4ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - Initializerクラスの作成
   - initialize()メソッド（初期化フロー）
   - 各ステップの実装（環境判定→設定移行→実装選択→登録）
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - 初期化フローの最適化
   - ステップ間の依存関係整理
 
