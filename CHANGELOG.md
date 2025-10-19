@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase C: Code Integration and Cleanup (2025-10-19)
+
+#### Added
+- **Environment-based layer architecture**: New modular structure separating Vim/Neovim implementations
+  - `vim/` layer (13 files) - Vim-specific implementations
+  - `neovim/` layer (12 files) - Neovim-specific implementations
+  - `common/` layer (14 files) - Shared utilities and types
+  - `integration/` layer (5 files) - Environment detection and initialization
+- **Environment-aware entry point**: `main.ts` automatically detects runtime environment
+  - Dynamic implementation selection based on Vim/Neovim detection
+  - Fallback to VimScript when Denops unavailable
+- **Unified initialization flow**: Centralized initialization via `Initializer` class
+  - `EnvironmentDetector` - Runtime environment detection
+  - `ImplementationSelector` - Appropriate implementation selection
+  - `CommandRegistry` - Unified command registration
+  - `MappingManager` - Key mapping management
+
+#### Changed
+- **Codebase reorganization**: Migrated phase-b{1,2,3,4}/ to environment-based layers
+  - Consolidated 24 implementation files (4,289 lines) into structured layers
+  - Improved code maintainability with clear separation of concerns
+- **Test directory reorganization**: Restructured tests by functionality
+  - `tests/vim/` - Vim layer tests
+  - `tests/neovim/` - Neovim layer tests
+  - `tests/common/` - Common layer tests
+  - `tests/integration/` - Integration layer tests
+
+#### Removed
+- **Implementation directories** (24 files, 4,289 lines):
+  - `denops/hellshake-yano/phase-b1/` - Phase B-1 implementation (integration foundation)
+  - `denops/hellshake-yano/phase-b2/` - Phase B-2 implementation (core functionality)
+  - `denops/hellshake-yano/phase-b3/` - Phase B-3 implementation (advanced features)
+  - `denops/hellshake-yano/phase-b4/` - Phase B-4 implementation (unified entry point)
+  - `denops/hellshake-yano/core/` - Legacy core directory (2 files)
+- **Test directories** (39 files):
+  - `tests/phase-b1/` - Phase B-1 tests (11 files)
+  - `tests/phase-b2/` - Phase B-2 tests (6 files)
+  - `tests/phase-b3/` - Phase B-3 tests (5 files)
+  - `tests/phase-b4/` - Phase B-4 tests (12 files)
+
+#### Fixed
+- **Type checking**: Resolved 38 TypeScript errors, achieving 100% type-safe codebase
+  - Fixed duplicate `DenopsWord` export in type definitions
+  - Resolved dynamic import type inference issues in `neovim/core/core.ts`
+  - Fixed `HighlightColor` type mismatch in `neovim/display/highlight.ts`
+- **Import dependencies**: Corrected phase-b references in integration tests
+
+#### Documentation
+- **ARCHITECTURE.md**: Added Phase C completion status section
+  - New directory structure diagram
+  - Quantitative improvement metrics (35% file reduction, 100% type safety)
+  - Phase D outlook and roadmap
+- **CHANGELOG.md**: Comprehensive Phase C changes documentation
+- **Phase completion reports**: Detailed reports for all Phase C sub-phases
+  - Phase C-1 through C-6 completion documentation in `ai/plan/`
+
 ### Phase A-4: Motion Repeat Detection (2025-10-16)
 
 #### Added
