@@ -2,8 +2,8 @@
  * @fileoverview Hellshake-Yano.vim メインエントリーポイント
  */
 import type { Denops } from "@denops/std";
-import { generateHints, assignHintsToWords } from "./hint.ts";
-import { Core } from "./core.ts";
+import { generateHints, assignHintsToWords } from "./neovim/core/hint.ts";
+import { Core } from "./neovim/core/core.ts";
 import type { DebugInfo, HintMapping, Word } from "./types.ts";
 import { Config, DEFAULT_CONFIG } from "./config.ts";
 
@@ -29,7 +29,7 @@ import {
   reloadDictionary,
   showDictionary,
   validateDictionary,
-} from "./dictionary.ts";
+} from "./neovim/dictionary.ts";
 import {
   cleanupPendingTimers,
   displayHintsAsync,
@@ -37,7 +37,7 @@ import {
   hideHints as hideHintsDisplay,
   highlightCandidateHintsAsync as highlightCandidateHintsAsyncInternal,
   highlightCandidateHintsHybrid,
-} from "./display.ts";
+} from "./neovim/display/extmark-display.ts";
 
 /** プラグインの設定 */
 let config: Config = DEFAULT_CONFIG;
