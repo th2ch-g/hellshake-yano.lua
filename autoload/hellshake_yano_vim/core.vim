@@ -166,10 +166,11 @@ function! hellshake_yano_vim#core#show() abort
   " 1. 画面内の単語を検出
   let l:detected_words = hellshake_yano_vim#word_detector#detect_visible()
 
-  " Phase A-3制限: 最大49個まで（7単一文字 + 42二文字）
-  if len(l:detected_words) > 49
-    let l:detected_words = l:detected_words[0:48]
-  endif
+  " Phase D-1 Sub2.2: 動的maxTotal対応
+  " 49個の固定制限を削除し、hint_generator の動的計算に委ねる
+  " hint_generator.generate() が適切な数のヒントを返すため、
+  " ここでは制限を設けない
+  " （以前の実装: if len(l:detected_words) > 49 で49個に制限）
 
   " 単語データから座標データに変換
   let l:positions = []

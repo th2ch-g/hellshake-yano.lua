@@ -34,8 +34,10 @@ set cpo&vim
 "                          短い単語を除外したい場合に変更
 "   visual_mode_enabled  - ビジュアルモード対応の有効/無効（デフォルト: true）
 "                          無効にするとビジュアルモードマッピングが作成されない
-"   max_hints            - 表示する最大ヒント数（デフォルト: 49個）
-"                          7単一文字 + 42二文字ヒント（aa-ff）
+"   max_hints            - [DEPRECATED] 表示する最大ヒント数（デフォルト: 49個）
+"                          Phase D-1 Sub2.2: 動的maxTotal計算に移行
+"                          hint_generator.vim が g:hellshake_yano.singleCharKeys と
+"                          multiCharKeys から動的に計算するため、この設定は非推奨
 "   exclude_numbers      - 数字のみの単語を除外（デフォルト: false）
 "                          trueにすると"123"などが除外される
 "   debug_mode           - デバッグモード（デフォルト: false）
