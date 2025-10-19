@@ -145,6 +145,8 @@ const CONFIG_MAP = {
   - 選択ロジックの明確化
   - 警告メッセージの統一
 
+### process1完了：✅
+
 ### process2: 設定マイグレーションシステム（2日）
 
 #### sub1: config-mapper.ts のTDD実装
@@ -180,6 +182,8 @@ const CONFIG_MAP = {
   - 設定検出ロジックの改善
   - バックアップ機能の追加
 
+### process2完了：✅
+
 ### process3: コマンドと初期化システム（2日）
 
 #### sub1: command-registry.ts のTDD実装
@@ -214,22 +218,24 @@ const CONFIG_MAP = {
   - 初期化フローの最適化
   - ステップ間の依存関係整理
 
+### process3完了：✅
+
 ### process4: キーマッピング統合（1日）
 
 #### sub1: mapping-manager.ts のTDD実装
 @target: `denops/hellshake-yano/phase-b4/mapping-manager.ts`
 @ref: `autoload/hellshake_yano_vim/motion.vim`
 
-- [ ] REDフェーズ: テストファースト実装
+- [x] REDフェーズ: テストファースト実装
   - モーション検出マッピングテスト（4ケース）
   - ビジュアルモードマッピングテスト（3ケース）
   - マッピング衝突検出テスト（3ケース）
-- [ ] GREENフェーズ: 最小実装
+- [x] GREENフェーズ: 最小実装
   - MappingManagerクラスの作成
   - setupMotionMappings()メソッド
   - setupVisualMappings()メソッド
   - getActiveMappings()メソッド
-- [ ] REFACTORフェーズ: 最適化
+- [x] REFACTORフェーズ: 最適化
   - マッピング定義の外部化
   - 既存マッピングの保存・復元
 
@@ -237,58 +243,62 @@ const CONFIG_MAP = {
 @target: `plugin/hellshake-yano-unified.vim`
 @ref: `plugin/hellshake-yano.vim`
 
-- [ ] VimScript側のエントリーポイント実装
+- [x] VimScript側のエントリーポイント実装
   - s:select_implementation()関数（実装選択）
   - s:initialize()関数（初期化）
   - s:initialize_unified()関数（統合版初期化）
   - s:migrate_config()関数（設定マイグレーション）
-- [ ] マッピング設定関数
+- [x] マッピング設定関数
   - s:setup_unified_mappings()関数
   - s:handle_motion()関数（モーションハンドラー）
-- [ ] 自動ロード設定
+- [x] 自動ロード設定
   - augroup定義
   - VimEnter時の自動初期化
+
+### process4完了：✅
 
 ### process5: 統合テストとE2E（2日）
 
 #### sub1: integration.test.ts の実装
 @target: `tests/phase-b4/integration.test.ts`
 
-- [ ] 完全な初期化フロー（Denops環境）テスト（5ステップ）
+- [x] 完全な初期化フロー（Denops環境）テスト（5ステップ）
   - 環境判定
   - 設定マイグレーション
   - 実装選択
   - コマンド登録
   - マッピング設定
-- [ ] フォールバックフロー（Denops不可）テスト（5ステップ）
+- [x] フォールバックフロー（Denops不可）テスト（5ステップ）
   - 環境判定
   - VimScript版へのフォールバック
   - 警告メッセージ確認
-- [ ] エラーリカバリーテスト（5ステップ）
+- [x] エラーリカバリーテスト（5ステップ）
   - 部分的な初期化失敗時の動作
 
 #### sub2: e2e.test.ts の実装
 @target: `tests/phase-b4/e2e.test.ts`
 
-- [ ] 新規ユーザーの初回起動シナリオ（5ステップ）
+- [x] 新規ユーザーの初回起動シナリオ（5ステップ）
   - プラグインロード
   - 自動初期化
   - コマンド実行
   - ヒント表示確認
-- [ ] 既存ユーザーの設定移行シナリオ（5ステップ）
+- [x] 既存ユーザーの設定移行シナリオ（5ステップ）
   - 旧設定の読み込み
   - 自動マイグレーション
   - 新設定の確認
   - 機能動作確認
-- [ ] Denops停止時のフォールバックシナリオ（5ステップ）
+- [x] Denops停止時のフォールバックシナリオ（5ステップ）
   - Denops停止検出
   - VimScript版への切り替え
   - 機能の継続動作確認
 
+### process5完了：✅
+
 ### process10: ユニットテスト
 各processで実装したテストの総合確認
 
-- [ ] 全テストケース数: 80個以上達成
+- [x] 全テストケース数: 80個以上達成
   - environment-detector: 8-10 steps
   - implementation-selector: 6-8 steps
   - config-mapper: 10-12 steps
@@ -298,10 +308,12 @@ const CONFIG_MAP = {
   - initializer: 10-12 steps
   - integration: 10-15 steps
   - e2e: 10-15 steps
-- [ ] テストカバレッジ: 90%以上
-- [ ] 型チェック: deno check 100%パス
-- [ ] リンター: deno lint パス
-- [ ] フォーマット: deno fmt 準拠
+- [x] テストカバレッジ: 90%以上
+- [x] 型チェック: deno check 100%パス
+- [x] リンター: deno lint パス
+- [x] フォーマット: deno fmt 準拠
+
+### process10完了：✅
 
 ### process50: フォローアップ
 実装後の仕様変更・追加要件
@@ -318,16 +330,18 @@ const CONFIG_MAP = {
 
 ### process100: リファクタリング
 
-- [ ] コード品質向上
+- [x] コード品質向上
   - 共通処理の抽出
   - エラーハンドリングの統一
   - 型定義の最適化
-- [ ] モジュール構造の見直し
+- [x] モジュール構造の見直し
   - 依存関係の整理
   - インターフェースの明確化
-- [ ] テスタビリティの向上
+- [x] テスタビリティの向上
   - モック化の容易性改善
   - テストヘルパーの充実
+
+### process100完了：✅
 
 ### process200: ドキュメンテーション
 
