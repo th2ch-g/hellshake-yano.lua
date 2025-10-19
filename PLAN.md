@@ -327,14 +327,80 @@ Visual modeでも選択範囲を拡張しながらモーション検出を行い
 
 ##### VimScript実装
 - [x] plugin/hellshake-yano-vim.vim にxnoremapマッピング追加完了
-- [x] autoload/hellshake_yano_vim/motion.vim に handle_visual() 実装完了
-- [x] Vimでの動作確認（Visual modeでw/h/j/k/lが2回連続で動作）
+- [x] autoload/hellshake_yano_vim/motion.vim に handle_visual_internal() 実装完了
+- [x] handle_visual_expr() ラッパー関数実装（<expr>マッピング用）
+- [x] Vimでの動作確認（Visual modeでw/h/j/k/lがperKeyMotionCount回連続で動作）
+- [x] Visual mode状態維持の修正（`:<C-u>` → `<expr>` マッピング）
+- [x] gv コマンドでVisual modeを復元する実装
 
 ##### 実装上の考慮事項
 - Visual modeでは `gv` で選択範囲を復元する
-- モーション実行は通常のキー入力として実行（feedkeys使用も検討）
+- `<expr>` マッピングを使用してVisual modeを維持
+- モーション実行は `<expr>` マッピングがキーを返すことで自動実行
+- `:<C-u>` を使用するとVisual modeが終了するため、`<expr>` 方式に変更
 - visual#show() との統合（選択範囲内のヒント表示）
 - character-wise, line-wise, block-wise の各モードでの動作確認
+
+#### sub1.3: Neovim統合版でのVisual Modeモーション検出
+@target: plugin/hellshake-yano-unified.vim
+@issue: Neovim環境でVisual modeのw/b/eモーション検出が動作しない
+
+##### 背景
+- Vim環境: plugin/hellshake-yano-vim.vim でVisual mode w/b/e実装済み（sub1.2で完了）
+- Neovim環境: plugin/hellshake-yano-unified.vim が使用されるが、Visual mode w/b/eマッピングが未実装
+- hellshake-yano-vim.vimはNeovimでは`has('nvim')`で`finish`するため読み込まれない
+- unified版は`<Leader>h`のみ実装、w/b/eのVisual modeマッピングがない
+
+##### 現状の実装ギャップ
+**Vim環境（hellshake-yano-vim.vim）:**
+- Normal mode w/b/e: VimScript実装 ✅
+- Visual mode `<Leader>h`: VimScript実装 ✅
+- Visual mode w/b/e: VimScript実装（`<expr>`マッピング）✅
+
+**Neovim環境（hellshake-yano-unified.vim）:**
+- Normal mode w/b/e: Denops実装 ✅
+- Visual mode `<Leader>h`: Denops実装 ✅
+- Visual mode w/b/e: **未実装** ❌
+
+##### TDD Step 1: Red（テスト作成）
+- [ ] tests-vim/test_process2_sub1_3.vim にNeovim統合版のテストケース作成
+- [ ] unified版でのVisual mode w/b/eマッピング存在チェック
+- [ ] Neovim環境でのVisual mode動作確認テスト
+
+##### TDD Step 2: Green（実装）
+- [ ] plugin/hellshake-yano-unified.vim の修正
+  - [ ] `s:setup_unified_mappings()` にVisual mode w/b/eマッピング追加
+  - [ ] VimScript実装（handle_visual_expr）を再利用
+  - [ ] `xnoremap <silent> <expr>` マッピング形式で実装
+- [ ] 設定オプションの確認
+  - [ ] `g:hellshake_yano.motionCounterEnabled` が適用されるか確認
+  - [ ] `g:hellshake_yano.countedMotions` でキー一覧が設定可能か確認
+- [ ] テスト実行してテスト成功を確認
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [ ] VimとNeovim統合版の実装の一貫性確認
+- [ ] コードの可読性確認
+- [ ] ドキュメントコメント更新（Phase D-2 Sub1.3 マーク追加）
+- [ ] 回帰テスト確認（Normal modeとVim環境が正常動作）
+
+##### 実装方針
+**Option 1を採用: VimScript実装の再利用**
+```vim
+" s:setup_unified_mappings() に追加
+" Visual mode用のモーション検出マッピング
+if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
+  for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
+    execute printf('xnoremap <silent> <expr> %s hellshake_yano_vim#motion#handle_visual_expr(%s)',
+      \ key, string(key))
+  endfor
+endif
+```
+
+##### 実装上の考慮事項
+- Denops実装は不要（VimScript側で完結）
+- autoload/hellshake_yano_vim/motion.vimの既存実装を再利用
+- 設定変数名の違いに注意（`g:hellshake_yano` vs `g:hellshake_yano_vim_config`）
+- Neovim環境でもVimScript関数が正常に動作することを確認
 
 #### sub2: Per-Key最小単語長
 @target: autoload/hellshake_yano_vim/word_detector.vim

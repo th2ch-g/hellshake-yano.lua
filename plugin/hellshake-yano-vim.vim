@@ -192,11 +192,12 @@ if s:motion_enabled
   endfor
 
   " Visual mode用のモーション検出マッピング (Phase D-2 Sub1.2)
+  " <expr>を使用してVisual modeを維持
   for s:key in s:motion_keys
     " Visual modeでもモーション検出を有効化
-    " モーション実行後にhandle_visual()を呼び出し
-    execute printf('xnoremap <silent> %s %s:<C-u>call hellshake_yano_vim#motion#handle_visual(%s)<CR>',
-          \ s:key, s:key, string(s:key))
+    " <expr>マッピングでVisual modeを自動的に維持
+    execute printf('xnoremap <silent> <expr> %s hellshake_yano_vim#motion#handle_visual_expr(%s)',
+          \ s:key, string(s:key))
   endfor
 endif
 

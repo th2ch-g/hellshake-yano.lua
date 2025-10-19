@@ -254,7 +254,30 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
   endtry
 endfunction
 
-" hellshake_yano_vim#motion#handle_visual(motion_key) - Visual Modeモーション処理
+" hellshake_yano_vim#motion#handle_visual_expr(motion_key) - Visual Mode用<expr>マッピング
+"
+" 目的:
+"   - Visual modeを維持したままモーション検出を実行
+"   - <expr>マッピング用のラッパー関数
+"   - モーションキーを返すことでVisual modeの選択範囲が自動的に拡張
+"
+" Phase D-2 Sub1.2: Visual Modeモーション検出（修正版）
+"
+" パラメータ:
+"   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
+"
+" @return String モーションキー（そのまま返すことでVisual mode維持）
+"
+" 使用例:
+"   xnoremap <silent> <expr> w hellshake_yano_vim#motion#handle_visual_expr('w')
+function! hellshake_yano_vim#motion#handle_visual_expr(motion_key) abort
+  " モーション検出処理を実行（非同期的に）
+  call hellshake_yano_vim#motion#handle_visual_internal(a:motion_key)
+  " モーションキーを返すことでVisual modeの選択範囲が拡張される
+  return a:motion_key
+endfunction
+
+" hellshake_yano_vim#motion#handle_visual_internal(motion_key) - Visual Modeモーション処理（内部実装）
 "
 " 目的:
 "   - Visual mode（v/V/Ctrl-v）でのモーションキー連打を検出
@@ -269,10 +292,9 @@ endfunction
 "   3. タイムアウト内 && 同じモーション → カウント++
 "   4. タイムアウト外 || 異なるモーション → カウント=1にリセット
 "   5. カウントが閾値以上 → ヒント表示トリガー & カウントリセット
-"   6. 通常モーション実行（選択範囲拡張）
-"   7. redrawでカーソル反映
-"   8. 閾値到達時にvisual#show()呼び出し
-"   9. 現在時刻と現在モーションを記録
+"   6. redrawでカーソル反映
+"   7. 閾値到達時にvisual#show()呼び出し
+"   8. 現在時刻と現在モーションを記録
 "
 " パラメータ:
 "   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
@@ -280,7 +302,7 @@ endfunction
 " @return なし
 "
 " 使用例:
-"   xnoremap <silent> w w:<C-u>call hellshake_yano_vim#motion#handle_visual('w')<CR>
+"   call hellshake_yano_vim#motion#handle_visual_internal('w')
 "
 " エラーハンドリング:
 "   - 不正なモーションキーの場合はエラーメッセージを表示
@@ -293,8 +315,8 @@ endfunction
 " 注意事項:
 "   - ヒント表示はブロッキング方式（Phase A-3で確立）
 "   - ヒント表示後はカウントをリセット（連続表示を防ぐ）
-"   - Visual modeの選択範囲は自動的に維持される
-function! hellshake_yano_vim#motion#handle_visual(motion_key) abort
+"   - Visual modeの選択範囲は自動的に維持される（<expr>マッピング経由）
+function! hellshake_yano_vim#motion#handle_visual_internal(motion_key) abort
   " 不正なモーションキーのチェック
   " Phase D-2 Sub1.2: Visual Modeモーション対応
   if index(['w', 'b', 'e', 'h', 'j', 'k', 'l'], a:motion_key) == -1
@@ -348,14 +370,18 @@ function! hellshake_yano_vim#motion#handle_visual(motion_key) abort
       let s:motion_state.motion_count = 0
     endif
 
-    " 6. 通常モーション実行はxnoremapマッピングで既に実行済み
-    " （xnoremap で %s を実行してから handle_visual() を呼び出している）
+    " 6. 通常モーション実行は<expr>マッピングで自動実行される
+    " （handle_visual_expr()がモーションキーを返すことで実行）
 
     " Phase D-2 Sub1.1: カーソル位置を画面に反映
     redraw
 
     " 7. ヒント表示トリガー（閾値に達した場合）
     if l:should_trigger_hint
+      " Visual modeを確実に維持するため gv で選択範囲を復元
+      " <expr>マッピング使用時はこの時点でVisual modeのはず
+      normal! gv
+
       " visual#show() を呼び出してヒント表示（選択範囲内）
       " ブロッキング方式なので、ヒント入力が完了するまで制御は戻らない
       call hellshake_yano_vim#visual#show()
