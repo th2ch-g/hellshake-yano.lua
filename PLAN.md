@@ -363,19 +363,19 @@ Visual modeでも選択範囲を拡張しながらモーション検出を行い
 - Visual mode w/b/e: **未実装** ❌
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests-vim/test_process2_sub1_3.vim にNeovim統合版のテストケース作成
-- [ ] unified版でのVisual mode w/b/eマッピング存在チェック
-- [ ] Neovim環境でのVisual mode動作確認テスト
+- [x] tests-vim/test_process2_sub1_3.vim にNeovim統合版のテストケース作成
+- [x] unified版でのVisual mode w/b/eマッピング存在チェック
+- [x] Neovim環境でのVisual mode動作確認テスト
 
 ##### TDD Step 2: Green（実装）
-- [ ] plugin/hellshake-yano-unified.vim の修正
-  - [ ] `s:setup_unified_mappings()` にVisual mode w/b/eマッピング追加
-  - [ ] VimScript実装（handle_visual_expr）を再利用
-  - [ ] `xnoremap <silent> <expr>` マッピング形式で実装
-- [ ] 設定オプションの確認
-  - [ ] `g:hellshake_yano.motionCounterEnabled` が適用されるか確認
-  - [ ] `g:hellshake_yano.countedMotions` でキー一覧が設定可能か確認
-- [ ] テスト実行してテスト成功を確認
+- [x] plugin/hellshake-yano-unified.vim の修正
+  - [x] `s:setup_unified_mappings()` にVisual mode w/b/eマッピング追加
+  - [x] 統合版共通名前空間（hellshake_yano#visual_motion）を使用
+  - [x] `xnoremap <silent> <expr>` マッピング形式で実装
+- [x] 設定オプションの確認
+  - [x] `g:hellshake_yano.motionCounterEnabled` が適用されるか確認
+  - [x] `g:hellshake_yano.countedMotions` でキー一覧が設定可能か確認
+- [ ] テスト実行してテスト成功を確認（Neovim環境での動作確認待ち）
 
 ##### TDD Step 3: Refactor（リファクタリング）
 - [ ] VimとNeovim統合版の実装の一貫性確認

@@ -191,7 +191,7 @@ endfunction
 "
 " モーション検出マッピングとビジュアルモードマッピングを設定
 function! s:setup_unified_mappings() abort
-  " モーション検出マッピング
+  " モーション検出マッピング（Normal mode）
   if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
     for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
       execute printf('nnoremap <silent> %s :<C-u>call <SID>handle_motion("%s")<CR>',
@@ -199,7 +199,16 @@ function! s:setup_unified_mappings() abort
     endfor
   endif
 
-  " ビジュアルモード対応
+  " Visual mode用のモーション検出マッピング（Phase D-2 Sub1.3）
+  " <expr>マッピングを使用してVisual modeを維持
+  if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
+    for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
+      execute printf('xnoremap <silent> <expr> %s hellshake_yano#visual_motion(%s)',
+        \ key, string(key))
+    endfor
+  endif
+
+  " ビジュアルモード対応（<Leader>h）
   if get(g:hellshake_yano, 'visualModeEnabled', v:true)
     xnoremap <silent> <Leader>h :<C-u>call <SID>show_hints_visual()<CR>
   endif
