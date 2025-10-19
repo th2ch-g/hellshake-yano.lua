@@ -288,6 +288,54 @@ perKeyMotionCountの設定で h/j/k/l を設定しても、「invalid motion key
 - [x] autoload/hellshake_yano_vim/motion.vim の修正完了
 - [x] Vimでの動作確認（h/j/k/l が2回連続で動作、テストで確認）
 
+#### sub1.2: Visual Modeモーション検出
+@target: plugin/hellshake-yano-vim.vim, autoload/hellshake_yano_vim/motion.vim
+@issue: Visual modeでw/b/e/h/j/k/lを入力してもヒントが表示されない
+
+##### 背景
+現在、Normal modeでのモーション検出は実装済み（nnoremap）。
+しかし、Visual mode（xnoremap）でのモーション検出マッピングが存在しないため、
+Visual mode中にw/b/e等を入力しても通常のVimモーションとして動作し、ヒントが表示されない。
+
+Visual modeでも選択範囲を拡張しながらモーション検出を行い、
+閾値に達したらヒント表示を行う機能が必要。
+
+##### TDD Step 1: Red（VimScriptテスト作成）
+- [x] tests-vim/test_process2_sub1_2.vim にVisual modeのテストケース作成
+- [x] Visual mode中のw/b/e/h/j/k/lでヒント表示されるテスト作成
+- [x] 選択範囲が維持されることを確認するテスト作成
+- [x] テスト実行して失敗を確認（マッピングが存在しない）
+
+##### TDD Step 2: Green（VimScript実装）
+- [x] plugin/hellshake-yano-vim.vim にxnoremapマッピング追加
+  - [x] motion_keys の各キーに対してxnoremapを生成
+  - [x] モーション実行後に選択範囲を維持
+  - [x] hellshake_yano_vim#motion#handle_visual() を呼び出し
+- [x] autoload/hellshake_yano_vim/motion.vim に handle_visual() 関数追加
+  - [x] Visual mode用のモーション処理ロジック
+  - [x] 選択範囲の自動維持（xnoremap経由）
+  - [x] perKeyMotionCount の適用
+  - [x] 閾値到達時にvisual#show()を呼び出し
+- [x] redraw でカーソル位置を即座に反映
+- [x] テスト実行してテスト成功を確認（全5テスト実装）
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [x] handle() と handle_visual() の共通ロジック確認（重複最小限）
+- [x] コードの可読性確認
+- [x] ドキュメントコメント更新（Phase D-2 Sub1.2 マーク追加）
+- [x] 回帰テスト確認（Normal modeが正常動作）
+
+##### VimScript実装
+- [x] plugin/hellshake-yano-vim.vim にxnoremapマッピング追加完了
+- [x] autoload/hellshake_yano_vim/motion.vim に handle_visual() 実装完了
+- [x] Vimでの動作確認（Visual modeでw/h/j/k/lが2回連続で動作）
+
+##### 実装上の考慮事項
+- Visual modeでは `gv` で選択範囲を復元する
+- モーション実行は通常のキー入力として実行（feedkeys使用も検討）
+- visual#show() との統合（選択範囲内のヒント表示）
+- character-wise, line-wise, block-wise の各モードでの動作確認
+
 #### sub2: Per-Key最小単語長
 @target: autoload/hellshake_yano_vim/word_detector.vim
 

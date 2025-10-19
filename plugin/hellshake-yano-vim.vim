@@ -184,11 +184,19 @@ let s:motion_enabled = get(g:hellshake_yano_vim_config, 'motion_enabled', v:true
 let s:motion_keys = get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e', 'h', 'j', 'k', 'l'])
 
 if s:motion_enabled
-  " 対象キーをループしてマッピング
+  " 対象キーをループしてマッピング（Normal mode）
   for s:key in s:motion_keys
     " execute を使って動的にマッピングを生成
     execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle(%s)<CR>',
           \ s:key, string(s:key))
+  endfor
+
+  " Visual mode用のモーション検出マッピング (Phase D-2 Sub1.2)
+  for s:key in s:motion_keys
+    " Visual modeでもモーション検出を有効化
+    " モーション実行後にhandle_visual()を呼び出し
+    execute printf('xnoremap <silent> %s %s:<C-u>call hellshake_yano_vim#motion#handle_visual(%s)<CR>',
+          \ s:key, s:key, string(s:key))
   endfor
 endif
 

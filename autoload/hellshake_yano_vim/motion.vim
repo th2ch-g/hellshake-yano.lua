@@ -254,5 +254,127 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
   endtry
 endfunction
 
+" hellshake_yano_vim#motion#handle_visual(motion_key) - Visual Modeモーション処理
+"
+" 目的:
+"   - Visual mode（v/V/Ctrl-v）でのモーションキー連打を検出
+"   - 閾値に達した場合はvisual#show()を呼び出してヒント表示
+"   - 選択範囲を維持しながらモーション処理を実行
+"
+" Phase D-2 Sub1.2: Visual Modeモーション検出
+"
+" アルゴリズム:
+"   1. 現在時刻を取得（reltime()）
+"   2. 前回のモーションとの時間差をチェック
+"   3. タイムアウト内 && 同じモーション → カウント++
+"   4. タイムアウト外 || 異なるモーション → カウント=1にリセット
+"   5. カウントが閾値以上 → ヒント表示トリガー & カウントリセット
+"   6. 通常モーション実行（選択範囲拡張）
+"   7. redrawでカーソル反映
+"   8. 閾値到達時にvisual#show()呼び出し
+"   9. 現在時刻と現在モーションを記録
+"
+" パラメータ:
+"   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
+"
+" @return なし
+"
+" 使用例:
+"   xnoremap <silent> w w:<C-u>call hellshake_yano_vim#motion#handle_visual('w')<CR>
+"
+" エラーハンドリング:
+"   - 不正なモーションキーの場合はエラーメッセージを表示
+"   - reltime() のエラーは try-catch で処理
+"
+" パフォーマンス特性:
+"   - reltime() と reltimefloat() を使用（高精度な時間計測）
+"   - 状態更新は最小限の操作で実行
+"
+" 注意事項:
+"   - ヒント表示はブロッキング方式（Phase A-3で確立）
+"   - ヒント表示後はカウントをリセット（連続表示を防ぐ）
+"   - Visual modeの選択範囲は自動的に維持される
+function! hellshake_yano_vim#motion#handle_visual(motion_key) abort
+  " 不正なモーションキーのチェック
+  " Phase D-2 Sub1.2: Visual Modeモーション対応
+  if index(['w', 'b', 'e', 'h', 'j', 'k', 'l'], a:motion_key) == -1
+    echohl ErrorMsg
+    echomsg 'hellshake_yano_vim#motion#handle_visual: invalid motion key: ' . a:motion_key
+    echohl None
+    return
+  endif
+
+  try
+    " 1. 現在時刻を取得
+    let l:current_time = reltime()
+
+    " 2. 前回のモーションとの時間差をチェック
+    let l:should_reset = v:false
+    let l:time_diff_ms = 0
+
+    " last_motion_time が初期化されているかチェック（0 ではなくリストかどうか）
+    if type(s:motion_state.last_motion_time) == type([])
+      " 時間差を計算（ミリ秒）
+      let l:time_diff = reltimefloat(reltime(s:motion_state.last_motion_time, l:current_time))
+      let l:time_diff_ms = float2nr(l:time_diff * 1000.0)
+
+      " タイムアウトチェック
+      if l:time_diff_ms > s:motion_state.timeout_ms
+        let l:should_reset = v:true
+      endif
+    endif
+
+    " 3. 異なるモーションの場合もリセット
+    if s:motion_state.last_motion != '' && s:motion_state.last_motion != a:motion_key
+      let l:should_reset = v:true
+    endif
+
+    " 4. カウントの更新
+    if l:should_reset || s:motion_state.motion_count == 0
+      " リセット
+      let s:motion_state.motion_count = 1
+    else
+      " 同じモーションをタイムアウト内に実行 → カウント++
+      let s:motion_state.motion_count += 1
+    endif
+
+    " 5. 閾値チェックとヒント表示トリガー
+    " Phase D-2 Sub1: キー別のモーションカウントを使用
+    let l:threshold = hellshake_yano_vim#motion#get_motion_count(a:motion_key)
+    let l:should_trigger_hint = v:false
+    if s:motion_state.motion_count >= l:threshold
+      let l:should_trigger_hint = v:true
+      " カウントをリセット（連続表示を防ぐ）
+      let s:motion_state.motion_count = 0
+    endif
+
+    " 6. 通常モーション実行はxnoremapマッピングで既に実行済み
+    " （xnoremap で %s を実行してから handle_visual() を呼び出している）
+
+    " Phase D-2 Sub1.1: カーソル位置を画面に反映
+    redraw
+
+    " 7. ヒント表示トリガー（閾値に達した場合）
+    if l:should_trigger_hint
+      " visual#show() を呼び出してヒント表示（選択範囲内）
+      " ブロッキング方式なので、ヒント入力が完了するまで制御は戻らない
+      call hellshake_yano_vim#visual#show()
+    endif
+
+    " 8. 現在時刻と現在モーションを記録
+    let s:motion_state.last_motion = a:motion_key
+    let s:motion_state.last_motion_time = l:current_time
+
+  catch
+    " エラーハンドリング
+    echohl ErrorMsg
+    echomsg 'hellshake_yano_vim#motion#handle_visual: error occurred: ' . v:exception
+    echohl None
+
+    " エラー時は状態をリセット
+    call hellshake_yano_vim#motion#init()
+  endtry
+endfunction
+
 let &cpo = s:save_cpo
 unlet s:save_cpo
