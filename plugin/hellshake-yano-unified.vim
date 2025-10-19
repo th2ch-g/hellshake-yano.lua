@@ -217,17 +217,42 @@ endfunction
 " s:setup_vimscript_mappings() - VimScript版のマッピング設定
 "
 " Pure VimScript版のマッピング設定（フォールバック）
+" Phase D-2 Sub1.2 追加修正: 設定変数名の統一
 function! s:setup_vimscript_mappings() abort
+  " motion_enabled の取得（g:hellshake_yano を優先）
+  let l:motion_enabled = v:true
+  if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'motionCounterEnabled')
+    let l:motion_enabled = g:hellshake_yano.motionCounterEnabled
+  elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'motion_enabled')
+    let l:motion_enabled = g:hellshake_yano_vim_config.motion_enabled
+  endif
+
+  " motion_keys の取得（g:hellshake_yano を優先）
+  let l:motion_keys = ['w', 'b', 'e', 'h', 'j', 'k', 'l']
+  if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'countedMotions')
+    let l:motion_keys = g:hellshake_yano.countedMotions
+  elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'motion_keys')
+    let l:motion_keys = g:hellshake_yano_vim_config.motion_keys
+  endif
+
   " モーション検出マッピング
-  if get(g:hellshake_yano_vim_config, 'motion_enabled', v:true)
-    for key in get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e', 'h', 'j', 'k', 'l'])
+  if l:motion_enabled
+    for key in l:motion_keys
       execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle("%s")<CR>',
         \ key, key)
     endfor
   endif
 
+  " visual_mode_enabled の取得（g:hellshake_yano を優先）
+  let l:visual_mode_enabled = v:true
+  if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'visualModeEnabled')
+    let l:visual_mode_enabled = g:hellshake_yano.visualModeEnabled
+  elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'visual_mode_enabled')
+    let l:visual_mode_enabled = g:hellshake_yano_vim_config.visual_mode_enabled
+  endif
+
   " ビジュアルモード対応
-  if get(g:hellshake_yano_vim_config, 'visual_mode_enabled', v:true)
+  if l:visual_mode_enabled
     xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>
   endif
 endfunction
