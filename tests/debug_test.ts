@@ -1,4 +1,4 @@
-import { TinySegmenterWordDetector } from "../denops/hellshake-yano/word.ts";
+import { TinySegmenterWordDetector } from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 const detector = new TinySegmenterWordDetector();

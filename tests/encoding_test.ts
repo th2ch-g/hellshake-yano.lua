@@ -11,7 +11,7 @@ import {
   getByteLength,
   getEncodingInfo,
   hasMultibyteCharacters,
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 
 describe("Character Encoding and Column Position", () => {
   it("should calculate correct byte position for ASCII text", () => {

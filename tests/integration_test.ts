@@ -2,8 +2,8 @@ import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import {
   getWordDetectionManager,
   resetWordDetectionManager,
-} from "../denops/hellshake-yano/word.ts";
-import { detectWordsWithManager, type EnhancedWordConfig } from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
+import { detectWordsWithManager, type EnhancedWordConfig } from "../denops/hellshake-yano/neovim/core/word.ts";
 import { MockDenops } from "./helpers/mock.ts";
 
 // Mock Denops for testing

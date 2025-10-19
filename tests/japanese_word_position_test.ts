@@ -8,7 +8,7 @@ import { describe, it } from "@std/testing/bdd";
 import {
   RegexWordDetector,
   type WordDetectionConfig,
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 describe("Japanese Word Position Issue", () => {

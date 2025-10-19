@@ -14,9 +14,9 @@
  */
 
 import type { Denops } from "@denops/std";
-import { TinySegmenter } from "../word/word-segmenter.ts";
+import { TinySegmenter } from "../neovim/core/word/word-segmenter.ts";
 import type { DenopsWord } from "../phase-b2/vimscript-types.ts";
-import { GlobalCache } from "../cache.ts";
+import { GlobalCache } from "../common/cache/unified-cache.ts";
 import type {
   UnifiedJapaneseSupportConfig,
   CacheStats,

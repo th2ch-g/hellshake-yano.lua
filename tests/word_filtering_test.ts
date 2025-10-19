@@ -5,7 +5,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { extractWords } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 describe("Word Filtering - Japanese Exclusion", () => {
   describe("English-only mode", () => {

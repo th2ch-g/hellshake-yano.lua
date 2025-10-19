@@ -4,7 +4,7 @@ import { MockTimer } from "./helpers/mock.ts";
 
 // 移動カウント管理機能をインポート
 // MotionCounter and MotionManager have been integrated into core.ts
-import { MotionCounter, MotionManager } from "../denops/hellshake-yano/core.ts";
+import { MotionCounter, MotionManager } from "../denops/hellshake-yano/neovim/core/core.ts";
 
 test("hjkl各キーのカウント増加", async (denops) => {
   const counter = new MotionCounter(3, 2000);

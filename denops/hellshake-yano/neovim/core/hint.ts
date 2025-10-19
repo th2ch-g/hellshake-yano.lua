@@ -7,7 +7,7 @@ import type {
 } from "../../types.ts";
 import { DEFAULT_HINT_MARKERS } from "../../types.ts";
 import type { Config } from "../../types.ts";
-import { HintGeneratorFactory } from "../../hint/hint-generator-strategies.ts";
+import { HintGeneratorFactory } from "./hint/hint-generator-strategies.ts";
 import { CacheType, GlobalCache, type CacheStatistics } from "../../cache.ts";
 import { Core } from "./core.ts";
 import { isAlphanumeric, isValidSymbol, isWhitespace, isControlCharacter, isDigit } from "../../validation-utils.ts";

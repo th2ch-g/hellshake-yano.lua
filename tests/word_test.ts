@@ -10,7 +10,7 @@ import {
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // 単語検出機能をインポート
-import { detectWords } from "../denops/hellshake-yano/word.ts";
+import { detectWords } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 test("単一単語の検出", async (denops) => {
   await mockBuffer(denops, ["hello"]);

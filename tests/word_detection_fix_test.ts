@@ -4,7 +4,7 @@ import { mockBuffer, mockCursor } from "./helpers/mock.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // 単語検出機能をインポート
-import { extractWords } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 /**
  * Process 50 Sub6: 単語の取りこぼし改善のテスト

@@ -7,7 +7,7 @@
  */
 
 import { assertEquals, assertExists, assertThrows } from "https://deno.land/std@0.190.0/testing/asserts.ts";
-import { CacheType } from "../denops/hellshake-yano/cache.ts";
+import { CacheType } from "../denops/hellshake-yano/common/cache/unified-cache.ts";
 
 // Phase 1 Red: これらのインポートは現在失敗するはずです
 // GlobalCacheクラスはまだ存在しないため、エラーが発生します
@@ -19,7 +19,7 @@ try {
 }
 
 // GlobalCacheを直接インポート
-import { GlobalCache } from "../denops/hellshake-yano/cache.ts";
+import { GlobalCache } from "../denops/hellshake-yano/common/cache/unified-cache.ts";
 
 Deno.test("TDD Red Phase: GlobalCache class should exist (現在は失敗するはず)", async () => {
   // 現在はGlobalCacheクラスが存在しないため、このテストは失敗します

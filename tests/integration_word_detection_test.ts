@@ -6,7 +6,7 @@ import {
   WordDetectionManager,
   type WordDetector,
   type WordDetectionManagerConfig
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import { type DetectionContext, type Word, type WordDetectionResult, type SyntaxContext, type LineContext } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 

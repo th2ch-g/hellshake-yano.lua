@@ -2,7 +2,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 
 /**
  * Integration tests for per-key motion count feature

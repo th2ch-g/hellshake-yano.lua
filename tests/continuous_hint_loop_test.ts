@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import type { Denops } from "@denops/std";
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 import type { Config, HintMapping } from "../denops/hellshake-yano/types.ts";
 import { MockDenops } from "./helpers/mock.ts";
 

@@ -1,8 +1,8 @@
 import { assertEquals, assertExists, assertThrows } from "jsr:@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
-import { Core } from "../denops/hellshake-yano/core.ts";
-import { HintManager } from "../denops/hellshake-yano/hint.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
+import { HintManager } from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 Deno.test("Config interface - should have perKeyMinLength property", () => {
 const config: Config = {

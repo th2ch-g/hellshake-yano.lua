@@ -11,7 +11,7 @@ import {
   WordDetectionManager,
   getWordDetectionManager,
   type WordDetectionManagerConfig
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // Mock Config for testing (flat structure as per actual Config interface)

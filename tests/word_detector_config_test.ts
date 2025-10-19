@@ -10,7 +10,7 @@ import { DEFAULT_CONFIG, type Config } from "../denops/hellshake-yano/config.ts"
 import {
   RegexWordDetector,
   type WordDetectionConfig
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // Mock Config for testing (flat structure as per actual Config interface)

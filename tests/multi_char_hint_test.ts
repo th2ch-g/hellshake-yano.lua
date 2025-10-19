@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import type { Denops } from "@denops/std";
-import { generateHints } from "../denops/hellshake-yano/hint.ts";
+import { generateHints } from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 /**
  * 複数文字ヒント機能のテスト

@@ -1,10 +1,10 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
-import { TinySegmenter } from "../denops/hellshake-yano/word.ts";
+import { TinySegmenter } from "../denops/hellshake-yano/neovim/core/word.ts";
 import {
   RegexWordDetector,
   WordDetectionManager,
   type WordDetectionConfig,
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("TinySegmenter Basic Functionality", async (t) => {

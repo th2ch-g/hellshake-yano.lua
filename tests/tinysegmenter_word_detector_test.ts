@@ -13,7 +13,7 @@
  */
 
 import { assertEquals, assertExists, assertInstanceOf } from "https://deno.land/std@0.212.0/assert/mod.ts";
-import { TinySegmenterWordDetector } from "../denops/hellshake-yano/word.ts";
+import { TinySegmenterWordDetector } from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { Word, DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("TinySegmenterWordDetector - プロパティの確認", () => {

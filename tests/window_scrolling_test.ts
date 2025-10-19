@@ -10,7 +10,7 @@ import { describe, it } from "@std/testing/bdd";
 import {
   detectWordsWithEnhancedConfig,
   type EnhancedWordConfig,
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import { MockDenops } from "./helpers/mock.ts";
 import type { Denops } from "@denops/std";
 

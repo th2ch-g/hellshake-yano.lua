@@ -2,7 +2,7 @@
  * Debug test to check available methods on Core class
  */
 
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 import { getDefaultConfig } from "../denops/hellshake-yano/config.ts";
 
 const config = getDefaultConfig();

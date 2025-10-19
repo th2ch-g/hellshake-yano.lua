@@ -6,8 +6,8 @@
 
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { extractWords } from "../denops/hellshake-yano/word.ts";
-import { calculateHintPosition } from "../denops/hellshake-yano/hint.ts";
+import { extractWords } from "../denops/hellshake-yano/neovim/core/word.ts";
+import { calculateHintPosition } from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 describe("Hint Position Fix - Process単語の表示位置", () => {
   describe("Process8のような英数字混在単語", () => {

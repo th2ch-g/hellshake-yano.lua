@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno test --allow-all
 
 import { assertEquals } from "@std/assert";
-import { extractWords } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 Deno.test("Single Character Word Detection Tests", async (t) => {
   await t.step("Basic single character detection", async (t) => {

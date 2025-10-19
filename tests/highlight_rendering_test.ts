@@ -1,7 +1,7 @@
 import { assertEquals, assertExists } from "jsr:@std/assert@1";
 import { test } from "jsr:@denops/test@3";
 import type { Denops } from "jsr:@denops/std@7";
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 import type { Config } from "../denops/hellshake-yano/config.ts";
 import { DEFAULT_CONFIG } from "../denops/hellshake-yano/config.ts";
 

@@ -7,7 +7,7 @@ import {
   normalizeColorName,
   validateHighlightColor,
   validateHighlightConfig,
-} from "../denops/hellshake-yano/validation.ts";
+} from "../denops/hellshake-yano/common/utils/validator.ts";
 import type { HighlightColor } from "../denops/hellshake-yano/types.ts";
 
 /**

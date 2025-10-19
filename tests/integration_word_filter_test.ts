@@ -9,12 +9,12 @@ import type { Word } from "../denops/hellshake-yano/types.ts";
 import {
   type EnhancedWordConfig,
   extractWords,
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import {
   assignHintsToWords,
   calculateHintPosition,
   generateHints,
-} from "../denops/hellshake-yano/hint.ts";
+} from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 describe("Integration Test - Word Filtering & Hint Positioning", () => {
   describe("End-to-end word detection and hint assignment", () => {

@@ -6,7 +6,7 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import { getDefaultConfig, validateConfig } from "../denops/hellshake-yano/main.ts";
 import { getDefaultConfig as getDefaultConfigFromConfig, validateConfig as validateConfigFromConfig } from "../denops/hellshake-yano/config.ts";
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 
 Deno.test("getDefaultConfig() should delegate to config.ts", () => {
   const config = getDefaultConfig();

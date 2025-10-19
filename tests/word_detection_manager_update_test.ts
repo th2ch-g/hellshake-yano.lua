@@ -14,7 +14,7 @@ import {
   RegexWordDetector,
   TinySegmenterWordDetector,
   HybridWordDetector
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("WordDetectionManager - initialize method registers three actual detectors", async () => {

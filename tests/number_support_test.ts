@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { generateHints } from "../denops/hellshake-yano/hint.ts";
+import { generateHints } from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 /**
  * 数字対応機能のテスト（Process8 sub3）

@@ -747,12 +747,12 @@ deno check denops/hellshake-yano/common/config.ts
 
 #### Phase 1 完了基準
 
-- [ ] common/types/ 配下に6ファイル作成完了
-- [ ] common/utils/ 配下に6ファイル作成完了
-- [ ] common/cache/ 作成完了
-- [ ] common/config.ts 更新完了
-- [ ] 全テストパス（既存テスト影響なし）
-- [ ] deno check 100%パス
+- [x] common/types/ 配下に6ファイル作成完了
+- [x] common/utils/ 配下に6ファイル作成完了
+- [x] common/cache/ 作成完了
+- [x] common/config.ts 更新完了
+- [x] 全テストパス（既存テスト影響なし）
+- [x] deno check 100%パス
 
 ---
 
@@ -872,8 +872,8 @@ deno test tests/vim/bridge/
 - [ ] vim/features/ 配下に3ファイル作成完了
 - [ ] vim/config/ 配下に3ファイル作成完了
 - [ ] vim/bridge/ 配下に1ファイル作成完了
-- [ ] 全テストパス
-- [ ] deno check 100%パス
+- [ ] 全テストパス（未実装）
+- [ ] deno check 100%パス（未実装）
 
 ---
 
@@ -944,11 +944,11 @@ deno test tests/neovim/
 
 #### Phase 3 完了基準
 
-- [ ] neovim/core/ 配下に3ファイル作成完了
-- [ ] neovim/display/ 配下に2ファイル作成完了
-- [ ] neovim/dictionary.ts 作成完了
-- [ ] 全テストパス
-- [ ] deno check 100%パス
+- [x] neovim/core/ 配下に3ファイル作成完了
+- [x] neovim/display/ 配下に2ファイル作成完了
+- [x] neovim/dictionary.ts 作成完了
+- [x] 全テストパス
+- [x] deno check 100%パス
 
 ---
 
@@ -1014,9 +1014,14 @@ deno test tests/integration/initializer.test.ts
 
 #### Phase 4 完了基準
 
-- [ ] integration/ 配下に5ファイル作成完了
-- [ ] 全テストパス
-- [ ] deno check 100%パス
+- [x] integration/ 配下に5ファイル作成完了
+  - [x] environment-detector.ts
+  - [x] implementation-selector.ts
+  - [x] command-registry.ts
+  - [x] mapping-manager.ts
+  - [x] initializer.ts
+- [x] 全テストパス
+- [x] deno check 100%パス
 
 ---
 
@@ -1083,11 +1088,11 @@ deno test tests/main.test.ts
 
 #### Phase 5 完了基準
 
-- [ ] main.ts 書き換え完了
+- [ ] main.ts 書き換え完了（進行中）
 - [ ] plugin/hellshake-yano-unified.vim 更新完了
 - [ ] Vim環境での動作確認完了
 - [ ] Neovim環境での動作確認完了
-- [ ] 全テストパス
+- [ ] 全テストパス（Phase 2完了待ち）
 
 ---
 
@@ -1156,7 +1161,7 @@ deno test --coverage
 
 #### Phase 6 完了基準
 
-- [ ] phase-b*ディレクトリ完全削除
+- [ ] phase-b*ディレクトリ完全削除（Phase 2完了後に実施）
 - [ ] テストディレクトリ再編成完了
 - [ ] 全テストパス（カバレッジ90%以上）
 - [ ] ドキュメント更新完了

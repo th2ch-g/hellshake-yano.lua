@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { extractWords } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 Deno.test("全角文字を含む行の正確な位置計算", () => {
   // 実際の問題のテキスト

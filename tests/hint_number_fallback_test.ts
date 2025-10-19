@@ -11,7 +11,7 @@ import {
   assignHintsToWords,
   generateHints,
   type HintKeyConfig,
-} from "../denops/hellshake-yano/hint.ts";
+} from "../denops/hellshake-yano/neovim/core/hint.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 describe("Hint Generation with Number Fallback (Approach A)", () => {

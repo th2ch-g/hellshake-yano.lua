@@ -20,7 +20,7 @@ import {
 } from "../denops/hellshake-yano/config.ts";
 import {
   assignHintsToWords,
-} from "../denops/hellshake-yano/hint.ts";
+} from "../denops/hellshake-yano/neovim/core/hint.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 // ========================================

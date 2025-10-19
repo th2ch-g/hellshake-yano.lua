@@ -9,7 +9,7 @@
  */
 
 import { assertEquals, assertExists } from "jsr:@std/assert";
-import { TinySegmenterWordDetector } from "../denops/hellshake-yano/word.ts";
+import { TinySegmenterWordDetector } from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { DetectionContext } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("Japanese Word Granularity - Phase 1 RED Tests", async (t) => {

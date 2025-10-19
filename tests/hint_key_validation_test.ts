@@ -10,7 +10,7 @@
  */
 
 import { assertEquals } from "@std/assert";
-import { validateHintKeyConfig } from "../denops/hellshake-yano/hint.ts";
+import { validateHintKeyConfig } from "../denops/hellshake-yano/neovim/core/hint.ts";
 import type { HintKeyConfig } from "../denops/hellshake-yano/types.ts";
 
 // ===== RED PHASE: 記号文字バリデーションテスト =====

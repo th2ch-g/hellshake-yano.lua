@@ -13,7 +13,7 @@ import {
   generateHints,
   type HintKeyConfig,
   validateHintKeyConfig,
-} from "../denops/hellshake-yano/hint.ts";
+} from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 describe("Integration: Hint Groups Feature", () => {
   describe("Configuration and Hint Generation", () => {

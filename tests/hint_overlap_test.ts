@@ -90,7 +90,7 @@ import {
   shouldSkipHintForOverlap,
   assignHintsToWords,
   generateHints
-} from "../denops/hellshake-yano/hint.ts";
+} from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 // ===== Test Data =====
 

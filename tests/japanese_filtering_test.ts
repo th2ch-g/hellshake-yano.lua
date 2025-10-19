@@ -7,7 +7,7 @@
 
 import { assertEquals } from "@std/assert";
 import { beforeEach, describe, it } from "@std/testing/bdd";
-import { detectWordsWithConfig, extractWords, resetWordDetectionManager } from "../denops/hellshake-yano/word.ts";
+import { detectWordsWithConfig, extractWords, resetWordDetectionManager } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 describe("Japanese Filtering Tests", () => {
   describe("extractWords with Japanese exclusion", () => {

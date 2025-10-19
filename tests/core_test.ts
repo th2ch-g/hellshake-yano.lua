@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertExists, assertThrows } from "https://deno.land/std@0.220.1/assert/mod.ts";
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 import type { Config, Word, HintMapping, HighlightColor } from "../denops/hellshake-yano/types.ts";
 import type { Denops } from "@denops/std";
 import { MockDenops } from "./helpers/mock.ts";

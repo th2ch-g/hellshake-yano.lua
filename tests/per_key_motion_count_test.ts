@@ -10,7 +10,7 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
 import type { Config } from "../denops/hellshake-yano/types.ts";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
-import { Core } from "../denops/hellshake-yano/core.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
 
 // Test helper to create minimal config with required fields
 function createTestConfig(partial: Partial<Config>): Config {

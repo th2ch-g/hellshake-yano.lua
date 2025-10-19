@@ -8,7 +8,7 @@ import {
   assertExists,
   assertRejects,
 } from "https://deno.land/std@0.220.0/assert/mod.ts";
-import { RegexWordDetector, type WordDetectionConfig } from "../denops/hellshake-yano/word.ts";
+import { RegexWordDetector, type WordDetectionConfig } from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { DetectionContext, Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("RegexWordDetector Refactoring Tests", async (t) => {

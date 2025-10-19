@@ -14,8 +14,8 @@ import type { Config } from "../types/config.ts";
 import type { HintMapping } from "../types/hint.ts";
 import type { DenopsWord as Word } from "../types/word.ts";
 import { LRUCache } from "../cache/unified-cache.ts";
-import { detectWordsWithManager } from "../../word.ts";
-import { generateHints } from "../../hint.ts";
+import { detectWordsWithManager } from "../../neovim/core/word.ts";
+import { generateHints } from "../../neovim/core/hint.ts";
 
 /**
  * パフォーマンスメトリクス

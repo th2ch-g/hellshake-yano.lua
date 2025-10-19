@@ -7,7 +7,7 @@ import { assertEquals } from "@std/assert";
 import {
   type ExtractWordsOptions,
   extractWords,
-} from "../denops/hellshake-yano/word.ts";
+} from "../denops/hellshake-yano/neovim/core/word.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 Deno.test("日本語1文字単語の検出", async (t) => {

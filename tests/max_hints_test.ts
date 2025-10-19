@@ -6,7 +6,7 @@
 
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { generateHints, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
+import { generateHints, type HintKeyConfig } from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 describe("Max Hints and Capacity Calculation", () => {
   describe("Hint capacity with custom keys", () => {

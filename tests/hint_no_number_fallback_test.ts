@@ -8,7 +8,7 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { generateHints, type HintKeyConfig } from "../denops/hellshake-yano/hint.ts";
+import { generateHints, type HintKeyConfig } from "../denops/hellshake-yano/neovim/core/hint.ts";
 
 describe("Hint Generation Without Number Fallback", () => {
   describe("Strict single/multi char keys separation", () => {

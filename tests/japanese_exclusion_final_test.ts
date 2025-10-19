@@ -7,7 +7,7 @@ import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 
 // Import the actual word detection function
-import { extractWords } from "../denops/hellshake-yano/word.ts";
+import { extractWords } from "../denops/hellshake-yano/neovim/core/word.ts";
 
 describe("Japanese Exclusion Final Fix", () => {
   describe("extractWords function with excludeJapanese", () => {

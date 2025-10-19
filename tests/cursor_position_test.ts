@@ -6,7 +6,7 @@
 
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { assignHintsToWords } from "../denops/hellshake-yano/hint.ts";
+import { assignHintsToWords } from "../denops/hellshake-yano/neovim/core/hint.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 describe("Process1: Cursor Position Retrieval and Passing", () => {

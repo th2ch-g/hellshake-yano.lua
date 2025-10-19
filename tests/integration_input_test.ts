@@ -1,7 +1,7 @@
 import { assertEquals, assertExists, assertRejects } from "@std/assert";
 import type { Denops } from "@denops/std";
 import { MockDenops } from "./helpers/mock.ts";
-import { assignHintsToWords, generateHints } from "../denops/hellshake-yano/hint.ts";
+import { assignHintsToWords, generateHints } from "../denops/hellshake-yano/neovim/core/hint.ts";
 import type { Word } from "../denops/hellshake-yano/types.ts";
 
 /**
