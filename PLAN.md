@@ -1,493 +1,625 @@
-# title: Phase B-4: 統合エントリーポイント
+# title: Phase C-1: 共通レイヤーの構築（TDD方式）
 
 ## 概要
-- Denops版とVimScript版を統合し、環境に応じて最適な実装を自動選択する仕組みを構築
-- 設定の自動マイグレーション機能により、既存ユーザーの設定を新形式に移行
-- 統一されたコマンドとキーマッピングで、両実装を透過的に利用可能にする
+- Phase B-1～B-4で実装された共通処理を`denops/hellshake-yano/common/`レイヤーに統合します
+- 型定義の一元化、ユーティリティの統合、キャッシュシステムの統合、設定管理の更新を実施
+- TDD（Test-Driven Development）方式で、各サブプロセスごとにRED→GREEN→REFACTOR→CHECKサイクルを実施
+- phase-b{1,2,3,4}/ディレクトリの重複コードを整理し、保守性の高いコードベースを実現
 
 ### goal
-- ユーザーが環境（Denops有無）を意識せずにプラグインを利用できる
-- 既存の設定（g:hellshake_yano_vim_config）が自動的に新形式（g:hellshake_yano）に移行される
-- VimでもNeovimでも同じコマンド・キーマッピングで動作する
+- **開発者視点**: 環境別レイヤー構造の基盤となる共通レイヤーが完成し、vim/とneovim/レイヤーの実装が容易になる
+- **保守性**: 型定義とユーティリティが一元化され、バグ修正と機能追加が効率化される
+- **テスト品質**: 全モジュールにテストが存在し、カバレッジ90%以上を達成
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
-- **ARCHITECTURE_B.md の基本ルールを厳守**:
-  - VimScript実装が正規実装（改善よりも一致性優先）
-  - 環境別処理の完全分離（Vim/Neovim）
-  - 既存実装の副作用チェック
-- **TDD開発の徹底**:
-  - RED→GREEN→REFACTORサイクルを厳守
-  - テストファースト（テストを書いてから実装）
-  - 最小限の実装から段階的に機能追加
+- **既存ファイルを削除しない**: phase-b*/と既存ファイルは残したまま、新しいcommon/を作成
+- **TDDサイクルの厳守**: 各サブプロセスで必ずRED→GREEN→REFACTOR→CHECKを実施
+- **段階的な移行**: 各サブプロセス完了後に必ず`deno check`と`deno test`を実行
+- **既存テストの保護**: Phase B実装の既存テストが破壊されないこと
 
 ## 開発のゴール
-- Denops環境では高機能版（TypeScript実装）を使用
-- Denops不在時は自動的にPure VimScript版にフォールバック
-- 既存ユーザーの設定を壊さない完全な後方互換性
-- テストケース80個以上、カバレッジ90%以上
+- Phase B-1～B-4の共通処理を`common/`レイヤーに統合
+- 型定義を機能別に分割し、一元管理
+- 重複するcommon-base.ts、types.ts、config-migrator.tsを統合
+- 全モジュールに対するユニットテストを作成
+- deno check 100%パス、deno lint 警告0個を達成
 
 ## 実装仕様
 
-### 実装範囲
+### ディレクトリ構造
 
 ```
-denops/hellshake-yano/phase-b4/
-├── environment-detector.ts          # 環境判定モジュール
-├── implementation-selector.ts       # 実装選択ロジック
-├── config-mapper.ts                 # 設定変換マッパー
-├── config-migrator.ts              # 設定マイグレーター
-├── command-registry.ts             # コマンド登録システム
-├── mapping-manager.ts              # キーマッピング管理
-└── initializer.ts                  # 初期化オーケストレーター
-
-plugin/
-└── hellshake-yano-unified.vim      # 統合エントリーポイント
-
-tests/phase-b4/
-├── environment-detector.test.ts     # 環境判定テスト（8-10 steps）
-├── implementation-selector.test.ts  # 実装選択テスト（6-8 steps）
-├── config-mapper.test.ts           # 設定変換テスト（10-12 steps）
-├── config-migrator.test.ts         # マイグレーションテスト（8-10 steps）
-├── command-registry.test.ts        # コマンド登録テスト（8-10 steps）
-├── mapping-manager.test.ts         # マッピングテスト（10-12 steps）
-├── initializer.test.ts             # 初期化テスト（10-12 steps）
-├── integration.test.ts             # 統合テスト（10-15 steps）
-└── e2e.test.ts                     # E2Eテスト（10-15 steps）
+denops/hellshake-yano/
+├── common/                       # 新規作成
+│   ├── types/                    # 型定義の一元管理
+│   │   ├── config.ts             # Config型
+│   │   ├── word.ts               # Word型、座標系変換
+│   │   ├── hint.ts               # Hint型
+│   │   ├── state.ts              # MotionState, VisualState
+│   │   ├── vimscript.ts          # VimScript型
+│   │   └── index.ts              # re-export
+│   ├── utils/                    # ユーティリティ
+│   │   ├── error-handler.ts      # エラーハンドリング
+│   │   ├── logger.ts             # ログ出力
+│   │   ├── validator.ts          # バリデーション
+│   │   ├── base.ts               # 共通基底処理
+│   │   ├── side-effect.ts        # 副作用管理
+│   │   └── performance.ts        # パフォーマンス計測
+│   ├── cache/                    # キャッシュシステム
+│   │   └── unified-cache.ts      # 統合キャッシュ
+│   └── config.ts                 # 設定管理
+│
+tests/
+└── common/                       # 新規作成
+    ├── types/
+    │   ├── config.test.ts
+    │   ├── word.test.ts
+    │   ├── hint.test.ts
+    │   ├── state.test.ts
+    │   └── vimscript.test.ts
+    ├── utils/
+    │   ├── error-handler.test.ts
+    │   ├── logger.test.ts
+    │   ├── validator.test.ts
+    │   ├── base.test.ts
+    │   ├── side-effect.test.ts
+    │   └── performance.test.ts
+    ├── cache/
+    │   └── unified-cache.test.ts
+    └── config.test.ts
 ```
 
-### 環境判定と実装選択の仕様
+### TDDサイクル
 
-**環境判定ロジック**:
-1. `exists('g:loaded_denops')` でDenops存在チェック
-2. `denops#server#status()` で実行状態確認
-3. `has('nvim')` でエディタ種別判定
-4. ユーザー設定（`g:hellshake_yano_use_legacy`）による強制切り替え
+各サブプロセスで以下のサイクルを実施：
 
-**実装選択マトリクス**:
-| Denops状態 | エディタ | ユーザー設定 | 選択される実装 |
-|-----------|---------|-------------|--------------|
-| 利用可能   | Vim/Neovim | - | denops-unified |
-| 利用可能   | Vim/Neovim | legacy=true | vimscript-pure |
-| 停止/不在  | Vim | - | vimscript-pure |
-| 停止/不在  | Neovim | - | vimscript-pure（警告表示） |
+1. **RED（テスト作成）**: テストを先に書き、失敗することを確認
+2. **GREEN（最小実装）**: 最小限の実装でテストを通す
+3. **REFACTOR（リファクタリング）**: コードを整理・最適化
+4. **CHECK（検証）**: `deno check`と`deno test`を実行
 
-### 設定マイグレーションの仕様
+### 完了基準
 
-**変換マッピング**:
-```typescript
-const CONFIG_MAP = {
-  'hint_chars': { key: 'markers', transform: (v: string) => v.split("") },
-  'motion_threshold': { key: 'motionCount', transform: (v: number) => v },
-  'motion_timeout_ms': { key: 'motionTimeout', transform: (v: number) => v },
-  'motion_keys': { key: 'countedMotions', transform: (v: string[]) => v },
-  'motion_enabled': { key: 'motionCounterEnabled', transform: (v: boolean) => v },
-  'visual_mode_enabled': { key: 'visualModeEnabled', transform: (v: boolean) => v },
-  'max_hints': { key: 'maxHints', transform: (v: number) => v },
-  'min_word_length': { key: 'defaultMinWordLength', transform: (v: number) => v },
-  'use_japanese': { key: 'useJapanese', transform: (v: boolean) => v },
-  'debug_mode': { key: 'debugMode', transform: (v: boolean) => v },
-}
-```
+#### 定量指標
+- [x] `common/types/` 配下に6ファイル作成完了
+- [x] `common/utils/` 配下に6ファイル作成完了
+- [x] `common/cache/` 配下に1ファイル作成完了
+- [x] `common/config.ts` 作成完了
+- [x] テスト15ファイル作成完了
+- [x] 全テストパス（100%）
+- [x] `deno check denops/hellshake-yano/common/**/*.ts` 100%パス
+- [x] `deno lint denops/hellshake-yano/common/**/*.ts` 警告0個
+
+#### 定性指標
+- [x] 既存テストが破壊されていない（Phase B実装のテストもパス）
+- [x] インポートパスが正しい（相対パスで`../../common/`）
+- [x] JSDocコメントが充実している
+- [x] 型安全性が担保されている
 
 ## 生成AIの学習用コンテキスト
 
-### Phase B-3実装（統合基盤）
-- `denops/hellshake-yano/phase-b1/vim-bridge.ts`
-  - VimBridgeクラス: Denopsブリッジの基本実装
-- `denops/hellshake-yano/phase-b1/config-unifier.ts`
-  - ConfigUnifierクラス: 設定統合の既存実装
+### 参考ドキュメント
+- `ARCHITECTURE_C.md`
+  - Phase Cの全体像と統合方針を理解する
+  - 現状分析（Phase B実装の構造）を参照
+  - 統合アーキテクチャ設計を理解
+
+### 既存実装（Phase B）
+- `denops/hellshake-yano/phase-b2/vimscript-types.ts`
+  - VimScriptWord型、DenopsWord型、座標系変換関数
+- `denops/hellshake-yano/phase-b3/types.ts`
+  - MotionState型、VisualState型、各種Result型
+- `denops/hellshake-yano/phase-b4/types.ts`
+  - ImplementationChoice型、CommandInfo型、MappingConfig型
+- `denops/hellshake-yano/phase-b3/common-base.ts`
+  - handleError、logMessage、バリデーション関数（Phase B-3版）
+- `denops/hellshake-yano/phase-b4/common-base.ts`
+  - handleError、logMessage、バリデーション関数（Phase B-4版、withFallback追加）
 - `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
-  - SideEffectCheckerクラス: 副作用管理
+  - SideEffectCheckerクラス、副作用管理
 
-### VimScript側実装（参考）
-- `autoload/hellshake_yano_vim/core.vim`
-  - init()関数: VimScript版の初期化ロジック
-- `autoload/hellshake_yano/denops.vim`
-  - call_function(): Denops呼び出しパターン
-- `plugin/hellshake-yano.vim`
-  - 既存のプラグインエントリーポイント
-
-### 設定ファイル
+### 既存実装（メインコードベース）
+- `denops/hellshake-yano/types.ts`
+  - 既存の型定義（305行）
 - `denops/hellshake-yano/config.ts`
-  - Config型定義とDEFAULT_CONFIG
+  - 既存の設定管理（445行）
+- `denops/hellshake-yano/cache.ts`
+  - 既存のキャッシュシステム（146行）
+- `denops/hellshake-yano/performance.ts`
+  - パフォーマンス計測（61行）
+- `denops/hellshake-yano/validation.ts`
+  - バリデーション機能（126行）
+
+### 既存テスト
+- `tests/phase-b2/vimscript-types.test.ts`
+  - 座標系変換のテストケース
+- `tests/phase-b4/common-base.test.ts`
+  - ユーティリティ関数のテストケース
+- `tests/phase-b1/side-effect-checker.test.ts`
+  - 副作用管理のテストケース
 
 ## Process
 
-### process1: 環境判定と実装選択システム（2日）
+### process1: 型定義の統合と分割（2.5時間）
 
-#### sub1: environment-detector.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/environment-detector.ts`
-@ref: `denops/hellshake-yano/phase-b1/vim-bridge.ts`
+#### sub1: common/types/config.ts（30分）
+@target: `denops/hellshake-yano/common/types/config.ts`
+@ref:
+- `denops/hellshake-yano/config.ts`
+- `denops/hellshake-yano/phase-b3/types.ts`（SystemConfig型）
 
-- [x] REDフェーズ: テストファースト実装
-  - Denops利用可能判定テスト（3ケース）
-  - エディタ種別判定テスト（2ケース）
-  - バージョン情報取得テスト（2ケース）
-- [x] GREENフェーズ: 最小実装
-  - EnvironmentDetectorクラスの作成
-  - isDenopsAvailable()メソッド
-  - getEditorInfo()メソッド
-- [x] REFACTORフェーズ: 最適化
-  - エラーハンドリングの改善
-  - キャッシュ機構の追加
+**RED（テスト作成）**:
+- [x] `tests/common/types/config.test.ts`を作成
+- [x] Config型の構造検証テスト
+- [x] DEFAULT_CONFIGの存在確認テスト
+- [x] 各フィールドの型チェックテスト
+- [x] テストが失敗することを確認: `deno test tests/common/types/config.test.ts`
 
-#### sub2: implementation-selector.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/implementation-selector.ts`
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/types/config.ts`を作成
+- [x] 既存config.tsからConfig型を抽出
+- [x] phase-b3のSystemConfigを統合
+- [x] DEFAULT_CONFIGを定義
+- [x] テストが通ることを確認: `deno test tests/common/types/config.test.ts`
 
-- [x] REDフェーズ: テストファースト実装
-  - 実装選択ロジックテスト（4ケース）
-  - ユーザー設定優先度テスト（2ケース）
-- [x] GREENフェーズ: 最小実装
-  - ImplementationSelectorクラスの作成
-  - select()メソッド（選択マトリクス実装）
-- [x] REFACTORフェーズ: 最適化
-  - 選択ロジックの明確化
-  - 警告メッセージの統一
+**REFACTOR（リファクタリング）**:
+- [x] JSDocコメント追加
+- [x] 型の整理（オプショナルフィールドの明示化）
+- [x] 設定項目のグループ化
 
-### process1完了：✅
-
-### process2: 設定マイグレーションシステム（2日）
-
-#### sub1: config-mapper.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/config-mapper.ts`
-@ref: `denops/hellshake-yano/phase-b1/config-unifier.ts`
-
-- [x] REDフェーズ: テストファースト実装
-  - 基本的な設定変換テスト（5ケース）
-  - 特殊な値の変換テスト（3ケース）
-  - 不明なキーの処理テスト（2ケース）
-- [x] GREENフェーズ: 最小実装
-  - ConfigMapperクラスの作成
-  - mapFromVimScript()メソッド
-  - 変換テーブル（MAPPING_TABLE）の実装
-- [x] REFACTORフェーズ: 最適化
-  - 型安全性の向上
-  - 変換ロジックの汎用化
-
-#### sub2: config-migrator.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/config-migrator.ts`
-@ref: `denops/hellshake-yano/phase-b1/config-migrator.ts`
-
-- [x] REDフェーズ: テストファースト実装
-  - 旧設定のみ存在する場合のテスト（2ケース）
-  - 両設定が存在する場合のテスト（2ケース）
-  - 新設定のみ存在する場合のテスト（2ケース）
-  - エラーハンドリングテスト（2ケース）
-- [x] GREENフェーズ: 最小実装
-  - ConfigMigratorクラスの作成
-  - migrate()メソッド
-  - 警告メッセージ表示機能
-- [x] REFACTORフェーズ: 最適化
-  - 設定検出ロジックの改善
-  - バックアップ機能の追加
-
-### process2完了：✅
-
-### process3: コマンドと初期化システム（2日）
-
-#### sub1: command-registry.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/command-registry.ts`
-@ref: `autoload/hellshake_yano/denops.vim`
-
-- [x] REDフェーズ: テストファースト実装
-  - 統合版コマンド登録テスト（3ケース）
-  - VimScript版コマンド登録テスト（3ケース）
-  - コマンド重複チェックテスト（2ケース）
-- [x] GREENフェーズ: 最小実装
-  - CommandRegistryクラスの作成
-  - registerUnifiedCommands()メソッド
-  - registerVimScriptCommands()メソッド
-  - getRegisteredCommands()メソッド
-- [x] REFACTORフェーズ: 最適化
-  - コマンド定義の外部化
-  - エラーハンドリングの強化
-
-#### sub2: initializer.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/initializer.ts`
-
-- [x] REDフェーズ: テストファースト実装
-  - Denops環境での初期化テスト（3ケース）
-  - VimScript環境での初期化テスト（3ケース）
-  - エラー時のフォールバックテスト（4ケース）
-- [x] GREENフェーズ: 最小実装
-  - Initializerクラスの作成
-  - initialize()メソッド（初期化フロー）
-  - 各ステップの実装（環境判定→設定移行→実装選択→登録）
-- [x] REFACTORフェーズ: 最適化
-  - 初期化フローの最適化
-  - ステップ間の依存関係整理
-
-### process3完了：✅
-
-### process4: キーマッピング統合（1日）
-
-#### sub1: mapping-manager.ts のTDD実装
-@target: `denops/hellshake-yano/phase-b4/mapping-manager.ts`
-@ref: `autoload/hellshake_yano_vim/motion.vim`
-
-- [x] REDフェーズ: テストファースト実装
-  - モーション検出マッピングテスト（4ケース）
-  - ビジュアルモードマッピングテスト（3ケース）
-  - マッピング衝突検出テスト（3ケース）
-- [x] GREENフェーズ: 最小実装
-  - MappingManagerクラスの作成
-  - setupMotionMappings()メソッド
-  - setupVisualMappings()メソッド
-  - getActiveMappings()メソッド
-- [x] REFACTORフェーズ: 最適化
-  - マッピング定義の外部化
-  - 既存マッピングの保存・復元
-
-#### sub2: hellshake-yano-unified.vim の実装
-@target: `plugin/hellshake-yano-unified.vim`
-@ref: `plugin/hellshake-yano.vim`
-
-- [x] VimScript側のエントリーポイント実装
-  - s:select_implementation()関数（実装選択）
-  - s:initialize()関数（初期化）
-  - s:initialize_unified()関数（統合版初期化）
-  - s:migrate_config()関数（設定マイグレーション）
-- [x] マッピング設定関数
-  - s:setup_unified_mappings()関数
-  - s:handle_motion()関数（モーションハンドラー）
-- [x] 自動ロード設定
-  - augroup定義
-  - VimEnter時の自動初期化
-
-### process4完了：✅
-
-### process5: 統合テストとE2E（2日）
-
-#### sub1: integration.test.ts の実装
-@target: `tests/phase-b4/integration.test.ts`
-
-- [x] 完全な初期化フロー（Denops環境）テスト（5ステップ）
-  - 環境判定
-  - 設定マイグレーション
-  - 実装選択
-  - コマンド登録
-  - マッピング設定
-- [x] フォールバックフロー（Denops不可）テスト（5ステップ）
-  - 環境判定
-  - VimScript版へのフォールバック
-  - 警告メッセージ確認
-- [x] エラーリカバリーテスト（5ステップ）
-  - 部分的な初期化失敗時の動作
-
-#### sub2: e2e.test.ts の実装
-@target: `tests/phase-b4/e2e.test.ts`
-
-- [x] 新規ユーザーの初回起動シナリオ（5ステップ）
-  - プラグインロード
-  - 自動初期化
-  - コマンド実行
-  - ヒント表示確認
-- [x] 既存ユーザーの設定移行シナリオ（5ステップ）
-  - 旧設定の読み込み
-  - 自動マイグレーション
-  - 新設定の確認
-  - 機能動作確認
-- [x] Denops停止時のフォールバックシナリオ（5ステップ）
-  - Denops停止検出
-  - VimScript版への切り替え
-  - 機能の継続動作確認
-
-### process5完了：✅
-
-### process10: ユニットテスト
-各processで実装したテストの総合確認
-
-- [x] 全テストケース数: 80個以上達成
-  - environment-detector: 8-10 steps
-  - implementation-selector: 6-8 steps
-  - config-mapper: 10-12 steps
-  - config-migrator: 8-10 steps
-  - command-registry: 8-10 steps
-  - mapping-manager: 10-12 steps
-  - initializer: 10-12 steps
-  - integration: 10-15 steps
-  - e2e: 10-15 steps
-- [x] テストカバレッジ: 90%以上
-- [x] 型チェック: deno check 100%パス
-- [x] リンター: deno lint パス
-- [x] フォーマット: deno fmt 準拠
-
-### process10完了：✅
-
-### process50: フォローアップ
-実装後の仕様変更・追加要件
-
-#### sub2: Denopsチャンネル初期化タイミングエラー修正
-@target: `plugin/hellshake-yano-unified.vim`
-@priority: 高（起動時エラー）
-
-**エラー内容:**
-```
-Error in VimEnter Autocommands for "*"..function <SNR>159_initialize[5]..<SNR>159_initialize_unified[2]..denops#notify[1]..denops#_internal#server#chan#notify:line 4:
-E605: Exception not caught: [denops] Channel is not ready yet
-```
-
-**調査結果:**
-- **根本原因**: VimEnterイベント時に`denops#notify()`を即座に呼び出しているが、Denopsサーバーの起動が完了しておらず、RPC通信チャネルがまだ準備できていない
-- **発生箇所**: `plugin/hellshake-yano-unified.vim`の`s:initialize_unified()`関数（75-78行目）
-- **問題**: チャネルのready状態確認が不足している
-
-**解決策の選択肢:**
-1. **オプション1: 同期型待機**
-   - `denops#plugin#wait()`を使用
-   - シンプルだがVimEnter中にブロッキングする
-
-2. **オプション2: 非同期型待機（採用）** ✅
-   - `denops#plugin#wait_async()`を使用
-   - ノンブロッキングでDenops準備完了後に自動初期化
-   - 最も安全でユーザー体験が良い
-
-3. **オプション3: 遅延初期化**
-   - VimEnterより後のイベントで初期化
-   - 複雑になる可能性がある
-
-**採用理由（オプション2）:**
-- VimEnter中にブロッキングしない
-- Denopsが準備完了後に自動的に初期化される
-- エラーハンドリングがシンプル
-- 他のプラグイン（kensaku.vim等）でも実績のある方法
-
-**修正内容:**
-- [x] `s:initialize_unified()` 関数の改修
-  - `denops#plugin#wait_async('hellshake-yano', function('s:initialize_unified_callback'))`で非同期待機を追加
-  - Denops準備完了後にコールバックで初期化処理を実行
-  - タイムアウト・エラー時のtry-catchでフォールバック処理を追加
-  - **重要**: 第1引数はプラグイン名（文字列）、第2引数はfunction()で関数参照を渡す
-
-- [x] `s:handle_motion()` 関数の改修
-  - `denops#notify()`呼び出し前にチャネル状態を確認
-  - エラーハンドリングを強化
-
-- [x] `s:show_hints_visual()` 関数の改修
-  - `denops#notify()`呼び出し前にチャネル状態を確認
-  - エラーハンドリングを強化
-
-- [x] フォールバック関数の追加
-  - `s:initialize_fallback()`を追加
-  - Denops準備失敗時の処理を実装
-
-**検証結果:**
-- ✅ `vim`コマンドで起動してE605エラーが出ないことを確認済み
-- ✅ `nvim`コマンドで起動してE729エラーが出ないことを確認済み（引数修正後）
-- ✅ Denops機能が正常に動作することを確認済み
-- ✅ フォールバック処理が適切に動作することを確認済み
-
-**修正履歴:**
-- 初回実装: ラムダ式で実装 → Neovimで E729 "Using a Funcref as a String" エラー
-- 修正1: `function('s:initialize_unified_callback')`で関数参照を渡す形式に変更 → E729解消
-- 修正2: `unifyConfig` → `updateConfig` に変更 → TypeError解消（存在しないAPI呼び出しエラー）
-  - `main.ts`に`unifyConfig`が存在しないため、既存の`updateConfig` APIを使用
-  - 設定マージロジックをVimScript側で実装（`extend()`使用）
-- 最終修正: Vim/Neovim両対応完了、すべてのエラー解消
-
-### process100: リファクタリング
-
-- [x] コード品質向上
-  - 共通処理の抽出
-  - エラーハンドリングの統一
-  - 型定義の最適化
-- [x] モジュール構造の見直し
-  - 依存関係の整理
-  - インターフェースの明確化
-- [x] テスタビリティの向上
-  - モック化の容易性改善
-  - テストヘルパーの充実
-
-### process100完了：✅
-
-### process200: ドキュメンテーション
-
-- [ ] ARCHITECTURE_B.md の更新
-  - Phase B-4完了レポートの追加
-  - 実装進捗状況テーブルの更新（B-4を✅に変更）
-  - 成功基準の達成状況記録
-- [ ] README.md の更新
-  - インストール手順の更新
-  - 設定マイグレーションガイド
-  - トラブルシューティング追加
-- [ ] ユーザーガイドの作成
-  - 環境別セットアップ手順
-  - 設定項目の説明
-  - よくある質問（FAQ）
-- [ ] 開発者ドキュメント
-  - アーキテクチャ図の作成
-  - 拡張ポイントの説明
-  - コントリビューションガイド
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/types/config.ts`
+- [x] `deno test tests/common/types/config.test.ts`
 
 ---
 
-## 成功基準
+#### sub2: common/types/word.ts（30分）
+@target: `denops/hellshake-yano/common/types/word.ts`
+@ref:
+- `denops/hellshake-yano/phase-b2/vimscript-types.ts`
+- `denops/hellshake-yano/phase-b3/types.ts`（DenopsWord型）
 
-### 定量指標
-- テストケース: **80個以上**
-- テストカバレッジ: **90%以上**
-- 型チェック: **deno check 100%パス**
-- リンター警告: **0個**
-- VimScript互換: **100%動作**
-- 設定マイグレーション: **成功率100%**
-- パフォーマンス:
-  - 初期化時間 < 100ms
-  - コマンド実行レイテンシ < 50ms
-  - メモリ使用量 < 10MB増
+**RED（テスト作成）**:
+- [x] `tests/common/types/word.test.ts`を作成
+- [x] DenopsWord型の検証テスト
+- [x] VimScriptWord型の検証テスト
+- [x] denopsToVimScript変換関数のテスト（1-indexed ↔ 0-indexed変換）
+- [x] vimScriptToDenops変換関数のテスト
+- [x] エッジケース（col=0, lnum=0）のテスト
+- [ ] 参考: `tests/phase-b2/vimscript-types.test.ts`
 
-### 定性指標
-- **完全な後方互換性**: 既存ユーザーの設定が壊れない
-- **透過的な実装切り替え**: ユーザーが実装の違いを意識しない
-- **エラーリカバリー**: 部分的な失敗でも最大限の機能を提供
-- **明確な警告メッセージ**: 問題発生時にユーザーが対処方法を理解できる
-- **保守性の高さ**: 新機能追加が容易な構造
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/types/word.ts`を作成
+- [x] VimScriptWord型を定義（text, lnum, col, end_col）
+- [x] DenopsWord型を定義（text, line, col）
+- [x] denopsToVimScript関数を実装
+- [x] vimScriptToDenops関数を実装
 
-## スケジュール
+**REFACTOR（リファクタリング）**:
+- [x] 型ガード関数の追加（isVimScriptWord, isDenopsWord）
+- [x] エラーハンドリング（不正な座標値の検出）
+- [x] JSDocコメント追加
 
-| Process | 内容 | 所要時間 | 累計 | 優先度 |
-|---------|------|---------|------|--------|
-| process1 | 環境判定と実装選択 | 2.0日 | 2.0日 | 高 |
-| process2 | 設定マイグレーション | 2.0日 | 4.0日 | 高 |
-| process3 | コマンドと初期化 | 2.0日 | 6.0日 | 高 |
-| process4 | キーマッピング統合 | 1.0日 | 7.0日 | 中 |
-| process5 | 統合テストとE2E | 2.0日 | 9.0日 | 高 |
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/types/word.ts`
+- [x] `deno test tests/common/types/word.test.ts`
 
-**合計**: 9日（TDDによる品質重視の開発）
+---
 
-## リスク管理
+#### sub3: common/types/hint.ts（20分）
+@target: `denops/hellshake-yano/common/types/hint.ts`
+@ref: `denops/hellshake-yano/types.ts`
 
-### 技術的リスク
-1. **VimScript側のテスト困難性**
-   - 対策: TypeScript側で完全にモック化してテスト
-   - VimScript部分は最小限に留める
+**RED（テスト作成）**:
+- [x] `tests/common/types/hint.test.ts`を作成
+- [x] Hint型の検証テスト
+- [x] HintMapping型の検証テスト
+- [x] ヒントキーの生成テスト
 
-2. **環境依存の問題**
-   - 対策: 環境判定ロジックを独立させて徹底的にテスト
-   - フォールバック機構を確実に実装
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/types/hint.ts`を作成
+- [x] 既存types.tsからHint関連型を抽出
+- [x] Hint型を定義
+- [x] HintMapping型を定義
 
-3. **設定マイグレーションの複雑性**
-   - 対策: 変換ロジックを単純化
-   - 段階的な移行を可能にする
+**REFACTOR（リファクタリング）**:
+- [x] JSDocコメント追加
+- [x] 型の整理
 
-### 運用リスク
-1. **既存ユーザーへの影響**
-   - 対策: 設定のバックアップ機能
-   - ロールバック手順の提供
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/types/hint.ts`
+- [x] `deno test tests/common/types/hint.test.ts`
 
-2. **パフォーマンス劣化**
-   - 対策: 遅延初期化の実装
-   - 不要な処理のスキップ
+---
 
-## 次フェーズへの引き継ぎ
+#### sub4: common/types/state.ts（20分）
+@target: `denops/hellshake-yano/common/types/state.ts`
+@ref: `denops/hellshake-yano/phase-b3/types.ts`
 
-Phase B-4完了により、Phase B全体が完成：
-- 統一されたプラグイン体験の実現
-- VimとNeovimの両環境での最適な動作
-- 日本語対応を含む高度な機能の提供
-- 完全な後方互換性の維持
+**RED（テスト作成）**:
+- [x] `tests/common/types/state.test.ts`を作成
+- [x] MotionState型の検証テスト
+- [x] VisualState型の検証テスト
+- [x] HandleMotionResult型の検証テスト
 
-今後の拡張ポイント：
-- Phase C: 追加機能の実装（カスタムヒント、プラグイン連携等）
-- Phase D: パフォーマンス最適化とスケーラビリティ向上
-- Phase E: コミュニティ機能（テーマ、拡張API等）
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/types/state.ts`を作成
+- [x] MotionState型を定義
+- [x] VisualState型を定義
+- [x] HandleMotionResult型を定義
+
+**REFACTOR（リファクタリング）**:
+- [x] デフォルト値の定義（createDefaultMotionState関数）
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/types/state.ts`
+- [x] `deno test tests/common/types/state.test.ts`
+
+---
+
+#### sub5: common/types/vimscript.ts（15分）
+@target: `denops/hellshake-yano/common/types/vimscript.ts`
+@ref: `denops/hellshake-yano/phase-b2/vimscript-types.ts`
+
+**RED（テスト作成）**:
+- [x] `tests/common/types/vimscript.test.ts`を作成
+- [x] VimScript互換性型の検証テスト
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/types/vimscript.ts`を作成
+- [x] phase-b2/vimscript-types.tsからVimScript関連型を抽出
+  - ※VimScriptWord型はword.tsに統合済み
+
+**REFACTOR（リファクタリング）**:
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/types/vimscript.ts`
+- [x] `deno test tests/common/types/vimscript.test.ts`
+
+---
+
+#### sub6: common/types/index.ts（15分）
+@target: `denops/hellshake-yano/common/types/index.ts`
+
+**GREEN（re-export実装）**:
+- [x] `denops/hellshake-yano/common/types/index.ts`を作成
+- [x] すべての型定義ファイルをre-export
+  ```typescript
+  export * from "./config.ts";
+  export * from "./word.ts";
+  export * from "./hint.ts";
+  export * from "./state.ts";
+  export * from "./vimscript.ts";
+  ```
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/types/index.ts`
+- [x] `deno test tests/common/types/`（全型定義テストを一括実行）
+
+---
+
+### process2: ユーティリティの統合（2.5時間）
+
+#### sub1: common/utils/error-handler.ts（20分）
+@target: `denops/hellshake-yano/common/utils/error-handler.ts`
+@ref:
+- `denops/hellshake-yano/phase-b3/common-base.ts`（handleError関数）
+- `denops/hellshake-yano/phase-b4/common-base.ts`（ErrorHandleResult型）
+
+**RED（テスト作成）**:
+- [x] `tests/common/utils/error-handler.test.ts`を作成
+- [x] handleError関数のテスト（Error型入力）
+- [x] handleError関数のテスト（string型入力）
+- [x] ErrorResult型の検証テスト
+- [x] エラーメッセージフォーマットの検証テスト
+- [x] 参考: `tests/phase-b4/common-base.test.ts`
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/utils/error-handler.ts`を作成
+- [x] ErrorResult型を定義
+- [x] ErrorHandleResult型を定義
+- [x] handleError関数を実装（phase-b3とphase-b4を統合）
+
+**REFACTOR（リファクタリング）**:
+- [x] 統一フォーマットの最適化
+- [x] スタックトレースの保持
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/utils/error-handler.ts`
+- [x] `deno test tests/common/utils/error-handler.test.ts`
+
+---
+
+#### sub2: common/utils/logger.ts（20分）
+@target: `denops/hellshake-yano/common/utils/logger.ts`
+@ref: `denops/hellshake-yano/phase-b3/common-base.ts`（logMessage関数）
+
+**RED（テスト作成）**:
+- [x] `tests/common/utils/logger.test.ts`を作成
+- [x] logMessage関数のテスト
+- [x] ログレベル別出力の検証（DEBUG, INFO, WARN, ERROR）
+- [x] タイムスタンプフォーマットの検証
+- [x] コンテキスト情報の検証
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/utils/logger.ts`を作成
+- [x] LogLevel型を定義（"DEBUG" | "INFO" | "WARN" | "ERROR"）
+- [x] logMessage関数を実装
+
+**REFACTOR（リファクタリング）**:
+- [x] ログ出力の最適化
+- [x] 設定によるログレベルフィルタリング
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/utils/logger.ts`
+- [x] `deno test tests/common/utils/logger.test.ts`
+
+---
+
+#### sub3: common/utils/validator.ts（25分）
+@target: `denops/hellshake-yano/common/utils/validator.ts`
+@ref:
+- `denops/hellshake-yano/validation.ts`
+- `denops/hellshake-yano/phase-b3/common-base.ts`（バリデーション関数）
+
+**RED（テスト作成）**:
+- [x] `tests/common/utils/validator.test.ts`を作成
+- [x] validateRange関数のテスト（正常値、境界値、異常値）
+- [x] validateNonEmpty関数のテスト（空文字列、null、undefined）
+- [x] validateInList関数のテスト（含まれる値、含まれない値）
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/utils/validator.ts`を作成
+- [x] ValidationResult型を定義
+- [x] validateRange関数を実装
+- [x] validateNonEmpty関数を実装
+- [x] validateInList関数を実装
+- [x] 既存validation.tsから必要な関数を移行
+
+**REFACTOR（リファクタリング）**:
+- [x] 関数の統一化（phase-b3版とphase-b4版のマージ）
+- [x] エラーメッセージの改善
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/utils/validator.ts`
+- [x] `deno test tests/common/utils/validator.test.ts`
+
+---
+
+#### sub4: common/utils/base.ts（30分）
+@target: `denops/hellshake-yano/common/utils/base.ts`
+@ref:
+- `denops/hellshake-yano/phase-b3/common-base.ts`
+- `denops/hellshake-yano/phase-b4/common-base.ts`（withFallback追加）
+
+**RED（テスト作成）**:
+- [x] `tests/common/utils/base.test.ts`を作成
+- [x] getSingletonInstance関数のテスト
+- [x] initializeState関数のテスト（ディープコピー検証）
+- [x] getStateCopy関数のテスト
+- [x] withFallback関数のテスト（正常系、異常系）
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/utils/base.ts`を作成
+- [x] StateBase型を定義
+- [x] getSingletonInstance関数を実装
+- [x] initializeState関数を実装
+- [x] getStateCopy関数を実装
+- [x] withFallback関数を実装（phase-b4から）
+
+**REFACTOR（リファクタリング）**:
+- [x] ジェネリクス型の最適化
+- [x] ディープコピーのパフォーマンス改善
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/utils/base.ts`
+- [x] `deno test tests/common/utils/base.test.ts`
+
+---
+
+#### sub5: common/utils/side-effect.ts（20分）
+@target: `denops/hellshake-yano/common/utils/side-effect.ts`
+@ref: `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
+
+**RED（テスト作成）**:
+- [x] `tests/common/utils/side-effect.test.ts`を作成
+- [x] SideEffectChecker.save()のテスト
+- [x] SideEffectChecker.restore()のテスト
+- [x] withSafeExecution()のテスト（正常系、異常系）
+- [x] 参考: `tests/phase-b1/side-effect-checker.test.ts`
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/utils/side-effect.ts`を作成
+- [x] SavedState型を定義
+- [x] SideEffectCheckerクラスを実装
+- [x] phase-b1/side-effect-checker.tsを移動
+
+**REFACTOR（リファクタリング）**:
+- [x] レジスタ保存・復元機能の追加（将来拡張用）
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/utils/side-effect.ts`
+- [x] `deno test tests/common/utils/side-effect.test.ts`
+
+---
+
+#### sub6: common/utils/performance.ts（15分）
+@target: `denops/hellshake-yano/common/utils/performance.ts`
+@ref: `denops/hellshake-yano/performance.ts`
+
+**RED（テスト作成）**:
+- [x] `tests/common/utils/performance.test.ts`を作成
+- [x] パフォーマンス計測機能のテスト
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/utils/performance.ts`を作成
+- [x] 既存performance.tsを移動
+
+**REFACTOR（リファクタリング）**:
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/utils/performance.ts`
+- [x] `deno test tests/common/utils/performance.test.ts`
+
+---
+
+### process3: キャッシュシステムの統合（2.5時間）
+
+#### sub1: common/cache/unified-cache.ts（2.5時間）
+@target: `denops/hellshake-yano/common/cache/unified-cache.ts`
+@ref:
+- `denops/hellshake-yano/cache.ts`
+- `denops/hellshake-yano/phase-b3/types.ts`（CacheStats型）
+
+**RED（テスト作成）**:
+- [x] `tests/common/cache/unified-cache.test.ts`を作成
+- [x] キャッシュの保存・取得テスト
+- [x] LRU（Least Recently Used）削除のテスト
+- [x] キャッシュクリアのテスト
+- [x] CacheStats取得のテスト（size, maxSize, hitRate）
+- [x] マルチキー対応のテスト
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/cache/unified-cache.ts`を作成
+- [x] 既存cache.tsを拡張
+- [x] CacheStats型を統合（phase-b3から）
+- [x] LRUキャッシュ機構を実装
+
+**REFACTOR（リファクタリング）**:
+- [x] LRUアルゴリズムの最適化（Map使用）
+- [x] ヒット率計算の最適化
+- [x] メモリ使用量の監視機能
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/cache/unified-cache.ts`
+- [x] `deno test tests/common/cache/unified-cache.test.ts`
+
+---
+
+### process4: 設定管理の更新（2.5時間）
+
+#### sub1: common/config.ts（2.5時間）
+@target: `denops/hellshake-yano/common/config.ts`
+@ref:
+- `denops/hellshake-yano/config.ts`
+- `denops/hellshake-yano/common/types/config.ts`
+
+**RED（テスト作成）**:
+- [x] `tests/common/config.test.ts`を作成
+- [x] 設定読み込みのテスト
+- [x] DEFAULT_CONFIGの検証テスト
+- [x] 設定マージのテスト（デフォルト + ユーザ設定）
+- [x] 不正な設定値のバリデーションテスト
+
+**GREEN（最小実装）**:
+- [x] `denops/hellshake-yano/common/config.ts`を作成
+- [x] 既存config.tsを拡張
+- [x] common/types/config.tsの型を使用
+- [x] 設定読み込み機能を実装
+
+**REFACTOR（リファクタリング）**:
+- [x] 設定マージロジックの最適化
+- [x] バリデーション強化
+- [x] JSDocコメント追加
+
+**CHECK（検証）**:
+- [x] `deno check denops/hellshake-yano/common/config.ts`
+- [x] `deno test tests/common/config.test.ts`
+
+---
+
+### process10: ユニットテスト
+
+各サブプロセスのRED（テスト作成）フェーズで実施済み。
+
+#### 完了基準
+- [x] すべてのテストファイルが作成されている（15ファイル）
+- [x] 全テストがパスする: `deno test tests/common/`
+- [x] テストカバレッジ90%以上: `deno coverage coverage/`
+
+---
+
+### process100: リファクタリング
+
+各サブプロセスのREFACTORフェーズで実施済み。
+
+#### 追加リファクタリング項目
+- [x] インポートパスの最適化
+- [x] 型定義の再整理（必要に応じて）
+- [x] コードの重複削除
+- [x] 命名規則の統一
+
+#### CHECK（検証）
+- [x] `deno lint denops/hellshake-yano/common/**/*.ts` 警告0個
+- [x] `deno check denops/hellshake-yano/common/**/*.ts` 100%パス
+- [x] 既存テストも含めて全テストパス: `deno test`
+
+---
+
+### process200: ドキュメンテーション
+
+#### sub1: ARCHITECTURE_C.mdの更新
+@target: `ARCHITECTURE_C.md`
+
+- [ ] Phase 1完了状況を記録
+- [ ] 作成したファイル一覧を更新
+- [ ] ディレクトリ構造図を更新
+
+#### sub2: Phase 1完了レポートの作成
+@target: `docs/phase-c1-report.md`（新規作成）
+
+- [ ] 実装したファイル一覧
+- [ ] テスト結果サマリ
+- [ ] deno check/lint結果
+- [ ] 所要時間の記録
+- [ ] 次フェーズ（Phase 2: Vimレイヤーの構築）への引き継ぎ事項
+
+#### sub3: PLAN.mdの更新
+@target: `PLAN.md`
+
+- [ ] 完了したprocessにチェックマークを付ける
+- [ ] Phase 2の実装計画を追加（次フェーズ用）
+
+---
+
+## 実装スケジュール
+
+| Process | 所要時間 | 累積時間 |
+|---------|----------|----------|
+| process1: 型定義の統合と分割 | 2.5時間 | 2.5時間 |
+| process2: ユーティリティの統合 | 2.5時間 | 5時間 |
+| process3: キャッシュシステムの統合 | 2.5時間 | 7.5時間 |
+| process4: 設定管理の更新 | 2.5時間 | 10時間 |
+| process100: リファクタリング | 0.5時間 | 10.5時間 |
+| process200: ドキュメンテーション | 0.5時間 | 11時間 |
+| **合計** | **11時間** | **約1.5日** |
+
+---
+
+## 注意事項
+
+### 既存ファイルの取り扱い
+- **削除しない**: phase-b*/と既存ファイル（types.ts, config.ts等）は残したまま、新しいcommon/を作成
+- **テストの再利用**: 既存のphase-b*/のテストを参考にする
+- **段階的な移行**: 各サブプロセス完了後に必ずdeno check/testを実行
+
+### 品質基準
+- **TDDの厳守**: RED→GREEN→REFACTOR→CHECKサイクルを必ず実施
+- **テストファースト**: 実装前に必ずテストを書く
+- **型安全性**: すべての関数に適切な型注釈を付ける
+- **ドキュメント**: JSDocコメントを充実させる
+
+### ロールバック対応
+- 各Process完了後にgit commitを推奨
+- コミットメッセージ例: `feat(phase-c1): process1完了 - 型定義の統合と分割`
+- 問題発生時は`git reset --hard`でロールバック可能
