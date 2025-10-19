@@ -1,15 +1,13 @@
 /**
- * denops/hellshake-yano/vim/config/config-migrator.ts
+ * config-migrator.ts - 設定の自動マイグレーション（統合版）
  *
- * ConfigMigrator - 設定の自動マイグレーション（統合版）
+ * Vim Layer: 設定マイグレーションコンポーネント
  *
  * 目的:
  *   - 既存のVimScript設定を自動検出
  *   - 統合設定への移行を支援
  *   - マイグレーション結果を詳細に追跡
  *   - エラーハンドリングと警告メッセージの表示
- *
- * Process: phase-2, process12（phase-b1 + phase-b4 統合）
  */
 
 import type { Denops } from "@denops/std";

@@ -1,12 +1,9 @@
 /**
  * popup-display.ts - Vim環境でのpopup_create()を使用したヒント表示
  *
- * Vim Layer Implementation
- * TDD Phase: GREEN
- * Process6-sub2: 実装
+ * Vim Layer: ポップアップ表示コンポーネント
  *
  * VimScript版のdisplay.vimを完全移植し、popup_create()を使用したヒント表示機能を提供
- * Neovim extmark機能は削除し、Vim専用の実装に統一
  *
  * ## VimScript版との互換性保証
  * - popup_create(): Vim標準のポップアップ機能

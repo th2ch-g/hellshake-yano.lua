@@ -1,10 +1,9 @@
 /**
- * denops/hellshake-yano/vim/config/config-mapper.ts
+ * config-mapper.ts - 設定変換マッパー
  *
- * ConfigMapper - 設定変換マッパー
+ * Vim Layer: 設定マッピングコンポーネント
+ *
  * 旧VimScript形式から新形式への変換
- *
- * Process: phase-2, process13
  */
 
 /** VimScript側の旧設定形式 */

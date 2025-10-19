@@ -1,14 +1,12 @@
 /**
- * denops/hellshake-yano/vim/bridge/vim-bridge.ts
+ * vim-bridge.ts - VimScript版との統合ブリッジ
  *
- * VimBridge - VimScript版との統合ブリッジ
+ * Vim Layer: 統合ブリッジコンポーネント
  *
  * 目的:
  *   - VimScript版のword_detector#detect_visible()を呼び出し
  *   - TypeScriptのWord型に変換
  *   - VimScript版の動作を100%再現
- *
- * Process: phase-2, process14
  */
 
 import type { Denops } from "@denops/std";

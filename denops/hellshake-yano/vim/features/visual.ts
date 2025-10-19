@@ -1,9 +1,7 @@
 /**
  * visual.ts - ビジュアルモード対応
  *
- * Vim Layer Implementation
- * TDD Phase: GREEN
- * Process10-sub2: 実装
+ * Vim Layer: ビジュアルモード管理コンポーネント
  *
  * Vimビジュアルモード (v, V, Ctrl-v) のサポート
  */

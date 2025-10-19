@@ -1,9 +1,7 @@
 /**
  * motion.ts - モーション検出
  *
- * Vim Layer Implementation
- * TDD Phase: GREEN
- * Process9-sub2: 実装
+ * Vim Layer: モーション検出コンポーネント
  *
  * Vim モーション (h, j, k, l, w, W, b, B等) の検出
  */

@@ -1,9 +1,7 @@
 /**
  * highlight.ts - Vim ハイライトグループ管理
  *
- * Vim Layer Implementation
- * TDD Phase: GREEN
- * Process7-sub2: 実装
+ * Vim Layer: ハイライト管理コンポーネント
  *
  * ヒント表示用のハイライトグループ（HintMarker）定義と管理機能
  *

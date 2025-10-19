@@ -1,17 +1,13 @@
 /**
- * denops/hellshake-yano/vim/config/config-unifier.ts
+ * config-unifier.ts - VimScript設定とTypeScript設定の統合
  *
- * ConfigUnifier - VimScript設定とTypeScript設定の統合
+ * Vim Layer: 設定統合コンポーネント
  *
  * 目的:
  *   - VimScript版（g:hellshake_yano_vim_config）の設定を読み取り
  *   - TypeScript版のConfig型に変換
  *   - キー名の変換（hint_chars → markers等）
  *   - デフォルト値の適用
- *
- * 参照: autoload/hellshake_yano_vim/config.vim
- * 参照: denops/hellshake-yano/config.ts
- * Process: phase-2, process11
  */
 
 import type { Denops } from "@denops/std";
