@@ -20,6 +20,103 @@ let s:popup_ids = []
 " Neovim の namespace ID（Neovim の場合のみ使用）
 let s:ns_id = -1
 
+" Phase D-1 Sub3: カスタムハイライト設定の初期化フラグ
+let s:highlight_initialized = v:false
+
+" hellshake_yano_vim#display#get_highlight_group(type) - ハイライトグループ名の取得
+"
+" 目的:
+"   - g:hellshake_yano.highlightHintMarker / highlightHintMarkerCurrent から
+"     適切なハイライトグループ名を取得する
+"   - 文字列の場合: そのままハイライトグループ名として使用
+"   - オブジェクトの場合: 動的にハイライトグループを作成
+"
+" @param type String 'normal' または 'current'
+" @return String ハイライトグループ名
+"
+" 使用例:
+"   let hl_group = hellshake_yano_vim#display#get_highlight_group('normal')
+"   " => 'DiffAdd' or 'HellshakeYanoHintMarker'
+function! hellshake_yano_vim#display#get_highlight_group(type) abort
+  " デフォルト値
+  let l:default_normal = 'HintMarker'
+  let l:default_current = 'HintMarkerCurrent'
+
+  " 設定を取得
+  let l:config_key = a:type ==# 'current' ? 'highlightHintMarkerCurrent' : 'highlightHintMarker'
+  let l:default_value = a:type ==# 'current' ? l:default_current : l:default_normal
+
+  " g:hellshake_yano から設定を読み込む
+  if !exists('g:hellshake_yano') || !has_key(g:hellshake_yano, l:config_key)
+    return l:default_value
+  endif
+
+  let l:config_value = g:hellshake_yano[l:config_key]
+
+  " 文字列の場合: ハイライトグループ名として使用
+  if type(l:config_value) == v:t_string
+    return l:config_value
+  endif
+
+  " オブジェクト（辞書）の場合: 動的ハイライトグループを作成
+  if type(l:config_value) == v:t_dict
+    let l:hl_group_name = a:type ==# 'current' ? 'HellshakeYanoHintMarkerCurrent' : 'HellshakeYanoHintMarker'
+
+    " ハイライトグループを定義（初回のみ、または設定変更時）
+    call s:define_highlight_group(l:hl_group_name, l:config_value)
+
+    return l:hl_group_name
+  endif
+
+  " その他の場合: デフォルトを返す
+  return l:default_value
+endfunction
+
+" s:define_highlight_group(name, color_obj) - ハイライトグループの動的定義
+"
+" 目的:
+"   - fg/bg を持つカラーオブジェクトから :highlight コマンドを生成
+"
+" @param name String ハイライトグループ名
+" @param color_obj Dict fg/bg を持つ辞書
+"
+" 例:
+"   call s:define_highlight_group('HellshakeYanoHintMarker', {'fg': '#FFFFFF', 'bg': '#000000'})
+"   " => :highlight HellshakeYanoHintMarker guifg=#FFFFFF guibg=#000000 ctermfg=White ctermbg=Black
+function! s:define_highlight_group(name, color_obj) abort
+  let l:hl_cmd = 'highlight ' . a:name
+
+  " fg (foreground) の設定
+  if has_key(a:color_obj, 'fg') && !empty(a:color_obj.fg)
+    let l:fg = a:color_obj.fg
+    let l:hl_cmd .= ' guifg=' . l:fg
+
+    " cterm色も設定（#RRGGBB形式の場合は近似色を使用）
+    if l:fg =~# '^#'
+      " GUI色の場合、ctermには名前色を使用（簡易実装）
+      let l:hl_cmd .= ' ctermfg=White'
+    else
+      let l:hl_cmd .= ' ctermfg=' . l:fg
+    endif
+  endif
+
+  " bg (background) の設定
+  if has_key(a:color_obj, 'bg') && !empty(a:color_obj.bg)
+    let l:bg = a:color_obj.bg
+    let l:hl_cmd .= ' guibg=' . l:bg
+
+    " cterm色も設定
+    if l:bg =~# '^#'
+      let l:hl_cmd .= ' ctermbg=Black'
+    else
+      let l:hl_cmd .= ' ctermbg=' . l:bg
+    endif
+  endif
+
+  " ハイライトグループを定義
+  execute l:hl_cmd
+endfunction
+
 " hellshake_yano_vim#display#show_hint(lnum, col, hint) - ヒント表示
 "
 " 目的:
@@ -74,13 +171,16 @@ function! s:show_hint_vim(lnum, col, hint) abort
     return -1
   endif
 
+  " Phase D-1 Sub3: カスタムハイライトグループを取得
+  let l:hl_group = hellshake_yano_vim#display#get_highlight_group('normal')
+
   " popup を作成
   let l:popup_id = popup_create(a:hint, {
     \ 'line': a:lnum,
     \ 'col': a:col,
     \ 'width': strlen(a:hint),
     \ 'height': 1,
-    \ 'highlight': 'HintMarker',
+    \ 'highlight': l:hl_group,
     \ 'zindex': 1000,
     \ 'wrap': 0
   \ })
@@ -112,9 +212,12 @@ function! s:show_hint_neovim(lnum, col, hint) abort
     let s:ns_id = nvim_create_namespace('hellshake_yano_vim_hint')
   endif
 
+  " Phase D-1 Sub3: カスタムハイライトグループを取得
+  let l:hl_group = hellshake_yano_vim#display#get_highlight_group('normal')
+
   " extmark を作成（行・列は 0-indexed に変換）
   let l:extmark_id = nvim_buf_set_extmark(0, s:ns_id, a:lnum - 1, a:col - 1, {
-    \ 'virt_text': [[a:hint, 'HintMarker']],
+    \ 'virt_text': [[a:hint, l:hl_group]],
     \ 'virt_text_pos': 'overlay',
     \ 'priority': 1000
   \ })

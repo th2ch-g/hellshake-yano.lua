@@ -206,24 +206,29 @@ sub2.1でhint_generator.vimに動的maxTotal計算を実装したが、core.vim�
 @target: autoload/hellshake_yano_vim/display.vim
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests/display_test.ts にハイライト設定のテストケース作成
-- [ ] `deno test` 実行して失敗を確認
+- [x] tests-vim/test_sub3_highlight.vim にハイライト設定のテストケース作成
+- [x] tests-vim/test_sub3_simple.vim に簡易テスト作成
+- [x] テスト実行して失敗を確認（E117: Unknown function）
 
 ##### TDD Step 2: Green（実装）
-- [ ] highlightHintMarker設定実装
-- [ ] highlightHintMarkerCurrent設定実装
-- [ ] 色指定（#RRGGBB）対応
-- [ ] ハイライトグループ名対応
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
+- [x] hellshake_yano_vim#display#get_highlight_group() 関数実装
+- [x] highlightHintMarker設定実装（文字列・オブジェクト両対応）
+- [x] highlightHintMarkerCurrent設定実装（文字列・オブジェクト両対応）
+- [x] 色指定（#RRGGBB）対応（fg/bg サポート）
+- [x] ハイライトグループ名対応（文字列の場合はそのまま使用）
+- [x] s:define_highlight_group() で動的ハイライト生成
+- [x] s:show_hint_vim() でカスタムハイライト適用
+- [x] s:show_hint_neovim() でカスタムハイライト適用
+- [x] テスト実行して成功を確認（全3テスト PASS）
 
 ##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの整理
-- [ ] `deno test` で回帰テスト確認
+- [x] コードの可読性確認（完了）
+- [x] ドキュメントコメント追加（Phase D-1 Sub3 マーク）
+- [x] 回帰テスト確認（VimScript テスト成功）
 
 ##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/display.vim に移植
-- [ ] Vimでの手動動作確認
+- [x] autoload/hellshake_yano_vim/display.vim に実装完了
+- [x] Vimでの動作確認（test_sub3_simple.vim で全テスト PASS）
 
 ### process2: Per-Key設定システム（Phase D-2）
 #### sub1: Per-Keyモーションカウント
