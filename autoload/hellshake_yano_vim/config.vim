@@ -48,7 +48,7 @@ let s:default_config = {
   \ 'motion_enabled': v:true,
   \ 'motion_threshold': 2,
   \ 'motion_timeout_ms': 2000,
-  \ 'motion_keys': ['w', 'b', 'e'],
+  \ 'motion_keys': ['w', 'b', 'e', 'h', 'j', 'k', 'l'],
   \
   \ 'use_japanese': v:false,
   \ 'min_word_length': 1,

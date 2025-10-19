@@ -181,7 +181,7 @@ endif
 " config#get() を使用して motion_enabled と motion_keys を取得
 " 初期化前なので、直接グローバル変数またはデフォルト値をチェック
 let s:motion_enabled = get(g:hellshake_yano_vim_config, 'motion_enabled', v:true)
-let s:motion_keys = get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e'])
+let s:motion_keys = get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e', 'h', 'j', 'k', 'l'])
 
 if s:motion_enabled
   " 対象キーをループしてマッピング

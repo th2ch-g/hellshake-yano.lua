@@ -211,7 +211,7 @@ endfunction
 function! s:setup_vimscript_mappings() abort
   " モーション検出マッピング
   if get(g:hellshake_yano_vim_config, 'motion_enabled', v:true)
-    for key in get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e'])
+    for key in get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e', 'h', 'j', 'k', 'l'])
       execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle("%s")<CR>',
         \ key, key)
     endfor
