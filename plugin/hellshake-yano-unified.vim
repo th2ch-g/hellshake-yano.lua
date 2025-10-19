@@ -230,9 +230,13 @@ function! s:setup_vimscript_mappings() abort
   " motion_keys の取得（g:hellshake_yano を優先）
   let l:motion_keys = ['w', 'b', 'e', 'h', 'j', 'k', 'l']
   if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'countedMotions')
-    let l:motion_keys = g:hellshake_yano.countedMotions
+    if !empty(g:hellshake_yano.countedMotions)
+      let l:motion_keys = g:hellshake_yano.countedMotions
+    endif
   elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'motion_keys')
-    let l:motion_keys = g:hellshake_yano_vim_config.motion_keys
+    if !empty(g:hellshake_yano_vim_config.motion_keys)
+      let l:motion_keys = g:hellshake_yano_vim_config.motion_keys
+    endif
   endif
 
   " モーション検出マッピング

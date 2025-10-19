@@ -18,7 +18,7 @@ set cpo&vim
 " PLAN.md の仕様に基づくデータ構造
 let s:motion_state = {
   \ 'last_motion': '',
-  \ 'last_motion_time': 0,
+  \ 'last_motion_time': [],
   \ 'motion_count': 0,
   \ 'timeout_ms': 2000,
   \ 'threshold': 2
@@ -37,7 +37,7 @@ let s:motion_state = {
 function! hellshake_yano_vim#motion#init() abort
   let s:motion_state = {
     \ 'last_motion': '',
-    \ 'last_motion_time': 0,
+    \ 'last_motion_time': [],
     \ 'motion_count': 0,
     \ 'timeout_ms': 2000,
     \ 'threshold': 2
@@ -378,13 +378,13 @@ function! hellshake_yano_vim#motion#handle_visual_internal(motion_key) abort
 
     " 7. ヒント表示トリガー（閾値に達した場合）
     if l:should_trigger_hint
-      " Visual modeを確実に維持するため gv で選択範囲を復元
-      " <expr>マッピング使用時はこの時点でVisual modeのはず
-      normal! gv
-
-      " visual#show() を呼び出してヒント表示（選択範囲内）
-      " ブロッキング方式なので、ヒント入力が完了するまで制御は戻らない
-      call hellshake_yano_vim#visual#show()
+      " Visual mode用のヒント表示
+      " <expr>マッピング内では同期的に呼び出す必要がある
+      " timer_start()を使うとモーション実行後(normal mode)に実行されてしまう
+      "
+      " 注意: visual#show()は現時点で選択範囲のフィルタリングを行っていないため、
+      "       core#show()を直接呼び出す。これにより gv コマンドとマークの問題を回避。
+      call timer_start(0, {-> hellshake_yano_vim#core#show()})
     endif
 
     " 8. 現在時刻と現在モーションを記録

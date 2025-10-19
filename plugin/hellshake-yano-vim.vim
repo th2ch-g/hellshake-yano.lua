@@ -191,9 +191,13 @@ endif
 " motion_keys の取得（g:hellshake_yano を優先）
 let s:motion_keys = ['w', 'b', 'e', 'h', 'j', 'k', 'l']
 if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'countedMotions')
-  let s:motion_keys = g:hellshake_yano.countedMotions
+  if !empty(g:hellshake_yano.countedMotions)
+    let s:motion_keys = g:hellshake_yano.countedMotions
+  endif
 elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'motion_keys')
-  let s:motion_keys = g:hellshake_yano_vim_config.motion_keys
+  if !empty(g:hellshake_yano_vim_config.motion_keys)
+    let s:motion_keys = g:hellshake_yano_vim_config.motion_keys
+  endif
 endif
 
 if s:motion_enabled
