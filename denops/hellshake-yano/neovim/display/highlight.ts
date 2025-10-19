@@ -67,9 +67,14 @@ export class HighlightManager {
    */
   async initializeDefaultHighlights(): Promise<void> {
     // Hint マーカー用ハイライト
+    const hintMarkerColor = this.config.highlightHintMarker;
+    const foreground = typeof hintMarkerColor === "string"
+      ? hintMarkerColor
+      : hintMarkerColor?.fg || "Yellow";
+
     await this.setHighlight({
       group: "HintMarker",
-      foreground: this.config.highlightHintMarker || "Yellow",
+      foreground,
       attributes: ["bold"],
     });
   }

@@ -13,7 +13,7 @@ import type { Denops } from "jsr:@denops/std@7.4.0";
 
 import { Initializer } from "../../denops/hellshake-yano/integration/initializer.ts";
 import { EnvironmentDetector } from "../../denops/hellshake-yano/integration/environment-detector.ts";
-import { ConfigMigrator } from "../../denops/hellshake-yano/phase-b4/config-migrator.ts";
+import { ConfigMigrator } from "../../denops/hellshake-yano/vim/config/config-migrator.ts";
 import { ImplementationSelector } from "../../denops/hellshake-yano/integration/implementation-selector.ts";
 import { CommandRegistry } from "../../denops/hellshake-yano/integration/command-registry.ts";
 import {

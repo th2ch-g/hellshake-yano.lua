@@ -2727,7 +2727,7 @@ export class HellshakeYanoCore {
    */
   static async createDisplayWidthCache(maxSize = 1000): Promise<import("./cache.ts").LRUCache<string, number>> {
     const { LRUCache } = await import("./cache.ts");
-    return new LRUCache<string, number>(maxSize);
+    return new (LRUCache as any)(maxSize) as import("./cache.ts").LRUCache<string, number>;
   }
   /*   * 一般的な文字列のグローバルキャッシュ（遅延初期化）
    * 頻繁に計算される文字列の表示幅をキャッシュ
@@ -2775,7 +2775,7 @@ export class HellshakeYanoCore {
       this._globalDisplayWidthCache.clear();
     }
     const { GlobalCache, CacheType } = await import("./cache.ts");
-    const CHAR_WIDTH_CACHE = GlobalCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
+    const CHAR_WIDTH_CACHE = (GlobalCache as any).getInstance().getCache(CacheType.CHAR_WIDTH) as Map<number, number>;
     CHAR_WIDTH_CACHE.clear();
     for (let i = 0x20; i <= 0x7E; i++) {
       CHAR_WIDTH_CACHE.set(i, 1);
@@ -2784,7 +2784,7 @@ export class HellshakeYanoCore {
   /* 性能監視用キャッシュ統計の取得   * 文字列キャッシュと文字キャッシュの統計情報を提供。 */
   static async getDisplayWidthCacheStats() {
     const { GlobalCache, CacheType } = await import("./cache.ts");
-    const CHAR_WIDTH_CACHE = GlobalCache.getInstance().getCache<number, number>(CacheType.CHAR_WIDTH);
+    const CHAR_WIDTH_CACHE = (GlobalCache as any).getInstance().getCache(CacheType.CHAR_WIDTH) as Map<number, number>;
     const cache = await this.getGlobalDisplayWidthCache();
     return {
       stringCache: cache.getStats(),
