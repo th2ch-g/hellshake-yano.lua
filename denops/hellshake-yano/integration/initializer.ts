@@ -8,7 +8,7 @@
 import type { Denops } from "jsr:@denops/std@7.4.0";
 import { EnvironmentDetector } from "./environment-detector.ts";
 import { ImplementationSelector } from "./implementation-selector.ts";
-import { ConfigMigrator } from "../phase-b4/config-migrator.ts";
+import { ConfigMigrator } from "../vim/config/config-migrator.ts";
 import { CommandRegistry } from "./command-registry.ts";
 
 /**
