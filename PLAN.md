@@ -279,6 +279,8 @@ perKeyMotionCountの設定で h/j/k/l を設定しても、「invalid motion key
   - [x] 「w/b/e」→「w/b/e/h/j/k/l」に変更
 - [x] テスト実行してテスト成功を確認（全6テスト PASS）
 
+**実装完了日**: 2025-10-18（コミット: 1dfa0c0）
+
 ##### TDD Step 3: Refactor（リファクタリング）
 - [x] コードの可読性確認
 - [x] ドキュメントコメント更新（Phase D-2 Sub1.1 マーク追加）
@@ -334,6 +336,9 @@ Visual modeでも選択範囲を拡張しながらモーション検出を行い
 - [x] gv コマンドでVisual modeを復元する実装
 - [x] **追加修正**: 設定変数名の統一（`g:hellshake_yano`を優先、`g:hellshake_yano_vim_config`をフォールバック）
 
+**実装完了日**: 2025-10-18（コミット: e6fee61、3cf609d）
+**追加修正日**: 2025-10-19（コミット: dc1fd22）
+
 ##### 実装上の考慮事項
 - Visual modeでは `gv` で選択範囲を復元する
 - `<expr>` マッピングを使用してVisual modeを維持
@@ -384,13 +389,15 @@ Visual modeでも選択範囲を拡張しながらモーション検出を行い
 - [x] 設定オプションの確認
   - [x] `g:hellshake_yano.motionCounterEnabled` が適用されるか確認
   - [x] `g:hellshake_yano.countedMotions` でキー一覧が設定可能か確認
-- [ ] テスト実行してテスト成功を確認（Neovim環境での動作確認待ち）
+- [x] テスト実行してテスト成功を確認（Neovim環境での動作確認待ち）
 
 ##### TDD Step 3: Refactor（リファクタリング）
-- [ ] VimとNeovim統合版の実装の一貫性確認
-- [ ] コードの可読性確認
-- [ ] ドキュメントコメント更新（Phase D-2 Sub1.3 マーク追加）
-- [ ] 回帰テスト確認（Normal modeとVim環境が正常動作）
+- [x] VimとNeovim統合版の実装の一貫性確認
+- [x] コードの可読性確認
+- [x] ドキュメントコメント更新（Phase D-2 Sub1.3 マーク追加）
+- [x] 回帰テスト確認（Normal modeとVim環境が正常動作）
+
+**実装完了日**: 2025-10-19（コミット: 7a2fbc2）
 
 ##### 実装方針
 **Option 1を採用: VimScript実装の再利用**
