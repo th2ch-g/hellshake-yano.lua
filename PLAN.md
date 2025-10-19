@@ -318,15 +318,73 @@ const CONFIG_MAP = {
 ### process50: フォローアップ
 実装後の仕様変更・追加要件
 
-- [ ] パフォーマンス最適化
-  - 初期化時間の短縮（遅延ロード）
-  - キャッシュ機構の追加
-- [ ] エラーリカバリーの強化
-  - 部分的な機能停止時の対応
-  - 自動リトライ機能
-- [ ] デバッグ機能の追加
-  - 実装選択理由の表示
-  - 設定マイグレーションログ
+#### sub2: Denopsチャンネル初期化タイミングエラー修正
+@target: `plugin/hellshake-yano-unified.vim`
+@priority: 高（起動時エラー）
+
+**エラー内容:**
+```
+Error in VimEnter Autocommands for "*"..function <SNR>159_initialize[5]..<SNR>159_initialize_unified[2]..denops#notify[1]..denops#_internal#server#chan#notify:line 4:
+E605: Exception not caught: [denops] Channel is not ready yet
+```
+
+**調査結果:**
+- **根本原因**: VimEnterイベント時に`denops#notify()`を即座に呼び出しているが、Denopsサーバーの起動が完了しておらず、RPC通信チャネルがまだ準備できていない
+- **発生箇所**: `plugin/hellshake-yano-unified.vim`の`s:initialize_unified()`関数（75-78行目）
+- **問題**: チャネルのready状態確認が不足している
+
+**解決策の選択肢:**
+1. **オプション1: 同期型待機**
+   - `denops#plugin#wait()`を使用
+   - シンプルだがVimEnter中にブロッキングする
+
+2. **オプション2: 非同期型待機（採用）** ✅
+   - `denops#plugin#wait_async()`を使用
+   - ノンブロッキングでDenops準備完了後に自動初期化
+   - 最も安全でユーザー体験が良い
+
+3. **オプション3: 遅延初期化**
+   - VimEnterより後のイベントで初期化
+   - 複雑になる可能性がある
+
+**採用理由（オプション2）:**
+- VimEnter中にブロッキングしない
+- Denopsが準備完了後に自動的に初期化される
+- エラーハンドリングがシンプル
+- 他のプラグイン（kensaku.vim等）でも実績のある方法
+
+**修正内容:**
+- [x] `s:initialize_unified()` 関数の改修
+  - `denops#plugin#wait_async('hellshake-yano', function('s:initialize_unified_callback'))`で非同期待機を追加
+  - Denops準備完了後にコールバックで初期化処理を実行
+  - タイムアウト・エラー時のtry-catchでフォールバック処理を追加
+  - **重要**: 第1引数はプラグイン名（文字列）、第2引数はfunction()で関数参照を渡す
+
+- [x] `s:handle_motion()` 関数の改修
+  - `denops#notify()`呼び出し前にチャネル状態を確認
+  - エラーハンドリングを強化
+
+- [x] `s:show_hints_visual()` 関数の改修
+  - `denops#notify()`呼び出し前にチャネル状態を確認
+  - エラーハンドリングを強化
+
+- [x] フォールバック関数の追加
+  - `s:initialize_fallback()`を追加
+  - Denops準備失敗時の処理を実装
+
+**検証結果:**
+- ✅ `vim`コマンドで起動してE605エラーが出ないことを確認済み
+- ✅ `nvim`コマンドで起動してE729エラーが出ないことを確認済み（引数修正後）
+- ✅ Denops機能が正常に動作することを確認済み
+- ✅ フォールバック処理が適切に動作することを確認済み
+
+**修正履歴:**
+- 初回実装: ラムダ式で実装 → Neovimで E729 "Using a Funcref as a String" エラー
+- 修正1: `function('s:initialize_unified_callback')`で関数参照を渡す形式に変更 → E729解消
+- 修正2: `unifyConfig` → `updateConfig` に変更 → TypeError解消（存在しないAPI呼び出しエラー）
+  - `main.ts`に`unifyConfig`が存在しないため、既存の`updateConfig` APIを使用
+  - 設定マージロジックをVimScript側で実装（`extend()`使用）
+- 最終修正: Vim/Neovim両対応完了、すべてのエラー解消
 
 ### process100: リファクタリング
 

@@ -70,23 +70,75 @@ endfunction
 " s:initialize_unified() - 統合版の初期化
 "
 " Denopsを使用した統合版の初期化処理
+" 非同期型待機でDenopsサーバーの準備完了後に初期化を実行
 function! s:initialize_unified() abort
-  " 設定の統一
-  call denops#notify('hellshake-yano', 'unifyConfig', [
-    \ get(g:, 'hellshake_yano_vim_config', {}),
-    \ get(g:, 'hellshake_yano', {})
-  \ ])
+  " denops#plugin#wait_async()で非同期待機
+  " Denopsの準備完了後、コールバックで実際の初期化を実行
+  " 第1引数: プラグイン名（文字列）
+  " 第2引数: 準備完了時のコールバック関数
+  try
+    call denops#plugin#wait_async('hellshake-yano', function('s:initialize_unified_callback'))
+  catch
+    " wait_async が失敗した場合はフォールバック
+    call s:initialize_fallback()
+  endtry
+endfunction
 
-  " コマンド定義
-  command! -nargs=0 HellshakeYanoShow
-    \ call denops#notify('hellshake-yano', 'showHints', [])
-  command! -nargs=0 HellshakeYanoHide
-    \ call denops#notify('hellshake-yano', 'hideHints', [])
-  command! -nargs=0 HellshakeYanoToggle
-    \ call denops#notify('hellshake-yano', 'toggle', [])
+" s:initialize_unified_callback() - Denops準備完了後のコールバック
+"
+" Denops準備完了後に実行される初期化処理
+function! s:initialize_unified_callback() abort
+  try
+    " 設定の統一
+    " 新形式の設定を優先、旧形式があればマージ
+    let l:config = extend(
+      \ get(g:, 'hellshake_yano_vim_config', {}),
+      \ get(g:, 'hellshake_yano', {})
+    \ )
+    call denops#notify('hellshake-yano', 'updateConfig', [l:config])
 
-  " キーマッピング
-  call s:setup_unified_mappings()
+    " コマンド定義
+    command! -nargs=0 HellshakeYanoShow
+      \ call denops#notify('hellshake-yano', 'showHints', [])
+    command! -nargs=0 HellshakeYanoHide
+      \ call denops#notify('hellshake-yano', 'hideHints', [])
+    command! -nargs=0 HellshakeYanoToggle
+      \ call denops#notify('hellshake-yano', 'toggle', [])
+
+    " キーマッピング
+    call s:setup_unified_mappings()
+  catch
+    " エラーが発生した場合はフォールバック
+    echohl ErrorMsg
+    echo '[hellshake-yano] Initialization error: ' . v:exception
+    echohl None
+    call s:initialize_fallback()
+  endtry
+endfunction
+
+" s:initialize_fallback() - フォールバック初期化
+"
+" Denops準備失敗時の初期化処理
+function! s:initialize_fallback() abort
+  try
+    " Pure VimScript版へのフォールバック
+    if exists('*hellshake_yano_vim#core#init')
+      call hellshake_yano_vim#core#init()
+    endif
+    call s:setup_vimscript_mappings()
+
+    " ユーザーに警告
+    if !get(g:, 'hellshake_yano_suppress_fallback_warning', 0)
+      echohl WarningMsg
+      echo '[hellshake-yano] Denops initialization failed. Using VimScript fallback.'
+      echohl None
+    endif
+  catch
+    " フォールバック自体が失敗した場合
+    echohl ErrorMsg
+    echo '[hellshake-yano] Critical error during initialization: ' . v:exception
+    echohl None
+  endtry
 endfunction
 
 "=============================================================================
@@ -174,8 +226,11 @@ endfunction
 "
 " @param a:key モーションキー（'w', 'b', 'e'など）
 function! s:handle_motion(key) abort
-  " Denopsに処理を委譲
-  call denops#notify('hellshake-yano', 'handleMotion', [a:key])
+  " Denopsチャネル状態を確認
+  if denops#server#status() ==# 'running'
+    " Denopsに処理を委譲
+    call denops#notify('hellshake-yano', 'handleMotion', [a:key])
+  endif
 
   " 通常のモーションも実行
   execute 'normal! ' . a:key
@@ -185,7 +240,14 @@ endfunction
 "
 " ビジュアルモードでヒント表示を呼び出し
 function! s:show_hints_visual() abort
-  call denops#notify('hellshake-yano', 'showHints', [])
+  " Denopsチャネル状態を確認
+  if denops#server#status() ==# 'running'
+    call denops#notify('hellshake-yano', 'showHints', [])
+  else
+    echohl ErrorMsg
+    echo '[hellshake-yano] Denops is not available. Hints cannot be shown.'
+    echohl None
+  endif
 endfunction
 
 "=============================================================================
