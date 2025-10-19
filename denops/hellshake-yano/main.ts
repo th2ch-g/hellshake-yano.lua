@@ -1,17 +1,21 @@
 /**
  * @fileoverview Hellshake-Yano.vim メインエントリーポイント
+ * Phase 5: 統合型エントリーポイント
+ *
+ * 環境判定に基づいて自動的に以下を実行:
+ * - Vim環境: vim/レイヤーを初期化
+ * - Neovim環境: neovim/レイヤーを初期化
  */
 import type { Denops } from "@denops/std";
-import { generateHints, assignHintsToWords } from "./neovim/core/hint.ts";
-import { Core } from "./neovim/core/core.ts";
-import type { DebugInfo, HintMapping, Word } from "./types.ts";
 import { Config, DEFAULT_CONFIG } from "./config.ts";
+import type { DebugInfo, HintMapping, Word } from "./types.ts";
 
-// 設定関連のエクスポート
-export { getDefaultConfig } from "./config.ts";
-export type { Config } from "./config.ts";
+// 統合レイヤーのインポート
+import { Initializer } from "./integration/initializer.ts";
 
-// 新しいモジュールからのインポート
+// Neovim固有のインポート（従来の実装維持）
+import { generateHints } from "./neovim/core/hint.ts";
+import { Core } from "./neovim/core/core.ts";
 import {
   clearCaches,
   clearDebugInfo as clearDebugInfoPerformance,
@@ -39,6 +43,10 @@ import {
   highlightCandidateHintsHybrid,
 } from "./neovim/display/extmark-display.ts";
 
+// 設定関連のエクスポート
+export { getDefaultConfig } from "./config.ts";
+export type { Config } from "./config.ts";
+
 /** プラグインの設定 */
 let config: Config = DEFAULT_CONFIG;
 
@@ -52,20 +60,80 @@ let hintsVisible = false;
 let extmarkNamespace: number | undefined;
 
 /** matchadd のフォールバック用 ID リスト */
-let fallbackMatchIds: number[] = [];
+const fallbackMatchIds: number[] = [];
 
 // テスト用に関数を再エクスポート
 export { detectWordsOptimized, generateHintsFromConfig, validateConfig };
 export { cleanupPendingTimers, collectDebugInfo };
 
 /**
- * プラグインのメインエントリーポイント
+ * プラグインのメインエントリーポイント（環境判定型）
  * @param denops - Denops インスタンス
  * @throws {Error} プラグインの初期化に失敗した場合
+ *
+ * フロー:
+ * 1. Initializer経由で環境判定を実行
+ * 2. 実装選択結果に基づいてenvironment判定を実行
+ * 3. Neovim環境 -> initializeNeovimLayer()
+ * 4. Vim環境 -> initializeVimLayer()
  */
 export async function main(denops: Denops): Promise<void> {
   try {
-    // initializePluginはcore.tsに統合されているのでCoreクラス経由で呼び出し
+    // Step 1: Initializer経由で初期化（環境判定と設定マイグレーション）
+    const initializer = new Initializer(denops);
+    const initResult = await initializer.initialize();
+
+    // Step 2: 初期化結果がdenops-unified実装の場合
+    if (initResult.implementation === "denops-unified") {
+      await initializeDenopsUnified(denops);
+    }
+    // VimScript版の場合は既にcommand-registry経由でコマンド登録済み
+  } catch (error) {
+    // エラーログ（オプション）
+    console.error("main() initialization failed:", error instanceof Error ? error.message : String(error));
+    throw error;
+  }
+}
+
+/**
+ * Denops統合実装の初期化
+ * 環境判定を行い、Vim/Neovim別の初期化を呼び出し
+ */
+async function initializeDenopsUnified(denops: Denops): Promise<void> {
+  try {
+    // 環境判定: has('nvim')を確認
+    const isNeovim = (await denops.call("has", "nvim") as number) ? true : false;
+
+    if (isNeovim) {
+      await initializeNeovimLayer(denops);
+    } else {
+      await initializeVimLayer(denops);
+    }
+  } catch (error) {
+    console.error("initializeDenopsUnified failed:", error instanceof Error ? error.message : String(error));
+    throw error;
+  }
+}
+
+/**
+ * Vim環境初期化関数
+ * vim/レイヤーのコンポーネント初期化とdispatcher登録
+ */
+async function initializeVimLayer(_denops: Denops): Promise<void> {
+  // TODO: Process 4で実装予定
+  // - Config統一化
+  // - コアコンポーネント初期化
+  // - 表示コンポーネント初期化
+  // - dispatcherメソッド登録
+}
+
+/**
+ * Neovim環境初期化関数
+ * 既存neovim/レイヤーを統合フローに組み込み
+ */
+async function initializeNeovimLayer(denops: Denops): Promise<void> {
+  try {
+    // 既存のNeovim初期化ロジック
     const core = Core.getInstance(DEFAULT_CONFIG);
     await core.initializePlugin(denops);
 
@@ -78,9 +146,7 @@ export async function main(denops: Denops): Promise<void> {
     const defaultConfig = DEFAULT_CONFIG;
     config = { ...defaultConfig, ...userConfig } as Config;
 
-    // デバッグログは削除されました（process1_sub2）
-
-    // Coreインスタンスの設定を更新（use_japanese, enable_tinysegmenterなどが反映される）
+    // Coreインスタンスの設定を更新
     core.updateConfig(config);
 
     if (denops.meta.host === "nvim") {
@@ -90,6 +156,7 @@ export async function main(denops: Denops): Promise<void> {
     await initializeDictionarySystem(denops);
 
     denops.dispatcher = {
+      // deno-lint-ignore require-await
       async enable(): Promise<void> {
         const core = Core.getInstance(config);
         core.enable();

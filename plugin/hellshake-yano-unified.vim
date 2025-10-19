@@ -2,8 +2,11 @@
 " Author: hellshake-yano
 " License: MIT
 "
-" Phase B-4: process4 - キーマッピング統合
+" Phase 5: メインエントリーポイント統合
 " 統合版とVimScript版を環境に応じて自動選択するエントリーポイント
+"
+" integration/initializer.ts と連携して、
+" Vim/Neovim環境を自動判定し、最適な実装を選択して初期化します。
 
 " ロードガード
 if exists('g:loaded_hellshake_yano_unified')
