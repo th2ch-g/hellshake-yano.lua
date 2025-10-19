@@ -95,10 +95,51 @@ function! hellshake_yano_vim#motion#set_timeout(ms) abort
   let s:motion_state.timeout_ms = a:ms
 endfunction
 
+" hellshake_yano_vim#motion#get_motion_count(key) - キー別モーションカウントの取得
+"
+" 目的:
+"   - Phase D-2 Sub1: Per-Keyモーションカウント機能
+"   - g:hellshake_yano.perKeyMotionCount からキー別のカウントを取得
+"   - 設定がない場合は defaultMotionCount にフォールバック
+"
+" @param key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l' など)
+" @return Number モーションカウント（閾値）
+"
+" Phase D-2 Sub1.1: h/j/k/l モーション対応
+"
+" 使用例:
+"   let l:count = hellshake_yano_vim#motion#get_motion_count('w')
+"   " => 2 (perKeyMotionCount.w の値) or 3 (defaultMotionCount)
+function! hellshake_yano_vim#motion#get_motion_count(key) abort
+  " デフォルト値
+  let l:default_count = 3
+
+  " g:hellshake_yano から設定を読み込む
+  if !exists('g:hellshake_yano')
+    return l:default_count
+  endif
+
+  " defaultMotionCount の取得
+  if has_key(g:hellshake_yano, 'defaultMotionCount')
+    let l:default_count = g:hellshake_yano.defaultMotionCount
+  endif
+
+  " perKeyMotionCount の取得
+  if has_key(g:hellshake_yano, 'perKeyMotionCount')
+    let l:per_key = g:hellshake_yano.perKeyMotionCount
+    if type(l:per_key) == v:t_dict && has_key(l:per_key, a:key)
+      return l:per_key[a:key]
+    endif
+  endif
+
+  " デフォルトを返す
+  return l:default_count
+endfunction
+
 " hellshake_yano_vim#motion#handle(motion_key) - モーション処理のメインロジック
 "
 " 目的:
-"   - モーションキー（w/b/e）の連打を検出
+"   - モーションキー（w/b/e/h/j/k/l）の連打を検出
 "   - 閾値に達した場合はヒント表示をトリガー
 "   - 通常のモーション実行も行う
 "
@@ -112,7 +153,7 @@ endfunction
 "   7. 現在時刻と現在モーションを記録
 "
 " パラメータ:
-"   @param a:motion_key String モーションキー ('w', 'b', 'e')
+"   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
 "
 " @return なし
 "
@@ -132,7 +173,8 @@ endfunction
 "   - ヒント表示後はカウントをリセット（連続表示を防ぐ）
 function! hellshake_yano_vim#motion#handle(motion_key) abort
   " 不正なモーションキーのチェック
-  if index(['w', 'b', 'e'], a:motion_key) == -1
+  " Phase D-2 Sub1.1: h/j/k/l モーション対応
+  if index(['w', 'b', 'e', 'h', 'j', 'k', 'l'], a:motion_key) == -1
     echohl ErrorMsg
     echomsg 'hellshake_yano_vim#motion#handle: invalid motion key: ' . a:motion_key
     echohl None
@@ -174,8 +216,10 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
     endif
 
     " 5. 閾値チェックとヒント表示トリガー
+    " Phase D-2 Sub1: キー別のモーションカウントを使用
+    let l:threshold = hellshake_yano_vim#motion#get_motion_count(a:motion_key)
     let l:should_trigger_hint = v:false
-    if s:motion_state.motion_count >= s:motion_state.threshold
+    if s:motion_state.motion_count >= l:threshold
       let l:should_trigger_hint = v:true
       " カウントをリセット（連続表示を防ぐ）
       let s:motion_state.motion_count = 0

@@ -236,24 +236,57 @@ sub2.1でhint_generator.vimに動的maxTotal計算を実装したが、core.vim�
 @ref: denops/hellshake-yano/config.ts
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests/motion_test.ts にperKeyMotionCountのテストケース作成
-- [ ] defaultMotionCountフォールバックのテスト作成
-- [ ] `deno test` 実行して失敗を確認
+- [x] tests-vim/test_process2_sub1.vim にperKeyMotionCountのテストケース作成
+- [x] tests-vim/test_process2_sub1_simple.vim に簡易テスト作成
+- [x] defaultMotionCountフォールバックのテスト作成
+- [x] テスト実行して失敗を確認（E117: Unknown function）
 
 ##### TDD Step 2: Green（実装）
-- [ ] perKeyMotionCount辞書のサポート実装
-- [ ] defaultMotionCountフォールバック実装
-- [ ] キー別カウンター管理実装
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
+- [x] hellshake_yano_vim#motion#get_motion_count() 関数実装
+- [x] perKeyMotionCount辞書のサポート実装
+- [x] defaultMotionCountフォールバック実装
+- [x] キー別カウンター管理実装（handle()関数で使用）
+- [x] Phase D-2 Sub1 ドキュメントコメント追加
+- [x] テスト実行してテスト成功を確認（全3テスト PASS）
 
 ##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの整理・最適化
-- [ ] `deno test` で回帰テスト確認
+- [x] コードの可読性確認（完了）
+- [x] ドキュメントコメント更新（Phase D-2 Sub1 マーク）
+- [x] 回帰テスト確認（VimScript テスト成功）
 
 ##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/motion.vim に移植
-- [ ] Vimでの手動動作確認
+- [x] autoload/hellshake_yano_vim/motion.vim に実装完了
+- [x] Vimでの動作確認（test_process2_sub1_simple.vim で全テスト PASS）
+
+#### sub1.1: h/j/k/l モーションのサポート
+@target: autoload/hellshake_yano_vim/motion.vim
+@issue: autoload/hellshake_yano_vim/motion.vim:174 で w/b/e のみ許可されており、h/j/k/l が拒否される
+
+##### 背景
+sub1でperKeyMotionCountを実装したが、motion.vim:174の検証ロジックで
+`index(['w', 'b', 'e'], a:motion_key)` により h/j/k/l が拒否される。
+perKeyMotionCountの設定で h/j/k/l を設定しても、「invalid motion key」エラーで動作しない。
+
+##### TDD Step 1: Red（VimScriptテスト作成）
+- [x] tests-vim/test_process2_sub1_1.vim に h/j/k/l のテストケース作成
+- [x] h/j/k/l で perKeyMotionCount が適用されるテスト作成
+- [x] テスト実行して失敗を確認（E117: Unknown function or invalid motion key）
+
+##### TDD Step 2: Green（VimScript実装）
+- [x] motion.vim:175 の検証配列を修正
+  - [x] `['w', 'b', 'e']` → `['w', 'b', 'e', 'h', 'j', 'k', 'l']` に拡張
+- [x] ドキュメントコメント（139-140行目）も更新
+  - [x] 「w/b/e」→「w/b/e/h/j/k/l」に変更
+- [x] テスト実行してテスト成功を確認（全6テスト PASS）
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [x] コードの可読性確認
+- [x] ドキュメントコメント更新（Phase D-2 Sub1.1 マーク追加）
+- [x] 回帰テスト確認（既存の w/b/e が正常動作、全3テスト PASS）
+
+##### VimScript実装
+- [x] autoload/hellshake_yano_vim/motion.vim の修正完了
+- [x] Vimでの動作確認（h/j/k/l が2回連続で動作、テストで確認）
 
 #### sub2: Per-Key最小単語長
 @target: autoload/hellshake_yano_vim/word_detector.vim
