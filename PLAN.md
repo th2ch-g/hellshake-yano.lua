@@ -1,404 +1,413 @@
-# title: Process2 - ユーティリティの統合（Phase C-1）
+# title: Phase 3 - Neovimレイヤーの構築
 
 ## 概要
-- Phase B-1～B-4で実装されたユーティリティ機能を`common/utils/`に統合
-- `validation.ts`と`performance.ts`の機能を完全に統合
-- `phase-b3/common-base.ts`と`phase-b4/common-base.ts`の差分を統合
+- 既存のメインコードベース（Neovim専用実装）を`neovim/`レイヤーに移動
+- `common/`レイヤーへの依存を更新
 - TDD方式で各サブプロセスごとにテスト→実装→検証のサイクルを実施
 
 ### goal
-- 開発者が`common/utils/`を参照するだけで、すべてのユーティリティ機能にアクセスできる
-- 重複コードが削減され、保守性が向上する
-- 既存の`validation.ts`と`performance.ts`への依存が解消され、古いファイルを削除できる
+- 既存のNeovim実装が`neovim/`レイヤーに整理される
+- `common/`レイヤーの型定義とユーティリティを活用する
+- 既存テストが破壊されず、すべてパスする
+- 型チェック100%パス、リンター警告0個を達成
 
 ## 必須のルール
 - 必ず `CLAUDE.md` を参照し、ルールを守ること
 - **TDDサイクルの厳守**: 各サブプロセスで必ずRED→GREEN→REFACTOR→CHECKを実施
-- **既存ファイルを段階的に移行**: 依存関係を更新してから古いファイルを削除
+- **既存実装を段階的に移行**: テストを維持しながら移動
 - **各サブプロセス完了後に検証**: `deno test`と`deno check`を必ず実行
 
 ## 開発のゴール
-- `validation.ts`の全機能を`common/utils/validator.ts`に統合
-- `performance.ts`の全機能を`common/utils/performance.ts`に統合
-- Phase B-3とPhase B-4の`common-base.ts`を`common/utils/base.ts`に完全統合
-- 依存関係を更新し、古いファイル（`validation.ts`, `performance.ts`）を削除
+- `neovim/core/core.ts`, `word.ts`, `hint.ts`を作成（既存実装を移動）
+- `neovim/display/extmark-display.ts`, `highlight.ts`を作成
+- `neovim/dictionary.ts`を作成
+- 依存関係を`common/`レイヤーに更新
+- 既存ファイル（`core.ts`, `word.ts`, `hint.ts`, `display.ts`, `dictionary.ts`）を削除
 - 全テストパス、型チェック100%パス、カバレッジ90%以上を達成
 
 ## 実装仕様
 
-### 現状分析結果
+### 前提条件
+- Phase 1完了: `common/`レイヤーが構築済み
+- Phase 2完了: `vim/`レイヤーが構築済み
+- Process2（Phase C-1）完了: `validation.ts`, `performance.ts`削除済み、`common/utils/`に統合済み
 
-#### 既存ファイルの状態
-- ✅ `common/utils/`ディレクトリ作成済み（6ファイル）
-- ✅ 基本的なテストファイル作成済み
-- ❌ `validation.ts`が依然として存在（126行）
-- ❌ `performance.ts`が依然として存在（61行）
-- ❌ `phase-b{1,2,3,4}/common-base.ts`が依然として存在
-- ❌ これらのファイルへの依存関係が残っている
+### 移動対象ファイル
 
-#### 統合すべきファイル
-1. `validation.ts` → `common/utils/validator.ts`（機能拡張統合）
-2. `performance.ts` → `common/utils/performance.ts`（機能拡張統合）
-3. `phase-b3/common-base.ts` + `phase-b4/common-base.ts` → `common/utils/base.ts`（完全統合）
-4. `phase-b1/side-effect-checker.ts` → `common/utils/side-effect.ts`（確認のみ）
+#### コア機能 (neovim/core/へ移動)
+- `denops/hellshake-yano/core.ts` → `neovim/core/core.ts`
+- `denops/hellshake-yano/word.ts` → `neovim/core/word.ts`
+- `denops/hellshake-yano/hint.ts` → `neovim/core/hint.ts`
 
-#### validation.tsの追加機能
-- `validateConfig()`: Config型バリデーション
-- `validateHighlightGroupName()`: ハイライトグループ名検証
-- `isValidColorName()`: カラー名検証
-- `isValidHexColor()`: Hex色検証
-- `validateHighlightColor()`: ハイライト色検証
-- `normalizeColorName()`: カラー名正規化
-- `generateHighlightCommand()`: ハイライトコマンド生成
-- `validateHighlightConfig()`: ハイライト設定検証
+#### 表示システム (neovim/display/へ移動)
+- `denops/hellshake-yano/display.ts` → `neovim/display/extmark-display.ts`
 
-#### performance.tsの追加機能
-- `detectWordsOptimized()`: 最適化された単語検出（キャッシュ付き）
-- `generateHintsOptimized()`: 最適化されたヒント生成
-- `generateHintsFromConfig()`: Config付きヒント生成
-- `collectDebugInfo()`: デバッグ情報収集
-- `clearDebugInfo()`: デバッグ情報クリア
-- `clearCaches()`: キャッシュクリア
-- `getWordsCache()`: 単語キャッシュ取得
-- `getHintsCache()`: ヒントキャッシュ取得
-
-#### Phase B-3とB-4のcommon-base.tsの差分
-- Phase B-3版: `validateRange()`等がstring | null返却
-- Phase B-4版: `ValidationResult`型返却、`withFallback()`関数追加
-- 統合方針: Phase B-4版を基準とし、Phase B-3互換関数を`*Compat`として追加
+#### 辞書管理 (neovim/へ移動)
+- `denops/hellshake-yano/dictionary.ts` → `neovim/dictionary.ts`
 
 ### 目標ディレクトリ構造
 
 ```
-denops/hellshake-yano/common/utils/
-├── error-handler.ts    # ✅ 完成（既存）
-├── logger.ts           # ✅ 完成（既存）
-├── validator.ts        # 🔧 validation.ts統合（拡張）
-├── base.ts             # 🔧 phase-b3/b4統合（拡張）
-├── side-effect.ts      # ✅ 完成（既存）
-└── performance.ts      # 🔧 既存performance.ts統合（拡張）
-
-tests/common/utils/
-├── error-handler.test.ts    # ✅ 完成
-├── logger.test.ts           # ✅ 完成
-├── validator.test.ts        # 🔧 拡張
-├── base.test.ts             # 🔧 拡張
-├── side-effect.test.ts      # ✅ 完成
-└── performance.test.ts      # 🔧 拡張
+denops/hellshake-yano/
+├── neovim/                       # Neovim専用実装レイヤー
+│   ├── core/                     # コア機能
+│   │   ├── core.ts               # 🔧 既存core.ts移動
+│   │   ├── word.ts               # 🔧 既存word.ts移動
+│   │   └── hint.ts               # 🔧 既存hint.ts移動
+│   ├── display/                  # 表示システム
+│   │   ├── extmark-display.ts   # 🔧 既存display.ts移動
+│   │   └── highlight.ts          # 🔧 新規作成（表示関連機能の抽出）
+│   └── dictionary.ts             # 🔧 既存dictionary.ts移動
+│
+└── main.ts                       # Phase 5で書き換え予定（Phase 3では移動しない）
 ```
 
-### 削除予定ファイル
-- `denops/hellshake-yano/validation.ts`
-- `denops/hellshake-yano/performance.ts`
+### 依存関係の更新方針
 
-### 残るファイル（Phase 6で削除予定）
-- `phase-b1/side-effect-checker.ts`
-- `phase-b3/common-base.ts`
-- `phase-b4/common-base.ts`
+移動時に以下のインポートパスを更新：
+
+```typescript
+// 変更前
+import type { Config } from "./config.ts";
+import type { Word } from "./types.ts";
+import { UnifiedCache } from "./cache.ts";
+
+// 変更後
+import type { Config } from "../../common/config.ts";
+import type { Word } from "../../common/types/word.ts";
+import { UnifiedCache } from "../../common/cache/unified-cache.ts";
+```
 
 ## 生成AIの学習用コンテキスト
 
+### 既存実装（移動元）
+- `denops/hellshake-yano/core.ts`
+  - Neovim専用のコア機能
+- `denops/hellshake-yano/word.ts`
+  - TinySegmenterによる日本語対応の単語検出
+- `denops/hellshake-yano/hint.ts`
+  - ヒント生成ロジック
+- `denops/hellshake-yano/display.ts`
+  - extmarkベースの表示システム
+- `denops/hellshake-yano/dictionary.ts`
+  - 辞書管理機能
+
 ### 参考ドキュメント
 - `ARCHITECTURE_C.md`
-  - Process2: ユーティリティの統合の詳細仕様
-  - 統合方針とマッピング
+  - Phase 3: Neovimレイヤーの構築の詳細仕様
+  - 依存関係の更新方針
 
-### 既存実装（統合元）
-- `denops/hellshake-yano/validation.ts`
-  - ハイライト関連のバリデーション機能
-- `denops/hellshake-yano/performance.ts`
-  - パフォーマンス計測とキャッシュ機能
-- `denops/hellshake-yano/phase-b3/common-base.ts`
-  - エラーハンドリング、ログ、バリデーション（Phase B-3版）
-- `denops/hellshake-yano/phase-b4/common-base.ts`
-  - エラーハンドリング、ログ、バリデーション（Phase B-4版、withFallback追加）
-- `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
-  - 副作用管理クラス
-
-### 既存実装（統合先）
-- `denops/hellshake-yano/common/utils/error-handler.ts`
-  - 完成済み
-- `denops/hellshake-yano/common/utils/logger.ts`
-  - 完成済み
-- `denops/hellshake-yano/common/utils/validator.ts`
-  - 基本機能のみ実装済み（拡張が必要）
-- `denops/hellshake-yano/common/utils/base.ts`
-  - Phase B-4版実装済み（Phase B-3互換追加が必要）
-- `denops/hellshake-yano/common/utils/side-effect.ts`
-  - 完成済み
-- `denops/hellshake-yano/common/utils/performance.ts`
-  - 基本機能のみ実装済み（拡張が必要）
-
-### 既存テスト
-- `tests/phase-b4/common-base.test.ts`
-  - ユーティリティ関数のテストケース（12ステップ）
-- `tests/common/utils/validator.test.ts`
-  - 基本的なバリデーションテスト
-- `tests/common/utils/performance.test.ts`
-  - 基本的なパフォーマンステスト
+### Phase 1で構築済み（想定）
+- `common/types/` - 型定義の一元管理
+- `common/utils/` - ユーティリティ関数
+- `common/cache/` - キャッシュシステム
+- `common/config.ts` - 設定管理
 
 ## Process
 
-### process1: 既存ファイルの差分分析とテスト準備（20分）
+### process1: 既存ファイルの分析とテスト準備（30分）
 
-#### sub1: validation.tsとcommon/utils/validator.tsの差分分析
+#### sub1: 既存ファイルとテストの確認
 @target: なし（調査のみ）
 @ref:
-- `denops/hellshake-yano/validation.ts`
-- `denops/hellshake-yano/common/utils/validator.ts`
+- `denops/hellshake-yano/core.ts`
+- `denops/hellshake-yano/word.ts`
+- `denops/hellshake-yano/hint.ts`
+- `denops/hellshake-yano/display.ts`
+- `denops/hellshake-yano/dictionary.ts`
 
-- [x] `validation.ts`の全機能をリストアップ
-- [x] `common/utils/validator.ts`の現在の機能をリストアップ
-- [x] 不足している機能を特定
-- [x] 追加すべきテストケースをリストアップ
+- [ ] 各ファイルのサイズと行数を確認
+  ```bash
+  wc -l denops/hellshake-yano/{core,word,hint,display,dictionary}.ts
+  ```
+- [ ] 既存テストファイルの場所を確認
+  ```bash
+  find tests -name "*core*.test.ts" -o -name "*word*.test.ts" -o -name "*hint*.test.ts" -o -name "*display*.test.ts" -o -name "*dictionary*.test.ts"
+  ```
+- [ ] 各ファイルの主要なexportを確認
+- [ ] 依存関係を分析（どのファイルが何をインポートしているか）
 
-#### sub2: performance.tsとcommon/utils/performance.tsの差分分析
+#### sub2: 依存関係の詳細分析
 @target: なし（調査のみ）
-@ref:
-- `denops/hellshake-yano/performance.ts`
-- `denops/hellshake-yano/common/utils/performance.ts`
 
-- [x] `performance.ts`の全機能をリストアップ
-- [x] `common/utils/performance.ts`の現在の機能をリストアップ
-- [x] 不足している機能を特定（キャッシュ関連関数）
-- [x] 追加すべきテストケースをリストアップ
+- [ ] `core.ts`の依存を確認
+  ```bash
+  grep -E "^import.*from" denops/hellshake-yano/core.ts | head -20
+  ```
+- [ ] `word.ts`の依存を確認
+- [ ] `hint.ts`の依存を確認
+- [ ] `display.ts`の依存を確認
+- [ ] `dictionary.ts`の依存を確認
+- [ ] 依存マップを作成（どのファイルがcommon/への更新が必要か）
 
-#### sub3: phase-b3/common-base.tsとphase-b4/common-base.tsの差分分析
+#### sub3: テスト戦略の確認
 @target: なし（調査のみ）
-@ref:
-- `denops/hellshake-yano/phase-b3/common-base.ts`
-- `denops/hellshake-yano/phase-b4/common-base.ts`
-- `denops/hellshake-yano/common/utils/base.ts`
 
-- [x] Phase B-3版とPhase B-4版の差分を特定
-- [x] `common/utils/base.ts`に不足している機能を特定
-- [x] 後方互換性のための`*Compat`関数の必要性を判断
-- [x] 追加すべきテストケースをリストアップ
+- [ ] 既存テストの実行状態を確認
+  ```bash
+  deno test --filter "core|word|hint|display|dictionary"
+  ```
+- [ ] テストカバレッジを確認
+  ```bash
+  deno test --coverage=coverage
+  deno coverage coverage/
+  ```
+- [ ] 移動後のテストパス更新が必要な箇所をリストアップ
 
 ---
 
-### process2: validator.tsの機能拡張（TDD）（30分）
+### process2: neovim/core/の構築（TDD）（2時間）
 
-#### sub1: RED - テスト作成（10分）
-@target: `tests/common/utils/validator.test.ts`
-@ref: `denops/hellshake-yano/validation.ts`
+#### sub1: RED - テスト準備とディレクトリ作成（15分）
+@target:
+- `denops/hellshake-yano/neovim/core/`
+- `tests/neovim/core/`
 
-- [x] `validateHighlightGroupName()`のテスト作成
-  - [x] 有効なグループ名（"MyGroup"）
-  - [x] 数字開始を拒否（"1Invalid"）
-  - [x] ハイフン・スペース含有を拒否
-  - [x] 空文字列を拒否
-- [x] `isValidColorName()`のテスト作成
-  - [x] 有効なカラー名（"red", "blue"等）
-  - [x] 無効なカラー名を拒否
-- [x] `isValidHexColor()`のテスト作成
-  - [x] 有効なHex色（"#FF0000", "#f00"）
-  - [x] 無効なHex色を拒否（"FF0000", "#XYZ"）
-- [x] `validateHighlightColor()`のテスト作成
-  - [x] fg/bgの検証
-- [x] `normalizeColorName()`のテスト作成
-  - [x] 小文字→大文字先頭（"red" → "Red"）
-  - [x] "none" → "None"
-- [x] `generateHighlightCommand()`のテスト作成
-  - [x] fg/bg指定のコマンド生成
-  - [x] Hex色とカラー名の両対応
-- [x] `validateHighlightConfig()`のテスト作成
-  - [x] Config全体の検証
-- [x] テスト実行: `deno test tests/common/utils/validator.test.ts`（失敗確認）
+- [ ] ディレクトリ作成
+  ```bash
+  mkdir -p denops/hellshake-yano/neovim/core
+  mkdir -p tests/neovim/core
+  ```
+- [ ] 既存テストを新しい場所にコピー（移動ではなくコピー）
+- [ ] テストのインポートパスを更新（neovim/core/を参照するように）
+- [ ] テスト実行（失敗確認）
+  ```bash
+  deno test tests/neovim/core/
+  ```
 
-#### sub2: GREEN - 最小実装（15分）
-@target: `denops/hellshake-yano/common/utils/validator.ts`
-@ref: `denops/hellshake-yano/validation.ts`
+#### sub2: GREEN - core.tsの移動と最小実装（30分）
+@target: `denops/hellshake-yano/neovim/core/core.ts`
+@ref: `denops/hellshake-yano/core.ts`
 
-- [x] `validation.ts`から以下の関数を移植
-  - [x] `validateHighlightGroupName()`
-  - [x] `isValidColorName()`
-  - [x] `isValidHexColor()`
-  - [x] `validateHighlightColor()`
-  - [x] `normalizeColorName()`
-  - [x] `generateHighlightCommand()`
-  - [x] `validateHighlightConfig()`
-- [x] 必要な型定義をインポート（`HighlightColor`等）
-- [x] テスト実行: `deno test tests/common/utils/validator.test.ts`（成功確認）
+- [ ] `core.ts`を`neovim/core/core.ts`にコピー
+  ```bash
+  cp denops/hellshake-yano/core.ts denops/hellshake-yano/neovim/core/core.ts
+  ```
+- [ ] インポートパスを更新
+  - [ ] `./config.ts` → `../../common/config.ts`
+  - [ ] `./types.ts` → `../../common/types/*.ts`
+  - [ ] `./cache.ts` → `../../common/cache/unified-cache.ts`
+  - [ ] `./word.ts` → `./word.ts`（同じディレクトリ）
+  - [ ] `./hint.ts` → `./hint.ts`（同じディレクトリ）
+  - [ ] `./display.ts` → `../display/extmark-display.ts`
+  - [ ] `./validation.ts` → `../../common/utils/validator.ts`
+  - [ ] `./performance.ts` → `../../common/utils/performance.ts`
+- [ ] 型チェック: `deno check denops/hellshake-yano/neovim/core/core.ts`
+
+#### sub3: GREEN - word.tsの移動（30分）
+@target: `denops/hellshake-yano/neovim/core/word.ts`
+@ref: `denops/hellshake-yano/word.ts`
+
+- [ ] `word.ts`を`neovim/core/word.ts`にコピー
+  ```bash
+  cp denops/hellshake-yano/word.ts denops/hellshake-yano/neovim/core/word.ts
+  ```
+- [ ] インポートパスを更新
+  - [ ] `./types.ts` → `../../common/types/word.ts`
+  - [ ] `./config.ts` → `../../common/config.ts`
+  - [ ] その他の依存を確認して更新
+- [ ] 型チェック: `deno check denops/hellshake-yano/neovim/core/word.ts`
+
+#### sub4: GREEN - hint.tsの移動（30分）
+@target: `denops/hellshake-yano/neovim/core/hint.ts`
+@ref: `denops/hellshake-yano/hint.ts`
+
+- [ ] `hint.ts`を`neovim/core/hint.ts`にコピー
+  ```bash
+  cp denops/hellshake-yano/hint.ts denops/hellshake-yano/neovim/core/hint.ts
+  ```
+- [ ] インポートパスを更新
+  - [ ] `./types.ts` → `../../common/types/hint.ts`
+  - [ ] `./word.ts` → `./word.ts`
+  - [ ] その他の依存を確認して更新
+- [ ] 型チェック: `deno check denops/hellshake-yano/neovim/core/hint.ts`
+
+#### sub5: REFACTOR - リファクタリング（15分）
+@target: `denops/hellshake-yano/neovim/core/*.ts`
+
+- [ ] 不要なインポートを削除
+- [ ] JSDocコメントの確認と更新（ファイルパスの説明を更新）
+- [ ] コードフォーマット
+  ```bash
+  deno fmt denops/hellshake-yano/neovim/core/
+  ```
+- [ ] リンター実行
+  ```bash
+  deno lint denops/hellshake-yano/neovim/core/
+  ```
+
+#### sub6: CHECK - 検証（10分）
+- [ ] `deno test tests/neovim/core/`（全テストパス）
+- [ ] `deno check denops/hellshake-yano/neovim/core/*.ts`（型チェック100%）
+- [ ] `deno lint denops/hellshake-yano/neovim/core/`（警告0個）
+
+---
+
+### process3: neovim/display/の構築（TDD）（1時間）
+
+#### sub1: RED - テスト準備とディレクトリ作成（10分）
+@target:
+- `denops/hellshake-yano/neovim/display/`
+- `tests/neovim/display/`
+
+- [ ] ディレクトリ作成
+  ```bash
+  mkdir -p denops/hellshake-yano/neovim/display
+  mkdir -p tests/neovim/display
+  ```
+- [ ] 既存のdisplay.tsのテストをコピー
+- [ ] テストのインポートパスを更新
+- [ ] テスト実行（失敗確認）
+  ```bash
+  deno test tests/neovim/display/
+  ```
+
+#### sub2: GREEN - extmark-display.tsの移動（30分）
+@target: `denops/hellshake-yano/neovim/display/extmark-display.ts`
+@ref: `denops/hellshake-yano/display.ts`
+
+- [ ] `display.ts`を`neovim/display/extmark-display.ts`にコピー
+  ```bash
+  cp denops/hellshake-yano/display.ts denops/hellshake-yano/neovim/display/extmark-display.ts
+  ```
+- [ ] インポートパスを更新
+  - [ ] `./types.ts` → `../../common/types/*.ts`
+  - [ ] `./config.ts` → `../../common/config.ts`
+  - [ ] その他の依存を確認して更新
+- [ ] 型チェック: `deno check denops/hellshake-yano/neovim/display/extmark-display.ts`
+
+#### sub3: GREEN - highlight.tsの作成（10分）
+@target: `denops/hellshake-yano/neovim/display/highlight.ts`
+
+- [ ] ハイライト管理機能を抽出（extmark-display.tsから分離するか、新規作成）
+- [ ] 必要な型定義をインポート
+- [ ] JSDocコメント追加
+- [ ] 型チェック: `deno check denops/hellshake-yano/neovim/display/highlight.ts`
+
+#### sub4: REFACTOR - リファクタリング（5分）
+@target: `denops/hellshake-yano/neovim/display/*.ts`
+
+- [ ] コードフォーマット
+  ```bash
+  deno fmt denops/hellshake-yano/neovim/display/
+  ```
+- [ ] リンター実行
+  ```bash
+  deno lint denops/hellshake-yano/neovim/display/
+  ```
+
+#### sub5: CHECK - 検証（5分）
+- [ ] `deno test tests/neovim/display/`（全テストパス）
+- [ ] `deno check denops/hellshake-yano/neovim/display/*.ts`（型チェック100%）
+- [ ] `deno lint denops/hellshake-yano/neovim/display/`（警告0個）
+
+---
+
+### process4: neovim/dictionary.tsの移動（TDD）（30分）
+
+#### sub1: RED - テスト準備（5分）
+@target: `tests/neovim/dictionary.test.ts`
+
+- [ ] 既存のdictionary.tsのテストをコピー
+- [ ] テストのインポートパスを更新
+- [ ] テスト実行（失敗確認）
+  ```bash
+  deno test tests/neovim/dictionary.test.ts
+  ```
+
+#### sub2: GREEN - dictionary.tsの移動（15分）
+@target: `denops/hellshake-yano/neovim/dictionary.ts`
+@ref: `denops/hellshake-yano/dictionary.ts`
+
+- [ ] `dictionary.ts`を`neovim/dictionary.ts`にコピー
+  ```bash
+  cp denops/hellshake-yano/dictionary.ts denops/hellshake-yano/neovim/dictionary.ts
+  ```
+- [ ] インポートパスを更新
+  - [ ] 相対パスを確認して更新
+- [ ] 型チェック: `deno check denops/hellshake-yano/neovim/dictionary.ts`
 
 #### sub3: REFACTOR - リファクタリング（5分）
-@target: `denops/hellshake-yano/common/utils/validator.ts`
+@target: `denops/hellshake-yano/neovim/dictionary.ts`
 
-- [x] JSDocコメント追加
-- [x] 関数の並び順整理（基本検証 → ハイライト検証）
-- [x] 重複コードの削除
-- [x] 型定義の整理
-
-#### sub4: CHECK - 検証
-- [x] `deno test tests/common/utils/validator.test.ts`（全テストパス）
-- [x] `deno check denops/hellshake-yano/common/utils/validator.ts`（型チェック100%）
-
----
-
-### process3: performance.tsの機能拡張（TDD）（30分）
-
-#### sub1: RED - テスト作成（10分）
-@target: `tests/common/utils/performance.test.ts`
-@ref: `denops/hellshake-yano/performance.ts`
-
-- [x] `detectWordsOptimized()`のテスト作成（Denopsモック必要）
-  - [x] キャッシュミス時の動作
-  - [x] キャッシュヒット時の動作
-- [x] `generateHintsOptimized()`のテスト作成
-  - [x] キャッシュミス時の動作
-  - [x] キャッシュヒット時の動作
-- [x] `generateHintsFromConfig()`のテスト作成
-  - [x] Config付きヒント生成
-- [x] `collectDebugInfo()`のテスト作成
-  - [x] デバッグ情報の構造検証
-- [x] `clearDebugInfo()`のテスト作成
-- [x] `clearCaches()`のテスト作成
-- [x] `getWordsCache()`のテスト作成
-- [x] `getHintsCache()`のテスト作成
-- [x] テスト実行: `deno test tests/common/utils/performance.test.ts`（失敗確認）
-
-#### sub2: GREEN - 最小実装（15分）
-@target: `denops/hellshake-yano/common/utils/performance.ts`
-@ref: `denops/hellshake-yano/performance.ts`
-
-- [x] `performance.ts`から以下を統合
-  - [x] `wordsCache`, `hintsCache`の定義
-  - [x] `detectWordsOptimized()`
-  - [x] `generateHintsOptimized()`
-  - [x] `generateHintsFromConfig()`
-  - [x] `collectDebugInfo()`
-  - [x] `clearDebugInfo()`
-  - [x] `clearCaches()`
-  - [x] `getWordsCache()`
-  - [x] `getHintsCache()`
-- [x] 必要な依存をインポート（`LRUCache`, `Word`, `Config`等）
-- [x] テスト実行: `deno test tests/common/utils/performance.test.ts`（成功確認）
-
-#### sub3: REFACTOR - リファクタリング（5分）
-@target: `denops/hellshake-yano/common/utils/performance.ts`
-
-- [x] インポートパスの整理
-- [x] JSDocコメント追加
-- [x] 関数の並び順整理（メトリクス → キャッシュ → デバッグ）
-
-#### sub4: CHECK - 検証
-- [x] `deno test tests/common/utils/performance.test.ts`（全テストパス）
-- [x] `deno check denops/hellshake-yano/common/utils/performance.ts`（型チェック100%）
-
----
-
-### process4: base.tsの完全統合（TDD）（30分）
-
-#### sub1: RED - テスト作成（10分）
-@target: `tests/common/utils/base.test.ts`
-@ref:
-- `denops/hellshake-yano/phase-b3/common-base.ts`
-- `denops/hellshake-yano/phase-b4/common-base.ts`
-
-- [x] Phase B-3版の`validateRange()`互換テスト
-  - [x] エラー時にstring返却（`validateRangeCompat()`）
-- [x] Phase B-3版の`validateNonEmpty()`互換テスト
-  - [x] エラー時にstring返却（`validateNonEmptyCompat()`）
-- [x] Phase B-3版の`validateInList()`互換テスト
-  - [x] エラー時にstring返却（`validateInListCompat()`）
-- [x] 既存の`withFallback()`テスト（Phase B-4版）
-- [x] テスト実行: `deno test tests/common/utils/base.test.ts`（失敗確認）
-
-#### sub2: GREEN - 最小実装（15分）
-@target: `denops/hellshake-yano/common/utils/base.ts`
-@ref: `denops/hellshake-yano/phase-b3/common-base.ts`
-
-- [x] Phase B-3互換関数を追加
-  - [x] `validateRangeCompat()`: string | null返却版
-  - [x] `validateNonEmptyCompat()`: string | null返却版
-  - [x] `validateInListCompat()`: string | null返却版
-- [x] または、`validator.ts`に統合するか判断
-- [x] テスト実行: `deno test tests/common/utils/base.test.ts`（成功確認）
-
-#### sub3: REFACTOR - リファクタリング（5分）
-@target: `denops/hellshake-yano/common/utils/base.ts`
-
-- [x] 重複コードの削除
-- [x] JSDocコメント追加（Deprecation警告）
-- [x] Phase B-3互換関数に`@deprecated`アノテーション追加
-
-#### sub4: CHECK - 検証
-- [x] `deno test tests/common/utils/base.test.ts`（全テストパス）
-- [x] `deno check denops/hellshake-yano/common/utils/base.ts`（型チェック100%）
-
----
-
-### process5: side-effect.tsの確認（10分）
-
-#### sub1: 既存実装の確認
-@target: `denops/hellshake-yano/common/utils/side-effect.ts`
-@ref: `denops/hellshake-yano/phase-b1/side-effect-checker.ts`
-
-- [x] 両ファイルの差分確認（ほぼ同一のはず）
-- [x] JSDocコメントの充実度確認
-- [x] 必要に応じてドキュメント追加
-
-#### sub2: CHECK - 検証
-- [x] `deno test tests/common/utils/side-effect.test.ts`（全テストパス）
-- [x] `deno check denops/hellshake-yano/common/utils/side-effect.ts`（型チェック100%）
-
----
-
-### process6: 依存関係の更新と古いファイル削除（20分）
-
-#### sub1: 依存関係の検索（5分）
-@target: なし（調査のみ）
-
-- [x] `validation.ts`への依存を検索
+- [ ] コードフォーマット
   ```bash
-  grep -r "from.*validation.ts" denops/hellshake-yano/
+  deno fmt denops/hellshake-yano/neovim/dictionary.ts
   ```
-- [x] `performance.ts`への依存を検索
+- [ ] リンター実行
   ```bash
-  grep -r "from.*performance.ts" denops/hellshake-yano/
+  deno lint denops/hellshake-yano/neovim/dictionary.ts
   ```
-- [x] `phase-b*/common-base.ts`への依存を検索
+
+#### sub4: CHECK - 検証（5分）
+- [ ] `deno test tests/neovim/dictionary.test.ts`（全テストパス）
+- [ ] `deno check denops/hellshake-yano/neovim/dictionary.ts`（型チェック100%）
+
+---
+
+### process5: 依存関係の更新（30分）
+
+#### sub1: main.tsの依存更新（15分）
+@target: `denops/hellshake-yano/main.ts`
+
+- [ ] main.tsのインポートパスを更新
+  - [ ] `./core.ts` → `./neovim/core/core.ts`
+  - [ ] `./display.ts` → `./neovim/display/extmark-display.ts`
+  - [ ] `./word.ts` → `./neovim/core/word.ts`
+  - [ ] `./hint.ts` → `./neovim/core/hint.ts`
+  - [ ] `./dictionary.ts` → `./neovim/dictionary.ts`
+- [ ] 型チェック: `deno check denops/hellshake-yano/main.ts`
+
+#### sub2: 他のファイルの依存更新（15分）
+@target: すべての既存ファイル
+
+- [ ] neovim/core/以外で旧パスを参照しているファイルを検索
   ```bash
-  grep -r "from.*phase-b.*/common-base.ts" denops/hellshake-yano/
+  grep -r "from.*\./core\.ts" denops/hellshake-yano/ --exclude-dir=neovim
+  grep -r "from.*\./word\.ts" denops/hellshake-yano/ --exclude-dir=neovim
+  grep -r "from.*\./hint\.ts" denops/hellshake-yano/ --exclude-dir=neovim
+  grep -r "from.*\./display\.ts" denops/hellshake-yano/ --exclude-dir=neovim
+  grep -r "from.*\./dictionary\.ts" denops/hellshake-yano/ --exclude-dir=neovim
   ```
-- [x] 依存ファイルのリストを作成
+- [ ] 見つかったファイルのインポートパスを更新
+- [ ] 全体の型チェック: `deno check denops/hellshake-yano/**/*.ts`
 
-#### sub2: 依存関係の更新（10分）
-@target: 依存しているすべてのファイル
+---
 
-- [x] すべてのインポートを置き換え
-  - [x] `./validation.ts` → `./common/utils/validator.ts`
-  - [x] `./performance.ts` → `./common/utils/performance.ts`
-  - [x] `../phase-b3/common-base.ts` → `./common/utils/base.ts`
-  - [x] `../phase-b4/common-base.ts` → `./common/utils/base.ts`
-- [x] 相対パスの調整（ファイル位置に応じて）
-- [x] 型チェック: `deno check denops/hellshake-yano/**/*.ts`
+### process6: 既存ファイルの削除と最終検証（30分）
 
-#### sub3: バックアップとコミット（2分）
+#### sub1: バックアップとコミット（5分）
 @target: なし（Git操作）
 
-- [x] 変更をコミット
+- [ ] 変更をコミット
   ```bash
   git add .
-  git commit -m "feat(phase-c1): process2 完了前 - 依存関係更新"
+  git commit -m "feat(phase-c3): neovim/レイヤー構築完了前 - ファイル移動とテスト更新"
   ```
 
-#### sub4: 古いファイルの削除（3分）
+#### sub2: 既存ファイルの削除（10分）
 @target: なし（ファイル削除）
 
-- [x] `validation.ts`を削除
+- [ ] 移動元ファイルを削除
   ```bash
-  rm denops/hellshake-yano/validation.ts
+  rm denops/hellshake-yano/core.ts
+  rm denops/hellshake-yano/word.ts
+  rm denops/hellshake-yano/hint.ts
+  rm denops/hellshake-yano/display.ts
+  rm denops/hellshake-yano/dictionary.ts
   ```
-- [x] `performance.ts`を削除
-  ```bash
-  rm denops/hellshake-yano/performance.ts
-  ```
-- [x] ※phase-b*ファイルはPhase 6で削除するため残す
+- [ ] 古いテストファイルを削除（neovim/に移動したもの）
 
-#### sub5: CHECK - 検証
-- [x] 型チェック: `deno check denops/hellshake-yano/**/*.ts`（エラー0）
-- [x] 全テスト: `deno test`（全テストパス）
+#### sub3: CHECK - 最終検証（15分）
+- [ ] 全テスト実行: `deno test`（全テストパス）
+- [ ] 型チェック: `deno check denops/hellshake-yano/**/*.ts`（エラー0）
+- [ ] リンター: `deno lint denops/hellshake-yano/`（警告0個）
+- [ ] カバレッジ確認: `deno test --coverage=coverage && deno coverage coverage/`（90%以上）
+- [ ] ディレクトリ構造確認
+  ```bash
+  tree denops/hellshake-yano/neovim/
+  tree tests/neovim/
+  ```
 
 ---
 
@@ -407,97 +416,47 @@ tests/common/utils/
 各サブプロセスのRED（テスト作成）フェーズで実施済み。
 
 #### 完了基準
-- [x] すべてのテストがパス: `deno test tests/common/utils/`
-- [x] テストカバレッジ90%以上: `deno coverage coverage/`
+- [ ] すべてのテストがパス: `deno test tests/neovim/`
+- [ ] テストカバレッジ90%以上: `deno coverage coverage/`
 
 ---
 
-### process100: リファクタリング
+### process100: リファクタリング（30分）
 
-各サブプロセスのREFACTORフェーズで実施済み。
+#### sub1: コード最適化
+@target: `denops/hellshake-yano/neovim/**/*.ts`
 
-#### 追加リファクタリング項目
-- [x] インポートパスの最適化（相対パス → 絶対パス検討）
-- [x] 型定義の再整理（必要に応じて）
-- [x] コードの重複削除（validator.ts内）
-- [x] 命名規則の統一
+- [ ] 不要なコメントの削除
+- [ ] 命名規則の統一確認
+- [ ] 重複コードの確認（common/に移動できるものがないか）
 
-#### CHECK - 検証
-- [x] `deno lint denops/hellshake-yano/common/utils/`（警告0個）
-- [x] `deno check denops/hellshake-yano/common/utils/**/*.ts`（100%パス）
-- [x] `deno test`（既存テスト含めて全テストパス）
+#### sub2: CHECK - 検証
+- [ ] `deno lint denops/hellshake-yano/neovim/`（警告0個）
+- [ ] `deno check denops/hellshake-yano/neovim/**/*.ts`（100%パス）
+- [ ] `deno test tests/neovim/`（全テストパス）
 
 ---
 
-### process200: ドキュメンテーション
+### process200: ドキュメンテーション（15分）
 
 #### sub1: PLAN.mdの更新
 @target: `PLAN.md`
 
-- [x] process2の全サブプロセスにチェックマークを付ける
-- [x] 完了時刻を記録
+- [ ] 全サブプロセスにチェックマークを付ける
+- [ ] 完了時刻を記録
 
-#### sub2: ARCHITECTURE_C.mdの更新（オプション）
+#### sub2: ARCHITECTURE_C.mdの更新
 @target: `ARCHITECTURE_C.md`
 
-- [ ] Process2完了状況を記録
+- [ ] Phase 3完了状況を記録
 - [ ] 作成・更新したファイル一覧を追加
+- [ ] Phase 3完了基準の達成状況を記録
+  ```markdown
+  ### Phase 3 完了基準
 
----
-
-## タイムライン
-
-| Process | 作業内容 | 時間 | 累計 |
-|---------|---------|------|------|
-| process1 | 差分分析とテスト準備 | 20分 | 20分 |
-| process2 | validator.ts拡張（TDD） | 30分 | 50分 |
-| process3 | performance.ts統合（TDD） | 30分 | 80分 |
-| process4 | base.ts完全統合（TDD） | 30分 | 110分 |
-| process5 | side-effect.ts確認 | 10分 | 120分 |
-| process6 | 依存更新・削除 | 20分 | 140分 |
-| process100 | リファクタリング | - | 140分 |
-| process200 | ドキュメンテーション | 10分 | 150分 |
-| **合計** | | **150分** | **2.5時間** |
-
----
-
-## リスク管理
-
-### リスク1: 依存関係の破壊
-- **確率**: 高
-- **影響度**: 高
-- **対策**: process6で段階的に更新し、各ステップで`deno check`を実行
-
-### リスク2: テストカバレッジ不足
-- **確率**: 中
-- **影響度**: 中
-- **対策**: TDDサイクルを厳密に守り、各機能にテストを作成
-
-### リスク3: 後方互換性の喪失
-- **確率**: 低
-- **影響度**: 中
-- **対策**: Phase B-3版の関数を`*Compat`として残す（必要に応じて）
-
----
-
-## 完了基準
-
-### 定量指標
-- [x] `common/utils/validator.ts`が拡張され、validation.tsの全機能を含む（43テスト）
-- [x] `common/utils/performance.ts`が拡張され、performance.tsの全機能を含む（11テスト）
-- [x] `common/utils/base.ts`がPhase B-3/B-4の差分を統合（13テスト）
-- [x] `validation.ts`, `performance.ts`が削除済み
-- [x] 全テストパス（76テスト、100%）
-- [x] `deno check denops/hellshake-yano/common/utils/`（100%パス）
-- [x] `deno lint denops/hellshake-yano/common/utils/`（警告0個）
-- [x] 依存関係が更新済み（display.ts, main.ts）
-
-### 定性指標
-- [x] すべての依存が`common/utils/`に向いている
-- [x] 既存テストが破壊されていない（display.ts, main.tsの型チェック成功）
-- [x] JSDocコメントが充実している
-- [x] 型安全性が担保されている
-
-## 実装完了日時
-- Process1-6: 2025-10-19 実装完了
-- コミット: 178eec0
+  - [ ] neovim/core/ 配下に3ファイル作成完了
+  - [ ] neovim/display/ 配下に2ファイル作成完了
+  - [ ] neovim/dictionary.ts 作成完了
+  - [ ] 全テストパス
+  - [ ] deno check 100%パス
+  ```
