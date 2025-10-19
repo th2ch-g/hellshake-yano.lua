@@ -1,7 +1,7 @@
 import type { Denops } from "@denops/std";
 import type { Config, HintMapping, Word } from "./types.ts";
 import { assignHintsToWords, calculateHintPosition } from "./hint.ts";
-import { generateHintsFromConfig, recordPerformance } from "./performance.ts";
+import { generateHintsFromConfig, recordPerformance } from "./common/utils/performance.ts";
 
 export const HIGHLIGHT_BATCH_SIZE = 15;
 let _isRenderingHints = false;

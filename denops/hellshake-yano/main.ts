@@ -20,8 +20,8 @@ import {
   generateHintsFromConfig,
   recordPerformance,
   resetPerformanceMetrics,
-} from "./performance.ts";
-import { validateConfig } from "./validation.ts";
+} from "./common/utils/performance.ts";
+import { validateConfig } from "./common/utils/validator.ts";
 import {
   addToDictionary,
   editDictionary,
