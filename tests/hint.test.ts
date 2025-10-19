@@ -12,7 +12,7 @@ import {
 import {
   detectAdjacentWords,
   calculateHintPosition,
-} from "../denops/hellshake-yano/hint.ts";
+} from "../denops/hellshake-yano/neovim/core/hint.ts";
 import type { Word, HintPosition } from "../denops/hellshake-yano/types.ts";
 
 // Helper function to create test words
