@@ -228,6 +228,10 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
     " 6. 通常モーション実行（ヒント表示の前に実行）
     execute 'normal! ' . a:motion_key
 
+    " Phase D-2 Sub1.1: カーソル位置を画面に反映してからヒント表示
+    " ヒント表示前に画面を更新し、カーソルの移動を視覚的に確認できるようにする
+    redraw
+
     " 7. ヒント表示トリガー（閾値に達した場合）
     if l:should_trigger_hint
       " core#show() を呼び出してヒント表示
