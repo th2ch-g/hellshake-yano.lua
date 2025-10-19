@@ -174,14 +174,27 @@ nnoremap <silent> <Plug>(hellshake-yano-vim-e)
       \ :<C-u>call hellshake_yano_vim#motion#handle('e')<CR>
 
 " デフォルトマッピングの設定（motion_enabled が true の場合のみ）
-if !exists('g:hellshake_yano_vim_config')
-  let g:hellshake_yano_vim_config = {}
+" 設定変数の統一: g:hellshake_yano を優先、g:hellshake_yano_vim_config をフォールバック
+" Phase D-2 Sub1.2 追加修正: 設定変数名の不整合を解消
+if !exists('g:hellshake_yano') && !exists('g:hellshake_yano_vim_config')
+  let g:hellshake_yano = {}
 endif
 
-" config#get() を使用して motion_enabled と motion_keys を取得
-" 初期化前なので、直接グローバル変数またはデフォルト値をチェック
-let s:motion_enabled = get(g:hellshake_yano_vim_config, 'motion_enabled', v:true)
-let s:motion_keys = get(g:hellshake_yano_vim_config, 'motion_keys', ['w', 'b', 'e', 'h', 'j', 'k', 'l'])
+" motion_enabled の取得（g:hellshake_yano を優先）
+let s:motion_enabled = v:true
+if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'motionCounterEnabled')
+  let s:motion_enabled = g:hellshake_yano.motionCounterEnabled
+elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'motion_enabled')
+  let s:motion_enabled = g:hellshake_yano_vim_config.motion_enabled
+endif
+
+" motion_keys の取得（g:hellshake_yano を優先）
+let s:motion_keys = ['w', 'b', 'e', 'h', 'j', 'k', 'l']
+if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'countedMotions')
+  let s:motion_keys = g:hellshake_yano.countedMotions
+elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'motion_keys')
+  let s:motion_keys = g:hellshake_yano_vim_config.motion_keys
+endif
 
 if s:motion_enabled
   " 対象キーをループしてマッピング（Normal mode）
@@ -231,7 +244,13 @@ xnoremap <silent> <Plug>(hellshake-yano-vim-visual)
       \ :<C-u>call hellshake_yano_vim#visual#show()<CR>
 
 " デフォルトマッピングの設定（visual_mode_enabled が true の場合のみ）
-let s:visual_mode_enabled = get(g:hellshake_yano_vim_config, 'visual_mode_enabled', v:true)
+" Phase D-2 Sub1.2 追加修正: 設定変数名の統一
+let s:visual_mode_enabled = v:true
+if exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'visualModeEnabled')
+  let s:visual_mode_enabled = g:hellshake_yano.visualModeEnabled
+elseif exists('g:hellshake_yano_vim_config') && has_key(g:hellshake_yano_vim_config, 'visual_mode_enabled')
+  let s:visual_mode_enabled = g:hellshake_yano_vim_config.visual_mode_enabled
+endif
 
 if s:visual_mode_enabled
   xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>

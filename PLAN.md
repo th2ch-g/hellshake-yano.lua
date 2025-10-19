@@ -332,6 +332,7 @@ Visual modeでも選択範囲を拡張しながらモーション検出を行い
 - [x] Vimでの動作確認（Visual modeでw/h/j/k/lがperKeyMotionCount回連続で動作）
 - [x] Visual mode状態維持の修正（`:<C-u>` → `<expr>` マッピング）
 - [x] gv コマンドでVisual modeを復元する実装
+- [x] **追加修正**: 設定変数名の統一（`g:hellshake_yano`を優先、`g:hellshake_yano_vim_config`をフォールバック）
 
 ##### 実装上の考慮事項
 - Visual modeでは `gv` で選択範囲を復元する
@@ -340,6 +341,14 @@ Visual modeでも選択範囲を拡張しながらモーション検出を行い
 - `:<C-u>` を使用するとVisual modeが終了するため、`<expr>` 方式に変更
 - visual#show() との統合（選択範囲内のヒント表示）
 - character-wise, line-wise, block-wise の各モードでの動作確認
+
+##### 設定変数の統一（追加修正）
+**問題**: plugin/hellshake-yano-vim.vimが`g:hellshake_yano_vim_config`のみチェック、motion.vimが`g:hellshake_yano`をチェック
+
+**解決策**:
+- `g:hellshake_yano`を優先、`g:hellshake_yano_vim_config`をフォールバック
+- 統合版（unified）と設定変数名を統一
+- 後方互換性維持
 
 #### sub1.3: Neovim統合版でのVisual Modeモーション検出
 @target: plugin/hellshake-yano-unified.vim
