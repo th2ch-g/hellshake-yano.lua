@@ -847,17 +847,17 @@ VimScript (word_detector.vim)
 Denops側に完全な辞書システムが既に実装されていることを確認：
 
 **Denops側の既存実装:**
-- `denops/hellshake-yano/neovim/core/core.ts`: 辞書管理のコアロジック（1529-1745行）
-- `denops/hellshake-yano/neovim/core/word.ts`: DictionaryLoader、VimConfigBridge実装（936-1142行）
-- `denops/hellshake-yano/neovim/dictionary.ts`: APIエンドポイント
-- `denops/hellshake-yano/main.ts`: Denopsメソッド登録（reloadDictionary、addToDictionary等）
+- [x] `denops/hellshake-yano/neovim/core/core.ts`: 辞書管理のコアロジック（1529-1745行）
+- [x] `denops/hellshake-yano/neovim/core/word.ts`: DictionaryLoader、VimConfigBridge実装（936-1142行）
+- [x] `denops/hellshake-yano/neovim/dictionary.ts`: APIエンドポイント
+- [x] `denops/hellshake-yano/main.ts`: Denopsメソッド登録（reloadDictionary、addToDictionary等）
 
 **実装済み機能:**
-- 辞書ファイル読み込み（JSON/YAML/テキスト形式対応）
-- ユーザー辞書管理（追加、編集、表示、検証）
-- Vimコマンド自動登録（HellshakeYanoAddWord、HellshakeYanoReloadDict等）
-- キャッシュ機能、自動再読み込み
-- エラーハンドリング、フォールバック処理
+- [x] 辞書ファイル読み込み（JSON/YAML/テキスト形式対応）
+- [x] ユーザー辞書管理（追加、編集、表示、検証）
+- [x] Vimコマンド自動登録（HellshakeYanoAddWord、HellshakeYanoReloadDict等）
+- [x] キャッシュ機能、自動再読み込み
+- [x] エラーハンドリング、フォールバック処理
 
 **設計方針変更:**
 当初の計画では、辞書システムをVimScriptで独自実装する予定だったが、
@@ -960,7 +960,241 @@ Denops側の実装を最大限活用し、Vim側はAPIエンドポイントに�
 - [ ] `deno test` と VimScript テストの両方を実行
 - [ ] `deno check` による型チェック自動化
 
-### process50: フォローアップ
+### process50: Neovimキーリピート抑制機能のVim移植（Phase D-6）
+
+#### 背景
+- **Neovim (Denopsベース)**: `autoload/hellshake_yano/motion.vim` → キーリピート抑制機能あり → フリーズしない
+- **Vim (Pure VimScript)**: `autoload/hellshake_yano_vim/motion.vim` → キーリピート抑制機能なし → hjkl連打でフリーズ
+
+Neovim側で実装されているキーリピート抑制機能（`suppressOnKeyRepeat`設定）をVim側に移植し、高速キーリピート時のフリーズ問題を解決する。
+
+#### sub1: Vim専用の状態管理を追加
+@target: autoload/hellshake_yano_vim/key_repeat.vim（新規）
+@ref: autoload/hellshake_yano/motion.vim（Neovim/Denopsベース）
+
+##### 移植元の実装詳細
+**Neovim側の実装（autoload/hellshake_yano/motion.vim）:**
+- `s:get_key_repeat_config()` (motion.vim:3-9): 設定を取得
+- `s:handle_key_repeat_detection()` (motion.vim:23-50): キーリピート判定の中核ロジック
+  - 前回キー入力時刻との差分を計算
+  - 閾値（50ms）未満ならリピート状態に設定
+  - リセットタイマーを設定
+
+**使用する状態管理関数:**
+- `hellshake_yano#state#get_last_key_time(bufnr)`
+- `hellshake_yano#state#set_last_key_time(bufnr, time)`
+- `hellshake_yano#state#is_key_repeating(bufnr)`
+- `hellshake_yano#state#set_key_repeating(bufnr, repeating)`
+- `hellshake_yano#timer#set_repeat_end_timer(bufnr, delay)`
+
+##### TDD Step 1: Red（テスト作成）
+- [ ] tests-vim/test_process50_sub1.vim にキーリピート状態管理のテストケース作成
+  - [ ] get_last_key_time() のテスト（初期値0、設定後の値取得）
+  - [ ] set_last_key_time() のテスト（バッファ単位の管理）
+  - [ ] is_repeating() のテスト（初期値false、設定後の値取得）
+  - [ ] set_repeating() のテスト（バッファ単位の管理）
+  - [ ] reset_state() のテスト（状態リセット、タイマー停止）
+  - [ ] set_reset_timer() のテスト（タイマー設定、既存タイマーの停止）
+  - [ ] 複数バッファでの独立動作テスト
+- [ ] tests-vim/test_process50_sub1_simple.vim に簡易テスト作成
+- [ ] テスト実行して失敗を確認（E117: Unknown function or E484: file not found）
+
+##### TDD Step 2: Green（実装）
+- [ ] autoload/hellshake_yano_vim/key_repeat.vim を新規作成
+  - [ ] 状態管理変数の定義
+    ```vim
+    let s:last_key_time = {}  " bufnr -> time (milliseconds)
+    let s:is_repeating = {}   " bufnr -> boolean
+    let s:reset_timers = {}   " bufnr -> timer_id
+    ```
+  - [ ] `hellshake_yano_vim#key_repeat#get_last_key_time(bufnr)` 実装
+    - バッファ単位の最後のキー時刻を取得
+    - 未初期化の場合は0を返す
+  - [ ] `hellshake_yano_vim#key_repeat#set_last_key_time(bufnr, time)` 実装
+    - バッファ単位の最後のキー時刻を設定
+    - ミリ秒単位のタイムスタンプ
+  - [ ] `hellshake_yano_vim#key_repeat#is_repeating(bufnr)` 実装
+    - バッファのキーリピート状態を取得
+    - 未初期化の場合はv:falseを返す
+  - [ ] `hellshake_yano_vim#key_repeat#set_repeating(bufnr, repeating)` 実装
+    - バッファのキーリピート状態を設定
+    - v:true/v:falseのみ受け付け
+  - [ ] `hellshake_yano_vim#key_repeat#reset_state(bufnr)` 実装
+    - リピート状態をv:falseに設定
+    - 既存タイマーを停止して削除
+  - [ ] `hellshake_yano_vim#key_repeat#set_reset_timer(bufnr, delay)` 実装
+    - 既存タイマーを停止
+    - 新規タイマーを設定（delay後にreset_state()を呼び出し）
+    - timer_start()を使用
+  - [ ] Phase D-6 Process50 Sub1 ドキュメントコメント追加
+  - [ ] ライセンス表示とファイルヘッダー追加
+- [ ] テスト実行してテスト成功を確認（全テスト PASS）
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [ ] コードの可読性確認
+  - [ ] 関数名が明確か
+  - [ ] コメントが充実しているか
+  - [ ] 変数名が分かりやすいか
+- [ ] タイマー処理の効率化
+  - [ ] 既存タイマーの適切な停止
+  - [ ] メモリリークの防止
+- [ ] エラーハンドリングの強化
+  - [ ] 不正な引数の検証
+  - [ ] タイマー失敗時の処理
+- [ ] ドキュメントコメント更新
+  - [ ] 各関数の説明追加
+  - [ ] 使用例の追加
+  - [ ] Phase D-6 Process50 Sub1 マーク追加
+- [ ] 回帰テスト確認
+  - [ ] 既存機能が壊れていないことを確認
+
+##### VimScript実装
+- [ ] autoload/hellshake_yano_vim/key_repeat.vim 実装完了
+- [ ] Vimでの動作確認
+  - [ ] バッファ単位で状態が管理されることを確認
+  - [ ] タイマーが正しく動作することを確認
+  - [ ] リセット処理が正しく動作することを確認
+  - [ ] 複数バッファで独立して動作することを確認
+
+#### sub2: キーリピート検出ロジックを追加
+@target: autoload/hellshake_yano_vim/motion.vim（修正）
+
+##### TDD Step 1: Red（テスト作成）
+- [ ] tests-vim/test_process50_sub2.vim にキーリピート検出のテストケース作成
+  - [ ] s:get_key_repeat_config() のテスト
+  - [ ] s:handle_key_repeat_detection() のテスト
+  - [ ] suppressOnKeyRepeat設定の反映テスト
+  - [ ] keyRepeatThreshold設定の反映テスト
+  - [ ] keyRepeatResetDelay設定の反映テスト
+- [ ] テスト実行して失敗を確認
+
+##### TDD Step 2: Green（実装）
+- [ ] autoload/hellshake_yano_vim/motion.vim に関数追加
+  - [ ] `s:get_key_repeat_config()` 関数実装
+    ```vim
+    function! s:get_key_repeat_config() abort
+      return {
+            \ 'enabled': get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true),
+            \ 'threshold': get(g:hellshake_yano, 'keyRepeatThreshold', 50),
+            \ 'reset_delay': get(g:hellshake_yano, 'keyRepeatResetDelay', 300)
+            \ }
+    endfunction
+    ```
+  - [ ] `s:handle_key_repeat_detection(bufnr, current_time, config)` 関数実装
+    - 機能が無効の場合は通常処理
+    - 前回のキー入力時刻との差を計算
+    - 閾値未満かつ2回目以降ならリピート状態に設定
+    - リセットタイマーを設定
+    - キー時刻を更新
+    - リピート中ならv:true、通常処理ならv:falseを返す
+  - [ ] Phase D-6 Process50 Sub2 ドキュメントコメント追加
+- [ ] テスト実行してテスト成功を確認
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [ ] コードの可読性向上
+- [ ] ドキュメントコメント更新
+- [ ] 回帰テスト確認
+
+##### VimScript実装
+- [ ] autoload/hellshake_yano_vim/motion.vim 修正完了
+- [ ] Vimでの動作確認
+  - [ ] キーリピート検出が正しく動作することを確認
+  - [ ] 設定が正しく反映されることを確認
+
+#### sub3: motion#handle()への統合
+@target: autoload/hellshake_yano_vim/motion.vim（修正）
+
+##### TDD Step 1: Red（テスト作成）
+- [ ] tests-vim/test_process50_sub3.vim に統合のテストケース作成
+  - [ ] hjklキー連打でヒント表示がスキップされるテスト
+  - [ ] ゆっくりキーを押すとヒントが表示されるテスト
+  - [ ] リセット後にヒント表示が再開されるテスト
+- [ ] テスト実行して失敗を確認
+
+##### TDD Step 2: Green（実装）
+- [ ] `hellshake_yano_vim#motion#handle()` 関数を修正
+  ```vim
+  function! hellshake_yano_vim#motion#handle(key) abort
+    let l:bufnr = bufnr('%')
+
+    " 1. 現在時刻を取得（ミリ秒単位）
+    let l:current_time = float2nr(reltimefloat(reltime()) * 1000.0)
+
+    " 2. キーリピート検出
+    let l:config = s:get_key_repeat_config()
+    if s:handle_key_repeat_detection(l:bufnr, l:current_time, l:config)
+      " リピート中の場合は通常のモーション実行のみ
+      execute 'normal! ' . a:key
+      return
+    endif
+
+    " 3-7. 既存のロジック（モーション検出・ヒント表示）...
+  endfunction
+  ```
+- [ ] Phase D-6 Process50 Sub3 ドキュメントコメント追加
+- [ ] テスト実行してテスト成功を確認
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [ ] コードの可読性向上
+- [ ] ドキュメントコメント更新
+- [ ] 回帰テスト確認
+
+##### VimScript実装
+- [ ] autoload/hellshake_yano_vim/motion.vim 修正完了
+- [ ] Vimでの動作確認
+  - [ ] hjklキー連打でフリーズしないことを確認
+  - [ ] ヒント表示が正しくスキップされることを確認
+
+#### sub4: テストと検証
+@target: tests-vim/test_process50_integration.vim（新規）
+
+##### 統合テスト作成
+- [ ] tests-vim/test_process50_integration.vim に統合テストケース作成
+  - [ ] hjklキー連打でフリーズしないテスト
+  - [ ] ゆっくりキーを押すとヒント表示されるテスト
+  - [ ] リセット後にヒント表示が再開されるテスト
+  - [ ] suppressOnKeyRepeat: v:false で常にヒント表示されるテスト
+  - [ ] keyRepeatThreshold設定の動作確認テスト
+  - [ ] keyRepeatResetDelay設定の動作確認テスト
+- [ ] テスト実行して全テスト成功を確認
+
+##### 手動動作確認
+- [ ] Vimでの実際の操作確認
+  - [ ] hjklキーを高速連打してフリーズしないことを確認
+  - [ ] ゆっくりキーを押すとヒントが表示されることを確認
+  - [ ] 高速連打後300ms待つと再びヒント表示されることを確認
+- [ ] Neovim側の動作に影響がないことを確認
+  - [ ] Neovim環境で既存機能が正常動作することを確認
+  - [ ] Denopsベースの実装が壊れていないことを確認
+
+##### 設定の動作確認
+- [ ] suppressOnKeyRepeat: v:false で常にヒント表示される
+- [ ] keyRepeatThreshold: 100 で100ms以下の連打で抑制される
+- [ ] keyRepeatResetDelay: 500 で連打停止後500ms後に再開される
+
+##### 後方互換性確認
+- [ ] 既存の設定ファイルで問題なく動作すること
+- [ ] 設定未指定時にデフォルト値が適用されること
+- [ ] 他の機能（Process2, Process3等）が正常動作すること
+
+#### 実装完了基準
+
+**機能要件:**
+- [ ] Vimで高速キーリピート時にフリーズしない
+- [ ] suppressOnKeyRepeat設定が正しく機能する
+- [ ] Neovimと同等のパフォーマンスを実現
+
+**品質要件:**
+- [ ] 全テストケースが成功（Sub1-Sub4）
+- [ ] 既存機能が壊れていない（回帰テスト成功）
+- [ ] Neovim側の動作に影響がない
+
+**保守性要件:**
+- [ ] コードの可読性が高い（関数分割、コメント充実）
+- [ ] ドキュメントコメント充実（Phase D-6 Process50 マーク）
+- [ ] エラーハンドリングが適切
+
+### process100: フォローアップ
 実装中に発見された追加要件や仕様変更はここに追加
 
 - [ ] 発見された課題の記録
