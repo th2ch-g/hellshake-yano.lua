@@ -556,25 +556,271 @@ TinySegmenterをVimScriptに移植するのではなく、既存のDenops実装�
 
 #### sub2: word_detector.vim統合
 @target: autoload/hellshake_yano_vim/word_detector.vim
+@ref: autoload/hellshake_yano_vim/japanese.vim（Sub1実装済み）
+
+##### 背景と目的
+Sub1で実装したjapanese.vim（Denops TinySegmenter連携）をword_detector.vimに統合し、日本語テキストの高精度な単語検出を実現する。
+
+**現在の実装状況（コード調査結果）:**
+- ✅ word_detector.vim: 英数字単語検出（\w\+ パターン）実装済み
+  - detect_visible(): 画面内（line('w0')～line('w$')）の単語を検出
+  - get_min_length(): Per-Key最小単語長の取得（Process2 Sub2で実装）
+  - データ構造: {'text': ..., 'lnum': ..., 'col': ..., 'end_col': ...}
+- ✅ japanese.vim: TinySegmenter連携実装済み（Process3 Sub1）
+  - segment(): Denops経由でTinySegmenterを呼び出し
+  - has_japanese(): 日本語文字パターンチェック（[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]）
+  - should_segment(): セグメント化が必要か判定（閾値チェック）
+  - フォールバック: Denops失敗時は文字種別による簡易分割
+- ✅ core.vim/visual.vim: detect_visible()を呼び出し、word_filter経由でフィルタリング（Process2 Sub0.1/Sub2）
+
+**統合の課題:**
+- 日本語を含む行のセグメント化処理が未実装
+- 英数字と日本語の混在テキストの処理が未対応
+- セグメント位置（col, end_col）の正確な計算が必要
+
+##### ナレッジ: TinySegmenterとの統合パターン
+**Denops呼び出しフロー:**
+```
+VimScript (word_detector.vim)
+  → japanese#segment(line)
+    → denops#request('hellshake-yano', 'segmentJapaneseText', [text, options])
+      → Core.ts#segmentJapaneseText()
+        → TinySegmenter.segment()
+          → キャッシュチェック（CacheType.ANALYSIS）
+          → セグメント化実行
+          → postProcessSegments()（助詞結合、数字・単位結合）
+          → キャッシュ保存
+        ← 結果返却: {segments: [], success: true, source: 'tinysegmenter'}
+      ← Denops応答
+    ← VimScript戻り値
+  → 座標計算（col, end_col）
+  → 単語リストに追加
+```
+
+**座標計算の注意点:**
+- VimScriptの文字列インデックスはバイト単位（UTF-8）
+- 日本語文字は3バイト（UTF-8）なので `len()` では文字数が正しく取れない
+- `stridx(haystack, needle, start)` でセグメント位置を検索
+- col/end_colは1-indexed（Vim座標系）
+
+**パフォーマンス考慮:**
+- TinySegmenterはキャッシュ済み（LRUキャッシュ、最大1000エントリ）
+- 画面内のみ処理（通常20-50行）なので高速
+- Denops呼び出しは同期処理（denops#request）
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests-vim/test_process3_sub2.vim に統合テストケース作成
-- [ ] 日本語・英語混在テキストのテスト作成
-- [ ] パフォーマンステスト作成
-- [ ] テスト実行して失敗を確認
+- [ ] tests-vim/test_process3_sub2.vim に統合テストケース作成（25テスト想定）
+  - [ ] Test 1-5: 純粋な日本語テキスト検出
+    - [ ] 基本的な日本語文（"これはテストです"）
+    - [ ] 漢字・ひらがな・カタカナ混在
+    - [ ] 助詞の結合確認（postProcessSegments動作）
+    - [ ] 数字と単位の結合確認（"100円"が1単語）
+    - [ ] 括弧内テキストの結合確認（"（注釈）"が1単語）
+  - [ ] Test 6-10: 英数字と日本語の混在テキスト
+    - [ ] "Hello これは test です"
+    - [ ] "変数名variable_nameの説明"
+    - [ ] "プログラミング言語Python"
+    - [ ] 行頭・行末に日本語/英数字
+    - [ ] 空白区切りの混在
+  - [ ] Test 11-15: 英数字のみの後方互換性
+    - [ ] "hello world test"
+    - [ ] "variable_name function_call"
+    - [ ] 既存のmatchstrpos()ロジックが動作
+    - [ ] パフォーマンス低下なし
+    - [ ] データ構造が既存と同一
+  - [ ] Test 16-20: エッジケース
+    - [ ] 空行・空文字列
+    - [ ] 空白のみの行
+    - [ ] 1文字単語（ひらがな・カタカナ・漢字）
+    - [ ] 特殊文字（記号、絵文字）
+    - [ ] 非常に長い行（1000文字以上）
+  - [ ] Test 21-25: Per-Key最小単語長との統合
+    - [ ] perKeyMinLength適用（日本語単語）
+    - [ ] defaultMinWordLengthフォールバック
+    - [ ] word_filter#apply()との連携
+    - [ ] original_index保持の確認
+    - [ ] ヒント位置のずれがないことを確認
+- [ ] tests-vim/test_process3_sub2_simple.vim に簡易テスト作成
+  - [ ] 基本的な日本語検出（5テスト程度）
+  - [ ] 混在テキスト検出（3テスト程度）
+  - [ ] 英数字のみの後方互換（2テスト程度）
+- [ ] テスト実行して失敗を確認（E117: Unknown function or 検出失敗）
+  ```bash
+  vim -u NONE -N -c "source tests-vim/test_process3_sub2.vim"
+  ```
 
 ##### TDD Step 2: Green（実装）
-- [ ] hellshake_yano_vim#word_detector#detect_visible() の拡張
-  - [ ] 日本語文字検出ロジック追加
-  - [ ] 日本語行のセグメント化処理
-  - [ ] 英数字と日本語の統合処理
-- [ ] hellshake_yano_vim#word_detector#has_japanese() 関数追加
-- [ ] テスト実行してテスト成功を確認
+
+**実装方針: オプション1（既存関数拡張）を採用**
+- detect_visible()を直接拡張（後方互換性維持）
+- 呼び出し側（core.vim, visual.vim）の変更不要
+- 日本語判定を各行の処理ループ内に追加
+
+**実装ステップ:**
+
+1. **サブ関数の追加（word_detector.vim）**
+   - [ ] `s:detect_japanese_words(line, lnum)` 関数実装
+     - [ ] japanese#segment()でセグメント化
+     - [ ] 各セグメントの位置を計算（stridx使用）
+     - [ ] {'text': ..., 'lnum': ..., 'col': ..., 'end_col': ...} 形式で返す
+     - [ ] 空白のみのセグメントを除外
+     - [ ] エラーハンドリング（segment失敗時は空配列）
+   - [ ] `s:detect_english_words(line, lnum)` 関数実装
+     - [ ] 既存のmatchstrpos()ロジックを抽出
+     - [ ] 英数字単語（\w\+）の検出
+     - [ ] 座標計算（0-indexed → 1-indexed変換）
+
+2. **detect_visible()の拡張**
+   - [ ] 各行の処理ループ内に日本語判定を追加
+     ```vim
+     if hellshake_yano_vim#japanese#has_japanese(l:line)
+       " 日本語を含む行
+       let l:japanese_words = s:detect_japanese_words(l:line, l:lnum)
+       let l:words += l:japanese_words
+     else
+       " 英数字のみの行（既存ロジック）
+       let l:english_words = s:detect_english_words(l:line, l:lnum)
+       let l:words += l:english_words
+     endif
+     ```
+   - [ ] Phase D-6 Process3 Sub2 ドキュメントコメント追加
+   - [ ] 既存のコメントを更新（日本語対応を明記）
+
+3. **座標計算ロジックの実装**
+   - [ ] `stridx(line, segment, offset)` でセグメント位置を検索
+   - [ ] UTF-8マルチバイト文字の考慮（`len()`ではなく`stridx()`を使用）
+   - [ ] col: match_start + 1（1-indexed変換）
+   - [ ] end_col: match_start + len(segment) + 1
+   - [ ] offset更新でセグメントの重複検出を防ぐ
+
+4. **エラーハンドリング**
+   - [ ] segment()失敗時のフォールバック（空配列返却）
+   - [ ] stridx()が-1を返す場合のスキップ処理
+   - [ ] 不正なデータ構造の検出とログ出力
+
+5. **テスト実行**
+   - [ ] `vim -u NONE -N -c "source tests-vim/test_process3_sub2.vim"`
+   - [ ] 全25テストケースの成功を確認
+   - [ ] `vim -u NONE -N -c "source tests-vim/test_process3_sub2_simple.vim"`
+   - [ ] 簡易テスト10件の成功を確認
 
 ##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの可読性向上
-- [ ] パフォーマンス最適化
-- [ ] 回帰テスト確認
+
+1. **コードの可読性向上**
+   - [ ] 長い関数の分割（detect_visibleが150行超える場合）
+   - [ ] コメントの充実化
+     - [ ] Phase D-6 Process3 Sub2 マーク明記
+     - [ ] アルゴリズムの説明追加
+     - [ ] エッジケースの処理説明
+   - [ ] 変数名の明確化（l:japanese_words, l:english_words）
+   - [ ] 重複コードの削除
+
+2. **パフォーマンス最適化**
+   - [ ] キャッシュの活用確認（TinySegmenterは既にキャッシュ済み）
+   - [ ] 不要な正規表現の削減
+   - [ ] ループの効率化（early return, continue）
+   - [ ] ベンチマーク実行（1000行バッファで数ミリ秒以内を確認）
+
+3. **エッジケースの処理強化**
+   - [ ] 空白のみのセグメント除外（filter使用）
+   - [ ] 特殊文字の処理（絵文字、記号）
+   - [ ] 1文字単語の扱い（minLengthフィルタとの連携）
+   - [ ] 非常に長い行の処理（1000文字以上でもエラーなし）
+
+4. **回帰テスト確認**
+   - [ ] 既存テストの実行
+     ```bash
+     vim -u NONE -N -c "source tests-vim/test_process2_sub2.vim"  # Per-Key最小単語長
+     vim -u NONE -N -c "source tests-vim/test_sub2_2_simple.vim"  # ヒント生成
+     vim -u NONE -N -c "source tests-vim/test_process2_sub0_1.vim"  # word_filter
+     ```
+   - [ ] 全既存テストが成功することを確認
+   - [ ] パフォーマンス低下がないことを確認（体感・ログ）
+
+##### VimScript実装
+- [ ] autoload/hellshake_yano_vim/word_detector.vim に実装完了
+- [ ] core.vim/visual.vimでの動作確認（日本語テキストバッファ）
+- [ ] Vimでの手動動作確認
+  - [ ] 日本語単語にヒントが表示される
+  - [ ] 英数字と日本語の混在バッファで両方にヒント表示
+  - [ ] perKeyMinLengthが日本語単語にも適用される
+  - [ ] ヒント位置がずれない（original_index保持確認）
+
+##### 実装上の考慮事項
+
+**セキュリティ:**
+- バッファ内容は信頼済み（ユーザーが編集中のファイル）
+- Denops呼び出し失敗時のフォールバック実装済み（japanese.vim）
+- エスケープ処理不要（VimScriptの文字列処理で安全）
+
+**パフォーマンス:**
+- 画面内のみ処理（既存設計を維持）
+- TinySegmenterはキャッシュ済み（LRUキャッシュ、最大1000エントリ）
+- 1000行バッファでも数ミリ秒以内（画面内は通常20-50行）
+- Denops呼び出しは同期処理（denops#request）なのでブロッキングなし
+
+**後方互換性:**
+- 既存の英数字検出ロジックは100%維持
+- データ構造の変更なし（{'text', 'lnum', 'col', 'end_col'}）
+- 呼び出し側（core.vim, visual.vim）の変更不要
+- 設定項目の追加なし（japanese.vimの設定を流用）
+
+**エラーハンドリング:**
+- Denops呼び出し失敗 → フォールバック（japanese.vimで実装済み）
+- segment()が空配列を返す → 空配列のまま返却（呼び出し側で処理）
+- stridx()が-1を返す → セグメントをスキップ
+- 不正なデータ構造 → ログ出力してスキップ
+
+##### 成功基準
+
+**機能要件:**
+- ✅ 日本語テキストがTinySegmenterでセグメント化される
+- ✅ 英数字と日本語の混在テキストが正しく処理される
+- ✅ Per-Key最小単語長フィルタが日本語にも適用される
+- ✅ ヒント位置がずれない（original_index保持）
+- ✅ 後方互換性維持（英数字のみのバッファで既存動作）
+
+**品質要件:**
+- ✅ 全25テストケースが成功（test_process3_sub2.vim）
+- ✅ 簡易テスト10件が成功（test_process3_sub2_simple.vim）
+- ✅ 既存テスト（sub2.1, sub2.2, sub3, sub0.1）が壊れていない
+- ✅ パフォーマンス低下なし（画面内処理のみ、キャッシュ活用）
+
+**保守性要件:**
+- ✅ コードの可読性が高い（関数分割、コメント充実）
+- ✅ ドキュメントコメント充実（Phase D-6 Process3 Sub2マーク）
+- ✅ エッジケース処理が明確
+
+##### コード調査サマリー
+
+**既存実装の詳細:**
+1. **word_detector.vim（71-140行目）**
+   - detect_visible(): 画面内単語検出のメイン関数
+   - アルゴリズム: line('w0')～line('w$')の各行をmatchstrpos()で処理
+   - データ構造: Dictionary {'text', 'lnum', 'col', 'end_col'}
+   - パフォーマンス: O(L * W)、L=行数、W=行あたり単語数
+
+2. **japanese.vim（67-102行目）**
+   - segment(): Denops経由でTinySegmenterを呼び出し
+   - has_japanese(): 日本語文字パターン [\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]
+   - should_segment(): 閾値チェック（デフォルト4文字以上）
+   - フォールバック: s:fallback_segment()（文字種別による簡易分割）
+
+3. **TinySegmenter実装（denops/hellshake-yano/neovim/core/word/word-segmenter.ts）**
+   - postProcessSegments(): 助詞結合、数字・単位結合、括弧処理
+   - キャッシュ: GlobalCache（CacheType.ANALYSIS、LRU、最大1000エントリ）
+   - パフォーマンス: キャッシュヒット率が高い（同じ行を複数回処理しない）
+
+4. **core.vim/visual.vim統合（165-224行目）**
+   - detect_visible() → word_filter#apply() → hint_generator#generate()
+   - original_index保持でヒント位置のずれを防止（Process2 Sub0.1）
+   - 空配列チェックと警告表示
+
+**統合の技術的課題:**
+- セグメント位置の計算精度（UTF-8マルチバイト文字）
+- 英数字と日本語の混在行の処理順序
+- エラーハンドリング（Denops失敗、stridx失敗）
+- パフォーマンス（キャッシュ活用、ループ最適化）
 
 ### process4: 辞書システム（Phase D-7）
 #### sub1: 辞書ファイル管理
