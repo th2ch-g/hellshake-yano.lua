@@ -174,10 +174,15 @@ function! s:show_hint_vim(lnum, col, hint) abort
   " Phase D-1 Sub3: カスタムハイライトグループを取得
   let l:hl_group = hellshake_yano_vim#display#get_highlight_group('normal')
 
-  " popup を作成
+  " Phase D-6 Sub2 Fix: 論理座標→画面座標に変換（折り返し対応）
+  " popup_create() は画面行番号（screen line）を期待するため、
+  " screenpos() で論理座標を画面座標に変換する必要がある
+  let l:screen = screenpos(win_getid(), a:lnum, a:col)
+
+  " popup を作成（画面座標を使用）
   let l:popup_id = popup_create(a:hint, {
-    \ 'line': a:lnum,
-    \ 'col': a:col,
+    \ 'line': l:screen.row,
+    \ 'col': l:screen.col,
     \ 'width': strlen(a:hint),
     \ 'height': 1,
     \ 'highlight': l:hl_group,

@@ -48,35 +48,60 @@ function! s:detect_japanese_words(line, lnum) abort
   endif
 
   let l:words = []
-  let l:offset = 0
+  let l:processed_positions = {}
+
+  " 最小単語長を取得（g:hellshake_yano.japaneseMinWordLengthから、デフォルト: 3）
+  let l:min_length = exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'japaneseMinWordLength')
+    \ ? g:hellshake_yano.japaneseMinWordLength
+    \ : 3
 
   " 各セグメントの位置を計算
+  " Phase D-6 Sub2 Fix: オフセット管理を見直し、重複を避けつつ全セグメントを正しく検出
   for l:segment in l:segment_result.segments
     " 空白のみのセグメントをスキップ
     if l:segment =~# '^\s\+$'
       continue
     endif
 
-    " セグメントの位置を検索（UTF-8対応）
-    let l:match_start = stridx(a:line, l:segment, l:offset)
-
-    " 見つからない場合はスキップ
-    if l:match_start == -1
+    " 最小単語長フィルタリング（Phase D-6 Process3 Sub2 閾値）
+    if strchars(l:segment) < l:min_length
       continue
     endif
 
-    " 単語データを作成（col と end_col は 1-indexed に変換）
-    let l:word_data = {
-      \ 'text': l:segment,
-      \ 'lnum': a:lnum,
-      \ 'col': l:match_start + 1,
-      \ 'end_col': l:match_start + len(l:segment) + 1
-    \ }
+    " セグメントの全出現位置を検索（UTF-8対応）
+    " すでに処理済みの位置は避ける
+    let l:search_offset = 0
+    while 1
+      let l:match_start = stridx(a:line, l:segment, l:search_offset)
 
-    call add(l:words, l:word_data)
+      " 見つからない場合は次のセグメントへ
+      if l:match_start == -1
+        break
+      endif
 
-    " 次の検索開始位置を更新
-    let l:offset = l:match_start + len(l:segment)
+      " この位置がすでに処理済みかチェック
+      if !has_key(l:processed_positions, l:match_start)
+        " 単語データを作成（col と end_col はバイト位置で保持）
+        " Phase D-6 Sub2 Fix: popup_create()はバイト位置（col()値）を期待
+        let l:word_data = {
+          \ 'text': l:segment,
+          \ 'lnum': a:lnum,
+          \ 'col': l:match_start + 1,
+          \ 'end_col': l:match_start + len(l:segment) + 1
+        \ }
+
+        call add(l:words, l:word_data)
+
+        " この位置を処理済みとしてマーク
+        let l:processed_positions[l:match_start] = 1
+
+        " 次のセグメントへ（同じセグメントの重複出現は検出しない）
+        break
+      endif
+
+      " 次の出現位置を探す
+      let l:search_offset = l:match_start + 1
+    endwhile
   endfor
 
   return l:words
@@ -115,7 +140,8 @@ function! s:detect_english_words(line, lnum) abort
       break
     endif
 
-    " 単語データを作成（col と end_col は 1-indexed に変換）
+    " 単語データを作成（col と end_col はバイト位置で保持）
+    " Phase D-6 Sub2 Fix: col()はバイト位置を返すため、1-indexedに変換するだけ
     let l:word_data = {
       \ 'text': l:match_text,
       \ 'lnum': a:lnum,
