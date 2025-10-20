@@ -1,8 +1,11 @@
 " Phase D-6: Process3 Sub1 - Denops TinySegmenter連携
 " 日本語テキストのセグメント化機能を提供する
 
-" 日本語文字パターン
-let s:japanese_pattern = '[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]'
+" 日本語文字パターン (Vim/Neovim互換)
+" ひらがな: ぁ-ん (U+3040-U+309F)
+" カタカナ: ァ-ヶー (U+30A0-U+30FF)
+" 漢字: 一-龯 (U+4E00-U+9FAF)
+let s:japanese_pattern = '[ぁ-んァ-ヶー一-龯]'
 
 " Denopsが利用可能かチェック
 function! s:is_denops_available() abort
@@ -41,13 +44,13 @@ function! s:fallback_segment(text) abort
   return filter(l:segments, 'v:val !~# "^\\s\\+$"')
 endfunction
 
-" 文字種別を判定
+" 文字種別を判定 (Vim/Neovim互換)
 function! s:get_character_type(char) abort
-  if a:char =~# '[\u4E00-\u9FAF]'
+  if a:char =~# '[一-龯]'
     return 'kanji'
-  elseif a:char =~# '[\u3040-\u309F]'
+  elseif a:char =~# '[ぁ-ん]'
     return 'hiragana'
-  elseif a:char =~# '[\u30A0-\u30FF]'
+  elseif a:char =~# '[ァ-ヶー]'
     return 'katakana'
   elseif a:char =~# '[a-zA-Z]'
     return 'latin'

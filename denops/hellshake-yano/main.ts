@@ -119,12 +119,142 @@ async function initializeDenopsUnified(denops: Denops): Promise<void> {
  * Vim環境初期化関数
  * vim/レイヤーのコンポーネント初期化とdispatcher登録
  */
-async function initializeVimLayer(_denops: Denops): Promise<void> {
-  // TODO: Process 4で実装予定
-  // - Config統一化
-  // - コアコンポーネント初期化
-  // - 表示コンポーネント初期化
-  // - dispatcherメソッド登録
+async function initializeVimLayer(denops: Denops): Promise<void> {
+  try {
+    // Core初期化
+    const core = Core.getInstance(DEFAULT_CONFIG);
+    await core.initializePlugin(denops);
+
+    // g:hellshake_yanoが未定義の場合は空のオブジェクトをフォールバック
+    const userConfig = await denops.eval("g:hellshake_yano").catch(() => ({})) as Partial<
+      Config
+    >;
+
+    // Configを直接使用
+    const defaultConfig = DEFAULT_CONFIG;
+    config = { ...defaultConfig, ...userConfig } as Config;
+
+    // Coreインスタンスの設定を更新
+    core.updateConfig(config);
+
+    // Dictionary初期化
+    await initializeDictionarySystem(denops);
+
+    // Dispatcher登録（Vim環境用の最小実装）
+    denops.dispatcher = {
+      // 基本制御
+      // deno-lint-ignore require-await
+      async enable(): Promise<void> {
+        const core = Core.getInstance(config);
+        core.enable();
+      },
+
+      async disable(): Promise<void> {
+        const core = Core.getInstance(config);
+        core.disable();
+      },
+
+      async toggle(): Promise<void> {
+        const core = Core.getInstance(config);
+        core.toggle();
+      },
+
+      // 設定管理
+      async updateConfig(cfg: unknown): Promise<void> {
+        if (typeof cfg === "object" && cfg !== null) {
+          const core = Core.getInstance(config);
+          const configUpdate = cfg as Partial<Config>;
+          core.updateConfig(configUpdate);
+          config = { ...config, ...configUpdate };
+        }
+      },
+
+      async getConfig(): Promise<Config> {
+        return config;
+      },
+
+      async validateConfig(cfg: unknown): Promise<{ valid: boolean; errors: string[] }> {
+        return validateConfig(cfg as Partial<Config>);
+      },
+
+      // Process3 Sub2: 日本語セグメント化API
+      async segmentJapaneseText(
+        text: unknown,
+        options?: unknown,
+      ): Promise<{ segments: string[]; success: boolean; error?: string; source: string }> {
+        const core = Core.getInstance(config);
+        const textStr = typeof text === "string" ? text : String(text);
+        const opts = typeof options === "object" && options !== null
+          ? options as { mergeParticles?: boolean }
+          : { mergeParticles: true };
+
+        try {
+          const result = await core.segmentJapaneseText(textStr, opts);
+          return result;
+        } catch (error) {
+          return {
+            segments: [],
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+            source: "fallback",
+          };
+        }
+      },
+
+      // デバッグ・ユーティリティ
+      async healthCheck(): Promise<void> {
+        const core = Core.getInstance(config);
+        await core.getHealthStatus(denops);
+      },
+
+      async getStatistics(): Promise<unknown> {
+        const core = Core.getInstance(config);
+        return core.getStatistics();
+      },
+
+      async debug(): Promise<DebugInfo> {
+        const core = Core.getInstance(config);
+        return core.collectDebugInfo();
+      },
+
+      async clearCache(): Promise<void> {
+        const core = Core.getInstance(config);
+        core.clearCache();
+        clearCaches();
+      },
+
+      // Dictionary管理
+      async reloadDictionary(): Promise<void> {
+        await reloadDictionary(denops);
+      },
+
+      async addToDictionary(word: unknown, meaning?: unknown, type?: unknown): Promise<void> {
+        if (typeof word === "string") {
+          await addToDictionary(
+            denops,
+            word,
+            typeof meaning === "string" ? meaning : undefined,
+            typeof type === "string" ? type : undefined,
+          );
+        }
+      },
+
+      async editDictionary(): Promise<void> {
+        await editDictionary(denops);
+      },
+
+      async showDictionary(): Promise<void> {
+        await showDictionary(denops);
+      },
+
+      async validateDictionary(): Promise<void> {
+        await validateDictionary(denops);
+      },
+    };
+  } catch (error) {
+    console.error("initializeVimLayer failed:", error instanceof Error ? error.message : String(error));
+    throw error;
+  }
 }
 
 /**

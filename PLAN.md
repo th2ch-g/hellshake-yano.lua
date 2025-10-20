@@ -609,7 +609,7 @@ VimScript (word_detector.vim)
 - Denops呼び出しは同期処理（denops#request）
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests-vim/test_process3_sub2.vim に統合テストケース作成（25テスト想定）
+- [x] tests-vim/test_process3_sub2.vim に統合テストケース作成（25テスト想定）
   - [ ] Test 1-5: 純粋な日本語テキスト検出
     - [ ] 基本的な日本語文（"これはテストです"）
     - [ ] 漢字・ひらがな・カタカナ混在
@@ -640,11 +640,11 @@ VimScript (word_detector.vim)
     - [ ] word_filter#apply()との連携
     - [ ] original_index保持の確認
     - [ ] ヒント位置のずれがないことを確認
-- [ ] tests-vim/test_process3_sub2_simple.vim に簡易テスト作成
+- [x] tests-vim/test_process3_sub2_simple.vim に簡易テスト作成
   - [ ] 基本的な日本語検出（5テスト程度）
   - [ ] 混在テキスト検出（3テスト程度）
   - [ ] 英数字のみの後方互換（2テスト程度）
-- [ ] テスト実行して失敗を確認（E117: Unknown function or 検出失敗）
+- [x] テスト実行して失敗を確認（E117: Unknown function or 検出失敗）
   ```bash
   vim -u NONE -N -c "source tests-vim/test_process3_sub2.vim"
   ```
@@ -738,9 +738,9 @@ VimScript (word_detector.vim)
    - [ ] パフォーマンス低下がないことを確認（体感・ログ）
 
 ##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/word_detector.vim に実装完了
-- [ ] core.vim/visual.vimでの動作確認（日本語テキストバッファ）
-- [ ] Vimでの手動動作確認
+- [x] autoload/hellshake_yano_vim/word_detector.vim に実装完了
+- [x] core.vim/visual.vimでの動作確認（日本語テキストバッファ）
+- [x] Vimでの手動動作確認
   - [ ] 日本語単語にヒントが表示される
   - [ ] 英数字と日本語の混在バッファで両方にヒント表示
   - [ ] perKeyMinLengthが日本語単語にも適用される
