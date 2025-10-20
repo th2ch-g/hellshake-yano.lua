@@ -476,24 +476,37 @@ process2 sub2の実装により以下の副作用が発生しやすいことが�
 @target: autoload/hellshake_yano_vim/word_detector.vim
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests/word_detector_test.ts にperKeyMinLengthのテストケース作成
-- [ ] defaultMinWordLengthフォールバックのテスト作成
-- [ ] `deno test` 実行して失敗を確認
+- [x] tests/per_key_min_length_test.ts にperKeyMinLengthのテストケース作成（18テスト）
+- [x] tests-vim/test_process2_sub2.vim に完全なテストケース作成（25テスト）
+- [x] defaultMinWordLengthフォールバックのテスト作成
+- [x] word_filter.vimとの統合テスト作成
+- [x] `deno test` 実行して成功を確認（実装済みのためGreen状態）
 
 ##### TDD Step 2: Green（実装）
-- [ ] perKeyMinLength辞書のサポート実装
-- [ ] defaultMinWordLengthフォールバック実装
-- [ ] キー別フィルタリング処理実装
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
+- [x] perKeyMinLength辞書のサポート実装（word_detector.vim）
+- [x] defaultMinWordLengthフォールバック実装
+- [x] キー別フィルタリング処理実装（word_filter.vim統合）
+- [x] core.vim へのword_filter統合（175-216行目）
+- [x] visual.vim へのword_filter統合（153-203行目）
+- [x] original_index保持でヒント位置のずれを防止
+- [x] `deno check denops/hellshake-yano/**/*.ts` で型チェック
+- [x] `deno test` 実行してテスト成功を確認（18/18成功）
+- [x] VimScriptテスト実行してテスト成功を確認（25/25成功）
 
 ##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの整理
-- [ ] `deno test` で回帰テスト確認
+- [x] コードの可読性向上
+- [x] ドキュメントコメント追加（Phase D-2 Sub2 マーク）
+- [x] `deno test` で回帰テスト確認（18/18成功）
+- [x] VimScriptで回帰テスト確認（既存テスト全成功）
 
 ##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/word_detector.vim に移植
-- [ ] Vimでの手動動作確認
+- [x] autoload/hellshake_yano_vim/word_detector.vim に実装完了
+- [x] autoload/hellshake_yano_vim/core.vim にword_filter統合完了
+- [x] autoload/hellshake_yano_vim/visual.vim にword_filter統合完了
+- [x] tests-vim/test_process2_sub2.vim でテスト完了
+- [x] tests-vim/verify_sub2.vim で動作確認完了
+
+**実装完了日**: 2025-10-20（コミット: 未実施）
 
 ### process3: 連続ヒントループモード（Phase D-3）
 #### sub1: 連続モード制御

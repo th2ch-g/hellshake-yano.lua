@@ -139,5 +139,75 @@ function! hellshake_yano_vim#word_detector#detect_visible() abort
   return l:words
 endfunction
 
+" hellshake_yano_vim#word_detector#get_min_length() - キー別最小単語長の取得
+"
+" Phase D-2 Sub2: Per-Key最小単語長機能
+"
+" 目的:
+"   - perKeyMinLength設定から指定されたキーの最小単語長を取得
+"   - perKeyMinLengthに設定がない場合はdefaultMinWordLengthにフォールバック
+"   - どちらも未設定の場合はハードコードされたデフォルト値（3）を返す
+"
+" アルゴリズム:
+"   1. g:hellshake_yano.perKeyMinLength[key]をチェック
+"   2. 存在しない、または無効な値（0以下）の場合はdefaultMinWordLengthを使用
+"   3. defaultMinWordLengthも未設定の場合はデフォルト値3を返す
+"
+" エラーハンドリング:
+"   - perKeyMinLengthが辞書でない場合はdefaultMinWordLengthにフォールバック
+"   - 0以下の値はdefaultMinWordLengthにフォールバック
+"   - すべて未設定の場合はデフォルト値3を返す
+"
+" @param key String モーションキー（例: 'w', 'b', 'e', 'h', 'j', 'k', 'l'）
+" @return Number 最小単語長
+"
+" 使用例:
+"   let l:min_length = hellshake_yano_vim#word_detector#get_min_length('w')
+"   " => 3 (perKeyMinLength.w が 3 の場合)
+"
+"   let l:min_length = hellshake_yano_vim#word_detector#get_min_length('h')
+"   " => 2 (perKeyMinLengthに'h'がなく、defaultMinWordLengthが2の場合)
+"
+" 注意事項:
+"   - PLAN.md Process2 Sub2 の仕様に基づく実装
+"   - word_filter.vimと組み合わせて使用することを想定
+"   - original_index保持のためword_filter#apply()を使用
+function! hellshake_yano_vim#word_detector#get_min_length(key) abort
+  " Phase D-2 Sub2: Per-Key最小単語長設定の取得
+
+  " デフォルト値（すべて未設定の場合）
+  let l:default_value = 3
+
+  " 設定を取得（存在しない場合は空の辞書）
+  let l:config = get(g:, 'hellshake_yano', {})
+
+  " 1. perKeyMinLengthからキー別設定を取得
+  let l:per_key_min_length = get(l:config, 'perKeyMinLength', {})
+
+  " perKeyMinLengthが辞書でない場合は使用しない
+  if type(l:per_key_min_length) != type({})
+    let l:per_key_min_length = {}
+  endif
+
+  " キー別設定が存在し、有効な値（1以上）であれば使用
+  if has_key(l:per_key_min_length, a:key)
+    let l:key_value = l:per_key_min_length[a:key]
+    if type(l:key_value) == type(0) && l:key_value > 0
+      return l:key_value
+    endif
+  endif
+
+  " 2. defaultMinWordLengthにフォールバック
+  let l:default_min_word_length = get(l:config, 'defaultMinWordLength', l:default_value)
+
+  " defaultMinWordLengthが有効な値であればそれを返す
+  if type(l:default_min_word_length) == type(0) && l:default_min_word_length > 0
+    return l:default_min_word_length
+  endif
+
+  " 3. すべて未設定の場合はデフォルト値を返す
+  return l:default_value
+endfunction
+
 let &cpo = s:save_cpo
 unlet s:save_cpo

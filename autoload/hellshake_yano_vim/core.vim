@@ -173,17 +173,45 @@ function! hellshake_yano_vim#core#show() abort
   " （以前の実装: if len(l:detected_words) > 49 で49個に制限）
 
   " Phase D-2 Sub0.1: フィルタリング層の堅牢性向上（準備）
-  " - 現時点では word_filter#apply() は呼ばない（既存動作維持）
-  " - Sub2実装時に最小単語長フィルタリングを追加予定
-  " - 空配列チェックを強化
+  " Phase D-2 Sub2: Per-Key最小単語長でのフィルタリング
+  " - word_filter#apply() を使用して最小単語長でフィルタリング
+  " - デフォルト最小単語長を使用（モーションキー別はmotion.vimで適用）
+  " - original_index保持でヒント位置のずれを防ぐ
+
   if empty(l:detected_words)
     call s:show_warning('no words detected')
     return
   endif
 
+  " 最小単語長を取得（デフォルト値）
+  " Note: core#show() は <Leader>h 経由で呼ばれるため、
+  " モーションキーのコンテキストがない。デフォルト値を使用する。
+  let l:min_word_length = hellshake_yano_vim#word_detector#get_min_length('')
+
+  " word_detector#detect_visible() の戻り値形式を word_filter#apply() に合わせる
+  " detect_visible() は {'text': ..., 'lnum': ..., 'col': ..., 'end_col': ...}
+  " word_filter#apply() は {'word': ..., 'lnum': ..., 'col': ...} を期待
+  let l:words_for_filter = []
+  for l:word in l:detected_words
+    call add(l:words_for_filter, {
+      \ 'word': l:word.text,
+      \ 'lnum': l:word.lnum,
+      \ 'col': l:word.col
+      \ })
+  endfor
+
+  " フィルタリング適用
+  let l:filtered_words = hellshake_yano_vim#word_filter#apply(l:words_for_filter, l:min_word_length)
+
+  " フィルタリング後の空配列チェック
+  if empty(l:filtered_words)
+    call s:show_warning('no words match minimum length criteria')
+    return
+  endif
+
   " 単語データから座標データに変換
   let l:positions = []
-  for l:word in l:detected_words
+  for l:word in l:filtered_words
     call add(l:positions, {'lnum': l:word.lnum, 'col': l:word.col})
   endfor
 

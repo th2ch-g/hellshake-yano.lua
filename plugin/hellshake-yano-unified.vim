@@ -192,9 +192,10 @@ endfunction
 " モーション検出マッピングとビジュアルモードマッピングを設定
 function! s:setup_unified_mappings() abort
   " モーション検出マッピング（Normal mode）
+  " Phase D-2: VimScript実装を使用（Denops依存を削減）
   if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
     for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
-      execute printf('nnoremap <silent> %s :<C-u>call <SID>handle_motion("%s")<CR>',
+      execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle("%s")<CR>',
         \ key, key)
     endfor
   endif
@@ -259,22 +260,6 @@ function! s:setup_vimscript_mappings() abort
   if l:visual_mode_enabled
     xnoremap <silent> <Leader>h :<C-u>call hellshake_yano_vim#visual#show()<CR>
   endif
-endfunction
-
-" s:handle_motion(key) - モーションハンドラー
-"
-" モーションキーの処理をDenopsに委譲
-"
-" @param a:key モーションキー（'w', 'b', 'e'など）
-function! s:handle_motion(key) abort
-  " Denopsチャネル状態を確認
-  if denops#server#status() ==# 'running'
-    " Denopsに処理を委譲
-    call denops#notify('hellshake-yano', 'handleMotion', [a:key])
-  endif
-
-  " 通常のモーションも実行
-  execute 'normal! ' . a:key
 endfunction
 
 " s:show_hints_visual() - ビジュアルモード用ヒント表示

@@ -160,15 +160,46 @@ function! s:detect_words_in_range(start_line, end_line) abort
   endif
 
   " 範囲内の単語のみをフィルタリング
-  let l:filtered_words = []
+  let l:words_in_range = []
   for l:word in l:all_words
     if l:word.lnum >= a:start_line && l:word.lnum <= a:end_line
-      call add(l:filtered_words, l:word)
+      call add(l:words_in_range, l:word)
     endif
   endfor
 
-  " Phase D-2 Sub0.1: フィルタリング結果が空でもエラーなし
-  return l:filtered_words
+  " Phase D-2 Sub2: 最小単語長でのフィルタリング
+  if empty(l:words_in_range)
+    return []
+  endif
+
+  " 最小単語長を取得（デフォルト値）
+  " Note: Visual modeでは 'v' キーのコンテキストで呼ばれることもあるが、
+  " ここでは汎用的にデフォルト値を使用
+  let l:min_word_length = hellshake_yano_vim#word_detector#get_min_length('')
+
+  " word_detector#detect_visible() の戻り値形式を word_filter#apply() に合わせる
+  let l:words_for_filter = []
+  for l:word in l:words_in_range
+    call add(l:words_for_filter, {
+      \ 'word': l:word.text,
+      \ 'lnum': l:word.lnum,
+      \ 'col': l:word.col
+      \ })
+  endfor
+
+  " フィルタリング適用
+  let l:filtered_words = hellshake_yano_vim#word_filter#apply(l:words_for_filter, l:min_word_length)
+
+  " Phase D-2 Sub0.1 & Sub2: フィルタリング結果が空でもエラーなし
+  " filtered_wordsを元の形式（text含む）に戻す
+  let l:result = []
+  for l:word in l:filtered_words
+    " original_indexを使って元のwords_in_rangeから情報を復元
+    let l:original_word = l:words_in_range[l:word.original_index]
+    call add(l:result, l:original_word)
+  endfor
+
+  return l:result
 endfunction
 
 " s:show_warning(message) - 警告メッセージを表示（統一されたフォーマット）
