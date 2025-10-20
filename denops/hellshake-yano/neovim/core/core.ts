@@ -1540,7 +1540,12 @@ export class Core {
       const dictConfig = await this.vimConfigBridge.getConfig(denops);
       await this.dictionaryLoader.loadUserDictionary(dictConfig);
     } catch (error) {
-      throw error;
+      // Silently handle dictionary initialization errors
+      // Dictionary system is optional - plugin should continue to work without it
+      // Error details are logged but not propagated to avoid blocking plugin initialization
+      if (this.config.debugMode) {
+        console.error('[Dictionary] Initialization failed:', error instanceof Error ? error.message : String(error));
+      }
     }
   }
   /*   * Register dictionary-related Vim commands

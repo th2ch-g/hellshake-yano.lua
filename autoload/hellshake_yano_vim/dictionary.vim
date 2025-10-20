@@ -163,13 +163,12 @@ function! hellshake_yano_vim#dictionary#is_in_dictionary(word) abort
     endif
     return l:result ? 1 : 0
   catch
-    " エラー時は0を返す（警告は1回のみ）
+    " Denops呼び出しが失敗した場合は静かに0を返す
+    " 初回失敗時（起動直後のコマンド未登録状態）のみフラグを設定
     if !s:warn_shown
-      echohl WarningMsg
-      echo '[Dictionary] Check failed (will retry): ' . v:exception
-      echohl None
       let s:warn_shown = 1
     endif
+    " エラーメッセージを出さずに0を返す（辞書にない単語として扱う）
     return 0
   endtry
 endfunction

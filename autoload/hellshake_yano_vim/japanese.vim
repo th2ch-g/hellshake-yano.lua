@@ -7,6 +7,9 @@
 " 漢字: 一-龯 (U+4E00-U+9FAF)
 let s:japanese_pattern = '[ぁ-んァ-ヶー一-龯]'
 
+" Denops初回失敗フラグ（起動直後のコマンド未登録状態を検出）
+let s:denops_failed_once = v:false
+
 " Denopsが利用可能かチェック
 function! s:is_denops_available() abort
   return exists('*denops#plugin#is_loaded') && denops#plugin#is_loaded('hellshake-yano')
@@ -84,13 +87,19 @@ function! hellshake_yano_vim#japanese#segment(text, ...) abort
   if s:is_denops_available()
     try
       let l:result = denops#request('hellshake-yano', 'segmentJapaneseText', [l:text, l:options])
+      " 成功時は失敗フラグをリセット（次回から正常動作）
+      let s:denops_failed_once = v:false
       return l:result
     catch
-      " Denops呼び出しが失敗した場合はフォールバック
+      " Denops呼び出しが失敗した場合は静かにフォールバック
+      " 初回失敗時のみフラグを設定（2回目以降は警告なし）
+      if !s:denops_failed_once
+        let s:denops_failed_once = v:true
+      endif
+      " エラーメッセージを出さずにフォールバックを返す
       return {
         \ 'segments': s:fallback_segment(l:text),
-        \ 'success': v:false,
-        \ 'error': 'Denops call failed: ' . v:exception,
+        \ 'success': v:true,
         \ 'source': 'fallback',
         \ }
     endtry

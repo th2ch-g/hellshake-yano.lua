@@ -1113,33 +1113,52 @@ export class VimConfigBridge {
    * Get dictionary configuration from Vim variables
    * Supports both new (g:hellshake_yano.dictionaryPath) and legacy (g:hellshake_yano_dictionary_path) formats
    * New format takes precedence for backward compatibility
+   *
+   * Implementation strategy:
+   * 1. Check if g:hellshake_yano exists
+   * 2. If exists, read new format first, fallback to legacy if not found
+   * 3. If not exists, read legacy format directly
    */
   async getConfig(denops: Denops): Promise<DictionaryLoaderConfig> {
     try {
       const config: DictionaryLoaderConfig = {};
 
-      // dictionaryPath: g:hellshake_yano.dictionaryPath (new) or g:hellshake_yano_dictionary_path (legacy)
-      config.dictionaryPath = await denops.eval(
-        'get(get(g:, "hellshake_yano", {}), "dictionaryPath", get(g:, "hellshake_yano_dictionary_path", ""))'
-      ) as string || undefined;
+      // Check if new format config exists
+      const hasNewConfig = await denops.eval('exists("g:hellshake_yano")') as number;
 
-      // useBuiltinDict: g:hellshake_yano.useBuiltinDict (new) or g:hellshake_yano_use_builtin_dict (legacy)
-      config.useBuiltinDict = await denops.eval(
-        'get(get(g:, "hellshake_yano", {}), "useBuiltinDict", get(g:, "hellshake_yano_use_builtin_dict", 1))'
-      ) as boolean;
+      if (hasNewConfig) {
+        // New format exists - try to read from it first
+        const newConfig = await denops.eval('g:hellshake_yano') as Record<string, unknown>;
 
-      // mergingStrategy: g:hellshake_yano.dictionaryMerge (new) or g:hellshake_yano_dictionary_merge (legacy)
-      config.mergingStrategy = await denops.eval(
-        'get(get(g:, "hellshake_yano", {}), "dictionaryMerge", get(g:, "hellshake_yano_dictionary_merge", "merge"))'
-      ) as 'override' | 'merge';
+        // dictionaryPath: try new format first, then legacy
+        config.dictionaryPath = (newConfig?.dictionaryPath as string) ||
+          await denops.eval('get(g:, "hellshake_yano_dictionary_path", "")') as string ||
+          undefined;
 
-      // autoReload: g:hellshake_yano.autoReload (new) or g:hellshake_yano_auto_reload_dict (legacy)
-      config.autoReload = await denops.eval(
-        'get(get(g:, "hellshake_yano", {}), "autoReload", get(g:, "hellshake_yano_auto_reload_dict", 0))'
-      ) as boolean;
+        // useBuiltinDict: try new format first, then legacy, default to true
+        config.useBuiltinDict = (newConfig?.useBuiltinDict !== undefined)
+          ? (newConfig.useBuiltinDict as boolean)
+          : await denops.eval('get(g:, "hellshake_yano_use_builtin_dict", 1)') as boolean;
+
+        // mergingStrategy: try new format first, then legacy, default to 'merge'
+        config.mergingStrategy = (newConfig?.dictionaryMerge as 'override' | 'merge') ||
+          await denops.eval('get(g:, "hellshake_yano_dictionary_merge", "merge")') as 'override' | 'merge';
+
+        // autoReload: try new format first, then legacy, default to false
+        config.autoReload = (newConfig?.autoReload !== undefined)
+          ? (newConfig.autoReload as boolean)
+          : await denops.eval('get(g:, "hellshake_yano_auto_reload_dict", 0)') as boolean;
+      } else {
+        // New format doesn't exist - read legacy format directly
+        config.dictionaryPath = await denops.eval('get(g:, "hellshake_yano_dictionary_path", "")') as string || undefined;
+        config.useBuiltinDict = await denops.eval('get(g:, "hellshake_yano_use_builtin_dict", 1)') as boolean;
+        config.mergingStrategy = await denops.eval('get(g:, "hellshake_yano_dictionary_merge", "merge")') as 'override' | 'merge';
+        config.autoReload = await denops.eval('get(g:, "hellshake_yano_auto_reload_dict", 0)') as boolean;
+      }
 
       return config;
-    } catch {
+    } catch (error) {
+      // Return empty config on any error - dictionary system will use defaults
       return {};
     }
   }
