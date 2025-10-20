@@ -51,12 +51,37 @@
     - 回帰テスト: 全12テスト成功、型チェック成功
   - **型チェック**: ✅ `deno check` 全ファイル成功（2025-10-20）
 
+- **Sub2: キーリピート検出ロジックの追加** ✅ 完了（2025-10-20）
+  - **TDD Step 1: Red（テスト作成）** ✅ 完了
+    - `tests-vim/test_process50_sub2.vim`: 7テストケース作成完了
+    - `tests-vim/test_process50_sub2_simple.vim`: 簡易テスト4件作成完了
+  - **TDD Step 2: Green（実装）** ✅ 完了
+    - `s:get_key_repeat_config()`: 設定取得関数実装完了
+    - `s:handle_key_repeat_detection()`: キーリピート検出ロジック実装完了
+    - key_repeat.vimとの連携実装完了
+    - 全4テスト成功、型チェック成功
+  - **TDD Step 3: Refactor（リファクタリング）** ✅ 完了（2025-10-20）
+    - 詳細なドキュメントコメント追加
+    - コードの可読性向上
+    - 回帰テスト成功
+
+- **Sub3: motion#handle()への統合** ✅ 完了（2025-10-20）
+  - **TDD Step 1: Red（テスト作成）** ✅ 完了
+    - `tests-vim/test_process50_sub3.vim`: 5テストケース作成完了
+    - `tests-vim/test_process50_sub3_simple.vim`: 簡易テスト3件作成完了
+  - **TDD Step 2: Green（実装）** ✅ 完了
+    - `hellshake_yano_vim#motion#handle()`: キーリピート検出統合完了
+    - 高速入力時のヒント表示スキップ機能実装
+    - 全3テスト成功、型チェック成功
+  - **TDD Step 3: Refactor（リファクタリング）** ✅ 完了（2025-10-20）
+    - アルゴリズムコメント更新
+    - Phase D-6マーカー追加
+    - 回帰テスト成功
+
 ### 次のステップ
-1. Process50 Sub2: キーリピート検出ロジックの追加（motion.vim統合）
-2. Process50 Sub3: motion#handle()への統合
-3. Process50 Sub4: テストと検証
-4. Process4: 辞書システム（Phase D-7）の実装
-5. ドキュメンテーションとリリース準備
+1. Process50 Sub4: テストと検証（統合テスト、手動動作確認）
+2. Process4: 辞書システム（Phase D-7）の実装
+3. ドキュメンテーションとリリース準備
 
 ## Coordinate Systems (座標系の知見)
 

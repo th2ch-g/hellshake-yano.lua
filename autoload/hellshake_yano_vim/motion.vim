@@ -4,15 +4,107 @@
 "
 " TDD Phase: GREEN
 " Process1: motion.vim の実装
+" Phase D-6 Process50 Sub2: キーリピート検出ロジックの追加
 "
 " このモジュールは w/b/e モーションの連打を検出し、
 " 自動的にヒント表示をトリガーする機能を提供します。
 " Phase A-4: モーション連打検出機能の実装。
+" Phase D-6: キーリピート抑制機能の追加。
 " Vim 8.0+ と Neovim の両方で動作します。
 
 " スクリプトローカル変数の定義
 let s:save_cpo = &cpo
 set cpo&vim
+
+" ============================================================================
+" Phase D-6 Process50 Sub2: キーリピート検出ロジック
+" ============================================================================
+
+" s:get_key_repeat_config() - キーリピート設定の取得
+"
+" 目的:
+"   - g:hellshake_yano からキーリピート抑制機能の設定を取得
+"   - デフォルト値を提供
+"
+" @return Dictionary キーリピート設定
+"   - enabled: 機能の有効/無効 (デフォルト: v:true)
+"   - threshold: リピート判定の閾値（ミリ秒）(デフォルト: 50)
+"   - reset_delay: リセット遅延時間（ミリ秒）(デフォルト: 300)
+"
+" 使用例:
+"   let l:config = s:get_key_repeat_config()
+"   if l:config.enabled
+"     " キーリピート抑制が有効
+"   endif
+function! s:get_key_repeat_config() abort
+  return {
+        \ 'enabled': get(get(g:, 'hellshake_yano', {}), 'suppressOnKeyRepeat', v:true),
+        \ 'threshold': get(get(g:, 'hellshake_yano', {}), 'keyRepeatThreshold', 50),
+        \ 'reset_delay': get(get(g:, 'hellshake_yano', {}), 'keyRepeatResetDelay', 300)
+        \ }
+endfunction
+
+" s:handle_key_repeat_detection(bufnr, current_time, config) - キーリピート検出処理
+"
+" 目的:
+"   - 高速なキーリピートを検出し、ヒント表示をスキップ
+"   - Neovim側の実装（autoload/hellshake_yano/motion.vim:23-50）を参考
+"
+" アルゴリズム:
+"   1. 機能が無効の場合は通常処理（キー時刻のみ更新）
+"   2. 前回のキー入力時刻との差を計算
+"   3. 閾値未満 && 初回でない → リピート状態に設定
+"   4. リセットタイマーを設定
+"   5. キー時刻を更新
+"   6. リピート検出の結果を返す
+"
+" パラメータ:
+"   @param a:bufnr Number バッファ番号
+"   @param a:current_time Number 現在時刻（ミリ秒）
+"   @param a:config Dictionary キーリピート設定
+"
+" @return Boolean リピート検出された場合はv:true、通常処理の場合はv:false
+"
+" 使用例:
+"   let l:bufnr = bufnr('%')
+"   let l:current_time = float2nr(reltimefloat(reltime()) * 1000.0)
+"   let l:config = s:get_key_repeat_config()
+"   if s:handle_key_repeat_detection(l:bufnr, l:current_time, l:config)
+"     " キーリピート検出 - ヒント表示をスキップ
+"     return
+"   endif
+function! s:handle_key_repeat_detection(bufnr, current_time, config) abort
+  " 機能が無効の場合は通常処理
+  if !a:config.enabled
+    call hellshake_yano_vim#key_repeat#set_last_key_time(a:bufnr, a:current_time)
+    return v:false
+  endif
+
+  " 前回のキー入力時刻との差を計算
+  let l:last_key_time = hellshake_yano_vim#key_repeat#get_last_key_time(a:bufnr)
+  let l:time_diff = a:current_time - l:last_key_time
+
+  " キーリピート判定（初回キー入力は除外、2回目以降で判定）
+  if l:time_diff < a:config.threshold && l:last_key_time > 0
+    " リピート状態に設定
+    call hellshake_yano_vim#key_repeat#set_repeating(a:bufnr, v:true)
+
+    " 既存のリピート終了タイマーをクリアして新しく設定
+    call hellshake_yano_vim#key_repeat#set_reset_timer(a:bufnr, a:config.reset_delay)
+
+    " キー時刻更新してヒント表示をスキップ
+    call hellshake_yano_vim#key_repeat#set_last_key_time(a:bufnr, a:current_time)
+    return v:true
+  endif
+
+  " 通常処理: キー時刻を更新
+  call hellshake_yano_vim#key_repeat#set_last_key_time(a:bufnr, a:current_time)
+  return v:false
+endfunction
+
+" ============================================================================
+" 既存のモーション連打検出機能
+" ============================================================================
 
 " モーション状態管理
 " PLAN.md の仕様に基づくデータ構造
@@ -141,9 +233,11 @@ endfunction
 " 目的:
 "   - モーションキー（w/b/e/h/j/k/l）の連打を検出
 "   - 閾値に達した場合はヒント表示をトリガー
+"   - Phase D-6 Process50 Sub3: キーリピート抑制機能の統合
 "   - 通常のモーション実行も行う
 "
 " アルゴリズム:
+"   0. Phase D-6: キーリピート検出（高速連打時はヒント表示をスキップ）
 "   1. 現在時刻を取得（reltime()）
 "   2. 前回のモーションとの時間差をチェック
 "   3. タイムアウト内 && 同じモーション → カウント++
@@ -171,6 +265,7 @@ endfunction
 " 注意事項:
 "   - ヒント表示はブロッキング方式（Phase A-3で確立）
 "   - ヒント表示後はカウントをリセット（連続表示を防ぐ）
+"   - Phase D-6: 高速キーリピート時はヒント表示をスキップ
 function! hellshake_yano_vim#motion#handle(motion_key) abort
   " 不正なモーションキーのチェック
   " Phase D-2 Sub1.1: h/j/k/l モーション対応
@@ -182,7 +277,22 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
   endif
 
   try
-    " 1. 現在時刻を取得
+    " Phase D-6 Process50 Sub3: キーリピート検出
+    " 0. 現在時刻を取得（ミリ秒単位）
+    let l:current_time_ms = float2nr(reltimefloat(reltime()) * 1000.0)
+    let l:bufnr = bufnr('%')
+
+    " キーリピート設定を取得
+    let l:key_repeat_config = s:get_key_repeat_config()
+
+    " キーリピート検出処理
+    if s:handle_key_repeat_detection(l:bufnr, l:current_time_ms, l:key_repeat_config)
+      " リピート中の場合は通常のモーション実行のみ（ヒント表示をスキップ）
+      execute 'normal! ' . a:motion_key
+      return
+    endif
+
+    " 1. 現在時刻を取得（既存のモーション検出用）
     let l:current_time = reltime()
 
     " 2. 前回のモーションとの時間差をチェック
