@@ -508,90 +508,7 @@ process2 sub2の実装により以下の副作用が発生しやすいことが�
 
 **実装完了日**: 2025-10-20（コミット: 未実施）
 
-### process3: 連続ヒントループモード（Phase D-3）
-#### sub1: 連続モード制御
-@target: autoload/hellshake_yano_vim/continuous.vim（新規）
-
-##### TDD Step 1: Red（テスト作成）
-- [ ] tests/continuous_test.ts に連続モードのテストケース作成
-- [ ] 再センタリングのテスト作成
-- [ ] ヒント再表示のテスト作成
-- [ ] maxContinuousJumps制限のテスト作成
-- [ ] `deno test` 実行して失敗を確認
-
-##### TDD Step 2: Green（実装）
-- [ ] continuousHintModeオプション実装
-- [ ] ジャンプ後の自動再センタリング実装
-- [ ] ヒントの自動再表示実装
-- [ ] maxContinuousJumps制限実装
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
-
-##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの整理・最適化
-- [ ] `deno test` で回帰テスト確認
-
-##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/continuous.vim に移植
-- [ ] Vimでの手動動作確認
-
-### process4: キャッシュシステム（Phase D-4）
-#### sub1: LRUキャッシュ実装
-@target: autoload/hellshake_yano_vim/cache.vim（新規）
-@ref: denops/hellshake-yano/cache.ts
-
-##### TDD Step 1: Red（テスト作成）
-- [ ] tests/cache_test.ts にLRUアルゴリズムのテストケース作成
-- [ ] キャッシュヒット・ミスのテスト作成
-- [ ] エビクションのテスト作成
-- [ ] `deno test` 実行して失敗を確認
-
-##### TDD Step 2: Green（実装）
-- [ ] VimScript版LRUアルゴリズム実装
-- [ ] 単語検出結果のキャッシュ実装
-- [ ] ヒント生成結果のキャッシュ実装
-- [ ] キャッシュサイズ制限とエビクション実装
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
-
-##### TDD Step 3: Refactor（リファクタリング）
-- [ ] パフォーマンス最適化
-- [ ] `deno test` で回帰テスト確認
-
-##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/cache.vim に移植
-- [ ] Vimでの手動動作確認
-
-### process5: 日本語基本対応（Phase D-5）
-#### sub1: 文字種判定と境界検出
-@target: autoload/hellshake_yano_vim/japanese.vim（新規）
-
-##### TDD Step 1: Red（テスト作成）
-- [ ] tests/japanese_test.ts に文字種判定のテストケース作成
-- [ ] 文字種境界検出のテスト作成
-- [ ] 助詞分割のテスト作成
-- [ ] カタカナ連続認識のテスト作成
-- [ ] 英数字混在テキストのテスト作成
-- [ ] `deno test` 実行して失敗を確認
-
-##### TDD Step 2: Green（実装）
-- [ ] ひらがな、カタカナ、漢字の判定実装
-- [ ] 文字種境界での単語分割実装
-- [ ] 助詞での分割（の、を、に、が等）実装
-- [ ] カタカナ連続の認識実装
-- [ ] 英数字混在テキストの処理実装
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
-
-##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの整理・最適化
-- [ ] `deno test` で回帰テスト確認
-
-##### VimScript実装
-- [ ] autoload/hellshake_yano_vim/japanese.vim に移植
-- [ ] Vimでの手動動作確認
-
-### process6: TinySegmenter移植（Phase D-6）
+### process3: TinySegmenter移植（Phase D-6）
 #### sub1: VimScript版TinySegmenter
 @target: autoload/hellshake_yano_vim/tinysegmenter.vim（新規）
 @ref: denops/hellshake-yano/neovim/core/word/word-segmenter.ts
@@ -621,7 +538,7 @@ process2 sub2の実装により以下の副作用が発生しやすいことが�
 - [ ] Vimでの手動動作確認
 - [ ] パフォーマンスベンチマーク実施
 
-### process7: 辞書システム（Phase D-7）
+### process4: 辞書システム（Phase D-7）
 #### sub1: 辞書ファイル管理
 @target: autoload/hellshake_yano_vim/dictionary.vim（新規）
 
@@ -649,35 +566,7 @@ process2 sub2の実装により以下の副作用が発生しやすいことが�
 - [ ] Vimでの手動動作確認
 - [ ] 辞書コマンドのテスト
 
-### process8: 統合と最適化（Phase D-8）
-#### sub1: その他の機能実装
-@target: 各関連ファイル
-
-##### TDD Step 1: Red（テスト作成）
-- [ ] tests/both_side_hint_test.ts にboth側ヒント表示のテストケース作成
-- [ ] tests/key_repeat_test.ts にキーリピート抑制のテスト作成
-- [ ] tests/metrics_test.ts にパフォーマンスメトリクスのテスト作成
-- [ ] tests/health_check_test.ts にヘルスチェックのテスト作成
-- [ ] `deno test` 実行して失敗を確認
-
-##### TDD Step 2: Green（実装）
-- [ ] both側ヒント表示（bothMinWordLength）実装
-- [ ] キーリピート抑制機能実装
-- [ ] パフォーマンスメトリクス実装
-- [ ] ヘルスチェック機能実装
-- [ ] `deno check denops/hellshake-yano/**/*.ts` で型チェック
-- [ ] `deno test` 実行してテスト成功を確認
-
-##### TDD Step 3: Refactor（リファクタリング）
-- [ ] コードの整理・最適化
-- [ ] `deno test` で回帰テスト確認
-
-##### VimScript実装
-- [ ] 各関連ファイルに移植
-- [ ] Vimでの手動動作確認
-- [ ] 統合テスト実施
-
-### process10: ユニットテスト
+### process0: ユニットテスト
 #### sub1: VimScript統合テスト整備
 @target: tests-vim/
 
