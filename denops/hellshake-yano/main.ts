@@ -350,6 +350,29 @@ async function initializeNeovimLayer(denops: Denops): Promise<void> {
       async clearPerformanceLog(): Promise<void> {
         resetPerformanceMetrics();
       },
+
+      async segmentJapaneseText(
+        text: unknown,
+        options?: unknown,
+      ): Promise<{ segments: string[]; success: boolean; error?: string; source: string }> {
+        const core = Core.getInstance(config);
+        const textStr = typeof text === "string" ? text : String(text);
+        const opts = typeof options === "object" && options !== null
+          ? options as { mergeParticles?: boolean }
+          : { mergeParticles: true };
+
+        try {
+          const result = await core.segmentJapaneseText(textStr, opts);
+          return result;
+        } catch (error) {
+          return {
+            segments: [],
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+            source: "fallback",
+          };
+        }
+      },
     };
     // updatePluginStateはcore.tsに統合されたため、必要に応じてCoreクラス経由で呼び出し
   } catch (error) {

@@ -34,6 +34,8 @@ import {
   detectWordsWithManager,
   detectWordsWithConfig,
 } from "./word.ts";
+import { TinySegmenter } from "./word/word-segmenter.ts";
+import type { SegmentationResult } from "./word/word-segmenter.ts";
 import {
   assignHintsToWords,
   generateHints,
@@ -943,6 +945,22 @@ export class Core {
       hintGeneration: [],
     };
   }
+
+  /**
+   * Phase D-6: Process3 Sub1 - TinySegmenter連携
+   * 日本語テキストをセグメント化する
+   * @param text セグメント化する日本語テキスト
+   * @param options セグメント化オプション
+   * @returns セグメント化結果
+   */
+  async segmentJapaneseText(
+    text: string,
+    options?: { mergeParticles?: boolean },
+  ): Promise<SegmentationResult> {
+    const segmenter = TinySegmenter.getInstance();
+    return await segmenter.segment(text, options);
+  }
+
   /*   * Phase 8: ユーティリティ機能 - 現在のヒントを設定（テスト用）   * @param hints ヒントマッピングの配列
    */
   setCurrentHints(hints: HintMapping[]): void {
