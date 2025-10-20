@@ -172,6 +172,15 @@ function! hellshake_yano_vim#core#show() abort
   " ここでは制限を設けない
   " （以前の実装: if len(l:detected_words) > 49 で49個に制限）
 
+  " Phase D-2 Sub0.1: フィルタリング層の堅牢性向上（準備）
+  " - 現時点では word_filter#apply() は呼ばない（既存動作維持）
+  " - Sub2実装時に最小単語長フィルタリングを追加予定
+  " - 空配列チェックを強化
+  if empty(l:detected_words)
+    call s:show_warning('no words detected')
+    return
+  endif
+
   " 単語データから座標データに変換
   let l:positions = []
   for l:word in l:detected_words

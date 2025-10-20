@@ -146,10 +146,18 @@ endfunction
 " @param end_line Number 終了行番号（1-indexed）
 " @return List<Dictionary> 範囲内の単語リスト
 "
-" NOTE: 現時点では未実装（Phase A-5 process1 の後続タスクで実装予定）
+" Phase D-2 Sub0.1: フィルタリング層の堅牢性向上
+"   - 空配列チェックを追加
+"   - word_filter.vim との互換性を確保
+"   - Sub2実装時に word_filter#apply() を使用する準備
 function! s:detect_words_in_range(start_line, end_line) abort
   " 全画面内の単語を取得
   let l:all_words = hellshake_yano_vim#word_detector#detect_visible()
+
+  " Phase D-2 Sub0.1: 空配列チェック（堅牢性向上）
+  if empty(l:all_words)
+    return []
+  endif
 
   " 範囲内の単語のみをフィルタリング
   let l:filtered_words = []
@@ -159,6 +167,7 @@ function! s:detect_words_in_range(start_line, end_line) abort
     endif
   endfor
 
+  " Phase D-2 Sub0.1: フィルタリング結果が空でもエラーなし
   return l:filtered_words
 endfunction
 

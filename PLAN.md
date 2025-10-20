@@ -418,6 +418,60 @@ endif
 - 設定変数名の違いに注意（`g:hellshake_yano` vs `g:hellshake_yano_vim_config`）
 - Neovim環境でもVimScript関数が正常に動作することを確認
 
+#### sub0.1: Per-Key最小単語長の実装前準備（堅牢性向上）
+@target: autoload/hellshake_yano_vim/word_filter.vim（新規）
+@issue: sub2実装時にヒント表示位置のずれやVisual Mode動作不良が発生することが判明
+
+##### 背景
+process2 sub2の実装により以下の副作用が発生しやすいことが判明：
+- 単語フィルタリング後のインデックスずれによるヒント位置の不正
+- Visual Modeでの選択範囲内単語検出の不具合
+- 空配列処理時のエラー
+
+これらを防ぐため、事前に堅牢性を向上させる。
+
+##### TDD Step 1: Red（テスト作成）
+- [x] tests-vim/test_process2_sub0_1.vim にフィルタリング層のテストケース作成
+- [x] 元のインデックス保持のテスト作成
+- [x] 空配列フォールバックのテスト作成
+- [x] Visual Mode互換性のテスト作成
+- [x] テスト実行して失敗を確認（E484: word_filter.vim not found）
+
+##### TDD Step 2: Green（実装）
+- [x] autoload/hellshake_yano_vim/word_filter.vim を新規作成
+  - [x] hellshake_yano_vim#word_filter#apply() 関数実装
+  - [x] 元の単語リスト情報（original_index）を保持
+  - [x] 空配列の場合のフォールバック処理
+  - [x] 不正なデータ構造のスキップ処理
+- [x] core.vim の安全な拡張
+  - [x] 空配列チェックの強化
+  - [x] Phase D-2 Sub0.1 マーク追加
+  - [x] Sub2実装準備のコメント追加
+- [x] visual.vim の独立処理強化
+  - [x] s:detect_words_in_range() に空配列チェック追加
+  - [x] Phase D-2 Sub0.1 マーク追加
+  - [x] word_filter.vim との互換性確保
+- [x] テスト実行してテスト成功を確認（全テストOK）
+
+##### TDD Step 3: Refactor（リファクタリング）
+- [x] コードの可読性向上（完了）
+- [x] ドキュメントコメント追加（Phase D-2 Sub0.1 マーク）
+- [x] 回帰テスト確認（既存機能が壊れていないことを確認）
+  - [x] word_filter.vim の基本機能テスト（OK）
+  - [x] visual.vim の読み込みテスト（OK）
+  - [x] core.vim の読み込みテスト（OK）
+  - [x] sub1/sub2.1/sub2.2/sub3 の機能確認（OK）
+
+##### 動作確認
+- [x] word_filter#apply() が正常に動作（OK）
+- [x] original_index が正しく保持される（OK）
+- [x] 空配列でもエラーが発生しない（OK）
+- [x] 不正なデータ構造がスキップされる（OK）
+- [x] Visual Mode関数が正常に読み込める（OK）
+- [x] 既存機能への影響なし（回帰テスト成功）
+
+**実装完了日**: 2025-10-20
+
 #### sub2: Per-Key最小単語長
 @target: autoload/hellshake_yano_vim/word_detector.vim
 
