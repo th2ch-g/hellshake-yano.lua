@@ -21,18 +21,27 @@ hellshake-yano.vimでは、ユーザー独自の辞書ファイルを定義す�
 ## 設定オプション
 
 ```vim
-" 辞書ファイルのパスを明示的に指定
-let g:hellshake_yano_dictionary_path = '~/my-dictionary.json'
+" 推奨: 新しい設定形式（camelCase）
+let g:hellshake_yano = {
+  \ 'dictionaryPath': '~/my-dictionary.json',
+  \ 'useBuiltinDict': v:true,
+  \ 'dictionaryMerge': 'merge',
+  \ 'autoReload': v:false
+  \ }
 
-" ビルトイン辞書を使用するか
-let g:hellshake_yano_use_builtin_dict = 1
-
-" 辞書のマージ戦略 ('merge' or 'override')
-let g:hellshake_yano_dictionary_merge = 'merge'
-
-" 辞書の自動再読み込み
-let g:hellshake_yano_auto_reload_dict = 0
+" 後方互換性: 古い設定形式（非推奨だが動作する）
+" let g:hellshake_yano_dictionary_path = '~/my-dictionary.json'
+" let g:hellshake_yano_use_builtin_dict = 1
+" let g:hellshake_yano_dictionary_merge = 'merge'
+" let g:hellshake_yano_auto_reload_dict = 0
 ```
+
+**設定項目の説明:**
+
+- `dictionaryPath`: 辞書ファイルのパスを明示的に指定
+- `useBuiltinDict`: ビルトイン辞書を使用するか（デフォルト: `v:true`）
+- `dictionaryMerge`: 辞書のマージ戦略（`'merge'` または `'override'`、デフォルト: `'merge'`）
+- `autoReload`: 辞書の自動再読み込み（デフォルト: `v:false`）
 
 ## 辞書ファイル形式
 

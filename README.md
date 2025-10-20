@@ -586,9 +586,11 @@ Define regex patterns to prioritize hint placement for specific document structu
 #### Configuration
 
 ```vim
-let g:hellshake_yano_dictionary_path = '~/.config/my-dict.json'
-let g:hellshake_yano_use_builtin_dict = v:true
-let g:hellshake_yano_dictionary_merge = 'merge'  " or 'override'
+let g:hellshake_yano = {
+  \ 'dictionaryPath': '~/.config/my-dict.json',
+  \ 'useBuiltinDict': v:true,
+  \ 'dictionaryMerge': 'merge'
+  \ }
 ```
 
 ### Japanese Word Segmentation Settings

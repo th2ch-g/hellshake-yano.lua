@@ -1368,6 +1368,14 @@ Deno.test("Core addToDictionary should add word to user dictionary", async () =>
 
   // Setup test dictionary path
   const testDictPath = "tmp/claude/test-dictionary.json";
+
+  // New variable format (g:hellshake_yano.dictionaryPath)
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "dictionaryPath", get(g:, "hellshake_yano_dictionary_path", ""))', testDictPath);
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "useBuiltinDict", get(g:, "hellshake_yano_use_builtin_dict", 1))', 1);
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "dictionaryMerge", get(g:, "hellshake_yano_dictionary_merge", "merge"))', "merge");
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "autoReload", get(g:, "hellshake_yano_auto_reload_dict", 0))', 0);
+
+  // Legacy variable format (backward compatibility)
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_path", "")', testDictPath);
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_use_builtin_dict", 1)', 1);
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_merge", "merge")', "merge");
@@ -1401,6 +1409,14 @@ Deno.test("Core addToDictionary should handle invalid word input", async () => {
 
   // Setup test dictionary path
   const testDictPath = "tmp/claude/test-dictionary-invalid.json";
+
+  // New variable format (g:hellshake_yano.dictionaryPath)
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "dictionaryPath", get(g:, "hellshake_yano_dictionary_path", ""))', testDictPath);
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "useBuiltinDict", get(g:, "hellshake_yano_use_builtin_dict", 1))', 1);
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "dictionaryMerge", get(g:, "hellshake_yano_dictionary_merge", "merge"))', "merge");
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "autoReload", get(g:, "hellshake_yano_auto_reload_dict", 0))', 0);
+
+  // Legacy variable format (backward compatibility)
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_path", "")', testDictPath);
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_use_builtin_dict", 1)', 1);
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_merge", "merge")', "merge");
@@ -1434,6 +1450,14 @@ Deno.test("Core addToDictionary should handle different word types", async () =>
 
   // Setup test dictionary path
   const testDictPath = "tmp/claude/test-dictionary-types.json";
+
+  // New variable format (g:hellshake_yano.dictionaryPath)
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "dictionaryPath", get(g:, "hellshake_yano_dictionary_path", ""))', testDictPath);
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "useBuiltinDict", get(g:, "hellshake_yano_use_builtin_dict", 1))', 1);
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "dictionaryMerge", get(g:, "hellshake_yano_dictionary_merge", "merge"))', "merge");
+  mockDenops.setEvalResponse('get(get(g:, "hellshake_yano", {}), "autoReload", get(g:, "hellshake_yano_auto_reload_dict", 0))', 0);
+
+  // Legacy variable format (backward compatibility)
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_path", "")', testDictPath);
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_use_builtin_dict", 1)', 1);
   mockDenops.setEvalResponse('get(g:, "hellshake_yano_dictionary_merge", "merge")', "merge");

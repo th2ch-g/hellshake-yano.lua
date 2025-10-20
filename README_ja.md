@@ -351,9 +351,11 @@ hintPatterns:
 #### 設定
 
 ```vim
-let g:hellshake_yano_dictionary_path = '~/.config/my-dict.json'
-let g:hellshake_yano_use_builtin_dict = v:true
-let g:hellshake_yano_dictionary_merge = 'merge'  " または'override'
+let g:hellshake_yano = {
+  \ 'dictionaryPath': '~/.config/my-dict.json',
+  \ 'useBuiltinDict': v:true,
+  \ 'dictionaryMerge': 'merge'
+  \ }
 ```
 
 ### 日本語単語分割設定

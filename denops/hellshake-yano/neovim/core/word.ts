@@ -1110,14 +1110,34 @@ export class DictionaryLoader {
  */
 export class VimConfigBridge {
   /**
+   * Get dictionary configuration from Vim variables
+   * Supports both new (g:hellshake_yano.dictionaryPath) and legacy (g:hellshake_yano_dictionary_path) formats
+   * New format takes precedence for backward compatibility
    */
   async getConfig(denops: Denops): Promise<DictionaryLoaderConfig> {
     try {
       const config: DictionaryLoaderConfig = {};
-      config.dictionaryPath = await denops.eval('get(g:, "hellshake_yano_dictionary_path", "")') as string || undefined;
-      config.useBuiltinDict = await denops.eval('get(g:, "hellshake_yano_use_builtin_dict", 1)') as boolean;
-      config.mergingStrategy = await denops.eval('get(g:, "hellshake_yano_dictionary_merge", "merge")') as 'override' | 'merge';
-      config.autoReload = await denops.eval('get(g:, "hellshake_yano_auto_reload_dict", 0)') as boolean;
+
+      // dictionaryPath: g:hellshake_yano.dictionaryPath (new) or g:hellshake_yano_dictionary_path (legacy)
+      config.dictionaryPath = await denops.eval(
+        'get(get(g:, "hellshake_yano", {}), "dictionaryPath", get(g:, "hellshake_yano_dictionary_path", ""))'
+      ) as string || undefined;
+
+      // useBuiltinDict: g:hellshake_yano.useBuiltinDict (new) or g:hellshake_yano_use_builtin_dict (legacy)
+      config.useBuiltinDict = await denops.eval(
+        'get(get(g:, "hellshake_yano", {}), "useBuiltinDict", get(g:, "hellshake_yano_use_builtin_dict", 1))'
+      ) as boolean;
+
+      // mergingStrategy: g:hellshake_yano.dictionaryMerge (new) or g:hellshake_yano_dictionary_merge (legacy)
+      config.mergingStrategy = await denops.eval(
+        'get(get(g:, "hellshake_yano", {}), "dictionaryMerge", get(g:, "hellshake_yano_dictionary_merge", "merge"))'
+      ) as 'override' | 'merge';
+
+      // autoReload: g:hellshake_yano.autoReload (new) or g:hellshake_yano_auto_reload_dict (legacy)
+      config.autoReload = await denops.eval(
+        'get(get(g:, "hellshake_yano", {}), "autoReload", get(g:, "hellshake_yano_auto_reload_dict", 0))'
+      ) as boolean;
+
       return config;
     } catch {
       return {};
