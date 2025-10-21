@@ -152,14 +152,74 @@ export async function detectWords(
   return visibleWords;
 }
 
+// キャッシュ用のLRUマップ（最大100エントリ）
+const detectionCache = new Map<string, { result: WordDetectionResult; timestamp: number }>();
+const CACHE_TTL = 5000; // 5秒間キャッシュを保持
+const MAX_CACHE_ENTRIES = 100;
+
+// キャッシュクリーンアップ関数
+function cleanupCache() {
+  const now = Date.now();
+  const entries = Array.from(detectionCache.entries());
+
+  // 古いエントリを削除
+  for (const [key, value] of entries) {
+    if (now - value.timestamp > CACHE_TTL) {
+      detectionCache.delete(key);
+    }
+  }
+
+  // サイズ制限を超えた場合は古いものから削除
+  if (detectionCache.size > MAX_CACHE_ENTRIES) {
+    const sortedEntries = entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toDelete = sortedEntries.slice(0, detectionCache.size - MAX_CACHE_ENTRIES);
+    for (const [key] of toDelete) {
+      detectionCache.delete(key);
+    }
+  }
+}
+
+// キャッシュキー生成関数
+function createCacheKey(
+  bufnr: number,
+  topLine: number,
+  bottomLine: number,
+  config: EnhancedWordConfig,
+  context?: DetectionContext,
+): string {
+  const keyContext = config.currentKeyContext || 'default';
+  const minLength = context?.minWordLength ??
+                   (config.perKeyMinLength?.[keyContext]) ??
+                   config.defaultMinWordLength ??
+                   config.minWordLength ??
+                   3;
+
+  return `detectWords:${bufnr}:${topLine}-${bottomLine}:${keyContext}:${minLength}:${config.useJapanese ?? true}`;
+}
+
 export async function detectWordsWithManager(
   denops: Denops,
   config: EnhancedWordConfig = {},
   context?: DetectionContext,
 ): Promise<WordDetectionResult> {
-  // foldされた行を取得
+  // バッファ番号と画面範囲を取得
+  const bufnr = await denops.call("bufnr", "%") as number;
   const topLine = await denops.call("line", "w0") as number;
   const bottomLine = await denops.call("line", "w$") as number;
+
+  // キャッシュキーを生成
+  const cacheKey = createCacheKey(bufnr, topLine, bottomLine, config, context);
+
+  // キャッシュチェック
+  const cached = detectionCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    return cached.result;
+  }
+
+  // キャッシュクリーンアップ
+  cleanupCache();
+
+  // foldされた行を取得
   const foldedLines = await getFoldedLines(denops, topLine, bottomLine);
 
   try {
@@ -183,18 +243,24 @@ export async function detectWordsWithManager(
         const filteredWords = initialResult.words
           .filter((word) => word.text.length >= threshold)
           .filter((word) => !foldedLines.has(word.line)); // foldされた行を除外
-        return {
+        const result = {
           ...initialResult,
           words: filteredWords,
         };
+        // キャッシュに保存
+        detectionCache.set(cacheKey, { result, timestamp: Date.now() });
+        return result;
       }
     }
     // foldされた行を除外
     const visibleWords = initialResult.words.filter((word) => !foldedLines.has(word.line));
-    return {
+    const result = {
       ...initialResult,
       words: visibleWords,
     };
+    // キャッシュに保存
+    detectionCache.set(cacheKey, { result, timestamp: Date.now() });
+    return result;
   } catch (error) {
     const fallbackConfig = createPartialConfig({
       useJapanese: config.useJapanese,
