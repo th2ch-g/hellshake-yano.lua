@@ -5,11 +5,13 @@
 " TDD Phase: GREEN
 " Process1: motion.vim の実装
 " Phase D-6 Process50 Sub2: キーリピート検出ロジックの追加
+" Phase D-7 Process2: 数値プレフィックス付きモーション対応（<expr>マッピング方式）
 "
 " このモジュールは w/b/e モーションの連打を検出し、
 " 自動的にヒント表示をトリガーする機能を提供します。
 " Phase A-4: モーション連打検出機能の実装。
 " Phase D-6: キーリピート抑制機能の追加。
+" Phase D-7: 数値プレフィックス（5j, 3wなど）の正しい処理を実装。
 " Vim 8.0+ と Neovim の両方で動作します。
 
 " スクリプトローカル変数の定義
@@ -266,12 +268,57 @@ endfunction
 "   - ヒント表示はブロッキング方式（Phase A-3で確立）
 "   - ヒント表示後はカウントをリセット（連続表示を防ぐ）
 "   - Phase D-6: 高速キーリピート時はヒント表示をスキップ
-function! hellshake_yano_vim#motion#handle(motion_key) abort
+" hellshake_yano_vim#motion#handle_with_count(motion_key, count)
+"
+" 目的:
+"   - 数値プレフィックス付きモーション（例: 5j, 3w）を正しく処理
+"   - カウント値を受け取ってモーション実行時に使用
+"   - Phase D-7 Process2 Sub2: <expr>マッピング方式への対応
+"
+" 背景:
+"   - 従来の:<C-u>call handle()方式では、<C-u>がカウントプレフィックスをクリア
+"   - 5jを入力しても1jと同じ動作になる問題があった
+"   - <expr>マッピングでv:count1を取得し、この関数に渡すことで解決
+"
+" パラメータ:
+"   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
+"   @param a:count Number カウント値（v:count1から取得、1以上）
+"
+" @return なし
+"
+" 使用例:
+"   nnoremap <silent> <expr> j hellshake_yano_vim#motion#handle_expr('j')
+"   " ユーザーが5jを入力:
+"   "   → handle_expr()でv:count1=5を取得
+"   "   → handle_with_count('j', 5)が呼ばれる
+"   "   → 'normal! 5j'を実行（5行下に移動）
+"
+" 処理フロー:
+"   0. Phase D-6: キーリピート検出（高速連打時はヒント表示をスキップ）
+"   1. 現在時刻を取得（reltime()）
+"   2. 前回のモーションとの時間差をチェック
+"   3. タイムアウト内 && 同じモーション → カウント++
+"   4. タイムアウト外 || 異なるモーション → カウント=1にリセット
+"   5. カウントが閾値以上 → ヒント表示トリガー & カウントリセット
+"   6. カウント付きモーション実行（例: 'normal! 5j'）
+"   7. 現在時刻と現在モーションを記録
+"
+" エラーハンドリング:
+"   - 不正なモーションキーの場合はエラーメッセージを表示
+"   - reltime() のエラーは try-catch で処理
+"   - エラー時は状態をリセット（init()呼び出し）
+"
+" 注意事項:
+"   - ヒント表示はブロッキング方式（Phase A-3で確立）
+"   - ヒント表示後はカウントをリセット（連続表示を防ぐ）
+"   - Phase D-7 Process2: カウント値を'normal!'コマンドに含める
+"
+function! hellshake_yano_vim#motion#handle_with_count(motion_key, count) abort
   " 不正なモーションキーのチェック
   " Phase D-2 Sub1.1: h/j/k/l モーション対応
   if index(['w', 'b', 'e', 'h', 'j', 'k', 'l'], a:motion_key) == -1
     echohl ErrorMsg
-    echomsg 'hellshake_yano_vim#motion#handle: invalid motion key: ' . a:motion_key
+    echomsg 'hellshake_yano_vim#motion#handle_with_count: invalid motion key: ' . a:motion_key
     echohl None
     return
   endif
@@ -286,9 +333,14 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
     let l:key_repeat_config = s:get_key_repeat_config()
 
     " キーリピート検出処理
-    if s:handle_key_repeat_detection(l:bufnr, l:current_time_ms, l:key_repeat_config)
+    let l:is_key_repeat = s:handle_key_repeat_detection(l:bufnr, l:current_time_ms, l:key_repeat_config)
+    if l:is_key_repeat
       " リピート中の場合は通常のモーション実行のみ（ヒント表示をスキップ）
-      execute 'normal! ' . a:motion_key
+      " Phase D-7 Process2: カウント付きモーション実行
+      execute 'normal! ' . a:count . a:motion_key
+      " Phase D-7 Process2 Sub2: キーリピート中も状態を更新（後方互換性維持のため）
+      let s:motion_state.last_motion = a:motion_key
+      let s:motion_state.last_motion_time = reltime()
       return
     endif
 
@@ -336,7 +388,8 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
     endif
 
     " 6. 通常モーション実行（ヒント表示の前に実行）
-    execute 'normal! ' . a:motion_key
+    " Phase D-7 Process2: カウント付きモーション実行
+    execute 'normal! ' . a:count . a:motion_key
 
     " Phase D-2 Sub1.1: カーソル位置を画面に反映してからヒント表示
     " ヒント表示前に画面を更新し、カーソルの移動を視覚的に確認できるようにする
@@ -356,7 +409,7 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
   catch
     " エラーハンドリング
     echohl ErrorMsg
-    echomsg 'hellshake_yano_vim#motion#handle: error occurred: ' . v:exception
+    echomsg 'hellshake_yano_vim#motion#handle_with_count: error occurred: ' . v:exception
     echohl None
 
     " エラー時は状態をリセット
@@ -364,27 +417,111 @@ function! hellshake_yano_vim#motion#handle(motion_key) abort
   endtry
 endfunction
 
-" hellshake_yano_vim#motion#handle_visual_expr(motion_key) - Visual Mode用<expr>マッピング
+" hellshake_yano_vim#motion#handle(motion_key) - 後方互換ラッパー
 "
 " 目的:
-"   - Visual modeを維持したままモーション検出を実行
-"   - <expr>マッピング用のラッパー関数
-"   - モーションキーを返すことでVisual modeの選択範囲が自動的に拡張
-"
-" Phase D-2 Sub1.2: Visual Modeモーション検出（修正版）
+"   - 既存のコードとの後方互換性を維持
+"   - handle_with_count()にカウント1を渡して呼び出す
+"   - Phase D-7 Process2 Sub3: 後方互換維持
 "
 " パラメータ:
 "   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
 "
-" @return String モーションキー（そのまま返すことでVisual mode維持）
+function! hellshake_yano_vim#motion#handle(motion_key) abort
+  call hellshake_yano_vim#motion#handle_with_count(a:motion_key, 1)
+endfunction
+
+" hellshake_yano_vim#motion#handle_expr(motion_key) - Normal Mode用<expr>マッピング
+"
+" 【非推奨】autoload遅延読み込みによるv:count消失問題のため、この関数は使用されなくなりました。
+" 現在はplugin/hellshake-yano-vim.vimで直接<expr>マッピングを実装しています。
+" 後方互換性のために残されていますが、新しいコードでは使用しないでください。
+"
+" 目的:
+"   - 数値プレフィックス付きモーション（例: 5j, 3w）を正しく処理
+"   - v:count1でカウント値を取得し、handle_with_count()に渡す
+"   - Phase D-7 Process2 Sub1: <expr>マッピング方式への対応
+"   - Phase D-7 Process3 Sub1: Normal modeマッピングの<expr>化
+"   - Phase D-7 Process3 Sub1 (修正): autoload遅延読み込み問題により非推奨化
+"
+" パラメータ:
+"   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
+"
+" @return String コマンド文字列（:call handle_with_count()を実行）
+"
+" 使用例:
+"   nnoremap <silent> <expr> j hellshake_yano_vim#motion#handle_expr('j')
+"   " ユーザーが5jを入力 → v:count1が5 → handle_with_count('j', 5)が呼ばれる
+"
+" 動作フロー:
+"   1. v:count1でカウント値取得（未指定時は1）
+"   2. <C-u>でコマンドラインのカウントプレフィックスをクリア
+"   3. handle_with_count(motion_key, count)を呼び出すコマンド文字列を返す
+"
+" 問題点:
+"   - 最初の呼び出し時にautoloadファイルが読み込まれる
+"   - その際にv:countが失われ、常に1になる
+"   - 結果として5jが1jとして実行される
+"   - plugin/で直接マッピングを実装することで解決
+"
+function! hellshake_yano_vim#motion#handle_expr(motion_key) abort
+  " v:count1を取得（ユーザーが入力した数値プレフィックス、なければ1）
+  let l:count = v:count1
+  " <C-u>でカウントプレフィックスをクリアしてから、handle_with_count()を呼び出す
+  return printf(":\<C-u>call hellshake_yano_vim#motion#handle_with_count(%s, %d)\<CR>",
+        \ string(a:motion_key), l:count)
+endfunction
+
+" hellshake_yano_vim#motion#handle_visual_expr(motion_key) - Visual Mode用<expr>マッピング
+"
+" 【非推奨】autoload遅延読み込みによるv:count消失問題のため、この関数は使用されなくなりました。
+" 現在はplugin/hellshake-yano-vim.vimでtimer_start()を使った直接実装に変更されています。
+" 後方互換性のために残されていますが、新しいコードでは使用しないでください。
+"
+" 目的:
+"   - Visual modeを維持したままモーション検出を実行
+"   - 数値プレフィックス付きモーション（例: v5j）を正しく処理
+"   - <expr>マッピング用のラッパー関数
+"   - カウント付きモーションキーを返すことでVisual modeの選択範囲が拡張
+"
+" Phase D-2 Sub1.2: Visual Modeモーション検出（修正版）
+" Phase D-7 Process3 Sub2: Visual modeカウント対応
+" Phase D-7 Process3 Sub2 (修正): autoload遅延読み込み問題により非推奨化
+"
+" パラメータ:
+"   @param a:motion_key String モーションキー ('w', 'b', 'e', 'h', 'j', 'k', 'l')
+"
+" @return String カウント付きモーションキー（Visual mode維持と範囲拡張）
 "
 " 使用例:
 "   xnoremap <silent> <expr> w hellshake_yano_vim#motion#handle_visual_expr('w')
+"   " ユーザーがv5jを入力 → v:count1が5 → '5j'を返す → 5行選択範囲拡張
+"
+" 動作フロー:
+"   1. v:count1でカウント値取得（未指定時は1）
+"   2. handle_visual_internal()でモーション検出処理を実行
+"   3. カウント > 1の場合は"5j"形式、カウント = 1の場合は"j"のみを返す
+"   4. 返されたモーションキーがVisual modeで実行され、選択範囲が拡張される
+"
+" 問題点:
+"   - 最初の呼び出し時にautoloadファイルが読み込まれる
+"   - その際にv:countが失われる可能性がある
+"   - plugin/でtimer_start()を使った直接実装により解決
+"
 function! hellshake_yano_vim#motion#handle_visual_expr(motion_key) abort
+  " Phase D-7 Process3 Sub2: カウント値を取得
+  let l:count = v:count1
+
   " モーション検出処理を実行（非同期的に）
   call hellshake_yano_vim#motion#handle_visual_internal(a:motion_key)
-  " モーションキーを返すことでVisual modeの選択範囲が拡張される
-  return a:motion_key
+
+  " Phase D-7 Process3 Sub2: カウント付きモーションキーを返すことでVisual modeの選択範囲が拡張される
+  " v:count1が1の場合はモーションキーのみ、2以上の場合はカウント付きで返す
+  if l:count > 1
+    return l:count . a:motion_key
+  else
+    return a:motion_key
+  endif
 endfunction
 
 " hellshake_yano_vim#motion#handle_visual_internal(motion_key) - Visual Modeモーション処理（内部実装）

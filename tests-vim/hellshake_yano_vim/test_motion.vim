@@ -235,11 +235,16 @@ endfunction
 " ========================================
 
 function! s:test_motion_count_accumulation() abort
+  " Phase D-7 Process2: キーリピート検出を無効化（テスト用）
+  " キーリピート検出が有効だとmotion_countがインクリメントされないため
+  let g:hellshake_yano = get(g:, 'hellshake_yano', {})
+  let l:old_enabled = get(g:hellshake_yano, 'suppressOnKeyRepeat', v:true)
+  let l:old_motion_count = get(g:hellshake_yano, 'defaultMotionCount', 3)
+  let g:hellshake_yano.suppressOnKeyRepeat = v:false
+  let g:hellshake_yano.defaultMotionCount = 5
+
   " 初期化
   call hellshake_yano_vim#motion#init()
-
-  " 閾値を5に設定（ヒント表示を遅らせる）
-  call hellshake_yano_vim#motion#set_threshold(5)
 
   " テストバッファの準備
   new
@@ -257,6 +262,10 @@ function! s:test_motion_count_accumulation() abort
   " カウントが3であることを確認
   call s:assert_equal(3, l:state.motion_count,
     \ 'three consecutive presses should set motion_count to 3')
+
+  " 設定を復元
+  let g:hellshake_yano.suppressOnKeyRepeat = l:old_enabled
+  let g:hellshake_yano.defaultMotionCount = l:old_motion_count
 
   " クリーンアップ
   bdelete!

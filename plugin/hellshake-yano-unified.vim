@@ -193,19 +193,21 @@ endfunction
 function! s:setup_unified_mappings() abort
   " モーション検出マッピング（Normal mode）
   " Phase D-2: VimScript実装を使用（Denops依存を削減）
+  " Phase D-7 Process3 Sub1: <expr>マッピングでv:count1を取得（autoload遅延読み込み問題対策）
   if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
     for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
-      execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle("%s")<CR>',
-        \ key, key)
+      execute printf('nnoremap <silent> <expr> %s printf(":\<C-u>call hellshake_yano_vim#motion#handle_with_count(%s, %%d)\<CR>", v:count1)',
+        \ key, string(key))
     endfor
   endif
 
   " Visual mode用のモーション検出マッピング（Phase D-2 Sub1.3）
   " <expr>マッピングを使用してVisual modeを維持
+  " Phase D-7 Process3 Sub2: timer_start()でカウント対応（autoload遅延読み込み問題対策）
   if get(g:hellshake_yano, 'motionCounterEnabled', v:true)
     for key in get(g:hellshake_yano, 'countedMotions', ['w', 'b', 'e'])
-      execute printf('xnoremap <silent> <expr> %s hellshake_yano#visual_motion(%s)',
-        \ key, string(key))
+      execute printf('xnoremap <silent> <expr> %s (timer_start(0, {-> hellshake_yano_vim#motion#handle_visual_internal(%s)}), v:count1 > 1 ? v:count1 . %s : %s)',
+        \ key, string(key), string(key), string(key))
     endfor
   endif
 
@@ -241,10 +243,11 @@ function! s:setup_vimscript_mappings() abort
   endif
 
   " モーション検出マッピング
+  " Phase D-7 Process3 Sub1: <expr>マッピングでv:count1を取得（autoload遅延読み込み問題対策）
   if l:motion_enabled
     for key in l:motion_keys
-      execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle("%s")<CR>',
-        \ key, key)
+      execute printf('nnoremap <silent> <expr> %s printf(":\<C-u>call hellshake_yano_vim#motion#handle_with_count(%s, %%d)\<CR>", v:count1)',
+        \ key, string(key))
     endfor
   endif
 

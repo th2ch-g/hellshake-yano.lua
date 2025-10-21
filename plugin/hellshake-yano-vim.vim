@@ -308,19 +308,26 @@ endif
 
 if s:motion_enabled
   " 対象キーをループしてマッピング（Normal mode）
+  " Phase D-7 Process3 Sub1 (修正版): <expr>マッピングで直接v:count1を取得
+  " autoload関数の遅延読み込みによるv:count消失問題を回避するため、
+  " plugin/でマッピングを直接実装（autoload関数を経由しない）
   for s:key in s:motion_keys
-    " execute を使って動的にマッピングを生成
-    execute printf('nnoremap <silent> %s :<C-u>call hellshake_yano_vim#motion#handle(%s)<CR>',
+    " <expr>マッピングを使用して数値プレフィックス（カウント）を取得
+    " v:count1を直接printfに渡し、handle_with_count()を呼び出す
+    " この方法により、autoload関数読み込み前にカウントが保存される
+    execute printf('nnoremap <silent> <expr> %s printf(":\<C-u>call hellshake_yano_vim#motion#handle_with_count(%s, %%d)\<CR>", v:count1)',
           \ s:key, string(s:key))
   endfor
 
-  " Visual mode用のモーション検出マッピング (Phase D-2 Sub1.2)
-  " <expr>を使用してVisual modeを維持
+  " Visual mode用のモーション検出マッピング (Phase D-2 Sub1.2, Phase D-7 Process3 Sub2)
+  " Phase D-7 Process3 Sub2 (修正版): timer_start()で非同期的にモーション検出処理を実行
+  " autoload関数の遅延読み込み問題を回避するため、v:count1を先に取得してからモーションキーを返す
   for s:key in s:motion_keys
     " Visual modeでもモーション検出を有効化
-    " <expr>マッピングでVisual modeを自動的に維持
-    execute printf('xnoremap <silent> <expr> %s hellshake_yano_vim#motion#handle_visual_expr(%s)',
-          \ s:key, string(s:key))
+    " timer_start()で非同期的にhandle_visual_internal()を呼び出し、
+    " v:count1を取得してカウント付きモーションキー（例: "5j"）を返す
+    execute printf('xnoremap <silent> <expr> %s (timer_start(0, {-> hellshake_yano_vim#motion#handle_visual_internal(%s)}), v:count1 > 1 ? v:count1 . %s : %s)',
+          \ s:key, string(s:key), string(s:key), string(s:key))
   endfor
 endif
 
