@@ -58,6 +58,18 @@ function! hellshake_yano#motion#process(key) abort
     return a:key
   endif
 
+  " 数字プレフィックス付きモーションの場合（例: 5j, 3w）
+  " 意図的な移動なのでヒント表示をスキップし、状態をリセット
+  let count = v:count1
+  if count > 1
+    let bufnr = hellshake_yano#utils#bufnr()
+    call hellshake_yano#state#init_buffer_state(bufnr)
+    " すべてのキーのカウントをリセット（次のjjjから再度カウント開始）
+    call hellshake_yano#count#reset_all_counts(bufnr)
+    " カウントは含めず、キーだけを返す（Vimが元のカウントを自動適用）
+    return a:key
+  endif
+
   let bufnr = hellshake_yano#utils#bufnr()
   call hellshake_yano#state#init_buffer_state(bufnr)
 
