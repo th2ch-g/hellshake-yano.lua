@@ -1,18 +1,39 @@
 " Phase D-6: Process3 Sub1 - Denops TinySegmenter連携
 " 日本語テキストのセグメント化機能を提供する
 
-" 日本語文字パターン (Vim/Neovim互換)
-" ひらがな: ぁ-ん (U+3040-U+309F)
-" カタカナ: ァ-ヶー (U+30A0-U+30FF)
-" 漢字: 一-龯 (U+4E00-U+9FAF)
-let s:japanese_pattern = '[ぁ-んァ-ヶー一-龯]'
-
 " Denops初回失敗フラグ（起動直後のコマンド未登録状態を検出）
 let s:denops_failed_once = v:false
 
 " Denopsが利用可能かチェック
 function! s:is_denops_available() abort
   return exists('*denops#plugin#is_loaded') && denops#plugin#is_loaded('hellshake-yano')
+endfunction
+
+" 日本語文字かどうかを文字コードで判定（Vim/Neovim互換）
+" E945エラー回避のため、char2nr()とnr2char()を使用
+function! s:is_japanese_char(char) abort
+  if empty(a:char)
+    return v:false
+  endif
+
+  let l:code = char2nr(a:char)
+
+  " ひらがな: U+3040-U+309F (12352-12447)
+  if l:code >= 12352 && l:code <= 12447
+    return v:true
+  endif
+
+  " カタカナ: U+30A0-U+30FF (12448-12543)
+  if l:code >= 12448 && l:code <= 12543
+    return v:true
+  endif
+
+  " 漢字: U+4E00-U+9FAF (19968-40879)
+  if l:code >= 19968 && l:code <= 40879
+    return v:true
+  endif
+
+  return v:false
 endfunction
 
 " フォールバック用の簡易セグメント化
@@ -48,12 +69,18 @@ function! s:fallback_segment(text) abort
 endfunction
 
 " 文字種別を判定 (Vim/Neovim互換)
+" E945エラー回避のため、char2nr()で文字コード判定
 function! s:get_character_type(char) abort
-  if a:char =~# '[一-龯]'
+  let l:code = char2nr(a:char)
+
+  " 漢字: U+4E00-U+9FAF (19968-40879)
+  if l:code >= 19968 && l:code <= 40879
     return 'kanji'
-  elseif a:char =~# '[ぁ-ん]'
+  " ひらがな: U+3040-U+309F (12352-12447)
+  elseif l:code >= 12352 && l:code <= 12447
     return 'hiragana'
-  elseif a:char =~# '[ァ-ヶー]'
+  " カタカナ: U+30A0-U+30FF (12448-12543)
+  elseif l:code >= 12448 && l:code <= 12543
     return 'katakana'
   elseif a:char =~# '[a-zA-Z]'
     return 'latin'
@@ -116,9 +143,18 @@ endfunction
 " 日本語文字を含むかチェック
 " @param text チェックするテキスト
 " @return v:true/v:false
+" E945エラー回避のため、文字コードで判定
 function! hellshake_yano_vim#japanese#has_japanese(text) abort
   let l:text = type(a:text) == v:t_string ? a:text : string(a:text)
-  return l:text =~# s:japanese_pattern
+
+  " テキストを1文字ずつチェック
+  for l:char in split(l:text, '\zs')
+    if s:is_japanese_char(l:char)
+      return v:true
+    endif
+  endfor
+
+  return v:false
 endfunction
 
 " セグメント化が必要かどうか判定

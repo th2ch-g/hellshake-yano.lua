@@ -18,7 +18,7 @@ function! s:assert(condition, message) abort
     echo 'OK: ' . a:message
   else
     let s:fail_count += 1
-    echoerr 'FAIL: ' . a:message
+    echomsg 'FAIL: ' . a:message
   endif
 endfunction
 
@@ -98,16 +98,13 @@ function! s:run_tests() abort
   endtry
   echo ''
 
-  " Test 7: get() function exists
-  echo 'Test 7: get() function exists'
+  " Test 7: is_in_dictionary() function exists
+  echo 'Test 7: is_in_dictionary() function exists'
   try
-    let l:result = hellshake_yano_vim#dictionary#get('test')
-    call s:assert(v:true, 'get() function callable')
-  catch /E117/
-    call s:assert(v:false, 'get() function exists - ERROR: ' . v:exception)
+    let l:result = hellshake_yano_vim#dictionary#is_in_dictionary('test')
+    call s:assert(type(l:result) == v:t_bool, 'is_in_dictionary() returns boolean (type=' . type(l:result) . ')')
   catch
-    " Other errors are OK for now
-    call s:assert(v:true, 'get() function exists but failed as expected: ' . v:exception)
+    call s:assert(v:false, 'is_in_dictionary() function exists - ERROR: ' . v:exception)
   endtry
   echo ''
 
@@ -143,13 +140,15 @@ function! s:run_tests() abort
   echo ''
 
   if s:fail_count > 0
-    echo '❌ RED PHASE: Tests FAILED as expected (functions not implemented yet)'
+    echomsg '❌ Tests FAILED: ' . s:fail_count . ' failures'
     cquit!
   else
-    echo '✅ All tests PASSED'
+    echomsg '✅ All tests PASSED (' . s:pass_count . ' tests)'
     qall!
   endif
 endfunction
 
-" Run tests
+" Run tests with silent echoerr to avoid "Press ENTER" prompts
+set cmdheight=2
+set shortmess+=A
 call s:run_tests()

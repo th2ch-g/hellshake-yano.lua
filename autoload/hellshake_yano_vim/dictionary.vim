@@ -40,15 +40,15 @@ endfunction
 " ==============================================================================
 
 " Denops利用可能チェック
-" @return 1: Denops利用可能 / 0: 利用不可
+" @return v:true: Denops利用可能 / v:false: 利用不可
 function! hellshake_yano_vim#dictionary#has_denops() abort
   if !exists('*denops#plugin#is_loaded')
-    return 0
+    return v:false
   endif
   try
-    return denops#plugin#is_loaded('hellshake-yano') ? 1 : 0
+    return denops#plugin#is_loaded('hellshake-yano') ? v:true : v:false
   catch
-    return 0
+    return v:false
   endtry
 endfunction
 
@@ -140,18 +140,18 @@ endfunction
 " word_detector.vimから高頻度で呼ばれるため、パフォーマンス最適化を実施：
 " - キャッシュヒット時: O(1)の辞書ルックアップ
 " - キャッシュミス時: Denops呼び出し → 結果をキャッシュ
-" - エラー時: 警告を1回のみ表示して0を返す（パフォーマンス重視）
+" - エラー時: 警告を1回のみ表示してv:falseを返す（パフォーマンス重視）
 "
 " @param word: チェックする単語
-" @return 1: 辞書に含まれる / 0: 含まれないまたはエラー
+" @return v:true: 辞書に含まれる / v:false: 含まれないまたはエラー
 function! hellshake_yano_vim#dictionary#is_in_dictionary(word) abort
   if !hellshake_yano_vim#dictionary#has_denops()
-    return 0
+    return v:false
   endif
 
   " キャッシュチェック（高速パス）
   if has_key(s:cache.words, a:word)
-    return 1
+    return v:true
   endif
 
   " Denops経由でチェック（遅いパス）
@@ -161,15 +161,15 @@ function! hellshake_yano_vim#dictionary#is_in_dictionary(word) abort
       " キャッシュに追加（次回からO(1)）
       let s:cache.words[a:word] = {'cached': 1}
     endif
-    return l:result ? 1 : 0
+    return l:result ? v:true : v:false
   catch
-    " Denops呼び出しが失敗した場合は静かに0を返す
+    " Denops呼び出しが失敗した場合は静かにv:falseを返す
     " 初回失敗時（起動直後のコマンド未登録状態）のみフラグを設定
     if !s:warn_shown
       let s:warn_shown = 1
     endif
-    " エラーメッセージを出さずに0を返す（辞書にない単語として扱う）
-    return 0
+    " エラーメッセージを出さずにv:falseを返す（辞書にない単語として扱う）
+    return v:false
   endtry
 endfunction
 
