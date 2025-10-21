@@ -231,6 +231,14 @@ function! hellshake_yano_vim#core#show() abort
     return
   endif
 
+  " 安全性チェック: positions数がhints数を超える場合は制限
+  " hint_generatorには最大ヒント数の制限があるため、
+  " 大量の単語が検出された場合にインデックスエラーを防ぐ
+  if len(l:hints) < len(l:positions)
+    " positionsをヒント数に制限（警告メッセージなし）
+    let l:positions = l:positions[0 : len(l:hints) - 1]
+  endif
+
   " 3. ヒント表示とヒントマップ作成
   let l:hint_map = {}
   let l:popup_ids = []

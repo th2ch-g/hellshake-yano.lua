@@ -85,6 +85,23 @@ Plug 'nekowasabi/hellshake-yano.vim'
 - **Different motion reset**: Counter resets when switching between w/b/e
 - **Customizable keys**: Choose which motion keys to track
 
+**Phase D (Vim機能の完成) ✅** (2025-10-21):
+- **カスタムヒントキー設定**: `singleCharKeys`, `multiCharKeys`で柔軟なヒント文字設定
+- **2桁数字ヒント**: `useNumericMultiCharHints`で01-99, 00の最大100個の数字ヒント
+- **動的maxTotal計算**: 設定に応じて最大337個のヒント対応
+- **カスタムハイライト**: 色指定（fg/bg）またはハイライトグループ名で設定可能
+- **Per-Keyモーションカウント**: `perKeyMotionCount`でキー別にモーション検出回数を設定
+- **h/j/k/lサポート**: w/b/eに加えてh/j/k/lでもヒント表示
+- **Visual Modeモーション検出**: Visual mode中のw/b/e/h/j/k/lでヒント表示
+- **Per-Key最小単語長**: `perKeyMinLength`でキー別に最小単語長を設定、ノイズ削減
+- **TinySegmenter連携**: Denops経由で日本語形態素解析（LRUキャッシュ、最大1000エントリ）
+- **日本語単語検出**: 英数字と日本語の混在テキスト対応、折り返し表示対応
+- **辞書システム**: Denops連携による辞書管理（reload, add, show, validate）
+- **辞書単語の優先表示**: 辞書に含まれる単語は最小長チェックをスキップ
+- **E684エラー修正**: 大量の単語（300個以上）検出時の安全性チェック追加
+- **キーリピート抑制**: Vim環境でのhjkl連打でもスムーズなスクロール
+- **ユニットテスト整備**: 43のVimScriptテスト、590のTypeScriptテスト成功
+
 ### Requirements
 
 - Vim 8.0+ or Neovim
@@ -192,11 +209,22 @@ let g:hellshake_yano_vim_config = {
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enabled` | Boolean | `v:true` | Enable/disable the plugin |
-| `hint_chars` | String | `'ASDFJKL'` | Characters used for hints |
+| `hint_chars` | String | `'ASDFJKL'` | Characters used for hints (legacy) |
+| `singleCharKeys` | List | `['A','S','D','F','G','H','J','K','L']` | Single-character hint keys (Phase D) |
+| `multiCharKeys` | List | `['B','C','E','I','O','P','Q','R','T']` | Multi-character hint keys (Phase D) |
+| `useNumericMultiCharHints` | Boolean | `v:false` | Enable 2-digit numeric hints (01-99, 00) (Phase D) |
+| `highlightHintMarker` | String/Dict | `'DiffAdd'` | Hint marker highlight (Phase D) |
+| `highlightHintMarkerCurrent` | String/Dict | `'DiffText'` | Current hint marker highlight (Phase D) |
 | `motion_enabled` | Boolean | `v:true` | Enable motion repeat detection |
 | `motion_threshold` | Number | `2` | Number of repeats to trigger hints |
 | `motion_timeout_ms` | Number | `2000` | Timeout in milliseconds (2 seconds) |
 | `motion_keys` | List | `['w', 'b', 'e']` | Motion keys to track |
+| `perKeyMotionCount` | Dict | `{}` | Per-key motion count settings (Phase D) |
+| `perKeyMinLength` | Dict | `{}` | Per-key minimum word length (Phase D) |
+| `defaultMinWordLength` | Number | `3` | Default minimum word length (Phase D) |
+| `suppressOnKeyRepeat` | Boolean | `v:true` | Suppress hints during fast key repeat (Phase D) |
+| `keyRepeatThreshold` | Number | `50` | Key repeat detection threshold (ms) (Phase D) |
+| `keyRepeatResetDelay` | Number | `300` | Reset delay after key repeat (ms) (Phase D) |
 
 **Configuration Examples**:
 
@@ -215,6 +243,41 @@ let g:hellshake_yano_vim_config = {'motion_enabled': v:false}
 nmap <Leader>w <Plug>(hellshake-yano-vim-w)
 nmap <Leader>b <Plug>(hellshake-yano-vim-b)
 nmap <Leader>e <Plug>(hellshake-yano-vim-e)
+
+" Example 5: Phase D - Full advanced configuration
+let g:hellshake_yano = {
+      \ 'useNumericMultiCharHints': v:true,
+      \ 'singleCharKeys': ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+      \ 'multiCharKeys': ['B', 'C', 'E', 'I', 'O', 'P', 'Q', 'R', 'T'],
+      \ 'highlightHintMarker': {'fg': '#00ff00', 'bg': '#1a1a1a'},
+      \ 'highlightHintMarkerCurrent': {'fg': '#ffffff', 'bg': '#ff0000'},
+      \ 'perKeyMotionCount': {
+      \   'w': 1, 'b': 1, 'e': 1,
+      \   'h': 2, 'j': 2, 'k': 2, 'l': 2,
+      \ },
+      \ 'perKeyMinLength': {
+      \   'w': 3, 'b': 3, 'e': 3,
+      \   'h': 2, 'j': 2, 'k': 2, 'l': 2,
+      \ },
+      \ 'suppressOnKeyRepeat': v:true,
+      \ 'keyRepeatThreshold': 50,
+      \ 'keyRepeatResetDelay': 300,
+      \ 'useJapanese': v:true,
+      \ 'japaneseMinWordLength': 3,
+      \ }
+
+" Example 6: Phase D - Dictionary system (Denops required)
+let g:hellshake_yano = {
+      \ 'dictionaryPath': '~/.config/hellshake-yano/dictionary.json',
+      \ 'useBuiltinDict': v:true,
+      \ 'dictionaryMerge': 'merge'
+      \ }
+
+" Dictionary commands (Phase D)
+:HYVimDictReload               " Reload dictionary
+:HYVimDictAdd API 接続 noun    " Add word to dictionary
+:HYVimDictShow                 " Show dictionary contents
+:HYVimDictValidate             " Validate dictionary format
 ```
 
 ### Current Limitations
@@ -230,9 +293,16 @@ nmap <Leader>e <Plug>(hellshake-yano-vim-e)
 - **Phase A-2**: Word detection within visible area ✅ **完了** (2025-10)
 - **Phase A-3**: Multi-character hints (AA, AS, AD, ...) ✅ **完了** (2025-10)
 - **Phase A-4**: Motion-triggered hints (w/b/e key repeat detection) ✅ **完了** (2025-10)
-- **Phase A-5**: Japanese support, caching, customization 🔜 Next
-- **Phase B**: Denops implementation (TypeScript, performance optimization) 📝 Planned
-- **Phase C**: Integration (unified API, auto-selection) 📝 Planned
+- **Phase A-5**: Japanese support, visual mode ✅ **完了** (2025-10)
+- **Phase B**: Denops implementation (TypeScript, performance optimization) ✅ **完了** (2024-2025)
+- **Phase C**: Integration (unified API, auto-selection) ✅ **完了** (2025-10)
+- **Phase D**: Vim機能の完成 (Pure VimScript版の高度化) ✅ **完了** (2025-10-21)
+  - Process1: カスタムヒントキー、2桁数字ヒント、カスタムハイライト ✅
+  - Process2: Per-Key設定（モーションカウント、最小単語長、h/j/k/lサポート、Visual mode） ✅
+  - Process3: TinySegmenter連携（日本語形態素解析） ✅
+  - Process4: 辞書システム（Denops連携） ✅
+  - Process10: ユニットテスト整備（43テスト成功） ✅
+  - Process50: キーリピート抑制機能のVim移植 ✅
 
 ---
 
