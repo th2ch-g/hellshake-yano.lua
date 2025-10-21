@@ -65,7 +65,7 @@ describe("Integration: Complete Initialization Flow (Denops Environment)", () =>
 
     assertEquals(result.status, "migrated");
     assertExists(result.migratedConfig);
-    assertEquals(result.migratedConfig?.markers?.length, 9);
+    assertEquals((result.migratedConfig?.markers as string[] | undefined)?.length, 9);
     assertEquals(result.migratedConfig?.motionCount, 3);
     assertEquals(result.migratedConfig?.motionTimeout, 2000);
   });
