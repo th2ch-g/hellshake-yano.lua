@@ -7,7 +7,7 @@ import { Denops } from "https://deno.land/x/denops_std@v6.4.0/mod.ts";
 import { assertEquals, assertExists } from "https://deno.land/std@0.201.0/assert/mod.ts";
 import { delay } from "https://deno.land/std@0.201.0/async/delay.ts";
 import type { HintMapping, Word } from "../denops/hellshake-yano/types.ts";
-import { Core, HIGHLIGHT_BATCH_SIZE } from "../denops/hellshake-yano/core.ts";
+import { Core, HIGHLIGHT_BATCH_SIZE } from "../denops/hellshake-yano/neovim/core/core.ts";
 import { getDefaultConfig, type Config } from "../denops/hellshake-yano/config.ts";
 
 // HIGHLIGHT_BATCH_SIZE定数のテスト用

@@ -79,7 +79,7 @@ Deno.test("highlightCandidateHintsHybrid - TDD Green Phase: Method exists and wo
   const testHints = createTestHints(30); // 30個のヒントで同期/非同期の境界をテスト
 
   // Core クラスをインポートして、メソッドが存在することを確認（Green Phase）
-  const { Core } = await import("../denops/hellshake-yano/core.ts");
+  const { Core } = await import("../denops/hellshake-yano/neovim/core/core.ts");
   const core = Core.getInstance();
 
   // メソッドが正常に実行できることを確認（Green Phase）
@@ -110,7 +110,7 @@ Deno.test("highlightCandidateHintsHybrid - First batch synchronous processing re
   const inputChar = "A";
 
   try {
-    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/core.ts");
+    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/neovim/core/core.ts");
     const core = new HellshakeYanoCore();
 
     // 開始時間を記録
@@ -153,7 +153,7 @@ Deno.test("highlightCandidateHintsHybrid - AbortController cancellation function
   const inputChar = "B";
 
   try {
-    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/core.ts");
+    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/neovim/core/core.ts");
     const core = new HellshakeYanoCore();
 
     // AbortControllerを作成
@@ -192,7 +192,7 @@ Deno.test("highlightCandidateHintsHybrid - Async processing of remaining hints",
   const inputChar = "C";
 
   try {
-    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/core.ts");
+    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/neovim/core/core.ts");
     const core = new HellshakeYanoCore();
 
     const startTime = Date.now();
@@ -242,7 +242,7 @@ Deno.test("highlightCandidateHintsHybrid - Immediate redraw after sync batch", a
   const inputChar = "D";
 
   try {
-    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/core.ts");
+    const { HellshakeYanoCore } = await import("../denops/hellshake-yano/neovim/core/core.ts");
     const core = new HellshakeYanoCore();
 
     const startTime = Date.now();

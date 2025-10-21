@@ -304,6 +304,10 @@ export class MockDenops implements Denops {
         return 27 as T; // ESC key by default
       case "bufexists":
         return 1 as T;
+      case "foldclosed":
+        return -1 as T; // fold されていない行は -1 を返す
+      case "foldclosedend":
+        return -1 as T; // fold されていない行は -1 を返す
       default:
         return undefined as T;
     }

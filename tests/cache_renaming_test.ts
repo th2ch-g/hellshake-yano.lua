@@ -149,12 +149,11 @@ Deno.test("Validate CacheType enum still works", () => {
   assertEquals(CacheType.HINTS, "HINTS");
   assertEquals(CacheType.DISPLAY, "DISPLAY");
 
-  // 全てのCacheTypeが定義されていることを確認
+  // 全てのCacheTypeが定義されていることを確認（unified-cache.tsで定義されているもののみ）
   const expectedTypes = [
     "WORDS", "HINTS", "DISPLAY", "ANALYSIS", "TEMP",
     "HINT_ASSIGNMENT_NORMAL", "HINT_ASSIGNMENT_VISUAL", "HINT_ASSIGNMENT_OTHER",
-    "LANGUAGE_RULES", "SYNTAX_CONTEXT", "DICTIONARY", "CHAR_WIDTH",
-    "CHAR_TYPE", "BYTE_LENGTH", "ADJACENCY", "WORD_DETECTION"
+    "WORD_DETECTION"
   ];
 
   for (const type of expectedTypes) {

@@ -18,13 +18,21 @@ async function resetCacheClearCount(denops: any): Promise<void> {
 
 async function setupCacheClearCounter(denops: any): Promise<void> {
   // キャッシュクリア関数をラップしてカウントする
+  // NOTE: autoload関数は上書きできないため、元の関数を保存してラップする
   await denops.cmd(`
+" 元の関数を保存
+if !exists('*s:original_clear_motion_count_cache')
+  function! s:original_clear_motion_count_cache() abort
+    call hellshake_yano#config#clear_motion_count_cache()
+  endfunction
+endif
+
+" 関数を削除してから再定義（autoload関数のため）
+silent! delfunction hellshake_yano#motion#clear_motion_count_cache
+
 function! hellshake_yano#motion#clear_motion_count_cache() abort
   let g:hellshake_yano_test_cache_clear_count = get(g:, 'hellshake_yano_test_cache_clear_count', 0) + 1
-  let s:motion_count_cache = {}
-  if exists('*hellshake_yano#config#clear_motion_count_cache')
-    call hellshake_yano#config#clear_motion_count_cache()
-  endif
+  call s:original_clear_motion_count_cache()
 endfunction
   `);
 }

@@ -214,7 +214,8 @@ Deno.test("Integration - Performance with large number of hints", async () => {
 
   // ヒント表示が500ms以内に完了することを確認（並列実行時の負荷を考慮）
   assertEquals(showTime < 500, true, `Hint display took ${showTime}ms`);
-  assertEquals(simulator.getHintCount(), 100);
+  // NOTE: カーソル位置の単語が除外されるため、100個の単語でも99個のヒントになる
+  assertEquals(simulator.getHintCount(), 99);
 
   // 選択も高速に動作することを確認
   const selectStart = performance.now();
@@ -284,17 +285,17 @@ Deno.test("Integration - Cursor proximity prioritization", async () => {
   // カーソル近くの単語を生成
   const words: Word[] = [
     { text: "far", line: 1, col: 1 },
-    { text: "near", line: 5, col: 19 }, // カーソル位置(5, 20)に最も近い
+    { text: "near", line: 5, col: 19 }, // カーソル位置(5, 20)の単語として除外される
     { text: "medium", line: 3, col: 10 },
   ];
 
   await simulator.showHints(words);
 
-  // 最も近い単語に'A'が割り当てられることを確認
+  // NOTE: "near"はカーソル位置の単語として除外されるため、"medium"が最も近い単語になる
   const result = await simulator.selectHint("A");
   assertEquals(result.jumped, true);
-  assertEquals(result.position?.line, 5);
-  assertEquals(result.position?.col, 19);
+  assertEquals(result.position?.line, 3);
+  assertEquals(result.position?.col, 10);
 });
 
 Deno.test("Integration - Timeout simulation", async () => {

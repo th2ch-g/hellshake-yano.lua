@@ -19,7 +19,7 @@ import { assertEquals, assertNotEquals } from "@std/assert";
 Deno.test({
   name: "[REGRESSION] Visual modeでのヒント位置設定が正しく動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     const words = [
       { text: "test", line: 1, col: 1, byteCol: 1 },
@@ -28,7 +28,7 @@ Deno.test({
     const hints = ["A", "B"];
 
     // hintPosition設定でのテスト
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
+    const mappings = assignHintsToWords(words, hints, 0, 0, "visual", {
       hintPosition: "end",
     });
 
@@ -43,7 +43,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] Visual modeとNormal modeでキャッシュが分離される",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     const words = [
       { text: "終点", line: 1, col: 1, byteCol: 1 },
@@ -51,11 +51,11 @@ Deno.test({
     const hints = ["A"];
 
     // Normal modeでの計算
-    const normalResult = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "start",
+    const normalResult = assignHintsToWords(words, hints, 0, 0, "normal", {hintPosition: "start",
     });
 
     // Visual modeでの計算（異なる設定）
-    const visualResult = assignHintsToWords(words, hints, 1, 1, "visual", {
+    const visualResult = assignHintsToWords(words, hints, 0, 0, "visual", {
       hintPosition: "end",
     });
 
@@ -69,7 +69,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] Visual modeでの日本語バイト位置計算が正しく動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     const words = [
       { text: "開始", line: 1, col: 1, byteCol: 1 },
@@ -77,7 +77,7 @@ Deno.test({
     ];
     const hints = ["A", "B"];
 
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
+    const mappings = assignHintsToWords(words, hints, 0, 0, "visual", {
       hintPosition: "end",
     }, { skipOverlapDetection: true });
 
@@ -92,7 +92,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] Visual modeのヒント位置フォールバック機能が動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     const words = [
       { text: "test", line: 1, col: 1, byteCol: 1 },
@@ -100,7 +100,7 @@ Deno.test({
     const hints = ["A"];
 
     // hintPositionが使用される
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
+    const mappings = assignHintsToWords(words, hints, 0, 0, "visual", {
       hintPosition: "end",
     });
 
@@ -113,7 +113,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] Visual modeでの設定継承が正しく動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     const words = [
       { text: "hello", line: 1, col: 1, byteCol: 1 },
@@ -121,7 +121,7 @@ Deno.test({
     const hints = ["A"];
 
     // Visual modeでの設定
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
+    const mappings = assignHintsToWords(words, hints, 0, 0, "visual", {
       hintPosition: "start",
     });
 
@@ -134,7 +134,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] Visual modeでの複雑なケースが正しく処理される",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     // 英語と日本語が混在するケース
     const words = [
@@ -144,7 +144,7 @@ Deno.test({
     ];
     const hints = ["A", "B", "C"];
 
-    const mappings = assignHintsToWords(words, hints, 1, 1, "visual", {
+    const mappings = assignHintsToWords(words, hints, 0, 0, "visual", {
       hintPosition: "end",
     }, { skipOverlapDetection: true });
 

@@ -18,7 +18,7 @@ import { assertEquals, assertNotEquals } from "@std/assert";
 Deno.test({
   name: "[REGRESSION] ヒント生成の基本機能が動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     // 基本的な英語単語のテスト
     const words = [
@@ -27,7 +27,7 @@ Deno.test({
     ];
     const hints = ["a", "b"];
 
-    const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "start",
+    const mappings = assignHintsToWords(words, hints, 0, 0, "normal", {hintPosition: "start",
     });
 
     assertEquals(mappings.length, 2);
@@ -41,7 +41,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] 日本語文字のヒント位置計算が正しく動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     const words = [
       { text: "開始", line: 1, col: 1, byteCol: 1 },
@@ -50,7 +50,7 @@ Deno.test({
     const hints = ["A", "B"];
 
     // 日本語の終端位置のテスト（隣接検出をスキップして両方の単語にヒントを割り当てる）
-    const mappings = assignHintsToWords(words, hints, 1, 1, "normal", {hintPosition: "end",
+    const mappings = assignHintsToWords(words, hints, 0, 0, "normal", {hintPosition: "end",
     }, { skipOverlapDetection: true });
 
     assertEquals(mappings.length, 2);
@@ -66,7 +66,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] 複数文字ヒントが正しく生成される",
   async fn() {
-    const { generateHints } = await import("../denops/hellshake-yano/hint.ts");
+    const { generateHints } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     // 多くの単語でフォールバック機能をテスト
     const wordCount = 30; // 単文字（26）+ 2文字（4） = 30
@@ -92,7 +92,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] キャッシュ機能が正しく動作する",
   async fn() {
-    const { assignHintsToWords } = await import("../denops/hellshake-yano/hint.ts");
+    const { assignHintsToWords } = await import("../denops/hellshake-yano/neovim/core/hint.ts");
 
     let textAccessCount = 0;
     const baseWord: any = { line: 1, col: 1, byteCol: 1 };
@@ -109,12 +109,12 @@ Deno.test({
     const hints = ["A"];
 
     // 1回目の呼び出し
-    const result1 = assignHintsToWords([baseWord], hints, 1, 1, "normal", {hintPosition: "end",
+    const result1 = assignHintsToWords([baseWord], hints, 0, 0, "normal", {hintPosition: "end",
     });
 
     // 2回目の呼び出し（同じ条件）
     textAccessCount = 0;
-    const result2 = assignHintsToWords([baseWord], hints, 1, 1, "normal", {hintPosition: "end",
+    const result2 = assignHintsToWords([baseWord], hints, 0, 0, "normal", {hintPosition: "end",
     });
 
     // キャッシュが効いていることを確認
@@ -126,7 +126,7 @@ Deno.test({
 Deno.test({
   name: "[REGRESSION] 単語検出機能が正しく動作する",
   async fn() {
-    const { detectWordsWithManager } = await import("../denops/hellshake-yano/word.ts");
+    const { detectWordsWithManager } = await import("../denops/hellshake-yano/neovim/core/word.ts");
 
     // Mock Denops
     const mockDenops = {
@@ -140,6 +140,10 @@ Deno.test({
             return 1;
           case "bufexists":
             return 1;
+          case "foldclosed":
+            return -1; // fold されていない行は -1 を返す
+          case "foldclosedend":
+            return -1; // fold されていない行は -1 を返す
           default:
             return null;
         }

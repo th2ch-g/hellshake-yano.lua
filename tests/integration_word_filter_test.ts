@@ -153,7 +153,8 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
       // Phase 2: ヒント生成と位置計算
       const hints = generateHints(words.length, "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
-      const hintMappings = assignHintsToWords(words, hints, 1, 1);
+      // NOTE: カーソル位置(0,0)を使用してカーソル位置の単語除外を回避
+      const hintMappings = assignHintsToWords(words, hints, 0, 0);
 
       // Phase 3: 位置計算
       const positions = words.map((word) => calculateHintPosition(word, "start"));
@@ -162,6 +163,7 @@ describe("Integration Test - Word Filtering & Hint Positioning", () => {
 
       // 結果検証（改善版では1文字の単語も検出されるため、より多くの単語が検出される）
       assertEquals(words.length, 100); // 1行あたりの上限は100に統一
+      // NOTE: カーソル位置を(0,0)に変更したため、100個すべてが検出される
       assertEquals(hintMappings.length, 100);
       assertEquals(positions.length, 100);
 

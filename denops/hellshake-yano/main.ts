@@ -25,7 +25,7 @@ import {
   recordPerformance,
   resetPerformanceMetrics,
 } from "./common/utils/performance.ts";
-import { validateConfig } from "./common/utils/validator.ts";
+import { validateConfig } from "./config.ts";
 import {
   addToDictionary,
   editDictionary,

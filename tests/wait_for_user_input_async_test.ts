@@ -54,6 +54,11 @@ class MockDenopsForInput implements Partial<Denops> {
     }
   }
 
+  async cmd(command: string): Promise<void> {
+    this.callHistory.push({ method: "cmd", args: [command] });
+    // コマンド実行のモック（何もしない）
+  }
+
   getCallHistory() {
     return this.callHistory;
   }

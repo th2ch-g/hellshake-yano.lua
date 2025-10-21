@@ -25,7 +25,8 @@ async function setup(denops: Denops) {
   await denops.cmd(`let g:hellshake_yano_vim_config.motion_timeout_ms = 2000`);
 
   // VimScriptモック関数をセットアップ
-  await setupMockVimFunctions(denops);
+  // NOTE: runtimepathに実際のautoloadファイルが追加されているため、モック関数は不要
+  // await setupMockVimFunctions(denops);
 
   // テスト用バッファを作成
   await denops.cmd("enew!");
