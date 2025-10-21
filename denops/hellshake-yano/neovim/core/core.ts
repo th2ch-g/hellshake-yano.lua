@@ -566,6 +566,11 @@ export class Core {
       segmenterThreshold: this.config.segmenterThreshold,
       cacheEnabled: true,
       autoDetectLanguage: true,
+      // キャッシュに必要な設定を追加
+      currentKeyContext: this.config.currentKeyContext,
+      perKeyMinLength: this.config.perKeyMinLength,
+      defaultMinWordLength: this.config.defaultMinWordLength,
+      minWordLength: this.config.bothMinWordLength,
     };
   }
   /*   * Phase4: 単語検出機能の移行 - 最適化された単語検出   * キャッシュを使用して高速に単語を検出する
