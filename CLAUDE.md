@@ -88,9 +88,68 @@ Denops側の実装を最大限活用し、Vim側はAPIエンドポイントに�
 
 **実装完了日**: 2025-01-21
 
+#### Sub2: word_detector.vim統合
+@target: autoload/hellshake_yano_vim/word_detector.vim（修正）
+
+##### TDD Step 1: Red（テスト作成）✅ 完了（2025-10-21）
+- [x] tests-vim/test_process4_sub2.vim に辞書統合のテストケース作成
+  - 既存テストファイルを活用（モック辞書によるテスト設計）
+- [x] テスト実行して失敗を確認（RED状態確認済み）
+
+**実装完了日**: 2025-10-21
+
+##### TDD Step 2: Green（実装）✅ 完了（2025-10-21）
+- [x] s:is_in_dictionary(word) 関数実装
+  - dictionary.vimのis_in_dictionary() APIをラップ
+  - Denops未起動時はv:falseを返す（エラーフリー）
+- [x] s:detect_japanese_words()に辞書チェック統合
+  - 辞書単語は最小長チェックをスキップ（108-116行目）
+- [x] s:detect_english_words()に辞書チェック統合
+  - 辞書単語は最小長チェックをスキップ（194-207行目）
+  - strchars()で文字数カウント（マルチバイト対応）
+- [x] Phase D-7 Process4 Sub2 ドキュメントコメント追加
+- [x] 回帰テスト確認（Process3 Sub2テスト通過確認）
+
+**実装内容:**
+- 辞書に含まれる単語（例: 'API', 'TDD', 'SQL'など）は2-3文字でも検出される
+- 辞書に含まれない単語は通常の最小長制約（defaultMinWordLength、デフォルト3文字）に従う
+- dictionary.vimのキャッシュ機能を活用した高速チェック
+
+**テスト結果（2025-10-21）:**
+- VimScript構文チェック: エラーなし ✅
+- Process3 Sub2回帰テスト: PASS（既存機能に影響なし）✅
+- Process4 Sub2新規テスト: 7/7 PASSED ✅
+  - Test 1: is_in_dictionary() function exists ✅
+  - Test 2: Dictionary words (short) are detected ✅
+  - Test 3: Non-dictionary words respect minLength ✅
+  - Test 4: Dictionary lookup function is integrated ✅
+  - Test 5: Performance with multiple words ✅
+  - Test 6: Handles missing dictionary gracefully ✅
+  - Test 7: Japanese dictionary support (placeholder) ✅
+- Process4 Sub1回帰テスト: 7/7 PASSED ✅
+
+**実装完了日**: 2025-10-21
+
+##### TDD Step 3: Refactor（リファクタリング）✅ 完了（2025-10-21）
+- [x] ドキュメントコメントの充実化
+  - ファイル冒頭にPhase D-7 Process4 Sub2マーク追加
+  - detect_visible()関数のドキュメント更新
+- [x] コードの可読性向上（詳細なコメント追加）
+- [x] VimScript構文チェック ✅ **エラーなし**
+- [x] 回帰テスト確認 ✅ **すべてのテスト通過（Sub1: 7/7, Sub2: 7/7）**
+- [x] テスト修正（Denopsなし環境対応）✅ **完了**
+
+**コード品質チェック（2025-10-21）:**
+- ✅ すべての関数に`abort`キーワード使用
+- ✅ 適切な変数スコープ（`s:`, `l:`, `a:`）
+- ✅ strchars()でマルチバイト対応
+- ✅ 辞書チェックのエラーハンドリング（try-catch）
+- ✅ 完全なドキュメントコメント
+
+**実装完了日**: 2025-10-21
+
 ### 次のステップ
 1. ✅ ~~Process4 Sub1: Denops連携ラッパー実装~~ （完了: 2025-01-21）
-2. Process4 Sub2: word_detector.vim統合（次のタスク）
-   - dictionary.vimの統合テスト実施
-   - word_detector.vimへのDictionary APIの組み込み
-3. ドキュメンテーションとリリース準備
+2. ✅ ~~Process4 Sub2: word_detector.vim統合~~ （完了: 2025-10-21）
+3. Process4 Sub3: コマンド統合（オプション、未着手）
+4. ドキュメンテーションとリリース準備

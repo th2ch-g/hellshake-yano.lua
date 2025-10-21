@@ -4,13 +4,57 @@
 "
 " TDD Phase: GREEN
 " Process2: word_detector.vim実装
+" Phase D-7 Process4 Sub2: Dictionary Integration (辞書統合)
 "
 " このモジュールは画面内（line('w0') ～ line('w$')）の単語を自動検出します。
 " Phase A-2: 固定座標から単語ベースのヒント表示への移行を実現します。
+" Phase D-7: dictionary.vimと統合し、辞書単語は最小長チェックをスキップします。
 
 " スクリプトローカル変数の定義
 let s:save_cpo = &cpo
 set cpo&vim
+
+" ======================================
+" Phase D-7: Process4 Sub2 - Dictionary Integration
+" ======================================
+
+" s:is_in_dictionary(word) - 辞書に単語が含まれるかチェック
+"
+" 目的:
+"   - dictionary.vimのis_in_dictionary() APIをラップ
+"   - キャッシュ機能を活用した高速チェック
+"   - Denops未起動時もエラーを出さずにv:falseを返す
+"
+" アルゴリズム:
+"   1. dictionary#has_denops()でDenops利用可否をチェック
+"   2. Denops利用可能ならdictionary#is_in_dictionary()を呼び出し
+"   3. Denops利用不可ならv:falseを返す（辞書にないものとして扱う）
+"
+" パフォーマンス:
+"   - dictionary.vimのキャッシュ機能を活用
+"   - キャッシュヒット時: O(1)
+"   - キャッシュミス時: Denops経由でチェック → キャッシュに保存
+"
+" @param word String チェックする単語
+" @return Boolean v:true: 辞書に含まれる / v:false: 含まれないまたはDenops未起動
+function! s:is_in_dictionary(word) abort
+  " dictionary.vimが利用可能かチェック
+  if !exists('*hellshake_yano_vim#dictionary#has_denops')
+    return v:false
+  endif
+
+  if !hellshake_yano_vim#dictionary#has_denops()
+    return v:false
+  endif
+
+  " dictionary.vimのAPIを呼び出し
+  try
+    return hellshake_yano_vim#dictionary#is_in_dictionary(a:word)
+  catch
+    " エラーが発生した場合は辞書にないものとして扱う
+    return v:false
+  endtry
+endfunction
 
 " ======================================
 " Phase D-6: Process3 Sub2 - サブ関数
@@ -63,8 +107,13 @@ function! s:detect_japanese_words(line, lnum) abort
       continue
     endif
 
+    " Phase D-7 Process4 Sub2: 辞書単語チェック
+    " 辞書に含まれる単語は最小長チェックをスキップ
+    let l:is_dict_word = s:is_in_dictionary(l:segment)
+
     " 最小単語長フィルタリング（Phase D-6 Process3 Sub2 閾値）
-    if strchars(l:segment) < l:min_length
+    " ただし、辞書単語はスキップ
+    if !l:is_dict_word && strchars(l:segment) < l:min_length
       continue
     endif
 
@@ -112,15 +161,22 @@ endfunction
 " 目的:
 "   - 既存のmatchstrpos()ロジックで英数字単語を検出
 "   - 後方互換性を維持
+"   - Phase D-7 Process4 Sub2: 辞書単語は最小長チェックをスキップ
 "
 " アルゴリズム:
 "   - matchstrpos()で英数字単語（\w\+）を順次検出
 "   - 座標計算（0-indexed → 1-indexed変換）
+"   - 最小長フィルタリング（辞書単語は除外）
 "
 " @param line String 行の内容
 " @param lnum Number 行番号（1-indexed）
 " @return List<Dictionary> 英数字単語データのリスト
 function! s:detect_english_words(line, lnum) abort
+  " 最小単語長を取得（defaultMinWordLengthから、デフォルト: 3）
+  " 注: 英数字は perKeyMinLength を使わず、defaultMinWordLength のみ使用
+  let l:min_length = exists('g:hellshake_yano') && has_key(g:hellshake_yano, 'defaultMinWordLength')
+    \ ? g:hellshake_yano.defaultMinWordLength
+    \ : 3
   " 単語パターン: 英数字とアンダースコア
   let l:word_pattern = '\w\+'
 
@@ -138,6 +194,18 @@ function! s:detect_english_words(line, lnum) abort
     " マッチが見つからない場合はループ終了
     if l:match_start == -1
       break
+    endif
+
+    " Phase D-7 Process4 Sub2: 辞書単語チェック
+    " 辞書に含まれる単語は最小長チェックをスキップ
+    let l:is_dict_word = s:is_in_dictionary(l:match_text)
+
+    " 最小単語長フィルタリング（辞書単語はスキップ）
+    " 注: strchars()で文字数をカウント（マルチバイト文字対応）
+    if !l:is_dict_word && strchars(l:match_text) < l:min_length
+      " 次の検索開始位置を更新
+      let l:start_pos = l:match_end
+      continue
     endif
 
     " 単語データを作成（col と end_col はバイト位置で保持）
@@ -167,12 +235,14 @@ endfunction
 " hellshake_yano_vim#word_detector#detect_visible() - 画面内の単語検出
 "
 " Phase D-6: Process3 Sub2 - 日本語対応拡張
+" Phase D-7: Process4 Sub2 - Dictionary Integration (辞書統合)
 "
 " 目的:
 "   - 画面内に表示されている範囲（line('w0') ～ line('w$')）の単語を検出
 "   - 日本語を含む行はTinySegmenterでセグメント化
 "   - 英数字のみの行は正規表現パターン \w\+ で検出
 "   - 各単語の位置情報（text, lnum, col, end_col）を返す
+"   - Phase D-7: 辞書に含まれる単語は最小長チェックをスキップ
 "
 " アルゴリズム:
 "   1. 画面内の表示範囲（line('w0') ～ line('w$')）を取得

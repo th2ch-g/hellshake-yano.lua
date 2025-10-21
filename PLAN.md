@@ -868,11 +868,11 @@ Denops側の実装を最大限活用し、Vim側はAPIエンドポイントに�
 @target: autoload/hellshake_yano_vim/dictionary.vim（新規）
 
 ##### TDD Step 1: Red（テスト作成）
-- [ ] tests-vim/test_process4_sub1.vim にDenops連携のテストケース作成
-- [ ] Denops利用可能チェックのテスト作成
-- [ ] 各API呼び出しのテスト作成（reload、add、edit、show、validate）
-- [ ] フォールバック処理のテスト作成
-- [ ] テスト実行して失敗を確認
+- [x] tests-vim/test_process4_sub1.vim にDenops連携のテストケース作成
+- [x] Denops利用可能チェックのテスト作成
+- [x] 各API呼び出しのテスト作成（reload、add、edit、show、validate）
+- [x] フォールバック処理のテスト作成
+- [x] テスト実行して失敗を確認
 
 ##### TDD Step 2: Green（実装）
 - [ ] hellshake_yano_vim#dictionary#has_denops() - Denops利用可能チェック実装
