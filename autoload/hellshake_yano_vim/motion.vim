@@ -324,6 +324,18 @@ function! hellshake_yano_vim#motion#handle_with_count(motion_key, count) abort
   endif
 
   try
+    " Phase D-7 Process3+: 数字プレフィックス付きモーションの場合
+    " 意図的な移動（例: 5j, 3w）なのでヒント表示をスキップし、状態をリセット
+    if a:count > 1
+      " モーション実行のみ（ヒント表示なし）
+      execute 'normal! ' . a:count . a:motion_key
+      " 状態をリセット（次のjjjから再度カウント開始）
+      let s:motion_state.motion_count = 0
+      let s:motion_state.last_motion = ''
+      let s:motion_state.last_motion_time = 0
+      return
+    endif
+
     " Phase D-6 Process50 Sub3: キーリピート検出
     " 0. 現在時刻を取得（ミリ秒単位）
     let l:current_time_ms = float2nr(reltimefloat(reltime()) * 1000.0)
