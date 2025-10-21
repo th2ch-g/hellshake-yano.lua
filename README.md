@@ -308,6 +308,35 @@ let g:hellshake_yano = {
 
 ## Denops版 (Full-Featured Implementation)
 
+### Requirements
+
+- Neovim or Vim 8.2+
+- Deno runtime
+- [vim-denops/denops.vim](https://github.com/vim-denops/denops.vim)
+
+**Installation of denops.vim:**
+
+Using vim-plug:
+```vim
+Plug 'vim-denops/denops.vim'
+Plug 'nekowasabi/hellshake-yano.vim'
+```
+
+Using lazy.nvim:
+```lua
+{
+  'vim-denops/denops.vim',
+  lazy = false,
+},
+{
+  'nekowasabi/hellshake-yano.vim',
+  dependencies = { 'vim-denops/denops.vim' },
+  config = function()
+    -- Configuration here
+  end
+}
+```
+
 ## Configuration
 
 The plugin can be configured using the `g:hellshake_yano` dictionary variable. All available options:

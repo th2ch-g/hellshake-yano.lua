@@ -46,6 +46,39 @@ Plug 'username/hellshake-yano.vim'
 }
 ```
 
+## 要件
+
+このプラグインは**Denops版**の完全機能を使用するために以下が必要です:
+
+- Neovim または Vim 8.2+
+- Deno ランタイム
+- [vim-denops/denops.vim](https://github.com/vim-denops/denops.vim)
+
+**denops.vimのインストール:**
+
+vim-plugを使用:
+```vim
+Plug 'vim-denops/denops.vim'
+Plug 'nekowasabi/hellshake-yano.vim'
+```
+
+lazy.nvimを使用:
+```lua
+{
+  'vim-denops/denops.vim',
+  lazy = false,
+},
+{
+  'nekowasabi/hellshake-yano.vim',
+  dependencies = { 'vim-denops/denops.vim' },
+  config = function()
+    -- ここに設定
+  end
+}
+```
+
+> **注意**: Pure VimScript版（基本機能のみ）を使用する場合は、denops.vimは不要です。詳細は英語版READMEの"Pure VimScript MVP"セクションを参照してください。
+
 ## 設定
 
 プラグインは`g:hellshake_yano`辞書変数を使用して設定できます。利用可能なすべてのオプション：
