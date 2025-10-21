@@ -183,19 +183,4 @@ export class ImplementationSelector {
     }
     return "Denops is not available";
   }
-
-  /**
-   * 実装選択のログを出力
-   * @param result 選択結果
-   */
-  logSelection(result: SelectionResult): void {
-    console.log(`[ImplementationSelector] Selected: ${result.implementation}`);
-    console.log(`[ImplementationSelector] Reason: ${result.reason}`);
-
-    if (result.warnings.length > 0) {
-      result.warnings.forEach((warning) => {
-        console.warn(`[ImplementationSelector] Warning: ${warning}`);
-      });
-    }
-  }
 }

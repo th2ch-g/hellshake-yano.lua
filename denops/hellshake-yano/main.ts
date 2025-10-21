@@ -12,6 +12,7 @@ import type { DebugInfo, HintMapping, Word } from "./types.ts";
 
 // 統合レイヤーのインポート
 import { Initializer } from "./integration/initializer.ts";
+import { initializeDebugMode } from "./common/utils/logger.ts";
 
 // Neovim固有のインポート（従来の実装維持）
 import { generateHints } from "./neovim/core/hint.ts";
@@ -79,6 +80,9 @@ export { cleanupPendingTimers, collectDebugInfo };
  */
 export async function main(denops: Denops): Promise<void> {
   try {
+    // Step 0: デバッグモードの初期化（g:hellshake_yano.debugMode をチェック）
+    await initializeDebugMode(denops);
+
     // Step 1: Initializer経由で初期化（環境判定と設定マイグレーション）
     const initializer = new Initializer(denops);
     const initResult = await initializer.initialize();
