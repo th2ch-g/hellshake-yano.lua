@@ -148,8 +148,71 @@ Denops側の実装を最大限活用し、Vim側はAPIエンドポイントに�
 
 **実装完了日**: 2025-10-21
 
+#### Sub3: Vimコマンド統合（オプション）✅ 完了（2025-10-21）
+@target: plugin/hellshake-yano-vim.vim（修正）
+
+##### TDD Step 1: Red（テスト作成）✅ 完了（2025-10-21）
+- [x] tests-vim/test_process4_sub3.vim に詳細テスト作成（20テスト）
+  - [x] Test Group 1: コマンド定義チェック（5テスト）
+  - [x] Test Group 2: コマンド引数チェック（5テスト）
+  - [x] Test Group 3: Denops未起動時のエラーハンドリング（3テスト）
+  - [x] Test Group 4: コマンドのAPI呼び出しチェック（4テスト）
+  - [x] Test Group 5: HYVimDictAddの引数処理（3テスト）
+- [x] tests-vim/test_process4_sub3_simple.vim に簡易テスト作成（10テスト）
+- [x] テスト実行して失敗を確認（全コマンド未定義 - Red状態確認済み）
+
+**実装完了日**: 2025-10-21
+
+##### TDD Step 2: Green（実装）✅ 完了（2025-10-21）
+- [x] command! HYVimDictReload - 辞書再読み込みコマンド追加
+- [x] command! HYVimDictAdd - 単語追加コマンド追加（引数1-3個）
+- [x] command! HYVimDictEdit - 辞書編集コマンド追加（案内表示）
+- [x] command! HYVimDictShow - 辞書表示コマンド追加
+- [x] command! HYVimDictValidate - 辞書検証コマンド追加
+- [x] s:dict_reload() - 再読み込み実装関数
+- [x] s:dict_add(...) - 単語追加実装関数（可変長引数対応）
+- [x] s:dict_edit() - 編集実装関数（show + 案内メッセージ）
+- [x] s:dict_show() - 表示実装関数
+- [x] s:dict_validate() - 検証実装関数
+- [x] テスト実行してテスト成功を確認 ✅ **10/10テストパス**
+
+**実装内容:**
+- 5つのコマンドエイリアス追加（Pure Vim版専用）
+- dictionary.vim APIへのラッパー実装
+- Denops未起動時の適切なエラーメッセージ表示
+- HYVimDictAddは1-3引数に対応（word, meaning, type）
+
+**テスト結果（2025-10-21）:**
+- test_process4_sub3_simple.vim: 10/10テストパス ✅
+  - Test 1-5: コマンド存在確認 ✅
+  - Test 6-10: コマンド実行確認 ✅
+- VimScript構文チェック: エラーなし ✅
+
+**実装完了日**: 2025-10-21
+
+##### TDD Step 3: Refactor（リファクタリング）✅ 完了（2025-10-21）
+- [x] エラーハンドリングの統一化
+  - s:show_dict_error(operation, exception) 共通関数追加
+  - すべての実装関数でエラーハンドリングを統一
+- [x] ドキュメントコメントの充実化
+  - ファイル冒頭にPhase D-7 Process4 Sub3マーク追加
+  - コマンド一覧を含む詳細な説明追加
+  - 各関数に詳細なコメント追加
+- [x] コードの可読性向上
+- [x] VimScript構文チェック ✅ **エラーなし**
+- [x] 回帰テスト確認 ✅ **すべてのテスト通過（10/10）**
+
+**コード品質チェック（2025-10-21）:**
+- ✅ すべての関数に`abort`キーワード使用
+- ✅ 適切な変数スコープ（`s:`, `l:`, `a:`）
+- ✅ すべてのDenops呼び出しで`try-catch`使用
+- ✅ エラーハンドリングの統一化（共通関数使用）
+- ✅ 完全なドキュメントコメント
+
+**実装完了日**: 2025-10-21
+
 ### 次のステップ
 1. ✅ ~~Process4 Sub1: Denops連携ラッパー実装~~ （完了: 2025-01-21）
 2. ✅ ~~Process4 Sub2: word_detector.vim統合~~ （完了: 2025-10-21）
-3. Process4 Sub3: コマンド統合（オプション、未着手）
+3. ✅ ~~Process4 Sub3: コマンド統合（オプション）~~ （完了: 2025-10-21）
 4. ドキュメンテーションとリリース準備

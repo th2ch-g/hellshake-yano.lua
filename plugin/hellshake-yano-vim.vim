@@ -64,6 +64,14 @@ command! -nargs=0 HellshakeYanoVimShow call s:show_hints()
 " Hide hints command: Remove all displayed hints
 command! -nargs=0 HellshakeYanoVimHide call s:hide_hints()
 
+" Dictionary commands (Phase D-7 Process4 Sub3)
+" Pure Vim版専用の辞書操作コマンド（Denops連携）
+command! -nargs=0 HYVimDictReload call s:dict_reload()
+command! -nargs=+ HYVimDictAdd call s:dict_add(<f-args>)
+command! -nargs=0 HYVimDictEdit call s:dict_edit()
+command! -nargs=0 HYVimDictShow call s:dict_show()
+command! -nargs=0 HYVimDictValidate call s:dict_validate()
+
 "=============================================================================
 " Command Implementation Functions
 "=============================================================================
@@ -142,6 +150,104 @@ function! s:hide_hints() abort
     echohl ErrorMsg
     echomsg '[hellshake-yano-vim] Error hiding hints: ' . v:exception
     echohl None
+  endtry
+endfunction
+
+"=============================================================================
+" Dictionary Command Implementation Functions (Phase D-7 Process4 Sub3)
+"=============================================================================
+"
+" Pure Vim版専用の辞書操作コマンド実装
+"
+" 【概要】
+" Denops辞書システム（dictionary.vim）へのコマンドラッパー
+" Denops未起動時は適切なエラーメッセージを表示
+"
+" 【コマンド一覧】
+" :HYVimDictReload    - 辞書を再読み込み
+" :HYVimDictAdd       - 辞書に単語を追加
+" :HYVimDictEdit      - 辞書ファイルを編集（案内メッセージ表示）
+" :HYVimDictShow      - 辞書の内容を表示
+" :HYVimDictValidate  - 辞書の整合性を検証
+"
+
+" Helper function: エラーメッセージの統一表示
+" @param operation: 操作名（'Reload', 'Add'等）
+" @param exception: 例外メッセージ
+function! s:show_dict_error(operation, exception) abort
+  echohl ErrorMsg
+  echomsg '[Dictionary] ' . a:operation . ' error: ' . a:exception
+  echohl None
+endfunction
+
+" Reload dictionary
+" Denops辞書システムの辞書を再読み込みする
+function! s:dict_reload() abort
+  try
+    call hellshake_yano_vim#dictionary#reload()
+  catch
+    call s:show_dict_error('Reload', v:exception)
+  endtry
+endfunction
+
+" Add word to dictionary
+" Denops辞書システムに単語を追加する
+" @param word: Word to add (required)
+" @param meaning: Meaning (optional, default: '')
+" @param type: Type (optional, default: 'custom')
+function! s:dict_add(...) abort
+  if a:0 < 1
+    echohl ErrorMsg
+    echomsg '[Dictionary] Usage: HYVimDictAdd <word> [meaning] [type]'
+    echohl None
+    return
+  endif
+
+  let l:word = a:1
+  let l:meaning = a:0 >= 2 ? a:2 : ''
+  let l:type = a:0 >= 3 ? a:3 : 'custom'
+
+  try
+    call hellshake_yano_vim#dictionary#add(l:word, l:meaning, l:type)
+  catch
+    call s:show_dict_error('Add', v:exception)
+  endtry
+endfunction
+
+" Edit dictionary
+" 辞書ファイルの編集方法を案内する
+" 注: 実際の編集はユーザーがエディタで直接行う必要がある
+function! s:dict_edit() abort
+  try
+    " Show dictionary first
+    call hellshake_yano_vim#dictionary#show()
+    echo ''
+    echohl WarningMsg
+    echo '[Dictionary] Please edit the dictionary file directly using your editor.'
+    echo 'Dictionary location: Check g:hellshake_yano.userDictionaryPath or use :HYVimDictShow'
+    echohl None
+  catch
+    call s:show_dict_error('Edit', v:exception)
+  endtry
+endfunction
+
+" Show dictionary
+" Denops辞書システムの辞書内容を表示する
+function! s:dict_show() abort
+  try
+    call hellshake_yano_vim#dictionary#show()
+  catch
+    call s:show_dict_error('Show', v:exception)
+  endtry
+endfunction
+
+" Validate dictionary
+" Denops辞書システムの辞書整合性を検証する
+function! s:dict_validate() abort
+  try
+    call hellshake_yano_vim#dictionary#validate()
+  catch
+    call s:show_dict_error('Validate', v:exception)
   endtry
 endfunction
 
