@@ -326,8 +326,8 @@ if s:motion_enabled
     " Visual modeでもモーション検出を有効化
     " timer_start()で非同期的にhandle_visual_internal()を呼び出し、
     " v:count1を取得してカウント付きモーションキー（例: "5j"）を返す
-    execute printf('xnoremap <silent> <expr> %s (timer_start(0, {-> hellshake_yano_vim#motion#handle_visual_internal(%s)}), v:count1 > 1 ? v:count1 . %s : %s)',
-          \ s:key, string(s:key), string(s:key), string(s:key))
+    execute printf('xnoremap <silent> <expr> %s hellshake_yano_vim#motion#visual_schedule(%s)',
+          \ s:key, string(s:key))
   endfor
 endif
 

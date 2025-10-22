@@ -5,8 +5,10 @@
 
 import { assert, assertEquals, assertExists } from "@std/assert";
 import { beforeEach, describe, it } from "@std/testing/bdd";
-import { HintManager } from "../denops/hellshake-yano/neovim/core/hint.ts";
-import type { Config } from "../denops/hellshake-yano/types.ts";
+import { filterWordsByDirection, HintManager } from "../denops/hellshake-yano/neovim/core/hint.ts";
+import { Core } from "../denops/hellshake-yano/neovim/core/core.ts";
+import type { Config, HintMapping, Word } from "../denops/hellshake-yano/types.ts";
+import type { Denops } from "@denops/std";
 import { DEFAULT_UNIFIED_CONFIG } from "../denops/hellshake-yano/config.ts";
 
 describe("HintManager Tests", () => {
@@ -217,5 +219,101 @@ describe("HintManager Tests", () => {
       manager.onKeyPress("x");
       assertEquals(manager.getCurrentKeyContext(), "x");
     });
+  });
+});
+
+describe("Directional Hint Filter", () => {
+  const cursor = { line: 10, col: 10 };
+  const words: Word[] = [
+    { text: "up-2", line: 8, col: 5 },
+    { text: "same-line-left", line: 10, col: 8 },
+    { text: "same-line-right", line: 10, col: 15 },
+    { text: "down-1", line: 12, col: 3 },
+  ];
+
+  it("should return original list when context is none", () => {
+    const result = filterWordsByDirection(words, cursor, "none");
+    assertEquals(result, words);
+  });
+
+  it("should filter words below cursor for down context", () => {
+    const result = filterWordsByDirection(words, cursor, "down").map((word: Word) => word.text);
+    assertEquals(result, ["same-line-right", "down-1"]);
+  });
+
+  it("should filter words above cursor for up context", () => {
+    const result = filterWordsByDirection(words, cursor, "up").map((word: Word) => word.text);
+    assertEquals(result, ["up-2", "same-line-left"]);
+  });
+});
+
+describe("Core directional filtering integration", () => {
+  function resetCoreInstance() {
+    Reflect.set(Core, "instance", null);
+  }
+
+  const sampleWords: Word[] = [
+    { text: "up", line: 8, col: 5 },
+    { text: "same-left", line: 10, col: 8 },
+    { text: "same-right", line: 10, col: 15 },
+    { text: "down", line: 12, col: 3 },
+  ];
+
+  const mockDenops = {
+    call: async (fn: string) => {
+      if (fn === "bufnr") {
+        return 1;
+      }
+      if (fn === "getpos") {
+        return [0, 10, 10, 0];
+      }
+      return null;
+    },
+  } as unknown as Denops;
+
+  it("should filter words below the cursor when key is j", async () => {
+    resetCoreInstance();
+    const core = Core.getInstance({
+      ...DEFAULT_UNIFIED_CONFIG,
+      directionalHintFilter: true,
+      markers: ["A", "B", "C"],
+    });
+
+    (core as unknown as { detectWordsOptimized: () => Promise<Word[]> }).detectWordsOptimized =
+      async () => sampleWords;
+    (core as unknown as { displayHintsOptimized: () => Promise<void> }).displayHintsOptimized =
+      async () => {};
+    (core as unknown as { waitForUserInput: () => Promise<void> }).waitForUserInput =
+      async () => {};
+
+    await core.showHintsWithKey(mockDenops, "j", "normal");
+    const hints = Reflect.get(core, "currentHints") as HintMapping[];
+    const capturedWords = hints.map((mapping) => mapping.word.text);
+    assertEquals(
+      capturedWords,
+      ["same-right", "down"],
+      "should only include words below or to the right on same line",
+    );
+  });
+
+  it("should filter words above the cursor when key is k", async () => {
+    resetCoreInstance();
+    const core = Core.getInstance({
+      ...DEFAULT_UNIFIED_CONFIG,
+      directionalHintFilter: true,
+      markers: ["A", "B", "C"],
+    });
+
+    (core as unknown as { detectWordsOptimized: () => Promise<Word[]> }).detectWordsOptimized =
+      async () => sampleWords;
+    (core as unknown as { displayHintsOptimized: () => Promise<void> }).displayHintsOptimized =
+      async () => {};
+    (core as unknown as { waitForUserInput: () => Promise<void> }).waitForUserInput =
+      async () => {};
+
+    await core.showHintsWithKey(mockDenops, "k", "normal");
+    const hints = Reflect.get(core, "currentHints") as HintMapping[];
+    const capturedWords = hints.map((mapping) => mapping.word.text);
+    assertEquals(capturedWords, ["up"], "should omit word under cursor and keep words above");
   });
 });

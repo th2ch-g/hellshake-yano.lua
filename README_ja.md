@@ -100,6 +100,7 @@ lazy.nvimを使用:
 | `multiCharKeys`                     | array       | BCEIOPQRTUVWXYZ | 複数文字ヒントに使用されるキー                          |
 | `useHintGroups`                     | boolean     | v:true          | ヒントグループ機能を有効化                              |
 | `useNumbers`                        | boolean     | v:true          | ヒントに数字キーを許可                                  |
+| `directionalHintFilter`             | boolean     | v:false         | `j` / `k` モーション時にカーソル方向のみヒントを表示      |
 | `useNumericMultiCharHints`          | boolean     | v:false         | 数字2文字ヒントを有効化（01-99, 00）                    |
 | `maxSingleCharHints`                | number      | -               | オプション: 単一文字ヒントを制限                        |
 | `useJapanese`                       | boolean     | v:true          | 日本語単語検出を有効化                                  |
@@ -154,6 +155,13 @@ let g:hellshake_yano = {
       \ 'segmenterThreshold': 4,
       \ 'japaneseMergeThreshold': 4,
       \ }
+```
+
+**方向限定ヒントを有効化:**
+```vim
+let g:hellshake_yano.directional_hint_filter = v:true
+" camelCase を使用する場合:
+let g:hellshake_yano.directionalHintFilter = v:true
 ```
 
 **日本語開発に最適:**

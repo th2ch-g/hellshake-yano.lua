@@ -29,6 +29,7 @@ describe("Config Tests", () => {
       assertEquals(config.maxHints, 336);
       assertEquals(config.debounceDelay, 50);
       assertEquals(config.highlightSelected, false);
+      assertEquals(config.directionalHintFilter, false);
     });
   });
 
@@ -188,6 +189,22 @@ describe("Config Tests", () => {
       assertEquals(result3.valid, true);
     });
 
+    it("should accept valid directionalHintFilter values", () => {
+      const result = validateConfig({ directionalHintFilter: true });
+      assertEquals(result.valid, true);
+      assertEquals(result.errors.length, 0);
+
+      const resultFalse = validateConfig({ directionalHintFilter: false });
+      assertEquals(resultFalse.valid, true);
+      assertEquals(resultFalse.errors.length, 0);
+    });
+
+    it("should reject invalid directionalHintFilter values", () => {
+      const result = validateConfig({ directionalHintFilter: "yes" as any });
+      assertEquals(result.valid, false);
+      assertEquals(result.errors[0], "directionalHintFilter must be a boolean");
+    });
+
     it("should reject invalid debounceDelay values", () => {
       const result1 = validateConfig({ debounceDelay: -1 });
       assertEquals(result1.valid, false);
@@ -301,7 +318,7 @@ describe("Config Tests", () => {
     // null値テストは不安定なため削除
     // validateConfig関数自体は正しくnullを検出することを確認済み
 
-it("should handle extreme values", () => {
+    it("should handle extreme values", () => {
       const result1 = validateConfig({ motionCount: 999999 });
       assertEquals(result1.valid, true);
 

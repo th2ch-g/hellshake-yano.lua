@@ -2,52 +2,51 @@
  * プラグインの中核となるロジックを統合管理するCoreクラス
  * TDD Red-Green-Refactor方法論に従って実装 */
 import type { Denops } from "@denops/std";
-import { LRUCache, type CacheStatistics } from "../../cache.ts";
+import { type CacheStatistics, LRUCache } from "../../cache.ts";
 import type { Config } from "../../types.ts";
-import { getDefaultConfig, DEFAULT_CONFIG, mergeConfig, validateConfig } from "../../config.ts";
+import { DEFAULT_CONFIG, getDefaultConfig, mergeConfig, validateConfig } from "../../config.ts";
 import type {
+  CommandObject,
+  ConfigManager,
+  Controller,
   CoreState,
+  DebugController,
   DebugInfo,
   DetectionContext,
-  HintMapping,
-  HintKeyConfig,
+  EnhancedConfig,
+  ExtendedDebugInfo,
+  HealthCheckResult,
   HighlightColor,
+  HintKeyConfig,
+  HintMapping,
+  HintOperations,
+  HintOperationsDependencies,
+  InitializeOptions,
+  InitializeResult,
   PerformanceMetrics,
+  PerformanceStats,
+  PluginStatistics,
   Word,
   WordDetectionResult,
-  CommandObject,
-  Controller,
-  ConfigManager,
-  DebugController,
-  ExtendedDebugInfo,
-  InitializeOptions,
-  EnhancedConfig,
-  PluginStatistics,
-  PerformanceStats,
-  HealthCheckResult,
-  InitializeResult,
-  HintOperationsDependencies,
-  HintOperations,
 } from "../../types.ts";
 import type { EnhancedWordConfig } from "./word.ts";
-import {
-  detectWordsWithManager,
-  detectWordsWithConfig,
-} from "./word.ts";
+import { detectWordsWithConfig, detectWordsWithManager } from "./word.ts";
 import { TinySegmenter } from "./word/word-segmenter.ts";
 import type { SegmentationResult } from "./word/word-segmenter.ts";
 import {
   assignHintsToWords,
+  filterWordsByDirection,
   generateHints,
-  validateHintKeyConfig
+  resolveDirectionalContext,
+  validateHintKeyConfig,
 } from "./hint.ts";
-import { DictionaryLoader, VimConfigBridge, type UserDictionary } from "./word.ts";
+import { DictionaryLoader, type UserDictionary, VimConfigBridge } from "./word.ts";
 import {
-  validateHighlightGroupName,
+  isControlCharacter,
   isValidColorName,
   isValidHexColor,
   validateHighlightColor,
-  isControlCharacter,
+  validateHighlightGroupName,
 } from "../../validation-utils.ts";
 /**
  * @param threshold
@@ -76,11 +75,15 @@ class MotionCounter {
     }
     return false;
   }
-  getCount(): number { return this.count; }
-  reset(): void { this.count = 0; this.lastMotionTime = 0; }
+  getCount(): number {
+    return this.count;
+  }
+  reset(): void {
+    this.count = 0;
+    this.lastMotionTime = 0;
+  }
 }
-/**
- */
+/** */
 class MotionManager {
   private counters = new Map<number, MotionCounter>();
   getCounter(bufnr: number, threshold?: number, timeout?: number): MotionCounter {
@@ -91,7 +94,9 @@ class MotionManager {
     const counter = this.counters.get(bufnr);
     if (counter) counter.reset();
   }
-  clearAll(): void { this.counters.clear(); }
+  clearAll(): void {
+    this.counters.clear();
+  }
 }
 /**
  * @param config
@@ -112,26 +117,71 @@ class CommandFactory {
   getConfigManager(): ConfigManager {
     return {
       getConfig: () => this.config,
-      updateConfig: (newConfig: Partial<Config>) => { Object.assign(this.config, newConfig); },
-      setCount: (count: number) => { this.config.motionCount = count; },
-      setTimeout: (timeout: number) => { this.config.motionTimeout = timeout; }
+      updateConfig: (newConfig: Partial<Config>) => {
+        Object.assign(this.config, newConfig);
+      },
+      setCount: (count: number) => {
+        this.config.motionCount = count;
+      },
+      setTimeout: (timeout: number) => {
+        this.config.motionTimeout = timeout;
+      },
     };
   }
   getDebugController(): DebugController {
     return {
       getStatistics: () => Core.getInstance(this.config).getStatistics(),
       clearCache: () => Core.getInstance(this.config).clearCache(),
-      toggleDebugMode: () => { this.config.debugMode = !this.config.debugMode; }
+      toggleDebugMode: () => {
+        this.config.debugMode = !this.config.debugMode;
+      },
     };
   }
 }
-/**
- */
+/** */
 export const HIGHLIGHT_BATCH_SIZE = 15;
 export const HYBRID_SYNC_BATCH_SIZE = 15;
 
-const DEFAULT_SINGLE_KEYS = ["A", "S", "D", "F", "G", "H", "J", "K", "L", "N", "M", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-const DEFAULT_MULTI_KEYS = ["B", "C", "E", "I", "O", "P", "Q", "R", "T", "U", "V", "W", "X", "Y", "Z"];
+const DEFAULT_SINGLE_KEYS = [
+  "A",
+  "S",
+  "D",
+  "F",
+  "G",
+  "H",
+  "J",
+  "K",
+  "L",
+  "N",
+  "M",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+];
+const DEFAULT_MULTI_KEYS = [
+  "B",
+  "C",
+  "E",
+  "I",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+];
 
 interface PluginState {
   /** プラグインの現在のステータス */
@@ -152,8 +202,7 @@ interface PluginState {
   /** パフォーマンスメトリクス */
   performanceMetrics: PerformanceMetrics;
 }
-/**
- */
+/** */
 let pluginState: PluginState = {
   status: "uninitialized",
   initialized: false,
@@ -162,19 +211,17 @@ let pluginState: PluginState = {
   currentHints: [],
   caches: {
     words: new LRUCache<string, Word[]>(100),
-    hints: new LRUCache<string, string[]>(50)
+    hints: new LRUCache<string, string[]>(50),
   },
   performanceMetrics: {
     showHints: [],
     hideHints: [],
     wordDetection: [],
-    hintGeneration: []
-  }
+    hintGeneration: [],
+  },
 };
-/**
- */
-/**
- */
+/** */
+/** */
 function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<InitializeResult> {
   pluginState.status = "initialized";
   pluginState.initialized = true;
@@ -188,7 +235,7 @@ function initializePlugin(denops: Denops, options?: InitializeOptions): Promise<
   }
   return Promise.resolve({
     extmarkNamespace: null,
-    caches: pluginState.caches
+    caches: pluginState.caches,
   });
 }
 function cleanupPlugin(denops: Denops): Promise<void> {
@@ -199,19 +246,16 @@ function cleanupPlugin(denops: Denops): Promise<void> {
   pluginState.caches.hints.clear();
   return Promise.resolve();
 }
-/**
- */
+/** */
 function healthCheck(denops: Denops): Promise<HealthCheckResult> {
   return Promise.resolve({
     healthy: true,
     issues: [],
-    recommendations: []
+    recommendations: [],
   });
 }
-/**
- */
-/**
- */
+/** */
+/** */
 function getPluginStatistics(): PluginStatistics {
   const calculateStats = (metrics: number[]): PerformanceStats => {
     if (metrics.length === 0) {
@@ -226,20 +270,24 @@ function getPluginStatistics(): PluginStatistics {
   };
   return {
     cacheStats: {
-      words: pluginState.caches.words.getStats ? pluginState.caches.words.getStats() : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 },
-      hints: pluginState.caches.hints.getStats ? pluginState.caches.hints.getStats() : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 }
+      words: pluginState.caches.words.getStats
+        ? pluginState.caches.words.getStats()
+        : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 },
+      hints: pluginState.caches.hints.getStats
+        ? pluginState.caches.hints.getStats()
+        : { hits: 0, misses: 0, size: 0, maxSize: 0, hitRate: 0 },
     },
     performanceStats: {
       showHints: calculateStats(pluginState.performanceMetrics.showHints),
       hideHints: calculateStats(pluginState.performanceMetrics.hideHints),
       wordDetection: calculateStats(pluginState.performanceMetrics.wordDetection),
-      hintGeneration: calculateStats(pluginState.performanceMetrics.hintGeneration)
+      hintGeneration: calculateStats(pluginState.performanceMetrics.hintGeneration),
     },
     currentState: {
       initialized: pluginState.initialized,
       hintsVisible: pluginState.hintsVisible,
-      currentHintsCount: pluginState.currentHints ? pluginState.currentHints.length : 0
-    }
+      currentHintsCount: pluginState.currentHints ? pluginState.currentHints.length : 0,
+    },
   };
 }
 function updatePluginState(updates: Partial<PluginState>): void {
@@ -264,8 +312,7 @@ function setCount(config: Config, count: number): void {
 function setTimeoutCommand(config: Config, timeout: number): void {
   config.motionTimeout = timeout;
 }
-/**
- */
+/** */
 export class Core {
   /** シングルトンインスタンス */
   private static instance: Core | null = null;
@@ -327,17 +374,17 @@ export class Core {
       if (denops) {
         await cleanupPlugin(denops);
       }
-    if (this._renderingAbortController) {
-      this._renderingAbortController.abort();
-    }
-    this._isRenderingHints = false;
-    this._renderingAbortController = null;
-    if (this._pendingHighlightTimer !== null) {
-      clearTimeout(this._pendingHighlightTimer);
-      this._pendingHighlightTimer = null;
-    }
+      if (this._renderingAbortController) {
+        this._renderingAbortController.abort();
+      }
+      this._isRenderingHints = false;
+      this._renderingAbortController = null;
+      if (this._pendingHighlightTimer !== null) {
+        clearTimeout(this._pendingHighlightTimer);
+        this._pendingHighlightTimer = null;
+      }
     } catch (error) {
-      console.error('[hellshake-yano] Core: Cleanup failed:', error);
+      console.error("[hellshake-yano] Core: Cleanup failed:", error);
     }
   }
   async getHealthStatus(denops: Denops): Promise<{
@@ -352,7 +399,7 @@ export class Core {
       return {
         healthy: false,
         issues: [`Health check error: ${error instanceof Error ? error.message : String(error)}`],
-        recommendations: ['Try reinitializing the plugin']
+        recommendations: ["Try reinitializing the plugin"],
       };
     }
   }
@@ -369,19 +416,19 @@ export class Core {
     try {
       return getPluginStatistics();
     } catch (error) {
-      console.error('[hellshake-yano] Core: Get statistics failed:', error);
+      console.error("[hellshake-yano] Core: Get statistics failed:", error);
       return {
         cacheStats: {
           words: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 },
-          hints: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 }
+          hints: { size: 0, maxSize: 0, hitRate: 0, hits: 0, misses: 0 },
         },
         performanceStats: {
           showHints: { count: 0, average: 0, max: 0, min: 0 },
           hideHints: { count: 0, average: 0, max: 0, min: 0 },
           wordDetection: { count: 0, average: 0, max: 0, min: 0 },
-          hintGeneration: { count: 0, average: 0, max: 0, min: 0 }
+          hintGeneration: { count: 0, average: 0, max: 0, min: 0 },
         },
-        currentState: { initialized: false, hintsVisible: false, currentHintsCount: 0 }
+        currentState: { initialized: false, hintsVisible: false, currentHintsCount: 0 },
       };
     }
   }
@@ -389,7 +436,7 @@ export class Core {
     try {
       updatePluginState(updates);
     } catch (error) {
-      console.error('[hellshake-yano] Core: Update state failed:', error);
+      console.error("[hellshake-yano] Core: Update state failed:", error);
     }
   }
   recordPerformanceMetric(operation: string, duration: number): void {
@@ -399,7 +446,7 @@ export class Core {
         state.performanceMetrics[operation as keyof typeof state.performanceMetrics].push(duration);
       }
     } catch (error) {
-      console.error('[hellshake-yano] Core: Record performance metric failed:', error);
+      console.error("[hellshake-yano] Core: Record performance metric failed:", error);
     }
   }
   getConfig(): Config {
@@ -482,7 +529,10 @@ export class Core {
 
       if (denops.meta.host === "nvim") {
         try {
-          const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+          const extmarkNamespace = await denops.call(
+            "nvim_create_namespace",
+            "hellshake_yano_hints",
+          ) as number;
           await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
         } catch (error) {
         }
@@ -583,8 +633,8 @@ export class Core {
       const enhancedConfig = this.createEnhancedWordConfig();
       const context = this.config.currentKeyContext
         ? {
-            minWordLength: this.getMinLengthForKey(this.config.currentKeyContext),
-          }
+          minWordLength: this.getMinLengthForKey(this.config.currentKeyContext),
+        }
         : undefined;
       const result = await detectWordsWithManager(denops, enhancedConfig, context);
 
@@ -634,7 +684,7 @@ export class Core {
         multiCharKeys: hintConfig.multiCharKeys,
         maxSingleCharHints: hintConfig.maxSingleCharHints,
         useNumericMultiCharHints: hintConfig.useNumericMultiCharHints,
-        markers: hintConfig.markers
+        markers: hintConfig.markers,
       });
     }
     return generateHints(wordCount, markers);
@@ -680,7 +730,7 @@ export class Core {
     this._renderingAbortController = new AbortController();
     const currentController = this._renderingAbortController;
     if (signal) {
-      signal.addEventListener('abort', () => {
+      signal.addEventListener("abort", () => {
         if (currentController === this._renderingAbortController) {
           currentController.abort();
         }
@@ -693,9 +743,15 @@ export class Core {
       }
       const mode = config.mode || "normal";
       const bufnr = await denops.call("bufnr", "%") as number;
-      await this.displayHintsWithExtmarksBatch(denops, bufnr, hints, mode, currentController.signal);
+      await this.displayHintsWithExtmarksBatch(
+        denops,
+        bufnr,
+        hints,
+        mode,
+        currentController.signal,
+      );
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         return;
       }
     } finally {
@@ -718,7 +774,10 @@ export class Core {
     const maxFailures = 5;
     let extmarkNamespace: number;
     try {
-      extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+      extmarkNamespace = await denops.call(
+        "nvim_create_namespace",
+        "hellshake_yano_hints",
+      ) as number;
     } catch (error) {
       await this.displayHintsWithMatchAddBatch(denops, hints, mode, signal);
       return;
@@ -840,15 +899,30 @@ export class Core {
 
       this.hideHints();
 
-      const words = await this.detectWordsOptimized(denops, bufnr);
+      const detectedWords = await this.detectWordsOptimized(denops, bufnr);
+
+      if (detectedWords.length === 0) {
+        return;
+      }
+
+      const cursorPos = await denops.call("getpos", ".") as
+        | [number, number, number, number]
+        | undefined;
+      const cursorLine = cursorPos ? cursorPos[1] : 1;
+      const cursorCol = cursorPos ? cursorPos[2] : 1;
+      const directionalContext = resolveDirectionalContext(
+        this.config.currentKeyContext,
+        this.config.directionalHintFilter,
+      );
+      const words = filterWordsByDirection(
+        detectedWords,
+        { line: cursorLine, col: cursorCol },
+        directionalContext,
+      );
 
       if (words.length === 0) {
         return;
       }
-
-      const cursorPos = await denops.call("getpos", ".") as [number, number, number, number] | undefined;
-      const cursorLine = cursorPos ? cursorPos[1] : 1;
-      const cursorCol = cursorPos ? cursorPos[2] : 1;
       const unifiedConfig = this.config; // 既にConfig形式
       let hints: string[];
       if (unifiedConfig.singleCharKeys || unifiedConfig.multiCharKeys) {
@@ -857,7 +931,7 @@ export class Core {
           multiCharKeys: unifiedConfig.multiCharKeys,
           maxSingleCharHints: unifiedConfig.maxSingleCharHints,
           useNumericMultiCharHints: unifiedConfig.useNumericMultiCharHints,
-          markers: unifiedConfig.markers // フォールバック用
+          markers: unifiedConfig.markers, // フォールバック用
         };
         hints = generateHints(words.length, {
           groups: true,
@@ -865,7 +939,7 @@ export class Core {
           multiCharKeys: hintConfig.multiCharKeys,
           maxSingleCharHints: hintConfig.maxSingleCharHints,
           useNumericMultiCharHints: hintConfig.useNumericMultiCharHints,
-          markers: hintConfig.markers
+          markers: hintConfig.markers,
         });
       } else {
         const markers = unifiedConfig.markers || ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
@@ -893,7 +967,6 @@ export class Core {
       this.isActive = true;
 
       await this.waitForUserInput(denops);
-
     } catch (error) {
       this.hideHints();
     }
@@ -915,7 +988,7 @@ export class Core {
   recordPerformance(
     operation: keyof PerformanceMetrics,
     startTime: number,
-    endTime: number
+    endTime: number,
   ): void {
     if (!this.config.performanceLog) return;
     const duration = endTime - startTime;
@@ -980,7 +1053,11 @@ export class Core {
    *   * @param target - ジャンプ対象のヒントマッピング
    * @param context - ジャンプのコンテキスト情報（デバッグ用）
    */
-  private async jumpToHintTarget(denops: Denops, target: HintMapping, context: string): Promise<void> {
+  private async jumpToHintTarget(
+    denops: Denops,
+    target: HintMapping,
+    context: string,
+  ): Promise<void> {
     try {
       const jumpCol = target.hintByteCol || target.hintCol ||
         target.word.byteCol || target.word.col;
@@ -999,7 +1076,7 @@ export class Core {
       try {
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
       } catch (error) {
-        console.error('[hellshake-yano] Core: Bell sound failed:', error);
+        console.error("[hellshake-yano] Core: Bell sound failed:", error);
       }
     }
   }
@@ -1013,7 +1090,9 @@ export class Core {
     const bufnr = await denops.call("bufnr", "%") as number;
 
     if (this.continuousModeActive && this.lastJumpBufnr !== null && this.lastJumpBufnr !== bufnr) {
-      await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (buffer changed)' | echohl None");
+      await denops.cmd(
+        "echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (buffer changed)' | echohl None",
+      );
       this.resetContinuousModeState();
       await this.hideHintsOptimized(denops);
       return;
@@ -1028,10 +1107,14 @@ export class Core {
     await this.hideHintsOptimized(denops);
 
     this.continuousJumpCount += 1;
-    const maxJumps = this.config.maxContinuousJumps > 0 ? this.config.maxContinuousJumps : DEFAULT_CONFIG.maxContinuousJumps;
+    const maxJumps = this.config.maxContinuousJumps > 0
+      ? this.config.maxContinuousJumps
+      : DEFAULT_CONFIG.maxContinuousJumps;
 
     if (this.continuousJumpCount > maxJumps) {
-      await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (max jumps reached)' | echohl None");
+      await denops.cmd(
+        "echohl WarningMsg | echo '[hellshake-yano] Continuous hint loop stopped (max jumps reached)' | echohl None",
+      );
       this.resetContinuousModeState();
       return;
     }
@@ -1039,7 +1122,9 @@ export class Core {
     try {
       await this.executeRecenterCommand(denops);
     } catch (_error) {
-      await denops.cmd("echohl WarningMsg | echo '[hellshake-yano] Failed to recenter cursor. Continuous mode disabled.' | echohl None");
+      await denops.cmd(
+        "echohl WarningMsg | echo '[hellshake-yano] Failed to recenter cursor. Continuous mode disabled.' | echohl None",
+      );
       this.resetContinuousModeState();
       return;
     }
@@ -1083,7 +1168,7 @@ export class Core {
       const char = result as number;
       if (char === -2) {
         if (config.motionCount === 1) {
-          const singleCharHints = currentHints.filter(h => h.hint.length === 1);
+          const singleCharHints = currentHints.filter((h) => h.hint.length === 1);
           if (singleCharHints.length === 1) {
             await this.jumpToHintTarget(denops, singleCharHints[0], "timeout auto-select");
             await this.postJumpHandler(denops, singleCharHints[0]);
@@ -1131,7 +1216,7 @@ export class Core {
       if (config.useNumericMultiCharHints) {
         allKeys.push(...["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
       }
-      const normalizedKeys = allKeys.map(k => /[a-zA-Z]/.test(k) ? k.toUpperCase() : k);
+      const normalizedKeys = allKeys.map((k) => /[a-zA-Z]/.test(k) ? k.toUpperCase() : k);
       const validKeysSet = new Set(normalizedKeys);
       if (!validKeysSet.has(inputChar)) {
         // ヒント以外のキーが入力された場合、ヒントを非表示にしてキーを通常処理に送る
@@ -1158,7 +1243,7 @@ export class Core {
 
       if (config.useHintGroups) {
         const defaultSingleKeys = config.useNumericMultiCharHints
-          ? DEFAULT_SINGLE_KEYS.filter(k => !/^\d$/.test(k))
+          ? DEFAULT_SINGLE_KEYS.filter((k) => !/^\d$/.test(k))
           : DEFAULT_SINGLE_KEYS;
         const singleOnlyKeys = config.singleCharKeys || defaultSingleKeys;
         const multiOnlyKeys = config.multiCharKeys || DEFAULT_MULTI_KEYS;
@@ -1268,7 +1353,9 @@ export class Core {
         await this.hideHintsOptimized(denops);
         return;
       }
-      const secondValidPattern = (config.useNumbers || config.useNumericMultiCharHints) ? /[A-Z0-9]/ : /[A-Z]/;
+      const secondValidPattern = (config.useNumbers || config.useNumericMultiCharHints)
+        ? /[A-Z0-9]/
+        : /[A-Z]/;
       const secondErrorMessage = (config.useNumbers || config.useNumericMultiCharHints)
         ? "Second character must be alphabetic or numeric"
         : "Second character must be alphabetic";
@@ -1299,7 +1386,7 @@ export class Core {
         await denops.cmd("echohl ErrorMsg | echo 'Input error - hints cleared' | echohl None");
         await denops.cmd("call feedkeys('\\<C-g>', 'n')"); // ベル音
       } catch (error) {
-        console.error('[hellshake-yano] Core: Error feedback failed:', error);
+        console.error("[hellshake-yano] Core: Error feedback failed:", error);
       }
       await this.hideHintsOptimized(denops);
       this.resetContinuousModeState();
@@ -1310,7 +1397,7 @@ export class Core {
     denops: Denops,
     hintMappings: HintMapping[],
     partialInput: string,
-    config: { mode?: "normal" | "visual" | "operator" } = {}
+    config: { mode?: "normal" | "visual" | "operator" } = {},
   ): void {
     if (this._renderingAbortController) {
       this._renderingAbortController.abort();
@@ -1331,7 +1418,10 @@ export class Core {
         const mode = config.mode || "normal";
         const bufnr = await denops.call("bufnr", "%") as number;
         if (signal.aborted) return;
-        const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+        const extmarkNamespace = await denops.call(
+          "nvim_create_namespace",
+          "hellshake_yano_hints",
+        ) as number;
         if (signal.aborted) return;
         await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
         if (signal.aborted) return;
@@ -1368,16 +1458,30 @@ export class Core {
                   "virt_text": [[hint, highlightGroup]],
                   "virt_text_pos": "overlay",
                   "priority": priority,
-                }
+                },
               );
             } catch (error) {
             }
           }
           return;
         }
-        await this.processBatchedExtmarks(denops, candidateHints, true, bufnr, extmarkNamespace, signal);
+        await this.processBatchedExtmarks(
+          denops,
+          candidateHints,
+          true,
+          bufnr,
+          extmarkNamespace,
+          signal,
+        );
         if (signal.aborted) return;
-        await this.processBatchedExtmarks(denops, nonCandidateHints, false, bufnr, extmarkNamespace, signal);
+        await this.processBatchedExtmarks(
+          denops,
+          nonCandidateHints,
+          false,
+          bufnr,
+          extmarkNamespace,
+          signal,
+        );
       } catch (error) {
       }
     }, 0) as unknown as number;
@@ -1386,7 +1490,7 @@ export class Core {
     denops: Denops,
     hintMappings: HintMapping[],
     partialInput: string,
-    config: { mode?: "normal" | "visual" | "operator" } = {}
+    config: { mode?: "normal" | "visual" | "operator" } = {},
   ): Promise<void> {
     const SYNC_BATCH_SIZE = HYBRID_SYNC_BATCH_SIZE;
     try {
@@ -1400,7 +1504,10 @@ export class Core {
       }
       const mode = config.mode || "normal";
       const bufnr = await denops.call("bufnr", "%") as number;
-      const extmarkNamespace = await denops.call("nvim_create_namespace", "hellshake_yano_hints") as number;
+      const extmarkNamespace = await denops.call(
+        "nvim_create_namespace",
+        "hellshake_yano_hints",
+      ) as number;
       if (signal.aborted) return;
       await denops.call("nvim_buf_clear_namespace", bufnr, extmarkNamespace, 0, -1);
       if (signal.aborted) return;
@@ -1457,7 +1564,9 @@ export class Core {
     }
   }
   private getHighlightGroupName(isCandidate: boolean): string {
-    const configValue = isCandidate ? this.config.highlightHintMarkerCurrent : this.config.highlightHintMarker;
+    const configValue = isCandidate
+      ? this.config.highlightHintMarkerCurrent
+      : this.config.highlightHintMarker;
     if (typeof configValue === "string") {
       return configValue;
     }
@@ -1468,7 +1577,7 @@ export class Core {
     mapping: HintMapping,
     bufnr: number,
     extmarkNamespace: number,
-    isCandidate: boolean = true
+    isCandidate: boolean = true,
   ): Promise<void> {
     const { word, hint } = mapping;
     const hintLine = word.line;
@@ -1486,7 +1595,7 @@ export class Core {
         "virt_text": [[hint, highlightGroup]],
         "virt_text_pos": "overlay",
         "priority": 1001,
-      }
+      },
     );
   }
   private async processBatchedExtmarks(
@@ -1495,7 +1604,7 @@ export class Core {
     isCandidate: boolean,
     bufnr: number,
     extmarkNamespace: number,
-    signal: AbortSignal
+    signal: AbortSignal,
   ): Promise<void> {
     const batchSize = HIGHLIGHT_BATCH_SIZE;
     const highlightGroup = this.getHighlightGroupName(isCandidate);
@@ -1521,13 +1630,13 @@ export class Core {
               "virt_text": [[hint, highlightGroup]],
               "virt_text_pos": "overlay",
               "priority": priority,
-            }
+            },
           );
         } catch (error) {
         }
       }
       if (i + batchSize < hints.length) {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
   }
@@ -1549,7 +1658,10 @@ export class Core {
       // Dictionary system is optional - plugin should continue to work without it
       // Error details are logged but not propagated to avoid blocking plugin initialization
       if (this.config.debugMode) {
-        console.error('[Dictionary] Initialization failed:', error instanceof Error ? error.message : String(error));
+        console.error(
+          "[Dictionary] Initialization failed:",
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
   }
@@ -1558,19 +1670,19 @@ export class Core {
    */
   private async registerDictionaryCommands(denops: Denops): Promise<void> {
     await denops.cmd(
-      `command! -nargs=+ HellshakeYanoAddWord call denops#request("${denops.name}", "addToDictionary", split('<args>'))`
+      `command! -nargs=+ HellshakeYanoAddWord call denops#request("${denops.name}", "addToDictionary", split('<args>'))`,
     );
     await denops.cmd(
-      `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`
+      `command! HellshakeYanoReloadDict call denops#request("${denops.name}", "reloadDictionary", [])`,
     );
     await denops.cmd(
-      `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`
+      `command! HellshakeYanoEditDict call denops#request("${denops.name}", "editDictionary", [])`,
     );
     await denops.cmd(
-      `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`
+      `command! HellshakeYanoShowDict call denops#request("${denops.name}", "showDictionary", [])`,
     );
     await denops.cmd(
-      `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`
+      `command! HellshakeYanoValidateDict call denops#request("${denops.name}", "validateDictionary", [])`,
     );
   }
   /*   * Check if dictionary system is initialized   * @returns boolean - True if dictionary system is ready
@@ -1610,15 +1722,22 @@ export class Core {
         const newPath = ".hellshake-yano/dictionary.json";
         try {
           await Deno.mkdir(".hellshake-yano", { recursive: true });
-          await Deno.writeTextFile(newPath, JSON.stringify({
-            "words": [],
-            "patterns": [],
-            "meta": {
-              "version": "1.0.0",
-              "created": new Date().toISOString(),
-              "description": "User dictionary for hellshake-yano.vim"
-            }
-          }, null, 2));
+          await Deno.writeTextFile(
+            newPath,
+            JSON.stringify(
+              {
+                "words": [],
+                "patterns": [],
+                "meta": {
+                  "version": "1.0.0",
+                  "created": new Date().toISOString(),
+                  "description": "User dictionary for hellshake-yano.vim",
+                },
+              },
+              null,
+              2,
+            ),
+          );
           await denops.cmd(`edit ${newPath}`);
           await denops.cmd('echo "Created new dictionary file: ' + newPath + '"');
         } catch (createError) {
@@ -1645,7 +1764,7 @@ export class Core {
       await denops.cmd("setlocal noswapfile");
       await denops.cmd("file [HellshakeYano Dictionary]");
       const content = JSON.stringify(dictionary, null, 2);
-      const lines = content.split('\n');
+      const lines = content.split("\n");
       await denops.call("setline", 1, lines);
     } catch (error) {
       await denops.cmd(`echoerr "Failed to show dictionary: ${error}"`);
@@ -1679,7 +1798,12 @@ export class Core {
     }
   }
   /* Add word to user dictionary */
-  async addToDictionary(denops: Denops, word: string, meaning: string, type: string): Promise<void> {
+  async addToDictionary(
+    denops: Denops,
+    word: string,
+    meaning: string,
+    type: string,
+  ): Promise<void> {
     try {
       if (!word || !word.trim()) {
         await denops.cmd('echoerr "Invalid word: word cannot be empty"');
@@ -1701,8 +1825,8 @@ export class Core {
           compoundPatterns: [],
           metadata: {
             version: "1.0.0",
-            description: "User dictionary for hellshake-yano.vim"
-          }
+            description: "User dictionary for hellshake-yano.vim",
+          },
         };
       }
       const wordEntry = word.trim();
@@ -1721,21 +1845,22 @@ export class Core {
           meta: {
             version: "1.0.0",
             created: new Date().toISOString(),
-            description: "User dictionary for hellshake-yano.vim"
-          }
+            description: "User dictionary for hellshake-yano.vim",
+          },
         };
       }
       const structuredWordEntry = {
         word: word.trim(),
         meaning: meaning.trim() || word.trim(),
         type: type.trim() || "unknown",
-        added: new Date().toISOString()
+        added: new Date().toISOString(),
       };
       if (!jsonDictionary.words) {
         jsonDictionary.words = [];
       }
       const jsonExistingIndex = jsonDictionary.words.findIndex((w: unknown) =>
-        typeof w === 'object' && w !== null && 'word' in w && (w as { word: string }).word === structuredWordEntry.word
+        typeof w === "object" && w !== null && "word" in w &&
+        (w as { word: string }).word === structuredWordEntry.word
       );
       if (jsonExistingIndex !== -1) {
         jsonDictionary.words[jsonExistingIndex] = structuredWordEntry;
@@ -1807,8 +1932,8 @@ export class Core {
     return validColorNames.includes(colorName.toLowerCase());
   }
   /**
- * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
- * @returns 
+   * main.ts の isValidHexColor 関数の実装をCore.isValidHexColor静的メソッドとして移植   * @param hexColor 検証する16進数色（例: "#ff0000", "#fff"）
+   * @returns
    */
   public static isValidHexColor(hexColor: string): boolean {
     if (!hexColor || typeof hexColor !== "string") {
@@ -1824,8 +1949,8 @@ export class Core {
     return /^[0-9a-fA-F]+$/.test(hex);
   }
   /**
- * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
- * @returns 
+   * main.ts の normalizeColorName 関数の実装をCore.normalizeColorName静的メソッドとして移植   * @param color 正規化する色値
+   * @returns
    */
   public static normalizeColorName(color: string): string {
     if (!color || typeof color !== "string") {
@@ -1846,9 +1971,9 @@ export class Core {
     return validateHighlightColor(colorConfig);
   }
   /**
- * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
- * @param colorConfig
- * @returns 
+   * main.ts の generateHighlightCommand 関数の実装をCore.generateHighlightCommand静的メソッドとして移植   * @param hlGroupName ハイライトグループ名
+   * @param colorConfig
+   * @returns
    */
   public static generateHighlightCommand(
     hlGroupName: string,
@@ -1882,8 +2007,8 @@ export class Core {
     return parts.join(" ");
   }
   /**
- * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
- * @returns 
+   * main.ts の validateHighlightConfig 関数の実装をCore.validateHighlightConfig静的メソッドとして移植   * @param config 検証する設定オブジェクト
+   * @returns
    */
   public static validateHighlightConfig(
     config: {
@@ -1907,9 +2032,9 @@ export class Core {
     return { valid: errors.length === 0, errors };
   }
   /**
- * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
- * @param key
- * @returns 
+   * main.ts の getMinLengthForKey 関数の実装をCore.getMinLengthForKey静的メソッドとして移植   * @param config プラグインの設定オブジェクト（Config または Config）
+   * @param key
+   * @returns
    */
   public static getMinLengthForKey(config: Config | Config, key: string): number {
     const unifiedConfig = config as EnhancedConfig;
@@ -1920,10 +2045,15 @@ export class Core {
       const perKeyValue = (unifiedConfig.perKeyMinLength as Record<string, number>)[key];
       if (perKeyValue !== undefined && perKeyValue > 0) return perKeyValue;
     }
-    if ("defaultMinWordLength" in unifiedConfig && typeof unifiedConfig.defaultMinWordLength === "number") {
+    if (
+      "defaultMinWordLength" in unifiedConfig &&
+      typeof unifiedConfig.defaultMinWordLength === "number"
+    ) {
       return unifiedConfig.defaultMinWordLength;
     }
-    if ("default_min_length" in unifiedConfig && typeof unifiedConfig.default_min_length === "number") {
+    if (
+      "default_min_length" in unifiedConfig && typeof unifiedConfig.default_min_length === "number"
+    ) {
       return unifiedConfig.default_min_length;
     }
     if ("min_length" in unifiedConfig && typeof unifiedConfig.min_length === "number") {
@@ -1935,9 +2065,9 @@ export class Core {
     return 3;
   }
   /**
- * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
- * @param config
- * @returns 
+   * main.ts の getMotionCountForKey 関数の実装をCore.getMotionCountForKey静的メソッドとして移植   * @param key 対象のキー文字（例: 'f', 't', 'w'など）
+   * @param config
+   * @returns
    */
   public static getMotionCountForKey(key: string, config: Config | Config): number {
     const unifiedConfig = config as Config;
@@ -2051,7 +2181,7 @@ export class Core {
    */
   updateConfigSafely(
     updates: Partial<Config>,
-    validator?: (config: Partial<Config>) => { valid: boolean; errors: string[] }
+    validator?: (config: Partial<Config>) => { valid: boolean; errors: string[] },
   ): void {
     if (validator) {
       const result = validator(updates);
@@ -2066,7 +2196,7 @@ export class Core {
    * @returns ロールバック関数を含むオブジェクト
    */
   updateConfigWithRollback(
-    updates: Partial<Config>
+    updates: Partial<Config>,
   ): { rollback: () => void } {
     const originalValues: Partial<Config> = {};
     for (const key in updates) {
@@ -2087,11 +2217,11 @@ export class Core {
    * @throws Error いずれかの更新関数でエラーが発生した場合
    */
   batchUpdateConfig(
-    updateFunctions: Array<(config: Config) => void>
+    updateFunctions: Array<(config: Config) => void>,
   ): void {
     const backup = { ...this.config };
     try {
-      updateFunctions.forEach(fn => fn(this.config));
+      updateFunctions.forEach((fn) => fn(this.config));
     } catch (error) {
       Object.assign(this.config, backup);
       throw error;
@@ -2102,14 +2232,17 @@ export class Core {
    * @param bufnr バッファ番号
    * @returns カウント結果（triggered: 閾値到達したか、count: 現在のカウント）
    */
-  async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
+  async incrementMotionCounter(
+    denops: Denops,
+    bufnr: number,
+  ): Promise<{ triggered: boolean; count: number }> {
     if (!this.config.motionCounterEnabled) {
       return { triggered: false, count: 0 };
     }
     const counter = this.motionManager.getCounter(
       bufnr,
       this.config.motionCounterThreshold,
-      this.config.motionCounterTimeout
+      this.config.motionCounterTimeout,
     );
     const triggered = counter.increment();
     const count = triggered ? 0 : counter.getCount(); // triggeredの時はリセットされるので0
@@ -2149,12 +2282,14 @@ export class Core {
   /*   * モーション設定を更新します
    * @param updates 更新する設定
    */
-  updateMotionConfig(updates: Partial<{
-    enabled: boolean;
-    threshold: number;
-    timeout: number;
-    showHintOnThreshold: boolean;
-  }>): void {
+  updateMotionConfig(
+    updates: Partial<{
+      enabled: boolean;
+      threshold: number;
+      timeout: number;
+      showHintOnThreshold: boolean;
+    }>,
+  ): void {
     if (updates.enabled !== undefined) {
       this.config.motionCounterEnabled = updates.enabled;
     }
@@ -2261,14 +2396,14 @@ export class Core {
   /*   * ヒント候補を検索
    */
   findMatchingHints(inputString: string, currentHints: HintMapping[]): HintMapping[] {
-    return currentHints.filter(hint =>
+    return currentHints.filter((hint) =>
       hint.hint && hint.hint.toLowerCase().startsWith(inputString.toLowerCase())
     );
   }
   /*   * 単文字マッチのヒントを検索
    */
   findExactMatch(inputString: string, currentHints: HintMapping[]): HintMapping | undefined {
-    return currentHints.find(hint =>
+    return currentHints.find((hint) =>
       hint.hint && hint.hint.toLowerCase() === inputString.toLowerCase()
     );
   }
@@ -2304,7 +2439,7 @@ export class Core {
 
       isValidInput(currentHints: HintMapping[]): boolean {
         if (inputBuffer.length === 0) return false;
-        return currentHints.some(hint =>
+        return currentHints.some((hint) =>
           hint.hint && hint.hint.toLowerCase().startsWith(inputBuffer.toLowerCase())
         );
       },
@@ -2432,7 +2567,7 @@ export class Core {
       hintsVisible: this.isActive,
       currentHints: this.currentHints,
       metrics: pluginState.performanceMetrics,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
   /*   * パフォーマンスログをクリアします
@@ -2452,18 +2587,18 @@ export class Core {
     this.isActive = true;
     this.currentHints = [
       {
-        word: { text: 'dummy', line: 1, col: 1 },
-        hint: 'a',
+        word: { text: "dummy", line: 1, col: 1 },
+        hint: "a",
         hintCol: 1,
-        hintByteCol: 1
-      }
+        hintByteCol: 1,
+      },
     ];
     const maybeMockDenops = denops as unknown;
     if (
-      typeof maybeMockDenops === 'object' &&
+      typeof maybeMockDenops === "object" &&
       maybeMockDenops !== null &&
-      'call' in maybeMockDenops &&
-      typeof (maybeMockDenops as { call?: unknown }).call === 'function'
+      "call" in maybeMockDenops &&
+      typeof (maybeMockDenops as { call?: unknown }).call === "function"
     ) {
       try {
         await ((maybeMockDenops as { call: () => Promise<void> }).call());
@@ -2496,7 +2631,7 @@ export class Core {
     if (core.detectWords) {
       const context: DetectionContext = {
         bufnr: params.bufnr || 0,
-        config: params.config
+        config: params.config,
       };
       const result = await core.detectWords(context);
       return result.words;
@@ -2508,7 +2643,9 @@ export class Core {
    * @returns Word detection function
    */
   static createDetectWordsOptimized(
-    mockDetector?: (params: { denops: Denops; bufnr?: number; config?: Partial<Config> }) => Promise<Word[]>
+    mockDetector?: (
+      params: { denops: Denops; bufnr?: number; config?: Partial<Config> },
+    ) => Promise<Word[]>,
   ) {
     return mockDetector || Core.detectWordsOptimized.bind(Core);
   }
@@ -2526,14 +2663,16 @@ export class Core {
       const words: Word[] = Array.from({ length: params.wordCount }, (_, i) => ({
         text: `word${i}`,
         line: 1,
-        col: i + 1
+        col: i + 1,
       }));
       const hints = core.generateHints(words);
-      return hints.map(h => h.hint || h.toString());
+      return hints.map((h) => h.hint || h.toString());
     }
-    const markers = typeof params.markers === 'string' ? params.markers :
-                   Array.isArray(params.markers) ? params.markers.join('') :
-                   'abcdefghijklmnopqrstuvwxyz';
+    const markers = typeof params.markers === "string"
+      ? params.markers
+      : Array.isArray(params.markers)
+      ? params.markers.join("")
+      : "abcdefghijklmnopqrstuvwxyz";
     const hints: string[] = [];
     for (let i = 0; i < params.wordCount && i < markers.length; i++) {
       hints.push(markers[i]);
@@ -2545,7 +2684,9 @@ export class Core {
    * @returns Hint generation function
    */
   static createGenerateHintsOptimized(
-    mockGenerator?: (params: { wordCount: number; markers?: string | string[]; config?: Partial<Config> }) => string[]
+    mockGenerator?: (
+      params: { wordCount: number; markers?: string | string[]; config?: Partial<Config> },
+    ) => string[],
   ) {
     return mockGenerator || Core.generateHintsOptimized.bind(Core);
   }
@@ -2566,7 +2707,7 @@ export class Core {
    */
   public static async showHints(
     denops: Denops,
-    config: { debounce?: number; force?: boolean; debounceDelay?: number } = {}
+    config: { debounce?: number; force?: boolean; debounceDelay?: number } = {},
   ): Promise<void> {
     const core = Core.getInstance();
     if (core.showHints) {
@@ -2637,8 +2778,7 @@ export class Core {
 export { validateHighlightGroupName };
 export { isValidColorName };
 export { isValidHexColor, validateHighlightColor };
-/**
- */
+/** */
 export class HellshakeYanoCore {
   /** プラグインの設定 */
   private config: Config;
@@ -2712,7 +2852,10 @@ export class HellshakeYanoCore {
     state.caches.words.clear();
     state.caches.hints.clear();
   }
-  async incrementMotionCounter(denops: Denops, bufnr: number): Promise<{ triggered: boolean; count: number }> {
+  async incrementMotionCounter(
+    denops: Denops,
+    bufnr: number,
+  ): Promise<{ triggered: boolean; count: number }> {
     const core = Core.getInstance();
     return core.incrementMotionCounter(denops, bufnr);
   }
@@ -2741,29 +2884,36 @@ export class HellshakeYanoCore {
   /*   * モーション設定を更新します
    * @param updates 更新する設定
    */
-  updateMotionConfig(updates: Partial<{
-    enabled: boolean;
-    threshold: number;
-    timeout: number;
-    showHintOnThreshold: boolean;
-  }>): void {
+  updateMotionConfig(
+    updates: Partial<{
+      enabled: boolean;
+      threshold: number;
+      timeout: number;
+      showHintOnThreshold: boolean;
+    }>,
+  ): void {
     const core = Core.getInstance();
     core.updateMotionConfig(updates);
   }
   /*   * Create a cache for display width calculations   * @param maxSize - Maximum number of entries in cache (default: 1000)
    * @returns LRUCache instance for caching display width calculations
    */
-  static async createDisplayWidthCache(maxSize = 1000): Promise<import("./cache.ts").LRUCache<string, number>> {
+  static async createDisplayWidthCache(
+    maxSize = 1000,
+  ): Promise<import("./cache.ts").LRUCache<string, number>> {
     const { LRUCache } = await import("./cache.ts");
     return new (LRUCache as any)(maxSize) as import("./cache.ts").LRUCache<string, number>;
   }
   /*   * 一般的な文字列のグローバルキャッシュ（遅延初期化）
    * 頻繁に計算される文字列の表示幅をキャッシュ
    */
-  private static _globalDisplayWidthCache: import("./cache.ts").LRUCache<string, number> | null = null;
+  private static _globalDisplayWidthCache: import("./cache.ts").LRUCache<string, number> | null =
+    null;
   /*   * グローバルキャッシュのゲッター（遅延初期化）
    */
-  private static async getGlobalDisplayWidthCache(): Promise<import("./cache.ts").LRUCache<string, number>> {
+  private static async getGlobalDisplayWidthCache(): Promise<
+    import("./cache.ts").LRUCache<string, number>
+  > {
     if (!this._globalDisplayWidthCache) {
       this._globalDisplayWidthCache = await this.createDisplayWidthCache(2000);
     }
@@ -2803,7 +2953,9 @@ export class HellshakeYanoCore {
       this._globalDisplayWidthCache.clear();
     }
     const { GlobalCache, CacheType } = await import("./cache.ts");
-    const CHAR_WIDTH_CACHE = (GlobalCache as any).getInstance().getCache(CacheType.CHAR_WIDTH) as Map<number, number>;
+    const CHAR_WIDTH_CACHE = (GlobalCache as any).getInstance().getCache(
+      CacheType.CHAR_WIDTH,
+    ) as Map<number, number>;
     CHAR_WIDTH_CACHE.clear();
     for (let i = 0x20; i <= 0x7E; i++) {
       CHAR_WIDTH_CACHE.set(i, 1);
@@ -2812,7 +2964,9 @@ export class HellshakeYanoCore {
   /* 性能監視用キャッシュ統計の取得   * 文字列キャッシュと文字キャッシュの統計情報を提供。 */
   static async getDisplayWidthCacheStats() {
     const { GlobalCache, CacheType } = await import("./cache.ts");
-    const CHAR_WIDTH_CACHE = (GlobalCache as any).getInstance().getCache(CacheType.CHAR_WIDTH) as Map<number, number>;
+    const CHAR_WIDTH_CACHE = (GlobalCache as any).getInstance().getCache(
+      CacheType.CHAR_WIDTH,
+    ) as Map<number, number>;
     const cache = await this.getGlobalDisplayWidthCache();
     return {
       stringCache: cache.getStats(),
@@ -2831,11 +2985,13 @@ export class HellshakeYanoCore {
         i++;
         continue;
       }
-      if (codePoint >= 0x1100 && (
-        this.isInCJKRange(codePoint) ||
-        this.isInEmojiRange(codePoint) ||
-        this.isInExtendedWideRange(codePoint)
-      )) {
+      if (
+        codePoint >= 0x1100 && (
+          this.isInCJKRange(codePoint) ||
+          this.isInEmojiRange(codePoint) ||
+          this.isInExtendedWideRange(codePoint)
+        )
+      ) {
         return true;
       }
       i += codePoint > 0xFFFF ? 2 : 1;
@@ -2869,7 +3025,7 @@ export class HellshakeYanoCore {
       (codePoint >= 0x3200 && codePoint <= 0x33FF) || // 囲みCJK文字・月 + CJK互換
       (codePoint >= 0x3400 && codePoint <= 0x4DBF) || // CJK拡張A
       (codePoint >= 0xAC00 && codePoint <= 0xD7AF) || // ハングル音節
-      (codePoint >= 0xF900 && codePoint <= 0xFAFF)    // CJK互換漢字
+      (codePoint >= 0xF900 && codePoint <= 0xFAFF) // CJK互換漢字
     );
   }
   /*   * 絵文字範囲の高速チェッカー
@@ -2893,7 +3049,7 @@ export class HellshakeYanoCore {
       (codePoint >= 0x1F000 && codePoint <= 0x1F0FF) || // 麻雀/ドミノ/トランプ
       (codePoint >= 0x1F100 && codePoint <= 0x1F2FF) || // 囲み英数字/表意文字補助
       (codePoint >= 0x1F700 && codePoint <= 0x1F9FF) || // 拡張絵文字範囲
-      (codePoint >= 0x1FA00 && codePoint <= 0x1FAFF)    // チェス記号 + 拡張絵記号
+      (codePoint >= 0x1FA00 && codePoint <= 0x1FAFF) // チェス記号 + 拡張絵記号
     );
   }
   /*   * 拡張全角文字範囲チェッカー（矢印、記号など）
@@ -2909,7 +3065,7 @@ export class HellshakeYanoCore {
       (codePoint >= 0x2600 && codePoint <= 0x26FF) || // その他の記号
       (codePoint >= 0x2700 && codePoint <= 0x27BF) || // 装飾記号
       (codePoint >= 0xFE10 && codePoint <= 0xFE1F) || // 縦書き形式
-      (codePoint >= 0xFE30 && codePoint <= 0xFE6F)    // CJK互換形式 + 小字形バリエーション
+      (codePoint >= 0xFE30 && codePoint <= 0xFE6F) // CJK互換形式 + 小字形バリエーション
     );
   }
   /*   * 幅が2であるべきLatin-1補助数学記号かチェック
@@ -2919,7 +3075,7 @@ export class HellshakeYanoCore {
   private static isLatinMathSymbol(codePoint: number): boolean {
     return (
       codePoint === 0x00D7 || // × (multiplication sign)
-      codePoint === 0x00F7    // ÷ (division sign)
+      codePoint === 0x00F7 // ÷ (division sign)
     );
   }
 }
@@ -2947,7 +3103,7 @@ export const {
   getCurrentHints,
 } = Core;
 export { CommandFactory, MotionCounter, MotionManager };
-export { getPluginState, updatePluginState, initializePlugin, cleanupPlugin, getPluginStatistics };
+export { cleanupPlugin, getPluginState, getPluginStatistics, initializePlugin, updatePluginState };
 function recordPerformanceMetric(operation: string, duration: number): void {
   const state = getPluginState();
   if (state.performanceMetrics[operation as keyof typeof state.performanceMetrics]) {

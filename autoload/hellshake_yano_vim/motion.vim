@@ -411,7 +411,7 @@ function! hellshake_yano_vim#motion#handle_with_count(motion_key, count) abort
     if l:should_trigger_hint
       " core#show() を呼び出してヒント表示
       " ブロッキング方式なので、ヒント入力が完了するまで制御は戻らない
-      call hellshake_yano_vim#core#show()
+      call hellshake_yano_vim#core#show_with_motion(a:motion_key)
     endif
 
     " 8. 現在時刻と現在モーションを記録
@@ -536,6 +536,14 @@ function! hellshake_yano_vim#motion#handle_visual_expr(motion_key) abort
   endif
 endfunction
 
+function! hellshake_yano_vim#motion#visual_schedule(motion_key) abort
+  call hellshake_yano_vim#motion#handle_visual_internal(a:motion_key)
+  if v:count1 > 1
+    return v:count1 . a:motion_key
+  endif
+  return a:motion_key
+endfunction
+
 " hellshake_yano_vim#motion#handle_visual_internal(motion_key) - Visual Modeモーション処理（内部実装）
 "
 " 目的:
@@ -643,7 +651,7 @@ function! hellshake_yano_vim#motion#handle_visual_internal(motion_key) abort
       "
       " 注意: visual#show()は現時点で選択範囲のフィルタリングを行っていないため、
       "       core#show()を直接呼び出す。これにより gv コマンドとマークの問題を回避。
-      call timer_start(0, {-> hellshake_yano_vim#core#show()})
+      call timer_start(0, function('hellshake_yano_vim#core#show_with_motion_timer'))
     endif
 
     " 8. 現在時刻と現在モーションを記録

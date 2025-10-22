@@ -3,6 +3,7 @@
 
 ## Active Specs
 - continuous-hint-recenter-loop: 連続ヒントモードでジャンプ後にカーソルを再センタリングし、ヒントを自動再表示する機能の設計開始
+- directional-hint-filter: j/kトリガー時にカーソル上下方向のみヒントを表示し設定で切替可能にする機能の設計開始
 - 連続ヒント機能追加: PLAN.md に基づき連続ヒントモードの要件を確定するフェーズ
 - 動作確認はneovimではなく、vimで行う
 - ヒントジャンプはブロッキング方式で行う
@@ -216,3 +217,14 @@ Denops側の実装を最大限活用し、Vim側はAPIエンドポイントに�
 2. ✅ ~~Process4 Sub2: word_detector.vim統合~~ （完了: 2025-10-21）
 3. ✅ ~~Process4 Sub3: コマンド統合（オプション）~~ （完了: 2025-10-21）
 4. ドキュメンテーションとリリース準備
+
+### 知見メモ: Vim と Neovim の timer 呼び出し差異
+- **背景**: 方向限定ヒント導入時、Visual モードで `timer_start()` にラムダ (`{-> ...}`) を渡して `hellshake_yano_vim#motion#handle_visual_internal()` を非同期実行していたところ、Vim で `E110: Missing ')'` が発生。Neovim では正常に動作。
+- **Neovim が動作した理由**: Neovim はデフォルトで `+lambda` をサポートし、Timer API でもラムダクロージャを安全に扱える。また、`denops` 経由の方向キー情報はグローバル状態に保持されており、タイマー呼び出しで渡した引数が不要でも破綻しなかった。
+- **Vim での問題点**:
+  - Vim の多くのビルドは `+lambda` を無効にコンパイルしており、`{-> ...}` 構文が `E110` になる。
+  - `timer_start()` は常に最初の引数にタイマー ID を渡すため、ラムダを使わずに `function('name', [arg])` を指定した場合でも、呼び出し側 (`hellshake_yano_vim#motion#handle_visual_internal`) にはタイマー ID が **第1引数** として届く。結果としてモーションキーの代わりに `1`, `2`, ... が渡り、`invalid motion key: 1` などのログが大量発生しヒント表示がブロックされた。
+- **最終対処**:
+  - Visual モードのマッピングでラムダを排除し、`hellshake_yano_vim#motion#visual_schedule()` から同期的に `handle_visual_internal()` を呼ぶ形に戻す。
+  - ヒント表示用タイマー (`hellshake_yano_vim#core#show_with_motion_timer`) はキー引数を受け取らず、直前に保持している `directional_last_motion_key` を使用するよう変更。
+- **教訓**: Vim 互換コードでは `+lambda` 依存を避け、Timer API には「タイマー ID が自動で第1引数に挿入される」ことを前提にコールバックの引数を設計する。

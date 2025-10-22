@@ -8,14 +8,24 @@ import type {
 import { DEFAULT_HINT_MARKERS } from "../../types.ts";
 import type { Config } from "../../types.ts";
 import { HintGeneratorFactory } from "./hint/hint-generator-strategies.ts";
-import { CacheType, GlobalCache, type CacheStatistics } from "../../cache.ts";
+import { type CacheStatistics, CacheType, GlobalCache } from "../../cache.ts";
 import { Core } from "./core.ts";
-import { isAlphanumeric, isValidSymbol, isWhitespace, isControlCharacter, isDigit } from "../../validation-utils.ts";
+import {
+  isAlphanumeric,
+  isControlCharacter,
+  isDigit,
+  isValidSymbol,
+  isWhitespace,
+} from "../../validation-utils.ts";
 export type { HintKeyConfig, HintMapping, HintPosition };
 const globalCache = GlobalCache.getInstance();
 const hintCache = globalCache.getCache<string, string[]>(CacheType.HINTS);
-const assignmentCacheNormal = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_NORMAL);
-const assignmentCacheVisual = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_VISUAL);
+const assignmentCacheNormal = globalCache.getCache<string, Word[]>(
+  CacheType.HINT_ASSIGNMENT_NORMAL,
+);
+const assignmentCacheVisual = globalCache.getCache<string, Word[]>(
+  CacheType.HINT_ASSIGNMENT_VISUAL,
+);
 const assignmentCacheOther = globalCache.getCache<string, Word[]>(CacheType.HINT_ASSIGNMENT_OTHER);
 const CHAR_WIDTH_CACHE = globalCache.getCache<number, number>(CacheType.CHAR_WIDTH);
 for (let i = 0x20; i <= 0x7E; i++) CHAR_WIDTH_CACHE.set(i, 1);
@@ -23,7 +33,12 @@ function charWidth(cp: number, tw: number): number {
   if (cp === 9) return tw;
   if (cp >= 0x20 && cp <= 0x7E) return 1;
   if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) return 0;
-  if ((cp >= 0xB0 && cp <= 0xF7) || (cp >= 0x2000 && cp <= 0x2EFF) || (cp >= 0x3000 && cp <= 0x9FFF) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFFEF) || (cp >= 0x1F000 && cp <= 0x1F9FF) || (cp >= 0x20000 && cp <= 0x2EBEF)) return 2;
+  if (
+    (cp >= 0xB0 && cp <= 0xF7) || (cp >= 0x2000 && cp <= 0x2EFF) ||
+    (cp >= 0x3000 && cp <= 0x9FFF) || (cp >= 0xF900 && cp <= 0xFAFF) ||
+    (cp >= 0xFF00 && cp <= 0xFFEF) || (cp >= 0x1F000 && cp <= 0x1F9FF) ||
+    (cp >= 0x20000 && cp <= 0x2EBEF)
+  ) return 2;
   return 1;
 }
 export function getCharDisplayWidth(char: string, tabWidth = 8): number {
@@ -40,7 +55,10 @@ export function getDisplayWidth(text: string, tabWidth = 8): number {
   let total = 0;
   for (let i = 0; i < text.length;) {
     const cp = text.codePointAt(i);
-    if (cp === undefined) { i++; continue; }
+    if (cp === undefined) {
+      i++;
+      continue;
+    }
     total += charWidth(cp, tabWidth);
     i += cp > 0xFFFF ? 2 : 1;
   }
@@ -67,8 +85,47 @@ export function areWordsAdjacent(word1: Word, word2: Word, tabWidth = 8): boolea
   const d = word1.col < word2.col ? word2.col - e1 - 1 : word1.col - e2 - 1;
   return d <= 0;
 }
+
+export type DirectionalContext = "up" | "down" | "none";
+
+export function filterWordsByDirection(
+  words: Word[],
+  cursor: { line: number; col: number },
+  context: DirectionalContext,
+): Word[] {
+  if (context === "none") {
+    return words;
+  }
+  return words.filter((word) => {
+    if (context === "down") {
+      if (word.line > cursor.line) return true;
+      if (word.line === cursor.line) return word.col > cursor.col;
+      return false;
+    }
+    if (word.line < cursor.line) return true;
+    if (word.line === cursor.line) return word.col < cursor.col;
+    return false;
+  });
+}
+
+export function resolveDirectionalContext(
+  key: string | undefined,
+  enabled: boolean,
+): DirectionalContext {
+  if (!enabled || !key) {
+    return "none";
+  }
+  const normalized = key.toLowerCase();
+  if (normalized === "j") return "down";
+  if (normalized === "k") return "up";
+  return "none";
+}
 function getAssignmentCacheForMode(mode: string) {
-  return mode === "visual" ? assignmentCacheVisual : mode === "normal" ? assignmentCacheNormal : assignmentCacheOther;
+  return mode === "visual"
+    ? assignmentCacheVisual
+    : mode === "normal"
+    ? assignmentCacheNormal
+    : assignmentCacheOther;
 }
 function createAssignmentCacheKey(
   words: Word[],
@@ -104,9 +161,24 @@ function createSingleHintMapping(word: Word, hint: string, pos: string): HintMap
       }
     }
   };
-  return { word, hint, get hintCol() { c(); return hc ?? word.col; }, get hintByteCol() { c(); return hbc ?? (word.byteCol ?? word.col); } };
+  return {
+    word,
+    hint,
+    get hintCol() {
+      c();
+      return hc ?? word.col;
+    },
+    get hintByteCol() {
+      c();
+      return hbc ?? (word.byteCol ?? word.col);
+    },
+  };
 }
-function storeAssignmentCache(cache: ReturnType<typeof globalCache.getCache>, cacheKey: string, sortedWords: Word[]): void {
+function storeAssignmentCache(
+  cache: ReturnType<typeof globalCache.getCache>,
+  cacheKey: string,
+  sortedWords: Word[],
+): void {
   cache.set(cacheKey, sortedWords.slice());
 }
 export interface GenerateHintsOptions {
@@ -135,7 +207,7 @@ export function generateHints(wordCount: number, markers?: string[], maxHints?: 
 export function generateHints(
   wordCount: number,
   optionsOrMarkers?: GenerateHintsOptions | string[],
-  maxHints?: number
+  maxHints?: number,
 ): string[] {
   let options: GenerateHintsOptions;
   if (Array.isArray(optionsOrMarkers)) {
@@ -194,7 +266,8 @@ export function assignHintsToWords(
         return hint;
       };
       cachedWords.forEach((word) => {
-        const useBothHints = bothMinWordLength === undefined || word.text.length >= bothMinWordLength;
+        const useBothHints = bothMinWordLength === undefined ||
+          word.text.length >= bothMinWordLength;
         if (useBothHints) {
           const startHint = nextHint();
           if (startHint) mappings.push(createSingleHintMapping(word, startHint, "start"));
@@ -207,7 +280,9 @@ export function assignHintsToWords(
       });
       return mappings;
     }
-    return cachedWords.map((word, i) => createSingleHintMapping(word, hints[i] || "", hintPositionSetting));
+    return cachedWords.map((word, i) =>
+      createSingleHintMapping(word, hints[i] || "", hintPositionSetting)
+    );
   }
   let filteredWords = words;
   const shouldSkipOverlapDetection = optimizationConfig?.skipOverlapDetection ?? false;
@@ -226,7 +301,7 @@ export function assignHintsToWords(
   const sortedWords = sortWordsByDistanceOptimized(filteredWords, cursorLine, cursorCol);
 
   // カーソル位置の単語を除外（カーソル位置にAヒントを作成しても入力することはまずありえないため）
-  const wordsExcludingCursor = sortedWords.filter(word =>
+  const wordsExcludingCursor = sortedWords.filter((word) =>
     !(word.line === cursorLine && isPositionWithinWord(cursorCol, word))
   );
 
@@ -251,19 +326,30 @@ export function assignHintsToWords(
       }
     });
   } else {
-    wordsExcludingCursor.forEach((word, i) => mappings.push(createSingleHintMapping(word, hints[i] || "", hintPositionSetting)));
+    wordsExcludingCursor.forEach((word, i) =>
+      mappings.push(createSingleHintMapping(word, hints[i] || "", hintPositionSetting))
+    );
   }
   storeAssignmentCache(assignmentCache, cacheKey, wordsExcludingCursor);
   return mappings;
 }
-function sortWordsByDistanceOptimized(words: Word[], cursorLine: number, cursorCol: number): Word[] {
-  return words.map(word => ({
+function sortWordsByDistanceOptimized(
+  words: Word[],
+  cursorLine: number,
+  cursorCol: number,
+): Word[] {
+  return words.map((word) => ({
     word,
-    distance: Math.abs(word.line - cursorLine) * 1000 + Math.abs(word.col - cursorCol)
+    distance: Math.abs(word.line - cursorLine) * 1000 + Math.abs(word.col - cursorCol),
   }))
-  .sort((a, b) => a.distance !== b.distance ? a.distance - b.distance :
-    a.word.line !== b.word.line ? a.word.line - b.word.line : a.word.col - b.word.col)
-  .map(item => item.word);
+    .sort((a, b) =>
+      a.distance !== b.distance
+        ? a.distance - b.distance
+        : a.word.line !== b.word.line
+        ? a.word.line - b.word.line
+        : a.word.col - b.word.col
+    )
+    .map((item) => item.word);
 }
 export function clearHintCache(): void {
   hintCache.clear();
@@ -289,10 +375,10 @@ interface HintCacheStatistics {
 export function getGlobalCacheStats(): HintCacheStatistics {
   const allStats = globalCache.getAllStats();
   const hintRelatedTypes = [
-    'HINTS',
-    'HINT_ASSIGNMENT_NORMAL',
-    'HINT_ASSIGNMENT_VISUAL',
-    'HINT_ASSIGNMENT_OTHER'
+    "HINTS",
+    "HINT_ASSIGNMENT_NORMAL",
+    "HINT_ASSIGNMENT_VISUAL",
+    "HINT_ASSIGNMENT_OTHER",
   ];
   const hintStats: Record<string, CacheStatistics> = {};
   let totalSize = 0;
@@ -312,31 +398,48 @@ export function getGlobalCacheStats(): HintCacheStatistics {
     totalSize,
     totalHits,
     totalMisses,
-    overallHitRate: totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0
+    overallHitRate: totalHits + totalMisses > 0 ? totalHits / (totalHits + totalMisses) : 0,
   };
 }
 export interface CalculateHintPositionOptions {
   hintPosition?: string;
-  coordinateSystem?: 'vim' | 'nvim';
-  displayMode?: 'before' | 'after' | 'overlay';
+  coordinateSystem?: "vim" | "nvim";
+  displayMode?: "before" | "after" | "overlay";
   enableDebug?: boolean;
   tabWidth?: number;
 }
-export function calculateHintPosition(word: Word, hintPositionOrOptions?: string | CalculateHintPositionOptions): HintPosition | HintPositionWithCoordinateSystem {
-  const opts: CalculateHintPositionOptions = typeof hintPositionOrOptions === 'string' ? { hintPosition: hintPositionOrOptions } : (hintPositionOrOptions || {});
-  const pos = opts.hintPosition || 'start';
+export function calculateHintPosition(
+  word: Word,
+  hintPositionOrOptions?: string | CalculateHintPositionOptions,
+): HintPosition | HintPositionWithCoordinateSystem {
+  const opts: CalculateHintPositionOptions = typeof hintPositionOrOptions === "string"
+    ? { hintPosition: hintPositionOrOptions }
+    : (hintPositionOrOptions || {});
+  const pos = opts.hintPosition || "start";
   const tw = opts.tabWidth || 8;
-  const isEnd = pos === 'end';
+  const isEnd = pos === "end";
   const col = isEnd ? getWordDisplayEndCol(word, tw) : word.col;
-  const byteCol = isEnd && word.byteCol ? word.byteCol + getByteLength(word.text) - 1 : word.byteCol || word.col;
-  const dm = opts.displayMode || (isEnd ? 'after' : pos === 'overlay' ? 'overlay' : 'before');
-  return opts.coordinateSystem ? { line: word.line, col, display_mode: dm, vim_col: col, nvim_col: Math.max(0, byteCol - 1), vim_line: word.line, nvim_line: word.line - 1 } : { line: word.line, col, display_mode: dm };
+  const byteCol = isEnd && word.byteCol
+    ? word.byteCol + getByteLength(word.text) - 1
+    : word.byteCol || word.col;
+  const dm = opts.displayMode || (isEnd ? "after" : pos === "overlay" ? "overlay" : "before");
+  return opts.coordinateSystem
+    ? {
+      line: word.line,
+      col,
+      display_mode: dm,
+      vim_col: col,
+      nvim_col: Math.max(0, byteCol - 1),
+      vim_line: word.line,
+      nvim_line: word.line - 1,
+    }
+    : { line: word.line, col, display_mode: dm };
 }
 export function isNumericOnlyKeys(keys: string[]): boolean {
   if (!Array.isArray(keys) || keys.length === 0) {
     return false;
   }
-  return keys.every(key => key.length === 1 && key >= "0" && key <= "9");
+  return keys.every((key) => key.length === 1 && key >= "0" && key <= "9");
 }
 export function generateMultiCharHintsFromKeys(
   keys: string[],
@@ -348,7 +451,6 @@ export function generateMultiCharHintsFromKeys(
     return hints;
   }
   if (isNumericOnlyKeys(keys)) {
-
     for (let i = 1; i <= 9 && hints.length < count; i++) {
       hints.push(String(i).padStart(2, "0"));
     }
@@ -413,14 +515,20 @@ function validateCharacterValidity(keys: string[]): string[] {
   }
 
   if (whitespaceChars.length > 0) {
-    errors.push(`singleCharKeys cannot contain whitespace characters: ${JSON.stringify(whitespaceChars)}`);
+    errors.push(
+      `singleCharKeys cannot contain whitespace characters: ${JSON.stringify(whitespaceChars)}`,
+    );
   }
   if (controlChars.length > 0) {
-    errors.push(`singleCharKeys cannot contain control characters: ${JSON.stringify(controlChars)}`);
+    errors.push(
+      `singleCharKeys cannot contain control characters: ${JSON.stringify(controlChars)}`,
+    );
   }
   if (invalidChars.length > 0) {
     errors.push(
-      `singleCharKeys contains invalid characters: ${invalidChars.join(", ")} (allowed: a-z, A-Z, 0-9, ${VALID_SYMBOLS.join(" ")})`
+      `singleCharKeys contains invalid characters: ${
+        invalidChars.join(", ")
+      } (allowed: a-z, A-Z, 0-9, ${VALID_SYMBOLS.join(" ")})`,
     );
   }
   return errors;
@@ -434,7 +542,9 @@ function validateNumericOnlyMode(config: HintKeyConfig): string[] {
     if (!isAllDigits) {
       const nonDigits = config.multiCharKeys.filter((k) => !isDigit(k));
       errors.push(
-        `numericOnlyMultiChar is true but multiCharKeys contains non-digit characters: ${nonDigits.join(", ")}`
+        `numericOnlyMultiChar is true but multiCharKeys contains non-digit characters: ${
+          nonDigits.join(", ")
+        }`,
       );
     }
   }
@@ -448,7 +558,9 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
   if (config.singleCharKeys) {
     const invalidLength = config.singleCharKeys.filter((k) => k.length !== 1);
     if (invalidLength.length > 0) {
-      errors.push(`Invalid single char keys (must be single character): ${invalidLength.join(", ")}`);
+      errors.push(
+        `Invalid single char keys (must be single character): ${invalidLength.join(", ")}`,
+      );
     }
     if (config.singleCharKeys.some((k) => k.length === 0)) {
       errors.push("singleCharKeys cannot contain empty strings");
@@ -487,7 +599,10 @@ export function validateHintKeyConfig(config: HintKeyConfig): {
     errors,
   };
 }
-let adjacencyCache = GlobalCache.getInstance().getCache<string, { word: Word; adjacentWords: Word[] }[]>(CacheType.ADJACENCY);
+let adjacencyCache = GlobalCache.getInstance().getCache<
+  string,
+  { word: Word; adjacentWords: Word[] }[]
+>(CacheType.ADJACENCY);
 
 export function detectAdjacentWords(words: Word[]): { word: Word; adjacentWords: Word[] }[] {
   if (words.length === 0) {
@@ -525,17 +640,32 @@ export function isSymbolWord(word: Word): boolean {
 
   return symbolPattern.test(word.text);
 }
-export function shouldSkipHintForOverlap(word: Word, adjacentWords: Word[], priorityRules: { symbolsPriority: number; wordsPriority: number }): boolean {
+export function shouldSkipHintForOverlap(
+  word: Word,
+  adjacentWords: Word[],
+  priorityRules: { symbolsPriority: number; wordsPriority: number },
+): boolean {
   if (!adjacentWords.length) return false;
   const isSym = isSymbolWord(word);
   for (const adj of adjacentWords) {
     const isAdjSym = isSymbolWord(adj);
-    if (isSym && !isAdjSym && priorityRules.symbolsPriority < priorityRules.wordsPriority) return true;
-    if (isSym === isAdjSym && (word.text.length < adj.text.length || (word.text.length === adj.text.length && word.col < adj.col))) return true;
+    if (isSym && !isAdjSym && priorityRules.symbolsPriority < priorityRules.wordsPriority) {
+      return true;
+    }
+    if (
+      isSym === isAdjSym &&
+      (word.text.length < adj.text.length ||
+        (word.text.length === adj.text.length && word.col < adj.col))
+    ) return true;
   }
   return false;
 }
-export function canDisplayHint(word: Word, adjacentWords: Word[], minHintWidth = 2, tabWidth = 8): boolean {
+export function canDisplayHint(
+  word: Word,
+  adjacentWords: Word[],
+  minHintWidth = 2,
+  tabWidth = 8,
+): boolean {
   if (!adjacentWords.length) return true;
   const cw = getDisplayWidth(word.text, tabWidth);
   const ce = word.col + cw - 1;
@@ -548,14 +678,17 @@ export function canDisplayHint(word: Word, adjacentWords: Word[], minHintWidth =
   }
   return true;
 }
-export function prioritizeHints(words: { word: Word; adjacentWords: Word[] }[], tabWidth = 8): Word[] {
+export function prioritizeHints(
+  words: { word: Word; adjacentWords: Word[] }[],
+  tabWidth = 8,
+): Word[] {
   const processed = new Set<Word>();
   return words.filter(({ word, adjacentWords }) => {
     if (processed.has(word)) return false;
     const canDisplay = canDisplayHint(word, adjacentWords, 2, tabWidth);
     if (canDisplay) processed.add(word);
     return canDisplay;
-  }).map(w => w.word);
+  }).map((w) => w.word);
 }
 export function getWordDisplayStartCol(word: Word, tabWidth = 8): number {
   return word.col;
@@ -581,10 +714,23 @@ export function calculateWordGap(word1: Word, word2: Word, tabWidth = 8): number
 export class HintManager {
   private config: Config;
   private currentKeyContext?: string;
-  constructor(config: Config) { this.config = config; this.currentKeyContext = config.currentKeyContext; }
-  onKeyPress(key: string): void { if (this.currentKeyContext !== key) this.clearCurrentHints(); this.currentKeyContext = key; this.config.currentKeyContext = key; }
-  getMinLengthForKey(key: string): number { return Core.getMinLengthForKey(this.config, key); }
+  constructor(config: Config) {
+    this.config = config;
+    this.currentKeyContext = config.currentKeyContext;
+  }
+  onKeyPress(key: string): void {
+    if (this.currentKeyContext !== key) this.clearCurrentHints();
+    this.currentKeyContext = key;
+    this.config.currentKeyContext = key;
+  }
+  getMinLengthForKey(key: string): number {
+    return Core.getMinLengthForKey(this.config, key);
+  }
   clearCurrentHints(): void {}
-  getCurrentKeyContext(): string | undefined { return this.currentKeyContext; }
-  getConfig(): Readonly<Config> { return this.config; }
+  getCurrentKeyContext(): string | undefined {
+    return this.currentKeyContext;
+  }
+  getConfig(): Readonly<Config> {
+    return this.config;
+  }
 }

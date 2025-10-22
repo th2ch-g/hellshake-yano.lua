@@ -358,6 +358,7 @@ The plugin can be configured using the `g:hellshake_yano` dictionary variable. A
 | `multiCharKeys`                 | array       | BCEIOPQRTUVWXYZ | Keys used for multi-character hints                            |
 | `useHintGroups`                 | boolean     | v:true          | Enable hint group functionality                                |
 | `useNumbers`                    | boolean     | v:true          | Allow number keys in hints                                     |
+| `directionalHintFilter`         | boolean     | v:false         | Limit hints to the cursor direction when pressing `j` / `k`    |
 | `useNumericMultiCharHints`      | boolean     | v:false         | Enable 2-digit numeric hints (01-99, 00)                       |
 | `maxSingleCharHints`            | number      | -               | Optional: Limit single-character hints                         |
 | `useJapanese`                   | boolean     | v:true          | Enable Japanese word detection                                 |
@@ -412,6 +413,13 @@ let g:hellshake_yano = {
       \ 'segmenterThreshold': 4,
       \ 'japaneseMergeThreshold': 4,
       \ }
+```
+
+**Enable directional hints for `j` / `k`:**
+```vim
+let g:hellshake_yano.directional_hint_filter = v:true
+" CamelCase alternative:
+let g:hellshake_yano.directionalHintFilter = v:true
 ```
 
 **Optimal for Japanese development:**
@@ -961,4 +969,3 @@ Pull requests and issue reports are welcome.
 ## Author
 
 nekowasabi
-

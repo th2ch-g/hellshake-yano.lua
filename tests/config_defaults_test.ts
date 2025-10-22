@@ -6,12 +6,12 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
-  getDefaultConfig as getDefaultConfigFunction,
-  getDefaultConfig,
+  type Config,
+  type Config as ConfigType,
   createMinimalConfig,
   DEFAULT_CONFIG,
-  type Config as ConfigType,
-  type Config
+  getDefaultConfig,
+  getDefaultConfig as getDefaultConfigFunction,
 } from "../denops/hellshake-yano/config.ts";
 
 describe("Process2 Sub4: Default Value Management Unification", () => {
@@ -40,6 +40,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(config.highlightSelected);
       assertExists(config.debugCoordinates);
       assertExists(config.singleCharKeys);
+      assertExists(config.directionalHintFilter);
 
       // Extended hint settings (4 properties)
       assertExists(config.multiCharKeys);
@@ -74,6 +75,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertEquals(config.motionCount, DEFAULT_CONFIG.motionCount);
       assertEquals(config.hintPosition, DEFAULT_CONFIG.hintPosition);
       assertEquals(config.useNumbers, DEFAULT_CONFIG.useNumbers);
+      assertEquals(config.directionalHintFilter, DEFAULT_CONFIG.directionalHintFilter);
       assertEquals(config.continuousHintMode, DEFAULT_CONFIG.continuousHintMode);
       assertEquals(config.recenterCommand, DEFAULT_CONFIG.recenterCommand);
       assertEquals(config.maxContinuousJumps, DEFAULT_CONFIG.maxContinuousJumps);
@@ -92,6 +94,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertEquals(oldConfig.hintPosition, newConfig.hintPosition);
       assertEquals(oldConfig.useNumbers, newConfig.useNumbers);
       assertEquals(oldConfig.highlightSelected, newConfig.highlightSelected);
+      assertEquals(oldConfig.directionalHintFilter, newConfig.directionalHintFilter);
     });
   });
 
@@ -103,12 +106,13 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       const minimal = createMinimalConfig({
         motionCount: 5,
         hintPosition: "end" as const,
-        useNumbers: false
+        useNumbers: false,
       });
 
       assertEquals(minimal.motionCount, 5);
       assertEquals(minimal.hintPosition, "end");
       assertEquals(minimal.useNumbers, false);
+      assertEquals(minimal.directionalHintFilter, false);
       assertEquals(minimal.continuousHintMode, false);
       assertEquals(minimal.recenterCommand, "normal! zz");
       assertEquals(minimal.maxContinuousJumps, 50);
@@ -122,6 +126,7 @@ describe("Process2 Sub4: Default Value Management Unification", () => {
       assertExists(minimal.motionCount);
       assertExists(minimal.hintPosition);
       assertExists(minimal.useNumbers);
+      assertExists(minimal.directionalHintFilter);
     });
   });
 

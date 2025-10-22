@@ -94,6 +94,15 @@ if !has_key(g:hellshake_yano, 'default_motion_count')
   let g:hellshake_yano.default_motion_count = 3
 endif
 
+if !has_key(g:hellshake_yano, 'directional_hint_filter') && !has_key(g:hellshake_yano, 'directionalHintFilter')
+  let g:hellshake_yano.directional_hint_filter = v:false
+endif
+if has_key(g:hellshake_yano, 'directionalHintFilter')
+  let g:hellshake_yano.directional_hint_filter = g:hellshake_yano.directionalHintFilter ? v:true : v:false
+elseif has_key(g:hellshake_yano, 'directional_hint_filter')
+  let g:hellshake_yano.directionalHintFilter = g:hellshake_yano.directional_hint_filter ? v:true : v:false
+endif
+
 " bothMinWordLength 設定（camelCase / snake_case 両対応）
 if !has_key(g:hellshake_yano, 'bothMinWordLength') && has_key(g:hellshake_yano, 'both_min_word_length')
   let g:hellshake_yano.bothMinWordLength = g:hellshake_yano.both_min_word_length
@@ -199,6 +208,30 @@ function! s:validate_config() abort
       unlet g:hellshake_yano.default_motion_count
     endif
   endif
+
+  " directional hint filter の検証と正規化
+  if has_key(g:hellshake_yano, 'directionalHintFilter')
+    let g:hellshake_yano.directional_hint_filter = g:hellshake_yano.directionalHintFilter ? v:true : v:false
+  endif
+
+  if has_key(g:hellshake_yano, 'directional_hint_filter')
+    let l:raw_directional = g:hellshake_yano.directional_hint_filter
+    if type(l:raw_directional) == v:t_string
+      let l:lower = tolower(l:raw_directional)
+      if l:lower !=# 'true' && l:lower !=# 'false' && l:lower !=# '1' && l:lower !=# '0'
+        echohl WarningMsg
+        echom '[hellshake-yano] Warning: directional_hint_filter must be boolean-like (true/false/1/0)'
+        echohl None
+        let l:raw_directional = v:false
+      else
+        let l:raw_directional = (l:lower ==# 'true' || l:lower ==# '1') ? v:true : v:false
+      endif
+    elseif type(l:raw_directional) != v:t_number
+      let l:raw_directional = l:raw_directional ? v:true : v:false
+    endif
+    let g:hellshake_yano.directional_hint_filter = l:raw_directional ? v:true : v:false
+  endif
+  let g:hellshake_yano.directionalHintFilter = get(g:hellshake_yano, 'directional_hint_filter', v:false)
 
   " both_min_word_length / bothMinWordLength の検証
   if has_key(g:hellshake_yano, 'both_min_word_length') && !has_key(g:hellshake_yano, 'bothMinWordLength')

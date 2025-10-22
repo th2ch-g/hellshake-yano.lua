@@ -162,6 +162,57 @@ endfunction
 " 注意事項:
 "   - Phase A-3: 画面内の単語を自動検出してヒントを表示
 "   - 最大49個の単語にヒント（a-l, aa-ll）を表示
+if !exists('g:hellshake_yano_debug_directional')
+  let g:hellshake_yano_debug_directional = 0
+endif
+
+function s:directional_log(msg) abort
+  if get(g:, 'hellshake_yano_debug_directional', 0)
+    echom '[hellshake directional] ' . a:msg
+  endif
+endfunction
+
+function s:ensure_internal_state() abort
+  if !exists('g:hellshake_yano_internal') || type(g:hellshake_yano_internal) != v:t_dict
+    let g:hellshake_yano_internal = {}
+  endif
+endfunction
+
+function s:consume_directional_context() abort
+  call s:ensure_internal_state()
+  let l:config = get(g:, 'hellshake_yano', {})
+  let l:flag = get(l:config, 'directionalHintFilter', get(l:config, 'directional_hint_filter', 0))
+  if !l:flag
+    let g:hellshake_yano_internal.directional_last_motion_key = ''
+    return 'none'
+  endif
+  let l:key = get(g:hellshake_yano_internal, 'directional_last_motion_key', '')
+  let g:hellshake_yano_internal.directional_last_motion_key = ''
+  if empty(l:key)
+    return 'none'
+  endif
+  let l:lower = tolower(l:key)
+  if l:lower ==# 'j'
+    return 'down'
+  endif
+  if l:lower ==# 'k'
+    return 'up'
+  endif
+  return 'none'
+endfunction
+
+function! hellshake_yano_vim#core#show_with_motion(motion_key) abort
+  call s:ensure_internal_state()
+  let g:hellshake_yano_internal.directional_last_motion_key = a:motion_key
+  call s:directional_log('show_with_motion queued key=' . a:motion_key)
+  return hellshake_yano_vim#core#show()
+endfunction
+
+function! hellshake_yano_vim#core#show_with_motion_timer(timer) abort
+  call s:directional_log('timer fired (key already queued)')
+  return hellshake_yano_vim#core#show()
+endfunction
+
 function! hellshake_yano_vim#core#show() abort
   " 1. 画面内の単語を検出
   let l:detected_words = hellshake_yano_vim#word_detector#detect_visible()
@@ -219,6 +270,18 @@ function! hellshake_yano_vim#core#show() abort
   if empty(l:positions)
     call s:show_warning('no positions found')
     return
+  endif
+
+  let l:direction = s:consume_directional_context()
+  call s:directional_log('consume_direction=' . l:direction . ' total_words=' . len(l:positions))
+  if l:direction !=# 'none'
+    let l:cursor = {'lnum': line('.'), 'col': col('.')}
+    let l:positions = hellshake_yano_vim#filter#by_direction(l:positions, l:cursor, l:direction)
+    call s:directional_log('filtered_words=' . len(l:positions) . ' cursor=' . l:cursor.lnum . ':' . l:cursor.col)
+    if empty(l:positions)
+      call s:directional_log('filtered result empty -> abort')
+      return
+    endif
   endif
 
   " 2. ヒント生成

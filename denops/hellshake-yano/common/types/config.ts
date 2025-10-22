@@ -40,6 +40,7 @@ export type WordDetectionStrategy = "regex" | "tinysegmenter" | "hybrid";
  * @property maxHints - 最大ヒント数
  * @property debounceDelay - デバウンス遅延（ミリ秒）
  * @property useNumbers - 数字をヒントに使用するか
+ * @property directionalHintFilter - `j`/`k`で方向限定ヒントを適用するか
  * @property highlightSelected - 選択されたヒントをハイライトするか
  * @property debugCoordinates - 座標デバッグモード
  * @property singleCharKeys - 1文字ヒントに使用するキー
@@ -86,6 +87,7 @@ export interface Config {
   maxHints: number;
   debounceDelay: number;
   useNumbers: boolean;
+  directionalHintFilter: boolean;
   highlightSelected: boolean;
   debugCoordinates: boolean;
   singleCharKeys: string[];
@@ -138,6 +140,7 @@ export const DEFAULT_CONFIG: Config = {
   maxHints: 336,
   debounceDelay: 50,
   useNumbers: false,
+  directionalHintFilter: false,
   highlightSelected: false,
   debugCoordinates: false,
   singleCharKeys: [
