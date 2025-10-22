@@ -521,26 +521,16 @@ endfunction
 "   - plugin/でtimer_start()を使った直接実装により解決
 "
 function! hellshake_yano_vim#motion#handle_visual_expr(motion_key) abort
-  " Phase D-7 Process3 Sub2: カウント値を取得
-  let l:count = v:count1
-
   " モーション検出処理を実行（非同期的に）
   call hellshake_yano_vim#motion#handle_visual_internal(a:motion_key)
 
-  " Phase D-7 Process3 Sub2: カウント付きモーションキーを返すことでVisual modeの選択範囲が拡張される
-  " v:count1が1の場合はモーションキーのみ、2以上の場合はカウント付きで返す
-  if l:count > 1
-    return l:count . a:motion_key
-  else
-    return a:motion_key
-  endif
+  " v:count1 はユーザー入力時点で既に適用されるためキーのみ返す
+  return a:motion_key
 endfunction
 
 function! hellshake_yano_vim#motion#visual_schedule(motion_key) abort
   call hellshake_yano_vim#motion#handle_visual_internal(a:motion_key)
-  if v:count1 > 1
-    return v:count1 . a:motion_key
-  endif
+  " カウントはVim側が再利用するので追加入力を返さない
   return a:motion_key
 endfunction
 
