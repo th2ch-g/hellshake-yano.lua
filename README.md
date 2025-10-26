@@ -22,17 +22,11 @@ It fully supports UTF-8 encoding and properly handles Japanese characters, makin
 ### Requirements
 - Neovim
 
-### Using vim-plug
-
-```vim
-Plug 'nekowasabi/hellshake-yano.vim'
-```
-
 ### Using lazy.nvim
 
 ```lua
 {
-  'nekowasabi/hellshake-yano.vim',
+  'th2ch-g/hellshake-yano.lua',
   config = function()
     -- Configuration here
   end
