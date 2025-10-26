@@ -8,24 +8,6 @@ hellshake-yano.vim is a Neovim/Vim plugin that enables seamless cursor movement 
 
 It fully supports UTF-8 encoding and properly handles Japanese characters, making word-based navigation in Japanese text as smooth as in English.
 
-### Implementation
-
-This plugin currently ships with one implementation:
-
-- **Denops Edition** (Neovim + Denops): Full-featured TypeScript implementation
-
-### Demo
-
-**Cursor move**
-
-![move-hint](https://github.com/nekowasabi/gif/blob/master/hellshake-yano/move-hint.gif?raw=true)
-
-**Visual select**
-
-![visual-hint](https://github.com/nekowasabi/gif/blob/master/hellshake-yano/visual-hint.gif?raw=true)
-
-
-
 ## Features
 
 - **Seamless Cursor Movement**: Navigate between words with standard vim motions (h, j, k, l, w, b, e)
@@ -36,6 +18,9 @@ This plugin currently ships with one implementation:
 - **Continuous Hint Loop**: Optional mode that recenters the cursor and redraws hints automatically after each jump
 
 ## Installation
+
+### Requirements
+- Neovim
 
 ### Using vim-plug
 
@@ -48,37 +33,6 @@ Plug 'nekowasabi/hellshake-yano.vim'
 ```lua
 {
   'nekowasabi/hellshake-yano.vim',
-  config = function()
-    -- Configuration here
-  end
-}
-```
-
-## Denops Edition (Full-Featured Implementation)
-
-### Requirements
-
-- Neovim or Vim 8.2+
-- Deno runtime
-- Denops runtime: https://github.com/vim-denops/denops.vim
-
-**Installation of denops.vim:**
-
-Using vim-plug:
-```vim
-Plug 'vim-denops/denops.vim'
-Plug 'nekowasabi/hellshake-yano.vim'
-```
-
-Using lazy.nvim:
-```lua
-{
-  'vim-denops/denops.vim',
-  lazy = false,
-},
-{
-  'nekowasabi/hellshake-yano.vim',
-  dependencies = { 'vim-denops/denops.vim' },
   config = function()
     -- Configuration here
   end
@@ -705,15 +659,3 @@ These motions correctly recognize Japanese word boundaries, allowing you to jump
 - `:HellshakeToggle` - Toggle the plugin on/off
 - `:HellshakeShow` - Show hints immediately
 - `:HellshakeHide` - Hide displayed hints
-
-## Contributing
-
-Pull requests and issue reports are welcome.
-
-## Inspiration
-- vim-jp slack channel
-- [POP TEAM EPIC](https://mangalifewin.takeshobo.co.jp/rensai/popute/)
-
-## Author
-
-nekowasabi
