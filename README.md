@@ -1,4 +1,4 @@
-# hellshake-yano.vim
+# hellshake-yano.lua
 
 A Neovim/Vim plugin for seamless word-based cursor movement
 
