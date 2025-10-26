@@ -24,17 +24,34 @@ function M.detect_visible()
 
   for i, line in ipairs(lines) do
     local lnum = first_line + i - 1
-    -- string.gmatchはバイト単位で位置を返すため、UTF-8を考慮
-    for word, start_pos in string.gmatch(line, '(' .. conf.word_pattern .. ')()') do
+    local last_end_byte = 1
+
+    while true do
+      local start_byte, end_byte = string.find(line, conf.word_pattern, last_end_byte)
+
+      if not start_byte then
+        break
+      end
+
+      local word = string.sub(line, start_byte, end_byte)
       if #word >= conf.min_word_length then
-        -- start_posは次のマッチの開始位置なので、単語の長さを引く
-        local byte_col = start_pos - #word
+        -- ★★★ ここからが修正箇所 ★★★
+        -- 単語が始まる位置の直前までの部分文字列を取得する
+        local prefix_of_line = string.sub(line, 1, start_byte - 1)
+
+        -- その部分文字列の画面上での幅を計算し、1を足して列番号(1-indexed)とする
+        -- これにより、マルチバイト文字やタブ文字が正しく扱われる
+        local col = vim.fn.strdisplaywidth(prefix_of_line) + 1
+        -- ★★★ 修正はここまで ★★★
+
         table.insert(words, {
           text = word,
           lnum = lnum,
-          col = vim.fn.byte2col(byte_col), -- バイト列を文字列表現の列に変換
+          col = col,
         })
       end
+
+      last_end_byte = end_byte + 1
     end
   end
 

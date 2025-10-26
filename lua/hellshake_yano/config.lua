@@ -19,7 +19,8 @@ local default_config = {
   key_repeat_reset_delay = 300, -- リピート状態をリセットするまでの時間 (ms)
   -- 単語検出
   min_word_length = 3,
-  word_pattern = '\\k\\+',
+  -- word_pattern = '\\k\\+',
+  word_pattern = '%w+',
   -- ハイライト
   highlight_hint = 'DiffAdd',
   highlight_input = 'DiffText',
